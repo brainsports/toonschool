@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { supabase } from '../../../shared/lib/supabase'
 import { geminiClient } from '../../../shared/lib/gemini'
 import { Sparkles, Save, Clipboard, Plus, Trash2, ChevronRight, AlertCircle, CheckCircle, Globe, Copy, X } from 'lucide-react'
+import { characters } from '../../../data/characters'
 
 interface ToonCut {
   id: string
@@ -18,6 +19,7 @@ export default function ToonEditor() {
     { id: 'cut-2', description: '창밖으로 외계 행성의 황량한 붉은 흙 대지가 펼쳐지는 모습', dialogue: '저기 붉은 행성에 비상 착륙해야 할 것 같아.' }
   ])
   const [activeCutId, setActiveCutId] = useState<string>('cut-1')
+  const [selectedCharacterId, setSelectedCharacterId] = useState<string>('tony')
   
   // AI states
   const [aiSuggestions, setAiSuggestions] = useState<string[]>([])
@@ -403,6 +405,74 @@ export default function ToonEditor() {
 
         {/* Right Column: AI Assistant Panel */}
         <div className="space-y-4">
+          {/* Cover Preview Section */}
+          <div className="p-5 rounded-3xl bg-slate-900 border border-slate-800 space-y-4">
+            <h3 className="font-bold text-xs text-slate-200 border-b border-slate-850 pb-2.5">
+              <span>표지 미리보기</span>
+            </h3>
+            
+            <div className="w-full aspect-square rounded-2xl bg-gradient-to-br from-slate-950 to-slate-900 border border-slate-850 flex items-center justify-center overflow-hidden p-4">
+              {selectedCharacterId && characters.length > 0 ? (
+                <div className="w-full h-full flex items-center justify-center">
+                  {(() => {
+                    const character = characters.find(c => c.id === selectedCharacterId)
+                    if (!character) return null
+                    const CharacterComponent = character.component
+                    return <CharacterComponent />
+                  })()}
+                </div>
+              ) : (
+                <div className="text-center">
+                  <p className="text-xs text-slate-500">캐릭터를 선택해 주세요</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Character Selection Section */}
+          <div className="p-5 rounded-3xl bg-slate-900 border border-slate-800 space-y-4">
+            <h3 className="font-bold text-xs text-slate-200 border-b border-slate-850 pb-2.5">
+              <span>캐릭터 선택</span>
+            </h3>
+            
+            <div className="grid grid-cols-3 gap-2">
+              {characters.map((character) => (
+                <button
+                  key={character.id}
+                  onClick={() => setSelectedCharacterId(character.id)}
+                  className={`flex flex-col items-center gap-2 p-3 rounded-xl transition-all border text-center ${
+                    selectedCharacterId === character.id
+                      ? 'bg-purple-950/60 border-purple-600 shadow-lg shadow-purple-500/20'
+                      : 'bg-slate-950 border-slate-800 hover:border-slate-700'
+                  }`}
+                >
+                  <div className={`w-12 h-12 rounded-lg flex items-center justify-center text-xl font-bold ${
+                    selectedCharacterId === character.id
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-slate-850 text-slate-400'
+                  }`}>
+                    {character.name.charAt(0)}
+                  </div>
+                  <div className="text-[10px]">
+                    <p className="font-bold text-slate-300">{character.name}</p>
+                    <p className="text-slate-500 text-[8px]">{character.role}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+            
+            {selectedCharacterId && (() => {
+              const character = characters.find(c => c.id === selectedCharacterId)
+              return character ? (
+                <div className="p-3 rounded-lg bg-slate-950 border border-slate-850 text-[10px] text-slate-400">
+                  <p className="font-semibold text-slate-300 mb-1">{character.name}</p>
+                  <p>{character.description}</p>
+                </div>
+              ) : null
+            })()}
+          </div>
+          
+          {/* AI Assistant Panel */}
           <div className="p-5 rounded-3xl bg-slate-900 border border-slate-800 space-y-5">
             <h3 className="font-bold text-xs text-slate-200 flex items-center gap-2 border-b border-slate-850 pb-2.5">
               <Sparkles className="h-4 w-4 text-purple-400" />
