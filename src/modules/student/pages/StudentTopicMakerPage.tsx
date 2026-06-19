@@ -103,14 +103,20 @@ export default function StudentTopicMakerPage() {
           onClick={() => navigate('/student/select-unit')}
         />
 
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.5fr] gap-6">
-          {/* 좌측: AI 요청 입력 & 추천 버튼 영역 */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* 좌측: 주제 목록 영역 & AI 추천 마법 부리기 버튼 */}
           <div className="flex flex-col gap-5">
-            <StoryInputCard
-              extraRequest={extraRequest}
-              onExtraRequestChange={setExtraRequest}
-              onFillExample={() => setExtraRequest('우주선 연료가 부족해지는 상황을 재미있게 해결해 주세요!')}
-            />
+            <div className="card-glass p-6 md:p-8 flex-1">
+              <AiRecommendationCard
+                topics={topics}
+                visibleTopics={visibleTopics}
+                selectedTopicId={selectedTopicId}
+                onSelectTopic={setSelectedTopicId}
+                genState={genState}
+                showAllTopics={showAllTopics}
+                onToggleShowAll={() => setShowAllTopics(!showAllTopics)}
+              />
+            </div>
 
             <AiMagicButton
               genState={genState}
@@ -119,16 +125,12 @@ export default function StudentTopicMakerPage() {
             />
           </div>
 
-          {/* 우측: 주제 목록 영역 */}
-          <div className="card-glass p-6 md:p-8">
-            <AiRecommendationCard
-              topics={topics}
-              visibleTopics={visibleTopics}
-              selectedTopicId={selectedTopicId}
-              onSelectTopic={setSelectedTopicId}
-              genState={genState}
-              showAllTopics={showAllTopics}
-              onToggleShowAll={() => setShowAllTopics(!showAllTopics)}
+          {/* 우측: AI 요청 입력 영역 */}
+          <div className="flex flex-col gap-5 h-full">
+            <StoryInputCard
+              extraRequest={extraRequest}
+              onExtraRequestChange={setExtraRequest}
+              onFillExample={() => setExtraRequest('우주선 연료가 부족해지는 상황을 재미있게 해결해 주세요!')}
             />
           </div>
         </div>
