@@ -17,6 +17,8 @@ import StudentManagementPage from '../modules/center-admin/pages/StudentManageme
 import ProgressPage from '../modules/center-admin/pages/ProgressPage'
 import EvaluationPage from '../modules/center-admin/pages/EvaluationPage'
 import StudentDashboard from '../modules/student/pages/StudentDashboard'
+import StudentUnitSelectPage from '../modules/student/pages/StudentUnitSelectPage'
+import StudentTopicMakerPage from '../modules/student/pages/StudentTopicMakerPage'
 import ToonEditor from '../modules/toon/pages/ToonEditor'
 import ToonViewer from '../modules/toon/pages/ToonViewer'
 import QuizPage from '../modules/quiz/pages/QuizPage'
@@ -50,6 +52,8 @@ export default function AppRouter() {
         <Route path="analytics" element={<AnalyticsDashboard />} />
         <Route path="*" element={<NotFound />} />
       </Route>
+      <Route path="/student/select-unit" element={<StudentUnitSelectPage />} />
+      <Route path="/student/topic" element={<StudentTopicMakerPage />} />
     </Routes>
   )
 }

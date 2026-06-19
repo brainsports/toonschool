@@ -187,7 +187,7 @@ function RiaCostumeBody({ costume }: { costume: Costume }) {
   );
 }
 
-function RiaFront({ expression = "happy", costume = "default" }: { expression?: Expression; costume?: Costume }) {
+export function RiaFront({ expression = "happy", costume = "default" }: { expression?: Expression; costume?: Costume }) {
   const shirts: Record<Costume, string> = {
     default: BLUE, science: "#F0F0F0", social: "#9C7A2C",
     math: PURPLE, korean: "#9B5E2A", english: "#3AB0D4",

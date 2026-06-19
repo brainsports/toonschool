@@ -59,7 +59,7 @@ function TonyFace({ expression }: { expression: Expression }) {
   );
 }
 
-function TonyCostumeBody({ costume, shirtColor, pantsColor }: { costume: Costume; shirtColor: string; pantsColor: string; }) {
+function TonyCostumeBody({ costume, shirtColor: _shirtColor, pantsColor: _pantsColor }: { costume: Costume; shirtColor: string; pantsColor: string; }) {
   if (costume === "science") return (
     <>
       {/* White coat flap left */}
@@ -167,7 +167,7 @@ function TonyCostumeBody({ costume, shirtColor, pantsColor }: { costume: Costume
   );
 }
 
-function TonyFront({ expression = "happy", costume = "default" }: { expression?: Expression; costume?: Costume }) {
+export function TonyFront({ expression = "happy", costume = "default" }: { expression?: Expression; costume?: Costume }) {
   const shirts: Record<Costume, string> = {
     default: ORANGE, science: "#F5F5F5", social: "#9C7A2C",
     math: "#4A90D9", korean: "#D4A853", english: "#3AB0D4",

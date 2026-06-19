@@ -236,7 +236,7 @@ function HanaCostumeBody({ costume }: { costume: Costume }) {
 }
 
 /* ─── FRONT VIEW ─────────────────────────────────────────── */
-function HanaFront({ expression = "smile", costume = "default" }: { expression?: Expression; costume?: Costume }) {
+export function HanaFront({ expression = "smile", costume = "default" }: { expression?: Expression; costume?: Costume }) {
   const shirts: Record<Costume, string> = {
     default: TEAL, science: "#F2F2F2", social: "#9C8240",
     math: "#5A8EC4", korean: "#C4A062", english: "#4ABCD4",
