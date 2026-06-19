@@ -1,0 +1,546 @@
+import { useState, useRef } from 'react'
+import { supabase } from '../../../shared/lib/supabase'
+import { geminiClient } from '../../../shared/lib/gemini'
+import { Sparkles, Save, Clipboard, Plus, Trash2, CheckCircle, Globe, Copy, X, FileDown, Pencil, MessageCircle, BookOpen, ImageIcon } from 'lucide-react'
+import { toast } from 'sonner'
+
+interface ToonCut {
+  id: string
+  description: string
+  dialogue: string
+}
+
+/* ?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧??+   SUBJECT BACKGROUNDS
+?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧??*/
+function MathBg() {
+  const flagColors = ["#FF5C5C","#4F6AF0","#FFD426","#10B981","#FF8C42","#9B7FD4","#FF5C5C","#4F6AF0","#FFD426"]
+  return (
+    <svg viewBox="0 0 620 877" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+      <defs>
+        <linearGradient id="mBg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%"   stopColor="#FFE566"/>
+          <stop offset="38%"  stopColor="#FFD426"/>
+          <stop offset="70%"  stopColor="#FFBF3D"/>
+          <stop offset="100%" stopColor="#FF9A3D"/>
+        </linearGradient>
+      </defs>
+      <rect width="620" height="877" fill="url(#mBg)"/>
+      <circle cx="540" cy="130" r="140" fill="rgba(255,255,255,0.09)"/>
+      <circle cx="80"  cy="260" r="100" fill="rgba(255,255,255,0.08)"/>
+      <circle cx="320" cy="60"  r="80"  fill="rgba(255,220,50,0.25)"/>
+      <circle cx="580" cy="500" r="90"  fill="rgba(255,255,255,0.07)"/>
+    </svg>
+  )
+}
+
+function ScienceBg() {
+  return (
+    <svg viewBox="0 0 620 877" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+      <defs><linearGradient id="scBg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#1A0A4C"/><stop offset="55%" stopColor="#2A1870"/><stop offset="100%" stopColor="#1A3A5C"/></linearGradient></defs>
+      <rect width="620" height="877" fill="url(#scBg)"/>
+      <circle cx="200" cy="200" r="60" fill="none" stroke="#7B9FF5" strokeWidth="2.5" opacity="0.6"/>
+      <circle cx="440" cy="320" r="45" fill="none" stroke="#3BAAA0" strokeWidth="2" opacity="0.5"/>
+      <circle cx="500" cy="120" r="50" fill="#9B7FD4" opacity="0.8"/>
+    </svg>
+  )
+}
+
+function KoreanBg() {
+  return (
+    <svg viewBox="0 0 620 877" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+      <rect width="620" height="877" fill="#FFF9E8"/>
+    </svg>
+  )
+}
+
+function EnglishBg() {
+  return (
+    <svg viewBox="0 0 620 877" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+      <defs><linearGradient id="enBg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#87CEFF"/><stop offset="60%" stopColor="#C8E8FF"/><stop offset="100%" stopColor="#E8F8FF"/></linearGradient></defs>
+      <rect width="620" height="877" fill="url(#enBg)"/>
+    </svg>
+  )
+}
+
+function SocialBg() {
+  return (
+    <svg viewBox="0 0 620 877" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+      <rect width="620" height="877" fill="#F0F8E8"/>
+    </svg>
+  )
+}
+
+function SubjectBg({ subject }: { subject: string }) {
+  switch (subject) {
+    case "怨쇳븰":
+      return <ScienceBg />
+    case "援?뼱":
+      return <KoreanBg />
+    case "?곸뼱":
+      return <EnglishBg />
+    case "?ы쉶":
+      return <SocialBg />
+    default:
+      return <MathBg />
+  }
+}
+
+/* ?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧??+   COMIC SPEECH BUBBLE
+?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧??*/
+function ComicBubble({ text, borderColor }: { text: string; borderColor: string }) {
+  return (
+    <div className="relative">
+      <div style={{ background:"#FFFEF5", border:`3px solid ${borderColor}`, borderRadius:18, padding:"7px 12px", boxShadow:`3px 4px 0 rgba(0,0,0,0.18), 0 2px 12px rgba(0,0,0,0.12)`, maxWidth:158, minWidth:96 }}>
+        <p style={{ fontSize:13, fontWeight:400, color:"#1E293B", lineHeight:1.35, textAlign:"center", margin:0 }}>{text}</p>
+      </div>
+      <div style={{position:"absolute", bottom:-13, left:"50%", transform:"translateX(-50%)", width:0, height:0, borderLeft:"10px solid transparent", borderRight:"10px solid transparent", borderTop:`14px solid ${borderColor}`}}/>
+    </div>
+  )
+}
+
+/* ?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧??+   A4 COVER CARD
+?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧??*/
+function A4CoverCard({
+  title, grade, subject, topic, concept, author, illustrator,
+}: {
+  title: string; grade: string; subject: string; topic: string
+  concept: string; author: string; illustrator: string
+}) {
+  const tags = concept ? concept.split(/[,竊뚣?n]/).map(t=>t.trim()).filter(Boolean) : ["二쇱젣"]
+
+  return (
+    <div style={{
+      position:"relative", width:"100%", aspectRatio:"1240/1754",
+      overflow:"hidden", borderRadius:16,
+      boxShadow:"0 28px 70px rgba(0,0,0,0.5), 0 6px 20px rgba(0,0,0,0.25)",
+    }}>
+      <div style={{position:"absolute",inset:0}}>
+        <SubjectBg subject={subject}/>
+      </div>
+      <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.06)"}}/>
+
+      <div style={{position:"absolute",inset:"7% 3% 0 3%",display:"flex",flexDirection:"column"}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"2%"}}>
+          <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
+            {[grade,subject].filter(Boolean).map((v,i)=>{
+              const bgs=["#4F6AF0","#3BAAA0"]
+              return <span key={i} style={{padding:"3px 10px",borderRadius:20,fontSize:"clamp(8px,1.5%,12px)",fontWeight:800,background:bgs[i],color:"white",boxShadow:"1px 2px 4px rgba(0,0,0,0.2)"}}>{v}</span>
+            })}
+          </div>
+          <div style={{width:"clamp(36px,8%,56px)",height:"clamp(36px,8%,56px)",borderRadius:"50%",background:"linear-gradient(135deg,#FF5C5C,#FF8C42)",border:"3px solid white",boxShadow:"2px 3px 8px rgba(0,0,0,0.3)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+            <div style={{textAlign:"center",lineHeight:1}}>
+              <div style={{fontSize:"clamp(5px,1%,8px)",fontWeight:900,color:"white"}}>VOL</div>
+              <div style={{fontSize:"clamp(10px,2.2%,18px)",fontWeight:900,color:"white"}}>1</div>
+            </div>
+          </div>
+        </div>
+
+        <div style={{
+          background:"white",
+          borderRadius:20,
+          border:"5px solid #1E2440",
+          boxShadow:"6px 8px 0 #1E2440, 0 4px 20px rgba(0,0,0,0.2)",
+          padding:"clamp(10px,2%,18px) clamp(12px,2.5%,20px)",
+          marginBottom:"2%",
+        }}>
+          <div style={{
+            fontSize:"clamp(22px,6.5%,50px)",
+            fontWeight:900,
+            color:"#4F6AF0",
+            lineHeight:1.1,
+            textShadow:"2px 2px 0 rgba(0,0,0,0.12)",
+          }}>
+            {title}
+          </div>
+          <div style={{marginTop:8,paddingTop:6,borderTop:"2px dashed #E2E8F0",fontSize:"clamp(9px,1.6%,13px)",color:"#64748B",fontWeight:600}}>
+            湲: {author||"?곗뒪荑?}&nbsp;&nbsp;쨌&nbsp;&nbsp;洹몃┝: {illustrator||"AI"}
+          </div>
+        </div>
+
+        {topic && <p style={{fontSize:"clamp(9px,1.6%,13px)",fontWeight:600,color:"rgba(30,36,64,0.82)",textShadow:"1px 1px 4px rgba(255,255,255,0.7)",marginBottom:"1.5%",paddingLeft:2}}>?뱰 {topic}</p>}
+
+        <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:"1%"}}>
+          {tags.slice(0,5).map(tag=>(
+            <span key={tag} style={{padding:"3px 10px",borderRadius:20,fontSize:"clamp(8px,1.4%,12px)",fontWeight:700,background:"rgba(255,255,255,0.85)",border:"2.5px solid rgba(79,106,240,0.5)",color:"#4F6AF0",boxShadow:"1px 2px 6px rgba(0,0,0,0.12)"}}>#{tag}</span>
+          ))}
+        </div>
+
+        <div style={{flex:1,minHeight:"2%"}}/>
+
+        <div style={{position:"relative",height:"48%",display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
+          <div style={{position:"absolute",bottom:0,left:"-5%",right:"-5%",height:"50%",background:"radial-gradient(ellipse at 50% 100%, rgba(255,255,200,0.4) 0%, transparent 68%)",borderRadius:"50% 50% 0 0"}}/>
+
+          <div style={{display:"flex",flexDirection:"column",alignItems:"center",zIndex:20,marginBottom:0}}>
+            <ComicBubble text="?④퍡 諛곗썙遊낆떆??" borderColor="#3BAAA0"/>
+            <div style={{filter:"drop-shadow(5px 10px 12px rgba(0,0,0,0.30))"}}>
+              <HanaSheet />
+            </div>
+            <div style={{padding:"3px 12px",borderRadius:14,background:"#3BAAA0",marginTop:-4,boxShadow:"2px 3px 6px rgba(0,0,0,0.22)"}}>
+              <span style={{fontSize:"clamp(7px,1.2%,11px)",fontWeight:900,color:"white"}}>?섎굹 ?좎깮??/span>
+            </div>
+          </div>
+        </div>
+
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"1.5% 0 1%",marginTop:4,borderTop:"1.5px solid rgba(255,255,255,0.4)"}}>
+          <div style={{display:"flex",alignItems:"center",gap:5}}>
+            <div style={{width:"clamp(14px,2.5%,18px)",height:"clamp(14px,2.5%,18px)",borderRadius:5,background:"#4F6AF0",display:"flex",alignItems:"center",justifyContent:"center"}}>
+              <Pencil style={{width:"65%",height:"65%",color:"white"}}/>
+            </div>
+            <span style={{fontSize:"clamp(8px,1.4%,12px)",fontWeight:900,color:"#4F6AF0"}}>ToonSchool</span>
+          </div>
+          <span style={{fontSize:"clamp(7px,1.2%,10px)",fontWeight:500,color:"rgba(30,36,64,0.55)"}}>?숈뒿??쨌 AI ?먮뵒??/span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+const PANEL_COLORS = ["#4F6AF0","#10B981","#F59E0B","#8B5CF6","#EF4444","#0EA5E9"]
+
+function ComicPreview({ cuts }: { cuts: ToonCut[] }) {
+  return (
+    <div>
+      <div className="flex items-center gap-2 mb-4">
+        <div className="w-1 h-5 bg-[#4F6AF0] rounded-full"/>
+        <p className="text-[15px] font-bold text-[#1E293B]">留뚰솕 而?({cuts.length}媛?</p>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        {cuts.map((cut, i) => (
+          <div key={cut.id} className="aspect-[4/3] rounded-2xl overflow-hidden border-2 border-[#E2E8F0] hover:border-[#4F6AF0] cursor-pointer transition-all">
+            <div className="w-full h-full flex flex-col items-center justify-center gap-2 p-3 relative" style={{background:`${PANEL_COLORS[i%PANEL_COLORS.length]}12`}}>
+              <div className="absolute top-2 left-2 w-7 h-7 rounded-xl text-[12px] font-black text-white flex items-center justify-center" style={{background:PANEL_COLORS[i%PANEL_COLORS.length]}}>{i+1}</div>
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{background:`${PANEL_COLORS[i%PANEL_COLORS.length]}25`}}><MessageCircle className="w-6 h-6" style={{color:PANEL_COLORS[i%PANEL_COLORS.length]}}/></div>
+              <div className="bg-white/80 rounded-xl px-2 py-1 w-full text-center"><p className="text-[11px] text-[#64748B] truncate">{cut.description || `${i+1}而?}</p></div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+export default function ToonEditor() {
+  const [projectId, setProjectId] = useState<string | null>(null)
+  const [slug, setSlug] = useState<string | null>(null)
+  const [title, setTitle] = useState('?㏃뀍怨?類꾩뀍???쇳빀 怨꾩궛 諛곗슦湲?)
+  const [cuts, setCuts] = useState<ToonCut[]>([
+    { id: 'cut-1', description: '?곗＜??議곗쥌???? 源쒖쭩 ?? ?쇨뎬???섍퀬 ?덈뒗 二쇱씤怨?罹먮┃??, dialogue: '?곗＜???곕즺媛 ?쇰쭏 ???⑥븯?뽰븘?!' },
+    { id: 'cut-2', description: '李쎈컰?쇰줈 ?멸퀎 ?됱꽦???⑸웾??遺됱? ???吏媛 ?쇱퀜吏??紐⑥뒿', dialogue: '?湲?遺됱? ?됱꽦??鍮꾩긽 李⑸쪠?댁빞 ??寃?媛숈븘.' }
+  ])
+  const [activeCutId, setActiveCutId] = useState<string>('cut-1')
+  const [activeTab, setActiveTab] = useState<'cover' | 'comic' | 'dialogue' | 'quiz'>('cover')
+  const [coverSubtitle, setCoverSubtitle] = useState('?④퍡 諛곗슦???섑븰??)
+  const [coverGrade, setCoverGrade] = useState('5?숇뀈')
+  const [coverSubject, setCoverSubject] = useState('?섑븰')
+  const [coverTopic, setCoverTopic] = useState('?㏃뀍, 類꾩뀍, 愿꾪샇媛 ?욎씤 ?앹쓽 怨꾩궛 ?쒖꽌')
+  const [coverCoreConcepts, setCoverCoreConcepts] = useState('怨꾩궛 ?쒖꽌, 愿꾪샇, ?쇳빀??)
+  
+  // AI states
+  const [aiSuggestions, setAiSuggestions] = useState<string[]>([])
+  const [aiLoading, setAiLoading] = useState(false)
+
+  // DB states
+  const [dbLoading, setDbLoading] = useState(false)
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false)
+  const [copied, setCopied] = useState(false)
+
+  const activeCutIndex = cuts.findIndex(c => c.id === activeCutId)
+  const activeCut = cuts[activeCutIndex] || cuts[0]
+
+  const addCut = () => {
+    const newId = `cut-${Date.now()}`
+    setCuts(prev => [...prev, { id: newId, description: '', dialogue: '' }])
+    setActiveCutId(newId)
+  }
+
+  const deleteCut = () => {
+    if (cuts.length <= 1) {
+      alert('理쒖냼 1媛??댁긽??而룹씠 ?덉뼱???⑸땲??')
+      return
+    }
+    const filtered = cuts.filter(c => c.id !== activeCutId)
+    setCuts(filtered)
+    const prevIdx = Math.max(0, activeCutIndex - 1)
+    setActiveCutId(filtered[prevIdx]?.id || filtered[0].id)
+  }
+
+  const updateCutField = (id: string, field: keyof ToonCut, value: string) => {
+    setCuts(prev => prev.map(c => (c.id === id ? { ...c, [field]: value } : c)))
+  }
+
+  const getAiDialogue = async () => {
+    if (!activeCut) return
+    setAiLoading(true)
+    setAiSuggestions([])
+
+    const prompt = `留뚰솕 而??쒖옉 ???諛??꾩씠?붿뼱 異붿쿇:
+      - ?꾩옱 留뚰솕 而??ㅻ챸: "${activeCut.description || '????놁씠 而룸쭔 ?앹꽦??}"
+      - ?묒꽦??湲곗〈 ??? "${activeCut.dialogue || '鍮꾩뼱 ?덉쓬'}"
+      
+      ???곹솴???뚮쭪? 罹먮┃?곗쓽 ?ъ튂 ?덇퀬 紐곗엯???믪? ????먮뒗 ?ㅼ쓬 而룹쑝濡??댁뼱媛??ㅽ넗由??꾩씠?붿뼱瑜?3媛吏 ?쒖븞??以?`
+
+    try {
+      const result = await geminiClient.generateText(prompt)
+      const lines = result.split('\n').map(l => l.replace(/^[-*??d.\s]+/g, '').trim()).filter(l => l.length > 2).slice(0, 3)
+      setAiSuggestions(lines.length > 0 ? lines : ['?ш릿 ?덈Т ?대몢??..', '? 硫由?遺덈튆??蹂댁뿬.', '?댁찈硫??앸챸泥닿? ?덉쓣吏??..'])
+    } catch (err) {
+      console.error('AI ?몄텧 ?ㅽ뙣:', err)
+      setAiSuggestions(['?곕즺媛 硫덉톬??', '?듭떊 ?μ튂瑜?蹂듦뎄?섏옄.', '愿묐Ъ???덉쓣 寃?媛숈븘.'])
+    } finally {
+      setAiLoading(false)
+    }
+  }
+
+  const handleSave = async (isDraft: boolean) => {
+    setDbLoading(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const userId = session?.user?.id || 'guest-user'
+      const projectData = {
+        title, content: cuts, user_id: userId,
+        status: isDraft ? 'draft' : 'published',
+        ...(slug ? { slug, is_public: !isDraft } : {}),
+        updated_at: new Date()
+      }
+      
+      const query = projectId
+        ? supabase.from('toon_projects').update(projectData).eq('id', projectId)
+        : supabase.from('toon_projects').insert([projectData]).select()
+
+      const { data, error } = await query
+      if (error) throw error
+      if (!projectId && Array.isArray(data) && data[0]?.id) setProjectId(data[0].id)
+      toast.success(isDraft ? '?꾩떆 ????꾨즺!' : '????꾨즺!')
+    } catch (err) {
+      localStorage.setItem(`toon-project-${projectId || 'draft'}`, JSON.stringify({ title, cuts }))
+      toast.error('???以??ㅻ쪟 諛쒖깮')
+    } finally {
+      setDbLoading(false)
+    }
+  }
+
+  const handlePublish = async () => {
+    setDbLoading(true)
+    const generatedSlug = slug || Math.random().toString(36).substring(2, 10)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const projectData = {
+        title, content: cuts, user_id: session?.user?.id || 'guest-user',
+        status: 'published', is_public: true, slug: generatedSlug, updated_at: new Date()
+      }
+      
+      const query = projectId
+        ? supabase.from('toon_projects').update(projectData).eq('id', projectId)
+        : supabase.from('toon_projects').insert([projectData]).select()
+
+      const { data, error } = await query
+      if (error) throw error
+      if (!projectId && Array.isArray(data) && data[0]?.id) setProjectId(data[0].id)
+      
+      setSlug(generatedSlug)
+      setIsShareModalOpen(true)
+      toast.success('諛고룷 ?꾨즺!')
+    } catch (err) {
+      const fallbackProject = { id: projectId || `fallback-${generatedSlug}`, title, content: cuts, user_id: 'guest-user', status: 'published', is_public: true, slug: generatedSlug, updated_at: new Date().toISOString() }
+      localStorage.setItem(`toon-project-${generatedSlug}`, JSON.stringify(fallbackProject))
+      setSlug(generatedSlug)
+      setIsShareModalOpen(true)
+      toast.error('濡쒖뺄 ??μ쑝濡?諛고룷??)
+    } finally {
+      setDbLoading(false)
+    }
+  }
+
+  const handleCopyLink = () => {
+    if (!slug) return
+    const shareUrl = `${window.location.origin}/p/${slug}`
+    navigator.clipboard.writeText(shareUrl).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }).catch(err => console.error('蹂듭궗 ?ㅽ뙣:', err))
+  }
+
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  return (
+    <div className="flex flex-col bg-[#E8EAF0]" style={{height:"calc(100vh - 116px)"}}>
+      <div className="flex flex-1 overflow-hidden">
+
+        {/* LEFT PANEL */}
+        <aside className="w-[320px] bg-white border-r border-[#E2E8F0] flex flex-col flex-shrink-0">
+          <div className="grid grid-cols-4 border-b border-[#E2E8F0] bg-[#F8FAFC]">
+            {[
+              {key:'cover',icon:BookOpen,label:'?쒖?'},
+              {key:'comic',icon:ImageIcon,label:'留뚰솕'},
+              {key:'dialogue',icon:MessageCircle,label:'???},
+              {key:'quiz',icon:CheckCircle,label:'?댁쫰'}
+            ].map(({key,icon:Icon,label})=>(
+              <button key={key} onClick={()=>setActiveTab(key as any)}
+                className={`flex flex-col items-center justify-center gap-1 py-4 transition-all ${activeTab===key?"text-[#4F6AF0] bg-white":"text-[#94A3B8] hover:bg-white/60"}`}>
+                <Icon className="w-5 h-5"/>
+                <span className="text-[11px] font-semibold">{label}</span>
+              </button>
+            ))}
+          </div>
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            {activeTab === 'cover' && (
+              <>
+                <div className="rounded-2xl border border-[#E2E8F0] overflow-hidden">
+                  <div className="px-4 py-2.5 bg-[#F8FAFC] border-b border-[#E2E8F0]">
+                    <p className="text-[11px] font-bold text-[#64748B] uppercase">?쒖? 湲곕낯</p>
+                  </div>
+                  <div className="p-4 space-y-3">
+                    <div className="space-y-1">
+                      <label className="text-[12px] font-semibold text-[#475569]">?쒕ぉ</label>
+                      <input value={title} onChange={e=>setTitle(e.target.value)} className="w-full px-3.5 py-2.5 bg-white border border-[#E2E8F0] rounded-xl text-[13px] focus:outline-none focus:border-[#4F6AF0]"/>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <label className="text-[12px] font-semibold">?숇뀈</label>
+                        <select value={coverGrade} onChange={e=>setCoverGrade(e.target.value)} className="w-full px-3.5 py-2.5 bg-white border border-[#E2E8F0] rounded-xl text-[13px]">
+                          {["1?숇뀈","2?숇뀈","3?숇뀈","4?숇뀈","5?숇뀈","6?숇뀈"].map(g=><option key={g}>{g}</option>)}
+                        </select>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[12px] font-semibold">怨쇰ぉ</label>
+                        <select value={coverSubject} onChange={e=>setCoverSubject(e.target.value)} className="w-full px-3.5 py-2.5 bg-white border border-[#E2E8F0] rounded-xl text-[13px]">
+                          {["?섑븰","援?뼱","怨쇳븰","?ы쉶","?곸뼱"].map(s=><option key={s}>{s}</option>)}
+                        </select>
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[12px] font-semibold">?숈뒿 二쇱젣</label>
+                      <textarea value={coverTopic} onChange={e=>setCoverTopic(e.target.value)} className="w-full px-3.5 py-2.5 bg-white border border-[#E2E8F0] rounded-xl text-[13px] resize-none" rows={2}/>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[12px] font-semibold">?듭떖 媛쒕뀗</label>
+                      <input value={coverCoreConcepts} onChange={e=>setCoverCoreConcepts(e.target.value)} className="w-full px-3.5 py-2.5 bg-white border border-[#E2E8F0] rounded-xl text-[13px]"/>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+            {activeTab === 'comic' && (
+              <div className="rounded-2xl border border-[#E2E8F0] overflow-hidden">
+                <div className="px-4 py-2.5 bg-[#F8FAFC] border-b border-[#E2E8F0]">
+                  <p className="text-[11px] font-bold text-[#64748B] uppercase">留뚰솕 而?/p>
+                </div>
+                <div className="p-4 space-y-3">
+                  <div className="flex gap-2">
+                    <button onClick={addCut} className="flex-1 flex items-center justify-center gap-1 py-2.5 rounded-xl bg-[#4F6AF0] text-white text-[12px] font-semibold hover:bg-[#3451D1]">
+                      <Plus className="w-4 h-4"/>異붽?
+                    </button>
+                    <button onClick={deleteCut} className="flex-1 flex items-center justify-center gap-1 py-2.5 rounded-xl border border-[#E2E8F0] text-[#64748B] text-[12px] font-semibold hover:bg-[#F8FAFC]">
+                      <Trash2 className="w-4 h-4"/>??젣
+                    </button>
+                  </div>
+                  {cuts.map((cut,i)=>(
+                    <div key={cut.id} className="space-y-2">
+                      <p className="text-[12px] font-semibold text-[#475569]">而?#{i+1}</p>
+                      <input value={cut.description} onChange={e=>updateCutField(cut.id,'description',e.target.value)} placeholder="臾섏궗" className="w-full px-3 py-2 bg-white border border-[#E2E8F0] rounded-xl text-[12px]"/>
+                      <input value={cut.dialogue} onChange={e=>updateCutField(cut.id,'dialogue',e.target.value)} placeholder="??? className="w-full px-3 py-2 bg-white border border-[#E2E8F0] rounded-xl text-[12px]"/>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {activeTab === 'dialogue' && (
+              <div className="rounded-2xl border border-[#E2E8F0] overflow-hidden">
+                <div className="px-4 py-2.5 bg-[#F8FAFC] border-b border-[#E2E8F0]">
+                  <p className="text-[11px] font-bold text-[#64748B] uppercase">AI ???/p>
+                </div>
+                <div className="p-4 space-y-3">
+                  <button onClick={getAiDialogue} disabled={aiLoading} className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-[#4F6AF0] to-[#8B5CF6] text-white text-[13px] font-bold hover:opacity-90 disabled:opacity-60">
+                    <Sparkles className="w-4 h-4"/>{aiLoading?'遺꾩꽍 以?..':'AI 異붿쿇諛쏄린'}
+                  </button>
+                  {aiSuggestions.map((s,i)=>(
+                    <button key={i} onClick={()=>updateCutField(activeCutId,'dialogue',s)} className="w-full text-left px-3 py-2.5 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] text-[12px] text-[#475569] hover:bg-[#F1F5F9]">
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </aside>
+
+        {/* RIGHT PREVIEW */}
+        <main className="flex-1 flex flex-col overflow-hidden">
+          <div className="bg-white border-b border-[#E2E8F0] px-5 py-3 flex items-center justify-between gap-4 flex-shrink-0">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#4F6AF0] to-[#8B5CF6] flex items-center justify-center flex-shrink-0">
+                <Pencil className="w-3.5 h-3.5 text-white"/>
+              </div>
+              <div className="min-w-0">
+                <p className="text-[13px] font-semibold text-[#1E293B] truncate">{activeTab==='cover'?'?쒖?':''}誘몃━蹂닿린</p>
+                <p className="text-[11px] text-[#94A3B8]">{coverGrade} 쨌 {coverSubject} 쨌 {title||'?쒕ぉ ?놁쓬'}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <button onClick={()=>handleSave(true)} className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-[#E2E8F0] bg-white text-[13px] font-medium text-[#64748B] hover:bg-[#F8FAFC]">
+                <Clipboard className="w-4 h-4"/>?꾩떆???+              </button>
+              <button onClick={()=>handleSave(false)} className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-[#C7D2FE] bg-[#EEF2FF] text-[13px] font-medium text-[#4F6AF0] hover:bg-[#E0E7FF]">
+                <Save className="w-4 h-4"/>???+              </button>
+              <button onClick={handlePublish} className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#4F6AF0] text-white text-[13px] font-semibold hover:bg-[#3451D1]">
+                <Globe className="w-4 h-4"/>諛고룷
+              </button>
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto" style={{background:"#3A3D4A",padding:"32px 24px 40px"}}>
+            {activeTab === 'cover' && (
+              <div className="flex flex-col items-center gap-5" style={{maxWidth:480,margin:"0 auto"}}>
+                <A4CoverCard
+                  title={title} grade={coverGrade} subject={coverSubject}
+                  topic={coverTopic} concept={coverCoreConcepts}
+                  author="?곗뒪荑? illustrator="AI"
+                />
+                <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl" style={{background:"rgba(255,255,255,0.1)"}}>
+                  <FileDown className="w-4 h-4 flex-shrink-0" style={{color:"rgba(255,255,255,0.55)"}}/>
+                  <p style={{fontSize:12,color:"rgba(255,255,255,0.55)",fontWeight:500}}>?쒖???A4 PDF 泥??μ쑝濡?異쒕젰?⑸땲??</p>
+                </div>
+              </div>
+            )}
+            {activeTab === 'comic' && (
+              <div style={{maxWidth:680,margin:"0 auto",background:"#F0F2F8",borderRadius:20,padding:24}}>
+                <ComicPreview cuts={cuts}/>
+              </div>
+            )}
+          </div>
+
+          <div className="bg-white border-t border-[#E2E8F0] px-5 py-2.5 flex items-center justify-between flex-shrink-0">
+            <span className="text-[12px] text-[#94A3B8]">A4 ?쒖? 쨌 {cuts.length}而?/span>
+            <span className="text-[11px] text-[#CBD5E1]">留덉?留???? 諛⑷툑 ??/span>
+          </div>
+        </main>
+      </div>
+
+      {isShareModalOpen && slug && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 p-4 backdrop-blur-sm">
+          <div className="relative w-full max-w-md overflow-hidden rounded-[32px] border border-slate-200 bg-white p-6 shadow-2xl">
+            <button onClick={()=>setIsShareModalOpen(false)} className="absolute right-4 top-4 inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 text-slate-600 hover:bg-slate-200">
+              <X className="h-5 w-5"/>
+            </button>
+            <div className="space-y-4 pt-4 text-center">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-3xl bg-amber-100 text-amber-700">
+                <Globe className="h-6 w-6"/>
+              </div>
+              <div>
+                <h3 className="text-2xl font-extrabold text-slate-900">諛고룷 ?깃났!</h3>
+                <p className="mt-2 text-sm text-slate-600">?뱁댆??怨듭쑀?섏뿀?듬땲??</p>
+              </div>
+              <div className="flex items-center gap-3 rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <input type="text" readOnly value={`${window.location.origin}/p/${slug}`} className="flex-1 bg-transparent text-sm text-slate-900 outline-none"/>
+                <button onClick={handleCopyLink} className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2 text-sm font-semibold ${copied ? 'bg-emerald-500 text-white' : 'bg-slate-900 text-white'}`}>
+                  {copied ? <CheckCircle className="h-4 w-4"/> : <Copy className="h-4 w-4"/>}
+                  {copied ? '蹂듭궗?? : '蹂듭궗'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      )}
+    </div>
+  )
+}

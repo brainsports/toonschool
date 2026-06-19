@@ -1,0 +1,17 @@
+warning: in the working copy of 'index.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/app/router.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/components/characters/HanaSheet.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/components/characters/RiaSheet.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/modules/toon/pages/ToonEditor.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/pages/HomePage.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/shared/components/Layout.tsx', LF will be replaced by CRLF the next time Git touches it
+ index.html                              |   3 [32m+[m
+ src/app/router.tsx                      |  33 [32m++[m
+ src/components/characters/HanaSheet.tsx |   8 [32m+[m[31m-[m
+ src/components/characters/RiaSheet.tsx  |   8 [32m+[m[31m-[m
+ src/components/characters/TonySheet.tsx |  10 [32m+[m[31m-[m
+ src/data/characters.ts                  |   8 [32m+[m[31m-[m
+ src/modules/toon/pages/ToonEditor.tsx   | 728 [32m+++++++++++++++++[m[31m---------------[m
+ src/pages/HomePage.tsx                  | 541 [32m++++++++++++[m[31m------------[m
+ src/shared/components/Layout.tsx        | 290 [32m+++++++[m[31m------[m
+ 9 files changed, 894 insertions(+), 735 deletions(-)

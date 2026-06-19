@@ -163,7 +163,7 @@ export default function StudentUnitSelectPage() {
   }
 
   return (
-    <StudentCreationLayout currentStep="unit" bgVariant="space" maxWidth="lg">
+    <StudentCreationLayout currentStep="unit" bgVariant="space" maxWidth="full">
       <div className="w-full">
         {/* 상단 제목 영역 */}
         <div className="text-center mb-8">

@@ -29,7 +29,14 @@ export default function StudentCreationLayout({
         </div>
 
         {/* 중앙 핵심 콘텐츠 영역 */}
-        <div className="flex-1 w-full max-w-3xl mx-auto flex flex-col gap-6 pl-0 md:pl-8">
+        <div className={`flex-1 w-full mx-auto flex flex-col gap-6 pl-0 md:pl-8
+          ${maxWidth === 'sm' ? 'max-w-xl' : 
+            maxWidth === 'md' ? 'max-w-2xl' : 
+            maxWidth === 'lg' ? 'max-w-3xl' : 
+            maxWidth === 'xl' ? 'max-w-4xl' : 
+            maxWidth === '2xl' ? 'max-w-5xl' : 
+            'max-w-[1200px]'}
+        `}>
           {children}
         </div>
       </div>

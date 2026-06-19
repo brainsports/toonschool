@@ -91,7 +91,7 @@ export default function StudentTopicMakerPage() {
   }
 
   return (
-    <StudentCreationLayout currentStep="topic" bgVariant="space" maxWidth="lg">
+    <StudentCreationLayout currentStep="topic" bgVariant="space" maxWidth="full">
       <div className="flex flex-col gap-8 animate-fade-in w-full pb-12 relative">
         
         {/* 헤더 영역 (제목 & 단원 배지) */}

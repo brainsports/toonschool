@@ -41,7 +41,7 @@ export default function UnitStep2Selection({
   canProceed
 }: UnitStep2SelectionProps) {
   return (
-    <div className="relative w-full max-w-[620px] mx-auto space-y-6 animate-fade-in pb-8">
+    <div className="relative w-full max-w-[1200px] mx-auto space-y-6 animate-fade-in pb-8">
       {/* 데스크톱 이전 버튼 */}
       <div className="hidden lg:flex lg:fixed lg:left-60 lg:top-24 z-40">
         <button

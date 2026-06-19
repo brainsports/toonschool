@@ -31,7 +31,7 @@ export default function UnitStep1Selection({
   isStep1Complete
 }: UnitStep1SelectionProps) {
   return (
-    <div className="w-full max-w-[620px] mx-auto space-y-6 animate-fade-in pb-8">
+    <div className="w-full max-w-[1200px] mx-auto space-y-6 animate-fade-in pb-8">
       {/* 학년 선택 */}
       <div className="card-glass px-6 py-6 md:px-7 md:py-7 space-y-5">
         <h3 className="font-jua text-lg text-purple-200 flex items-center gap-2">
@@ -48,7 +48,7 @@ export default function UnitStep1Selection({
         ) : grades.length === 0 ? (
           <p className="text-sm text-slate-300 font-bold py-8 text-center bg-white/5 rounded-2xl border border-white/10">준비된 학년이 없습니다.</p>
         ) : (
-          <div className="flex justify-center gap-6">
+          <div className="flex justify-center gap-8 md:gap-16">
             {grades.map((g) => {
               const isSelected = selectedGrade?.id === g.id
               return (
@@ -56,14 +56,14 @@ export default function UnitStep1Selection({
                   key={g.id}
                   onClick={() => onGradeSelect(g)}
                   className={`
-                    w-[92px] h-[92px] md:w-[100px] md:h-[100px] py-3 px-2 transition-all flex flex-col items-center justify-center gap-2
+                    w-[138px] h-[138px] md:w-[150px] md:h-[150px] py-3 px-2 transition-all flex flex-col items-center justify-center gap-2
                     ${isSelected
                       ? 'card-glass card-glass-active scale-105 text-white shadow-[0_0_20px_rgba(167,139,250,0.3)]'
                       : 'card-glass card-glass-interactive text-slate-300'}
                   `}
                 >
-                  <span className="text-4xl select-none mb-1">{gradeEmojis[g.label] || '🎒'}</span>
-                  <span className="font-jua text-sm md:text-base">{g.label}</span>
+                  <span className="text-5xl md:text-6xl select-none mb-2">{gradeEmojis[g.label] || '🎒'}</span>
+                  <span className="font-jua text-lg md:text-2xl text-slate-100">{g.label}</span>
                 </button>
               )
             })}
@@ -87,7 +87,7 @@ export default function UnitStep1Selection({
         ) : subjects.length === 0 && selectedGrade ? (
           <p className="text-sm text-slate-300 font-bold py-8 text-center bg-white/5 rounded-2xl border border-white/10">준비된 과목이 없습니다.</p>
         ) : (
-          <div className="flex flex-wrap justify-center gap-4">
+          <div className="flex flex-wrap justify-center gap-6 md:gap-10">
             {subjects.map((s) => {
               const isSelected = selectedSubject?.id === s.id
               return (
@@ -95,14 +95,14 @@ export default function UnitStep1Selection({
                   key={s.id}
                   onClick={() => onSubjectSelect(s)}
                   className={`
-                    w-[84px] h-[84px] md:w-[92px] md:h-[92px] py-3 px-2 transition-all flex flex-col items-center justify-center gap-2
+                    w-[126px] h-[135px] md:w-[140px] md:h-[150px] py-3 px-2 transition-all flex flex-col items-center justify-center gap-2
                     ${isSelected
                       ? 'card-glass card-glass-active scale-105 text-white shadow-[0_0_15px_rgba(56,189,248,0.3)] border-sky-400/50'
                       : 'card-glass card-glass-interactive text-slate-300'}
                   `}
                 >
-                  <span className="text-3xl select-none mb-1">{subjectEmojis[s.name] || '📚'}</span>
-                  <span className="font-jua text-sm">{s.name}</span>
+                  <span className="text-5xl md:text-6xl select-none mb-2">{subjectEmojis[s.name] || '📚'}</span>
+                  <span className="font-jua text-lg md:text-2xl text-slate-100">{s.name}</span>
                 </button>
               )
             })}
