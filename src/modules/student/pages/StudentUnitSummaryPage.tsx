@@ -5,6 +5,7 @@ import StudentCreationLayout from '../components/layout/StudentCreationLayout'
 import UnitSummaryCard from '../components/summary/UnitSummaryCard'
 import CoreConceptCard from '../components/summary/CoreConceptCard'
 import RelatedStoryCard from '../components/summary/RelatedStoryCard'
+import StudentPrimaryActionButton from '../components/layout/StudentPrimaryActionButton'
 import { ArrowLeft, ArrowRight } from 'lucide-react'
 import { mockUnitSummary } from '../data/studentMockData'
 
@@ -22,7 +23,7 @@ export default function StudentUnitSummaryPage() {
     : mockUnitSummary.summary
 
   return (
-    <StudentCreationLayout currentStep="summary" bgVariant="space" maxWidth="lg">
+    <StudentCreationLayout currentStep="summary" bgVariant="space" maxWidth="full">
       <div className="flex flex-col gap-6 animate-fade-in pb-8">
         
         {/* 헤더 영역 */}
@@ -45,7 +46,7 @@ export default function StudentUnitSummaryPage() {
             {summaryMode !== 'default' && (
               <button
                 onClick={() => setSummaryMode('default')}
-                className="card-glass card-glass-interactive w-full py-4 text-slate-300 font-jua text-base"
+                className="card-glass card-glass-interactive w-full min-h-[56px] text-slate-300 font-jua text-lg md:text-xl rounded-full"
               >
                 원래 상세 설명 보기
               </button>
@@ -63,19 +64,20 @@ export default function StudentUnitSummaryPage() {
         <div className="flex gap-4 pt-8 border-t border-white/10 mt-4">
           <button
             onClick={() => navigate('/student/comic/full')}
-            className="card-glass card-glass-interactive flex-1 py-5 text-slate-300 font-jua text-lg flex items-center justify-center"
+            className="card-glass card-glass-interactive flex-1 min-h-[72px] text-slate-300 font-jua text-xl md:text-2xl flex items-center justify-center rounded-full"
           >
             <ArrowLeft className="w-6 h-6 stroke-[3] mr-2" />
             <span>이전</span>
           </button>
 
-          <button
-            onClick={() => navigate('/student/quiz')}
-            className="btn-neon-purple flex-[2] py-5 text-lg font-jua flex items-center justify-center"
-          >
-            <span>퀴즈 풀러 가기 🧩</span>
-            <ArrowRight className="w-6 h-6 stroke-[3] ml-2" />
-          </button>
+          <div className="flex-[2] w-full">
+            <StudentPrimaryActionButton
+              onClick={() => navigate('/student/quiz')}
+            >
+              <span>퀴즈 풀러 가기 🧩</span>
+              <ArrowRight className="w-6 h-6 stroke-[3] ml-2" />
+            </StudentPrimaryActionButton>
+          </div>
         </div>
 
       </div>

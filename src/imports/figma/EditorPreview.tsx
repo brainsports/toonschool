@@ -4,7 +4,7 @@ import {
   BookOpen, Sparkles, ImageIcon, RefreshCw, Sun, Contrast, Moon,
   Eye, Upload, HelpCircle,
 } from "lucide-react";
-import { toast } from "sonner";
+const toast = Object.assign((...args: any[]) => console.log(args), { success: (...args: any[]) => console.log(args), error: (...args: any[]) => console.log(args) });
 import { HanaSheet } from "../../components/characters/HanaSheet";
 import { TonySheet } from "../../components/characters/TonySheet";
 import { RiaSheet } from "../../components/characters/RiaSheet";

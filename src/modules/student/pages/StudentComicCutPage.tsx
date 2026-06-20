@@ -1,30 +1,25 @@
-// 만화 컷 말풍선 완성 페이지 - 1컷~6컷 장면별 편집 퀘스트
-import { useState, useEffect } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useState } from 'react'
+import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import StudentCreationLayout from '../components/layout/StudentCreationLayout'
-import ComicScenePreview from '../components/comic/ComicScenePreview'
-import SpeechBubbleEditor from '../components/forms/SpeechBubbleEditor'
-import ComicCutActionButtons from '../components/comic/ComicCutActionButtons'
 import HalfwayPraiseMessage from '../components/comic/HalfwayPraiseMessage'
 import { mockComicCuts } from '../data/studentMockData'
 import { getNextCutPath, isHalfwayDone } from '../utils/studentFlowUtils'
 
+import StudentCanvasEditor from '../components/editor/StudentCanvasEditor'
+import { loadEditorState, saveEditorState } from '../components/editor/utils/editorStorage'
+import type { EditorState, CanvasElement } from '../components/editor/types'
+import { v4 as uuidv4 } from 'uuid'
+
 export default function StudentComicCutPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { cutNumber } = useParams<{ cutNumber: string }>()
   const currentCutNumber = parseInt(cutNumber || '1', 10)
 
   // 현재 컷 데이터 찾기
   const currentCut = mockComicCuts.find((c) => c.cutNumber === currentCutNumber) || mockComicCuts[0]
 
-  // 말풍선 대사 상태
-  const [speechText, setSpeechText] = useState(currentCut.speechBubble)
   const [showPraise, setShowPraise] = useState(false)
-
-  // 컷 번호가 변경될 때마다 입력 필드 값을 새 컷 데이터로 초기화
-  useEffect(() => {
-    setSpeechText(currentCut.speechBubble)
-  }, [currentCutNumber, currentCut])
 
   // 이전 컷 경로
   const backPath = currentCutNumber > 1
@@ -35,79 +30,84 @@ export default function StudentComicCutPage() {
   const handleNext = () => {
     if (isHalfwayDone(currentCutNumber)) {
       setShowPraise(true)
-      // 2.5초간 칭찬 팝업을 띄운 뒤 다음 경로로
       setTimeout(() => {
         setShowPraise(false)
-        navigate(getNextCutPath(currentCutNumber))
+        navigate(getNextCutPath(currentCutNumber), { state: location.state })
       }, 2500)
     } else {
-      navigate(getNextCutPath(currentCutNumber))
+      navigate(getNextCutPath(currentCutNumber), { state: location.state })
     }
   }
 
-  const handleKeep = () => {
-    handleNext()
+  const handlePrev = () => {
+    navigate(backPath, { state: location.state })
   }
 
-  const handleAiRewrite = () => {
-    const aiSuggestions = [
-      '앗! 연료가 3/8밖에 없잖아? 서둘러 계산해야 해!',
-      '목표 행성까지 거리를 통분해서 계산해보자!',
-      '통분을 하면 분모가 같아져서 덧셈이 무척 쉬워져!',
-      '야호! 연료 충전 100% 완료! 출발해볼까?',
-    ]
-    const random = aiSuggestions[Math.floor(Math.random() * aiSuggestions.length)]
-    setSpeechText(random)
-  }
+  const storageKey = `canvas_comic_state_cut_${currentCutNumber}`
+
+  const getInitialEditorState = (): EditorState => {
+    const saved = loadEditorState(storageKey);
+    if (saved) return saved;
+
+    const elements: CanvasElement[] = [];
+    
+    // 배경 (텍스트/이모지로 대체)
+    elements.push({
+      id: uuidv4(), type: 'text',
+      x: 0, y: 300, width: 1000, height: 1000,
+      rotation: 0, zIndex: 1, locked: true, visible: true,
+      props: { text: currentCut.backgroundEmoji, fontSize: 400, fill: '#cbd5e1', align: 'center', opacity: 0.3 }
+    });
+
+    // 캐릭터 (기본 공식 캐릭터 하나 사용)
+    elements.push({
+      id: uuidv4(), type: 'image',
+      x: 250, y: 400, width: 500, height: 600,
+      rotation: 0, zIndex: 5, locked: false, visible: true,
+      props: { src: '/images/toonschool/characters/official/hana-teacher.png' }
+    });
+
+    // 대사 (가짜 말풍선)
+    elements.push({
+      id: uuidv4(), type: 'shape',
+      x: 50, y: 50, width: 900, height: 250,
+      rotation: 0, zIndex: 9, locked: false, visible: true,
+      props: { shapeType: 'rect', cornerRadius: 40, fill: '#ffffff', stroke: '#cbd5e1', strokeWidth: 4 }
+    });
+
+    elements.push({
+      id: 'speech-bubble-text', type: 'text',
+      x: 100, y: 100, width: 800, height: 150,
+      rotation: 0, zIndex: 10, locked: false, visible: true,
+      props: { text: currentCut.speechBubble, fontSize: 50, fill: '#0f172a', fontFamily: 'Pretendard', align: 'center' }
+    });
+
+    return {
+      version: '1.1',
+      elements,
+      canvasWidth: 1000,
+      canvasHeight: 1000
+    };
+  };
 
   return (
-    <StudentCreationLayout currentStep="comic" bgVariant="space" maxWidth="lg">
+    <StudentCreationLayout currentStep="comic" bgVariant="space" maxWidth="full">
       
-      {/* 절반 완성 축하 오버레이 */}
       <HalfwayPraiseMessage visible={showPraise} />
 
-      <div className="flex flex-col gap-6 w-full animate-fade-in pb-8">
-        
-        {/* 헤더 영역 */}
-        <div className="text-center mb-2">
-          <div className="inline-flex items-center justify-center gap-3 mb-2">
-            <h1 className="text-[2rem] font-jua text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">만화를 만들어요</h1>
-            <span className="bg-white/10 backdrop-blur-md border border-white/20 text-purple-200 px-4 py-1.5 rounded-full text-sm font-jua shadow-sm">
-              {currentCutNumber} / 6 컷
-            </span>
-          </div>
-        </div>
-
-        {/* 태블릿 최적화: 좌우 2컬럼 배치 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-          
-          {/* 좌측: 만화 컷 미리보기 프레임 */}
-          <div className="space-y-4">
-            <ComicScenePreview cut={{ ...currentCut, speechBubble: speechText }} />
-          </div>
-
-          {/* 우측: 말풍선 텍스트 수정 및 액션 버튼 */}
-          <div className="space-y-6">
-            <SpeechBubbleEditor
-              text={speechText}
-              onChange={setSpeechText}
-              cutNumber={currentCutNumber}
-            />
-
-            <ComicCutActionButtons
-              cutNumber={currentCutNumber}
-              totalCuts={6}
-              onKeep={handleKeep}
-              onEdit={() => {}}
-              onAiRewrite={handleAiRewrite}
-              onNext={handleNext}
-              onBack={() => navigate(backPath)}
-            />
-          </div>
-
-        </div>
+      <div className="w-full flex-1 flex flex-col min-h-0 animate-fade-in">
+        <StudentCanvasEditor 
+          initialState={getInitialEditorState()}
+          subject={(location.state as any)?.selection?.subjectId || undefined}
+          onSave={(state) => saveEditorState(storageKey, state)}
+          canvasWidth={1000}
+          canvasHeight={1000}
+          onPrev={handlePrev}
+          onNext={handleNext}
+          prevText="이전으로"
+          nextText="다음 장면"
+        />
       </div>
-
     </StudentCreationLayout>
   )
 }

@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import StudentCreationLayout from '../components/layout/StudentCreationLayout'
 import BackCoverForm from '../components/forms/BackCoverForm'
+import StudentPrimaryActionButton from '../components/layout/StudentPrimaryActionButton'
 import { ArrowLeft, ArrowRight } from 'lucide-react'
 import { mockStudentProfile } from '../data/studentMockData'
 
@@ -14,7 +15,7 @@ export default function StudentBackCoverPage() {
   const canProceed = learnedPoints.trim().length > 0 && impression.trim().length > 0
 
   return (
-    <StudentCreationLayout currentStep="backCover" bgVariant="space" maxWidth="lg">
+    <StudentCreationLayout currentStep="backCover" bgVariant="space" maxWidth="full">
       <div className="flex flex-col gap-6 animate-fade-in pb-8">
         
         {/* 헤더 영역 */}
@@ -41,23 +42,21 @@ export default function StudentBackCoverPage() {
         <div className="flex gap-4 pt-8 border-t border-white/10 mt-auto">
           <button
             onClick={() => navigate('/student/quiz')}
-            className="card-glass card-glass-interactive flex-1 py-5 text-slate-300 font-jua text-lg flex items-center justify-center"
+            className="card-glass card-glass-interactive flex-1 min-h-[72px] text-slate-300 font-jua text-xl md:text-2xl flex items-center justify-center rounded-full"
           >
             <ArrowLeft className="w-6 h-6 stroke-[3] mr-2" />
             <span>이전</span>
           </button>
 
-          <button
-            disabled={!canProceed}
-            onClick={() => { if (canProceed) navigate('/student/complete') }}
-            className={`flex items-center justify-center flex-[2] py-5 text-lg font-jua
-              ${canProceed 
-                ? 'btn-neon-purple' 
-                : 'btn-neon-disabled'}`}
-          >
-            <span>완성 🏆</span>
-            <ArrowRight className="w-6 h-6 stroke-[3] ml-2" />
-          </button>
+          <div className="flex-[2] w-full">
+            <StudentPrimaryActionButton
+              disabled={!canProceed}
+              onClick={() => { if (canProceed) navigate('/student/complete') }}
+            >
+              <span>완성 🏆</span>
+              <ArrowRight className="w-6 h-6 stroke-[3] ml-2" />
+            </StudentPrimaryActionButton>
+          </div>
         </div>
 
       </div>

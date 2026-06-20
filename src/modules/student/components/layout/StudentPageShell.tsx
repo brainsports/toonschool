@@ -42,13 +42,15 @@ export default function StudentPageShell({
   const navigate = useNavigate()
   const profile = mockStudentProfile
 
+  const isFull = maxWidth === 'full';
+
   return (
-    <div className={`min-h-screen flex flex-col pb-12 bg-gradient-to-tr ${bgOverlays[bgVariant as keyof typeof bgOverlays] || bgOverlays.default} relative overflow-hidden`}>
+    <div className={`${isFull ? 'h-[100dvh] overflow-hidden' : 'min-h-screen overflow-x-hidden'} flex flex-col ${isFull ? 'pb-0' : 'pb-12'} bg-gradient-to-tr ${bgOverlays[bgVariant as keyof typeof bgOverlays] || bgOverlays.default} relative`}>
       {bgVariant === 'space' && <StudentSpaceBackground />}
       
       {/* 상단 게임 HUD 영역 */}
       {showHUD && (
-        <header className="hud-panel sticky top-0 z-50 px-4 py-3 mb-6 bg-white/80 border-b-2 border-purple-100">
+        <header className={`hud-panel relative z-50 px-4 py-3 ${isFull ? 'mb-0 shrink-0' : 'mb-6 sticky top-0'} bg-white/80 border-b-2 border-purple-100`}>
           <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
             
             {/* 좌측: 프로필 & 레벨 */}
@@ -126,7 +128,7 @@ export default function StudentPageShell({
       )}
 
       {/* 메인 컨텐츠 영역 */}
-      <main className={`flex-1 mx-auto px-4 w-full relative z-10 ${maxWidths[maxWidth]} ${className}`}>
+      <main className={`flex-1 flex flex-col mx-auto ${isFull ? 'px-0 overflow-hidden' : 'px-4'} w-full relative z-10 ${maxWidths[maxWidth]} ${className}`}>
         {children}
       </main>
     </div>

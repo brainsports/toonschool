@@ -28,18 +28,18 @@ export default function ComicCutActionButtons({
         <button
           type="button"
           onClick={onKeep}
-          className="card-glass card-glass-interactive py-4 text-purple-200 font-jua flex items-center justify-center text-lg"
+          className="card-glass card-glass-interactive min-h-[72px] text-purple-200 font-jua flex items-center justify-center text-xl md:text-2xl rounded-full"
         >
-          <Check className="w-5 h-5 stroke-[3] mr-1.5" />
+          <Check className="w-6 h-6 stroke-[3] mr-2" />
           <span>대사 저장하기</span>
         </button>
 
         <button
           type="button"
           onClick={onAiRewrite}
-          className="card-glass card-glass-interactive py-4 text-sky-300 font-jua flex items-center justify-center text-lg"
+          className="card-glass card-glass-interactive min-h-[72px] text-sky-300 font-jua flex items-center justify-center text-xl md:text-2xl rounded-full"
         >
-          <Sparkles className="w-5 h-5 fill-sky-300 stroke-sky-200 stroke-2 mr-1.5" />
+          <Sparkles className="w-6 h-6 fill-sky-300 stroke-sky-200 stroke-2 mr-2" />
           <span>AI 다른 추천</span>
         </button>
       </div>
@@ -50,9 +50,9 @@ export default function ComicCutActionButtons({
         <button
           type="button"
           onClick={onBack}
-          className="card-glass card-glass-interactive py-4 text-slate-300 font-jua text-lg flex items-center justify-center"
+          className="card-glass card-glass-interactive min-h-[72px] text-slate-300 font-jua text-xl md:text-2xl flex items-center justify-center rounded-full"
         >
-          <ArrowLeft className="w-5 h-5 stroke-[3] mr-1.5" />
+          <ArrowLeft className="w-6 h-6 stroke-[3] mr-2" />
           <span>이전 장면</span>
         </button>
 
@@ -60,10 +60,10 @@ export default function ComicCutActionButtons({
         <button
           type="button"
           onClick={onNext}
-          className="btn-neon-purple py-4 font-jua text-lg flex items-center justify-center"
+          className="btn-neon-purple min-h-[72px] font-jua text-xl md:text-2xl flex items-center justify-center rounded-full"
         >
           <span>{isLast ? '전체 보기' : '다음 장면'}</span>
-          <ArrowRight className="w-5 h-5 stroke-[3] ml-1.5" />
+          <ArrowRight className="w-6 h-6 stroke-[3] ml-2" />
         </button>
       </div>
     </div>

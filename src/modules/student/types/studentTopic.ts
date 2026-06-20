@@ -7,12 +7,18 @@ export interface TopicRecommendation {
   storyMood: string
 }
 
+export interface KeywordItem {
+  word: string
+  reason?: string
+}
+
 export interface TopicGenerationRequest {
   gradeName: string
   subjectName: string
   majorUnitName: string
   middleUnitName: string
   extraRequest?: string
+  selectedKeywords?: string[]
 }
 
 export type TopicGenerationState = 'idle' | 'loading' | 'success' | 'error'

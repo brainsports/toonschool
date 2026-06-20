@@ -18,10 +18,7 @@ export default function TopicRecommendationGrid({
 }: TopicRecommendationGridProps) {
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2 select-none px-2">
-        <span className="text-2xl animate-float">🤖</span>
-        <h3 className="text-lg font-jua text-purple-200">AI 추천 이야기 목록</h3>
-      </div>
+
       
       {isLoading ? (
         <div className="py-12 flex flex-col items-center justify-center space-y-4 bg-white/5 rounded-[2rem] border border-white/10">
@@ -33,14 +30,8 @@ export default function TopicRecommendationGrid({
             주제를 고르고 있어요...
           </p>
         </div>
-      ) : topics.length === 0 ? (
-        <div className="py-8 text-center bg-white/5 rounded-2xl border border-white/10">
-          <p className="text-sm font-bold text-slate-300 leading-relaxed">
-            아직 추천된 이야기가 없어요.<br/>왼쪽에서 "AI 추천 마법 부리기" 버튼을 눌러주세요.
-          </p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 gap-3.5">
+      ) : topics.length === 0 ? null : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {topics.map((topic) => (
             <TopicRecommendationCard
               key={topic.id}

@@ -4,6 +4,7 @@ import StudentCreationLayout from '../components/layout/StudentCreationLayout'
 import ComicFullViewGrid from '../components/comic/ComicFullViewGrid'
 import ComicFullViewToolbar from '../components/comic/ComicFullViewToolbar'
 import { mockComicCuts } from '../data/studentMockData'
+import StudentWideCard from '../components/layout/StudentWideCard'
 
 export default function StudentComicFullViewPage() {
   const navigate = useNavigate()
@@ -34,7 +35,7 @@ export default function StudentComicFullViewPage() {
 
         <div className="space-y-8">
           {/* 만화책 도화지 프레임 */}
-          <div className="card-glass p-6 md:p-10 shadow-lg bg-white/5 border border-white/10">
+          <StudentWideCard className="shadow-lg bg-white/5 border border-white/10">
             {/* 책 타이틀 및 작성자 정보 */}
             <div className="border-b border-white/10 pb-6 mb-8 flex flex-col md:flex-row items-center justify-between gap-4">
               <div className="text-center md:text-left select-none">
@@ -58,7 +59,7 @@ export default function StudentComicFullViewPage() {
               cuts={mockComicCuts}
               onRevise={handleRevise}
             />
-          </div>
+          </StudentWideCard>
 
           {/* 제어 툴바 */}
           <ComicFullViewToolbar

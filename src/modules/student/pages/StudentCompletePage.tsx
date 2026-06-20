@@ -4,12 +4,14 @@ import StudentCreationLayout from '../components/layout/StudentCreationLayout'
 import RewardCard from '../components/cards/RewardCard'
 import { mockRewardResult, mockStudentProfile } from '../data/studentMockData'
 import { Sparkles, ArrowRight } from 'lucide-react'
+import StudentWideCard from '../components/layout/StudentWideCard'
+import StudentPrimaryActionButton from '../components/layout/StudentPrimaryActionButton'
 
 export default function StudentCompletePage() {
   const navigate = useNavigate()
 
   return (
-    <StudentCreationLayout currentStep="complete" bgVariant="space" maxWidth="lg">
+    <StudentCreationLayout currentStep="complete" bgVariant="space" maxWidth="full">
       <div className="flex flex-col gap-6 animate-fade-in pb-8">
         
         {/* 헤더 영역 */}
@@ -30,7 +32,7 @@ export default function StudentCompletePage() {
 
         <div className="space-y-8">
           {/* 완성된 책 표지 카드 */}
-          <div className="card-glass bg-white/5 border border-white/10 p-8 md:p-10 shadow-lg text-center backdrop-blur-sm rounded-[2rem]">
+          <StudentWideCard className="bg-white/5 border border-white/10 shadow-lg text-center backdrop-blur-sm rounded-[2rem]">
             <div className="w-32 h-32 rounded-[2rem] bg-purple-500/20 border border-purple-400/50 flex items-center justify-center text-7xl mx-auto mb-8 animate-float shadow-inner">
               🚀
             </div>
@@ -45,7 +47,7 @@ export default function StudentCompletePage() {
                 <span>작가: {mockStudentProfile.name} · 2026년 6월 19일</span>
               </p>
             </div>
-          </div>
+          </StudentWideCard>
 
           {/* 보상 카드 */}
           <RewardCard reward={mockRewardResult} />
@@ -53,7 +55,7 @@ export default function StudentCompletePage() {
           {/* 선생님에게 제출 */}
           <button
             onClick={() => alert('선생님께 만화책 제출을 완료했습니다! 📤')}
-            className="card-glass card-glass-interactive w-full py-5 text-xl text-emerald-300 hover:border-emerald-400/50 hover:bg-emerald-500/20 border border-emerald-500/30 bg-emerald-900/20 font-jua flex justify-center items-center"
+            className="card-glass card-glass-interactive w-full min-h-[72px] text-xl md:text-2xl text-emerald-300 hover:border-emerald-400/50 hover:bg-emerald-500/20 border border-emerald-500/30 bg-emerald-900/20 font-jua flex justify-center items-center rounded-full"
           >
             <span>선생님에게 제출하기 📤</span>
           </button>
@@ -63,18 +65,19 @@ export default function StudentCompletePage() {
         <div className="flex gap-4 pt-8 border-t border-white/10 mt-auto">
           <button
             onClick={() => navigate('/student/my')}
-            className="card-glass card-glass-interactive flex-1 py-5 text-slate-300 bg-white/5 border border-white/10 font-jua text-lg"
+            className="card-glass card-glass-interactive flex-1 min-h-[72px] text-slate-300 bg-white/5 border border-white/10 font-jua text-xl md:text-2xl flex items-center justify-center rounded-full"
           >
             <span>내 작품 보기 📖</span>
           </button>
 
-          <button
-            onClick={() => navigate('/student/my')}
-            className="btn-neon-purple flex-[2] py-5 text-lg font-jua flex items-center justify-center"
-          >
-            <span>나의 페이지로 가기</span>
-            <ArrowRight className="w-6 h-6 stroke-[3] ml-2" />
-          </button>
+          <div className="flex-[2] w-full">
+            <StudentPrimaryActionButton
+              onClick={() => navigate('/student/my')}
+            >
+              <span>나의 페이지로 가기</span>
+              <ArrowRight className="w-6 h-6 stroke-[3] ml-2" />
+            </StudentPrimaryActionButton>
+          </div>
         </div>
 
       </div>

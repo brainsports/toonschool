@@ -1,0 +1,94 @@
+import { useState } from 'react';
+import type { CanvasElement } from '../types';
+import { CHARACTER_ASSETS, normalizeSubject } from '../../../data/characterAssets';
+import type { CharacterSubject } from '../../../data/characterAssets';
+
+interface Props {
+  onAddElement: (element: Omit<CanvasElement, 'id'>) => void;
+  subject?: string;
+}
+
+export default function CharacterPanel({ onAddElement, subject }: Props) {
+  const normSubject = normalizeSubject(subject);
+  
+  const [activeTab, setActiveTab] = useState<CharacterSubject | 'all' | 'current'>(
+    normSubject !== 'official' ? 'current' : 'official'
+  );
+
+  const handleAddCharacter = (src: string, layerName: string) => {
+    onAddElement({
+      type: 'image',
+      x: 200, y: 200,
+      width: 250, height: 400,
+      rotation: 0, zIndex: 100,
+      locked: false, visible: true,
+      props: { src, layerName }
+    });
+  };
+
+  const tabs = [
+    ...(normSubject !== 'official' ? [{ id: 'current', label: '현재 과목' }] : []),
+    { id: 'all', label: '전체' },
+    { id: 'official', label: '공용' },
+    { id: 'korean', label: '국어' },
+    { id: 'english', label: '영어' },
+    { id: 'math', label: '수학' },
+    { id: 'science', label: '과학' },
+    { id: 'social', label: '사회' },
+  ] as const;
+
+  const filteredCharacters = CHARACTER_ASSETS.filter(char => {
+    if (activeTab === 'all') return true;
+    if (activeTab === 'current') return char.subject === normSubject;
+    return char.subject === activeTab;
+  });
+
+  return (
+    <div className="w-full bg-slate-800 h-full p-4 overflow-hidden flex flex-col min-h-0">
+      <h3 className="text-white font-bold mb-4 shrink-0">캐릭터</h3>
+      
+      <div className="flex flex-wrap gap-2 mb-4 shrink-0">
+        {tabs.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id as any)}
+            className={`px-3 py-1.5 text-xs font-bold rounded-full transition-colors ${
+              activeTab === tab.id
+                ? 'bg-purple-600 text-white'
+                : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+            }`}
+            aria-label={tab.label}
+            title={tab.label}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 overflow-y-auto overscroll-contain pb-4 flex-1 min-h-0">
+        {filteredCharacters.map(char => (
+          <button 
+            key={char.id}
+            onClick={() => handleAddCharacter(char.imageUrl, char.layerName)}
+            className="bg-slate-700 hover:bg-slate-600 rounded-xl p-2 flex flex-col items-center transition-all group"
+            aria-label={char.name}
+            title={char.name}
+          >
+            <div className="h-24 w-full flex items-center justify-center bg-slate-900/50 rounded-lg mb-2 p-1">
+              <img 
+                src={char.imageUrl} 
+                alt={char.name} 
+                className="h-full object-contain drop-shadow-md group-hover:scale-110 transition-transform" 
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MCIgaGVpZ2h0PSI1MCIgdmlld0JveD0iMCAwIDUwIDUwIj48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1zaXplPSIyMCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPj88L3RleHQ+PC9zdmc+'; // simple SVG fallback
+                  console.error('Image load failed:', char.imageUrl);
+                }}
+              />
+            </div>
+            <span className="text-xs text-slate-300 font-bold text-center break-words w-full">{char.name}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}

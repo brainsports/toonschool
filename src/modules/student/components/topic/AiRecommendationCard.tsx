@@ -2,23 +2,23 @@ import TopicRecommendationGrid from './TopicRecommendationGrid'
 import type { TopicRecommendation, TopicGenerationState } from '../../types/studentTopic'
 
 interface AiRecommendationCardProps {
-  topics: TopicRecommendation[]
   visibleTopics: TopicRecommendation[]
   selectedTopicId: string | null
   onSelectTopic: (id: string | null) => void
   genState: TopicGenerationState
-  showAllTopics: boolean
-  onToggleShowAll: () => void
+  visibleCount: number
+  totalCount: number
+  onLoadMore: () => void
 }
 
 export default function AiRecommendationCard({
-  topics,
   visibleTopics,
   selectedTopicId,
   onSelectTopic,
   genState,
-  showAllTopics,
-  onToggleShowAll
+  visibleCount,
+  totalCount,
+  onLoadMore
 }: AiRecommendationCardProps) {
   return (
     <div className="flex flex-col lg:flex-row gap-6 items-start">
@@ -31,14 +31,14 @@ export default function AiRecommendationCard({
           isLoading={genState === 'loading'}
         />
 
-        {topics.length > 4 && (
-          <div className="text-center pt-6">
+        {visibleCount < totalCount && (
+          <div className="text-center pt-8">
             <button
               type="button"
-              onClick={onToggleShowAll}
-              className="card-glass card-glass-interactive px-8 py-3 text-purple-200 font-jua text-sm"
+              onClick={onLoadMore}
+              className="card-glass card-glass-interactive px-8 py-4 text-purple-200 font-jua text-base md:text-lg min-h-[56px] rounded-full inline-flex items-center justify-center"
             >
-              {showAllTopics ? '▲ 숨기기' : `➕ ${topics.length - 4}개의 추천 주제 더 보기`}
+              <span>+ 2개 더 보기</span>
             </button>
           </div>
         )}

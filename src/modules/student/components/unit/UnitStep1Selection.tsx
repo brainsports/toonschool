@@ -1,5 +1,7 @@
 import { Loader2, ArrowRight } from 'lucide-react'
 import type { StudentGradeOption, StudentSubjectOption, CurriculumLoadState } from '../../types/studentCurriculum'
+import StudentWideCard from '../layout/StudentWideCard'
+import StudentInnerPanel from '../layout/StudentInnerPanel'
 
 interface UnitStep1SelectionProps {
   grades: StudentGradeOption[]
@@ -33,7 +35,7 @@ export default function UnitStep1Selection({
   return (
     <div className="w-full max-w-[1200px] mx-auto space-y-6 animate-fade-in pb-8">
       {/* 학년 선택 */}
-      <div className="card-glass px-6 py-6 md:px-7 md:py-7 space-y-5">
+      <StudentWideCard className="!gap-5">
         <h3 className="font-jua text-lg text-purple-200 flex items-center gap-2">
           <span className="w-6 h-6 rounded-full bg-purple-500/40 border border-purple-400/60 flex items-center justify-center text-sm text-purple-100">
             1
@@ -46,7 +48,7 @@ export default function UnitStep1Selection({
             <Loader2 className="animate-spin w-10 h-10" />
           </div>
         ) : grades.length === 0 ? (
-          <p className="text-sm text-slate-300 font-bold py-8 text-center bg-white/5 rounded-2xl border border-white/10">준비된 학년이 없습니다.</p>
+          <StudentInnerPanel>준비된 학년이 없습니다.</StudentInnerPanel>
         ) : (
           <div className="flex justify-center gap-8 md:gap-16">
             {grades.map((g) => {
@@ -69,10 +71,10 @@ export default function UnitStep1Selection({
             })}
           </div>
         )}
-      </div>
+      </StudentWideCard>
 
       {/* 과목 선택 */}
-      <div className={`card-glass px-6 py-6 md:px-7 md:py-7 space-y-5 transition-all duration-300 ${selectedGrade ? 'opacity-100 translate-y-0' : 'opacity-40 translate-y-4 pointer-events-none'}`}>
+      <StudentWideCard className={`!gap-5 transition-all duration-300 ${selectedGrade ? 'opacity-100 translate-y-0' : 'opacity-40 translate-y-4 pointer-events-none'}`}>
         <h3 className="font-jua text-lg text-sky-300 flex items-center gap-2">
           <span className="w-6 h-6 rounded-full bg-sky-500/40 border border-sky-400/60 flex items-center justify-center text-sm text-sky-100">
             2
@@ -85,7 +87,7 @@ export default function UnitStep1Selection({
             <Loader2 className="animate-spin w-10 h-10" />
           </div>
         ) : subjects.length === 0 && selectedGrade ? (
-          <p className="text-sm text-slate-300 font-bold py-8 text-center bg-white/5 rounded-2xl border border-white/10">준비된 과목이 없습니다.</p>
+          <StudentInnerPanel>준비된 과목이 없습니다.</StudentInnerPanel>
         ) : (
           <div className="flex flex-wrap justify-center gap-6 md:gap-10">
             {subjects.map((s) => {
@@ -108,7 +110,7 @@ export default function UnitStep1Selection({
             })}
           </div>
         )}
-      </div>
+      </StudentWideCard>
 
       {/* 하단 1단계 버튼 */}
       <div className="flex justify-end pt-2 lg:fixed lg:right-10 lg:top-24 lg:pt-0 z-40">

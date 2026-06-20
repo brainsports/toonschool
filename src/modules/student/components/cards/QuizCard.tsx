@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import type { QuizQuestion } from '../../types/studentFlow'
 import { XCircle, CheckCircle2 } from 'lucide-react'
+import StudentWideCard from '../layout/StudentWideCard'
 
 interface QuizCardProps {
   question: QuizQuestion
@@ -24,7 +25,7 @@ export default function QuizCard({
   }
 
   return (
-    <div className="card-glass p-6 md:p-8 space-y-6">
+    <StudentWideCard>
       
       {/* 문제 번호 및 유형 */}
       <div className="flex items-center justify-between border-b border-white/10 pb-4">
@@ -104,6 +105,6 @@ export default function QuizCard({
         </div>
       )}
 
-    </div>
+    </StudentWideCard>
   )
 }

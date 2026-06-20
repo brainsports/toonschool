@@ -2,6 +2,7 @@
 import type { RewardResult } from '../../types/studentFlow'
 import StudentRewardBadge from '../StudentRewardBadge'
 import { Star } from 'lucide-react'
+import StudentWideCard from '../layout/StudentWideCard'
 
 interface RewardCardProps {
   reward: RewardResult
@@ -9,7 +10,7 @@ interface RewardCardProps {
 
 export default function RewardCard({ reward }: RewardCardProps) {
   return (
-    <div className="card-glass p-6 md:p-8 bg-amber-900/20 border border-amber-500/30 text-white w-full relative overflow-hidden shadow-sm">
+    <StudentWideCard className="!bg-amber-900/20 !border-amber-500/30 text-white relative overflow-hidden shadow-sm !p-8 md:!p-10">
       {/* 장식용 코너 리본 */}
       <div className="absolute top-0 right-0 w-20 h-20 bg-yellow-400/80 border-l border-b border-white/20 rotate-45 translate-x-10 -translate-y-10 shadow-sm" />
       
@@ -66,6 +67,6 @@ export default function RewardCard({ reward }: RewardCardProps) {
           </p>
         )}
       </div>
-    </div>
+    </StudentWideCard>
   )
 }

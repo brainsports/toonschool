@@ -11,9 +11,9 @@ export default function SpeechBubbleEditor({
   cutNumber,
 }: SpeechBubbleEditorProps) {
   return (
-    <div className="card-glass p-6 space-y-4">
-      <h3 className="text-base font-jua text-purple-200 flex items-center gap-2 select-none">
-        <span className="text-xl">💬</span> {cutNumber}번 컷 대사 변경하기
+    <div className="card-glass p-8 md:p-10 min-h-[240px] space-y-4 flex flex-col justify-center">
+      <h3 className="text-lg md:text-xl font-jua text-purple-200 flex items-center gap-2 select-none mb-2">
+        <span className="text-2xl">💬</span> {cutNumber}번 컷 대사 변경하기
       </h3>
 
       {/* 대사 수정 입력칸 */}

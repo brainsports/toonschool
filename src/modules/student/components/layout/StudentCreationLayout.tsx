@@ -17,10 +17,12 @@ export default function StudentCreationLayout({
   bgVariant = 'default',
   maxWidth = 'lg'
 }: StudentCreationLayoutProps) {
+  const isFull = maxWidth === 'full';
   return (
     <StudentPageShell bgVariant={bgVariant} maxWidth={maxWidth}>
-      <div className="flex w-full min-h-[80vh] items-start pt-6 md:pt-12 relative max-w-6xl mx-auto">
-        <div className="hidden md:block w-[200px] shrink-0 fixed left-0 top-24 bottom-0 h-[calc(100vh-6rem)] bg-[#05030A]/95 z-30 pl-4 pt-2 overflow-y-auto">
+      <div className={`flex w-full items-stretch relative ${isFull ? 'flex-1 pt-0 overflow-hidden min-h-0' : 'min-h-[80vh] pt-6 md:pt-12 max-w-6xl mx-auto'}`}>
+        {/* 사이드바 */}
+        <div className={`hidden md:block shrink-0 bg-[#05030A]/95 z-30 overflow-y-auto ${isFull ? 'w-[180px] pl-2 pt-2 relative h-full' : 'w-[200px] pl-4 pt-2 fixed left-0 top-24 bottom-0'}`}>
           <StudentFlowSidebar 
             currentStep={currentStep} 
             completedSteps={completedSteps} 
@@ -29,13 +31,13 @@ export default function StudentCreationLayout({
         </div>
 
         {/* 중앙 핵심 콘텐츠 영역 */}
-        <div className={`flex-1 w-full mx-auto flex flex-col gap-6 pl-0 md:pl-8
-          ${maxWidth === 'sm' ? 'max-w-xl' : 
-            maxWidth === 'md' ? 'max-w-2xl' : 
-            maxWidth === 'lg' ? 'max-w-3xl' : 
-            maxWidth === 'xl' ? 'max-w-4xl' : 
-            maxWidth === '2xl' ? 'max-w-5xl' : 
-            'max-w-[1200px]'}
+        <div className={`flex-1 w-full flex flex-col ${isFull ? 'max-w-none gap-0 mx-0 overflow-hidden min-h-0' : 'pl-0 md:pl-8 mx-auto gap-6'}
+          ${!isFull && maxWidth === 'sm' ? 'max-w-xl' : 
+            !isFull && maxWidth === 'md' ? 'max-w-2xl' : 
+            !isFull && maxWidth === 'lg' ? 'max-w-3xl' : 
+            !isFull && maxWidth === 'xl' ? 'max-w-4xl' : 
+            !isFull && maxWidth === '2xl' ? 'max-w-5xl' : 
+            !isFull ? 'max-w-[1200px]' : ''}
         `}>
           {children}
         </div>

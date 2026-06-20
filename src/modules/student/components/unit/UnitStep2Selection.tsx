@@ -6,6 +6,9 @@ import type {
   StudentMiddleUnitOption, 
   CurriculumLoadState 
 } from '../../types/studentCurriculum'
+import StudentWideCard from '../layout/StudentWideCard'
+import StudentInnerPanel from '../layout/StudentInnerPanel'
+import StudentPrimaryActionButton from '../layout/StudentPrimaryActionButton'
 
 interface UnitStep2SelectionProps {
   selectedGrade: StudentGradeOption | null
@@ -54,7 +57,7 @@ export default function UnitStep2Selection({
       </div>
 
       {/* 단원 선택 */}
-      <div className="card-glass p-6 md:p-8 space-y-8">
+      <StudentWideCard className="!gap-8">
         <div className="flex items-center gap-3 bg-white/10 p-4 rounded-2xl border border-white/20">
           <span className="text-2xl">{gradeEmojis[selectedGrade?.label || ''] || '🎒'}</span>
           <span className="font-jua text-lg text-purple-200">{selectedGrade?.label}</span>
@@ -73,7 +76,7 @@ export default function UnitStep2Selection({
               <Loader2 className="animate-spin w-8 h-8" />
             </div>
           ) : majorUnits.length === 0 ? (
-            <p className="text-sm text-slate-300 font-bold py-6 text-center bg-white/5 border border-white/10 rounded-2xl">단원이 없습니다.</p>
+            <StudentInnerPanel>단원이 없습니다.</StudentInnerPanel>
           ) : (
             <select
               value={selectedMajorUnit?.id || ''}
@@ -101,7 +104,7 @@ export default function UnitStep2Selection({
                 <Loader2 className="animate-spin w-8 h-8" />
               </div>
             ) : middleUnits.length === 0 ? (
-              <p className="text-sm text-slate-300 font-bold py-6 text-center bg-white/5 border border-white/10 rounded-2xl">세부 단원이 없습니다.</p>
+              <StudentInnerPanel>세부 단원이 없습니다.</StudentInnerPanel>
             ) : (
               <select
                 value={selectedMiddleUnit?.id || ''}
@@ -118,7 +121,7 @@ export default function UnitStep2Selection({
             )}
           </div>
         )}
-      </div>
+      </StudentWideCard>
 
       {/* 하단 2단계 버튼 */}
       <div className="flex flex-col md:flex-row gap-4 pt-4">
@@ -131,16 +134,14 @@ export default function UnitStep2Selection({
           <span>이전</span>
         </button>
 
-        <button
-          disabled={!canProceed}
-          onClick={onProceed}
-          className={`
-            flex-[2] py-4 flex items-center justify-center font-jua text-lg rounded-full transition-all
-            ${canProceed ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-[0_0_20px_rgba(124,58,237,0.4)] hover:scale-105' : 'bg-white/5 text-slate-500 border border-white/10'}
-          `}
-        >
-          <span>주제 고르기 ✨</span>
-        </button>
+        <div className="flex-[2] w-full">
+          <StudentPrimaryActionButton
+            disabled={!canProceed}
+            onClick={onProceed}
+          >
+            주제 고르기 ✨
+          </StudentPrimaryActionButton>
+        </div>
       </div>
     </div>
   )

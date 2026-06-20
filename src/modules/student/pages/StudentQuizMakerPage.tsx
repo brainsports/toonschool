@@ -6,6 +6,7 @@ import QuizCard from '../components/cards/QuizCard'
 import { ArrowLeft, ArrowRight } from 'lucide-react'
 import { mockQuizQuestions } from '../data/studentMockData'
 import { Trophy } from 'lucide-react'
+import StudentPrimaryActionButton from '../components/layout/StudentPrimaryActionButton'
 
 export default function StudentQuizMakerPage() {
   const navigate = useNavigate()
@@ -26,7 +27,7 @@ export default function StudentQuizMakerPage() {
   const allAnswered = answeredCount >= quizSet.length
 
   return (
-    <StudentCreationLayout currentStep="quiz" bgVariant="space" maxWidth="lg">
+    <StudentCreationLayout currentStep="quiz" bgVariant="space" maxWidth="full">
       <div className="flex flex-col gap-6 animate-fade-in pb-8">
         
         {/* 헤더 영역 */}
@@ -69,23 +70,21 @@ export default function StudentQuizMakerPage() {
         <div className="flex gap-4 pt-8 border-t border-white/10 mt-auto">
           <button
             onClick={() => navigate('/student/summary')}
-            className="card-glass card-glass-interactive flex-1 py-5 text-slate-300 font-jua text-lg flex items-center justify-center"
+            className="card-glass card-glass-interactive flex-1 min-h-[72px] text-slate-300 font-jua text-xl md:text-2xl flex items-center justify-center rounded-full"
           >
             <ArrowLeft className="w-6 h-6 stroke-[3] mr-2" />
             <span>이전</span>
           </button>
 
-          <button
-            disabled={!allAnswered}
-            onClick={() => navigate('/student/back-cover')}
-            className={`flex items-center justify-center flex-[2] py-5 text-lg font-jua
-              ${allAnswered 
-                ? 'btn-neon-purple' 
-                : 'btn-neon-disabled'}`}
-          >
-            <span>뒤표지 만들기 🎨</span>
-            <ArrowRight className="w-6 h-6 stroke-[3] ml-2" />
-          </button>
+          <div className="flex-[2] w-full">
+            <StudentPrimaryActionButton
+              disabled={!allAnswered}
+              onClick={() => navigate('/student/back-cover')}
+            >
+              <span>뒤표지 만들기 🎨</span>
+              <ArrowRight className="w-6 h-6 stroke-[3] ml-2" />
+            </StudentPrimaryActionButton>
+          </div>
         </div>
 
       </div>
