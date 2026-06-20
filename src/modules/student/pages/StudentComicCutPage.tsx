@@ -29,7 +29,7 @@ export default function StudentComicCutPage() {
   // 이전 컷 경로
   const backPath = currentCutNumber > 1
     ? `/student/comic/cut/${currentCutNumber - 1}`
-    : '/student/topic'
+    : '/student/front-cover'
 
   // 다음 장면으로
   const handleNext = () => {
