@@ -36,8 +36,8 @@ export default function UnitStep1Selection({
     <div className="w-full max-w-[1200px] mx-auto space-y-6 animate-fade-in pb-8">
       {/* 학년 선택 */}
       <StudentWideCard className="!gap-5">
-        <h3 className="font-jua text-lg text-purple-200 flex items-center gap-2">
-          <span className="w-6 h-6 rounded-full bg-purple-500/40 border border-purple-400/60 flex items-center justify-center text-sm text-purple-100">
+        <h3 className="font-jua text-lg text-[#303442] flex items-center gap-2">
+          <span className="w-6 h-6 rounded-full bg-[#f1ebff] border border-purple-200 flex items-center justify-center text-sm text-purple-600">
             1
           </span>
           학년을 골라주세요
@@ -57,15 +57,11 @@ export default function UnitStep1Selection({
                 <button
                   key={g.id}
                   onClick={() => onGradeSelect(g)}
-                  className={`
-                    w-[138px] h-[138px] md:w-[150px] md:h-[150px] py-3 px-2 transition-all flex flex-col items-center justify-center gap-2
-                    ${isSelected
-                      ? 'card-glass card-glass-active scale-105 text-white shadow-[0_0_20px_rgba(167,139,250,0.3)]'
-                      : 'card-glass card-glass-interactive text-slate-300'}
-                  `}
+                  className={`btn-select-item flex-col w-[138px] h-[138px] md:w-[150px] md:h-[150px] py-3 px-2 gap-2
+                    ${isSelected ? 'btn-select-item-active scale-105 shadow-md' : ''}`}
                 >
                   <span className="text-5xl md:text-6xl select-none mb-2">{gradeEmojis[g.label] || '🎒'}</span>
-                  <span className="font-jua text-lg md:text-2xl text-slate-100">{g.label}</span>
+                  <span className={`font-jua text-lg md:text-2xl ${isSelected ? 'text-white' : 'text-[#3f4350]'}`}>{g.label}</span>
                 </button>
               )
             })}
@@ -75,8 +71,8 @@ export default function UnitStep1Selection({
 
       {/* 과목 선택 */}
       <StudentWideCard className={`!gap-5 transition-all duration-300 ${selectedGrade ? 'opacity-100 translate-y-0' : 'opacity-40 translate-y-4 pointer-events-none'}`}>
-        <h3 className="font-jua text-lg text-sky-300 flex items-center gap-2">
-          <span className="w-6 h-6 rounded-full bg-sky-500/40 border border-sky-400/60 flex items-center justify-center text-sm text-sky-100">
+        <h3 className={`font-jua text-lg flex items-center gap-2 ${selectedGrade ? 'text-[#303442]' : 'text-[#8b909e]'}`}>
+          <span className={`w-6 h-6 rounded-full border flex items-center justify-center text-sm ${selectedGrade ? 'bg-[#f1ebff] border-purple-200 text-purple-600' : 'bg-slate-100 border-slate-200 text-slate-400'}`}>
             2
           </span>
           과목을 골라주세요
@@ -96,15 +92,11 @@ export default function UnitStep1Selection({
                 <button
                   key={s.id}
                   onClick={() => onSubjectSelect(s)}
-                  className={`
-                    w-[126px] h-[135px] md:w-[140px] md:h-[150px] py-3 px-2 transition-all flex flex-col items-center justify-center gap-2
-                    ${isSelected
-                      ? 'card-glass card-glass-active scale-105 text-white shadow-[0_0_15px_rgba(56,189,248,0.3)] border-sky-400/50'
-                      : 'card-glass card-glass-interactive text-slate-300'}
-                  `}
+                  className={`btn-select-item flex-col w-[126px] h-[135px] md:w-[140px] md:h-[150px] py-3 px-2 gap-2
+                    ${isSelected ? 'btn-select-item-active scale-105 shadow-md' : ''}`}
                 >
                   <span className="text-5xl md:text-6xl select-none mb-2">{subjectEmojis[s.name] || '📚'}</span>
-                  <span className="font-jua text-lg md:text-2xl text-slate-100">{s.name}</span>
+                  <span className={`font-jua text-lg md:text-2xl ${isSelected ? 'text-white' : 'text-[#3f4350]'}`}>{s.name}</span>
                 </button>
               )
             })}
@@ -117,11 +109,7 @@ export default function UnitStep1Selection({
         <button
           disabled={!isStep1Complete}
           onClick={onNextStep}
-          className={`flex items-center px-10 py-3.5 rounded-full font-jua text-base md:text-lg transition-all ${
-            isStep1Complete 
-            ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-[0_0_20px_rgba(124,58,237,0.4)] hover:scale-105' 
-            : 'bg-white/5 text-slate-500 border border-white/10'
-          }`}
+          className="btn-primary-action px-10 py-3.5 font-jua text-base md:text-lg"
         >
           <span>다음 🚀</span>
           <ArrowRight className="w-5 h-5 ml-2" />

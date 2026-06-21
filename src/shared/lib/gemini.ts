@@ -9,12 +9,12 @@ export const geminiClient = {
   generateText: async (prompt: string): Promise<string> => {
     if (!GEMINI_API_KEY || GEMINI_API_KEY === 'your_gemini_api_key_here') {
       console.warn('Gemini API key is not configured.')
-      return 'API Key가 설정되지 않았습니다. .env 파일을 확인해 주세요.'
+      throw new Error('API Key가 설정되지 않았습니다. .env 파일을 확인해 주세요.')
     }
     
     try {
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${GEMINI_API_KEY}`,
         {
           method: 'POST',
           headers: {
@@ -27,14 +27,21 @@ export const geminiClient = {
       )
       
       if (!response.ok) {
-        throw new Error(`Gemini API Request failed with status ${response.status}`)
+        const errorText = await response.text()
+        console.error(`Gemini API HTTP Error: ${response.status}`, errorText)
+        throw new Error(`Gemini API Request failed with status ${response.status}: ${errorText}`)
       }
       
       const data = await response.json()
-      return data.candidates?.[0]?.content?.parts?.[0]?.text || '응답을 생성하지 못했습니다.'
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text
+      if (!text) {
+        console.error('Gemini API Unexpected Response Format:', data)
+        throw new Error('응답을 생성하지 못했습니다. (데이터 형식 오류)')
+      }
+      return text
     } catch (error) {
       console.error('Error generating content from Gemini:', error)
-      return `Gemini API 호출 중 오류가 발생했습니다: ${error instanceof Error ? error.message : String(error)}`
+      throw error
     }
   }
 }

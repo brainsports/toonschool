@@ -1,6 +1,6 @@
 import { Check } from 'lucide-react'
 
-export type FlowStepKey = 'unit' | 'topic' | 'frontCover' | 'comic' | 'full' | 'summary' | 'quiz' | 'backCover' | 'complete'
+export type FlowStepKey = 'unit' | 'topic' | 'script' | 'frontCover' | 'comic' | 'full' | 'summary' | 'quiz' | 'backCover' | 'complete'
 
 interface FlowStep {
   key: FlowStepKey
@@ -11,6 +11,7 @@ interface FlowStep {
 const steps: FlowStep[] = [
   { key: 'unit', label: '어떤 공부 할까?', icon: '📚' },
   { key: 'topic', label: '무엇을 그릴까?', icon: '✨' },
+  { key: 'script', label: '대본 만들기', icon: '📝' },
   { key: 'frontCover', label: '앞표지 만들기', icon: '📘' },
   { key: 'comic', label: '뚝딱 만화 만들기', icon: '💬' },
   { key: 'full', label: '모아보기', icon: '🖼️' },

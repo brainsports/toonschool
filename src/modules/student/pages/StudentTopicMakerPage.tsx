@@ -20,7 +20,7 @@ export default function StudentTopicMakerPage() {
   const [creationMode, setCreationMode] = useState<'select' | 'ai' | 'manual'>('select')
   const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null)
   const [extraRequest, setExtraRequest] = useState('')
-  const [visibleCount, setVisibleCount] = useState(2)
+  const [visibleCount, setVisibleCount] = useState(4)
   const [selection, setSelection] = useState<StudentUnitSelection | null>(null)
 
   // AI 추천 관련 상태
@@ -87,9 +87,17 @@ export default function StudentTopicMakerPage() {
   const handleGenerateTopics = async () => {
     if (!selection) return
 
+    if (topics.length > 0) {
+      if (!window.confirm('현재 추천 주제가 새로운 이야기로 바뀝니다. 다시 받을까요?')) {
+        return
+      }
+    }
+
+    const previousTitles = topics.map(t => t.title)
+    const previousIncidents = topics.map(t => t.incident).filter(Boolean)
+    const previousTypes = topics.map(t => t.storyType).filter(Boolean)
+
     setGenState('loading')
-    setSelectedTopicId(null)
-    setVisibleCount(2)
 
     const request = {
       gradeName: selection.gradeName || '',
@@ -97,13 +105,31 @@ export default function StudentTopicMakerPage() {
       majorUnitName: selection.majorUnitName || '',
       middleUnitName: selection.middleUnitName || '',
       extraRequest: extraRequest.trim() || undefined,
-      selectedKeywords
+      selectedKeywords,
+      learningTopicId: selection.middleUnitId || null,
+      previousTitles,
+      previousIncidents,
+      previousTypes
     }
 
-    const generatedTopics = await generateTopicRecommendations(request)
-    
-    setTopics(generatedTopics)
-    setGenState('success')
+    let isSuccess = false
+    try {
+      const generatedTopics = await generateTopicRecommendations(request)
+      
+      setTopics(generatedTopics)
+      setSelectedTopicId(null)
+      setVisibleCount(4)
+      isSuccess = true
+    } catch (error) {
+      console.error('AI 추천 주제 생성 중 오류 발생:', error)
+      alert('AI 추천 주제를 생성하지 못했습니다. 잠시 후 다시 시도해 주세요.')
+    } finally {
+      if (isSuccess) {
+        setGenState('success')
+      } else {
+        setGenState(topics.length > 0 ? 'success' : 'idle')
+      }
+    }
   }
 
   const visibleTopics = topics.slice(0, visibleCount)
@@ -119,17 +145,18 @@ export default function StudentTopicMakerPage() {
     const fullSelectionData = {
       selection,
       topic: selectedTopic,
-      extraRequest
+      extraRequest,
+      selectedKeywords
     }
     localStorage.setItem('studentSelectedTopic', JSON.stringify(fullSelectionData))
 
-    // 앞표지 생성 화면으로 이동하며 state 전달
-    navigate('/student/front-cover', { state: fullSelectionData })
+    // 대본 생성 화면으로 이동하며 state 전달
+    navigate('/student/script', { state: fullSelectionData })
   }
 
   return (
-    <StudentCreationLayout currentStep="topic" bgVariant="space" maxWidth="full">
-      <div className="flex flex-col gap-8 animate-fade-in w-full pb-12 relative">
+    <StudentCreationLayout currentStep="topic" bgVariant="pastel" maxWidth="full">
+      <div className="flex flex-col gap-8 animate-fade-in w-full pt-[40px] md:pt-[56px] px-4 max-w-5xl mx-auto pb-[48px] relative overflow-y-auto h-full">
         
         {/* 헤더 영역 (제목 & 단원 배지) */}
         <TopicStepTitle selection={selection} />
@@ -150,15 +177,15 @@ export default function StudentTopicMakerPage() {
                   setCreationMode('ai')
                   setExtraRequest('')
                 }}
-                className="card-glass p-8 flex flex-col items-center justify-between hover:scale-[1.02] transition-transform text-center h-[22rem] group"
+                className="card-select-panel p-8 flex flex-col items-center justify-between hover:scale-[1.02] transition-transform text-center h-[22rem] group"
               >
-                <div className="w-24 h-24 bg-purple-500/20 rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(168,85,247,0.3)] group-hover:bg-purple-500/30 transition-colors shrink-0">
-                  <Sparkles className="w-12 h-12 text-purple-300" />
+                <div className="w-24 h-24 bg-purple-500/10 rounded-full flex items-center justify-center group-hover:bg-purple-500/20 transition-colors shrink-0">
+                  <Sparkles className="w-12 h-12 text-purple-500" />
                 </div>
                 <div className="text-center">
-                  <h3 className="font-jua text-3xl md:text-4xl font-bold text-white leading-tight">AI 추천으로 시작하기</h3>
+                  <h3 className="font-jua text-3xl md:text-4xl font-bold text-[#25213b] leading-tight">AI 추천으로 시작하기</h3>
                 </div>
-                <div className="btn-neon-purple px-8 py-3 rounded-full font-jua text-xl w-full max-w-[200px] text-center shrink-0">
+                <div className="btn-primary-action px-8 py-3 font-jua text-xl w-full max-w-[200px] text-center shrink-0 shadow-md">
                   AI 추천 받기
                 </div>
               </button>
@@ -168,15 +195,15 @@ export default function StudentTopicMakerPage() {
                   setCreationMode('manual')
                   setExtraRequest('')
                 }}
-                className="card-glass p-8 flex flex-col items-center justify-between hover:scale-[1.02] transition-transform text-center h-[22rem] group"
+                className="card-select-panel p-8 flex flex-col items-center justify-between hover:scale-[1.02] transition-transform text-center h-[22rem] group"
               >
-                <div className="w-24 h-24 bg-blue-500/20 rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(59,130,246,0.3)] group-hover:bg-blue-500/30 transition-colors shrink-0">
-                  <PenTool className="w-12 h-12 text-blue-300" />
+                <div className="w-24 h-24 bg-blue-500/10 rounded-full flex items-center justify-center group-hover:bg-blue-500/20 transition-colors shrink-0">
+                  <PenTool className="w-12 h-12 text-blue-500" />
                 </div>
                 <div className="text-center">
-                  <h3 className="font-jua text-3xl md:text-4xl font-bold text-white leading-tight">내가 직접 만들기</h3>
+                  <h3 className="font-jua text-3xl md:text-4xl font-bold text-[#25213b] leading-tight">내가 직접 만들기</h3>
                 </div>
-                <div className="px-8 py-3 rounded-full font-jua text-xl w-full max-w-[200px] text-center shrink-0 bg-gradient-to-r from-blue-500/80 to-indigo-500/80 border border-blue-400/50 text-white shadow-[0_0_15px_rgba(59,130,246,0.4)] hover:shadow-[0_0_25px_rgba(59,130,246,0.6)] transition-all">
+                <div className="btn-primary-action px-8 py-3 font-jua text-xl w-full max-w-[200px] text-center shrink-0 shadow-md transition-all">
                   직접 입력하기
                 </div>
               </button>
@@ -195,9 +222,9 @@ export default function StudentTopicMakerPage() {
                   setSelectedTopicId(null)
                   setExtraRequest('')
                 }}
-                className="flex items-center text-purple-200 hover:text-white transition-colors font-jua text-lg bg-black/20 px-5 py-2.5 rounded-full border border-white/10"
+                className="btn-primary-action flex items-center font-jua text-lg px-6 py-2.5 shadow-sm"
               >
-                <ArrowLeft className="w-5 h-5 mr-2" />
+                <ArrowLeft className="w-5 h-5 mr-2 stroke-[3]" />
                 방법 다시 선택하기
               </button>
             </div>
@@ -213,7 +240,7 @@ export default function StudentTopicMakerPage() {
                 />
 
                 {(genState === 'loading' || genState === 'success') && (
-                  <div className="card-glass p-8 md:p-10 min-h-[240px] animate-fade-in">
+                  <div className="card-select-panel p-8 md:p-10 min-h-[240px] animate-fade-in">
                     <AiRecommendationCard
                       visibleTopics={visibleTopics}
                       selectedTopicId={selectedTopicId}
@@ -221,7 +248,7 @@ export default function StudentTopicMakerPage() {
                       genState={genState}
                       visibleCount={visibleCount}
                       totalCount={topics.length}
-                      onLoadMore={() => setVisibleCount(prev => Math.min(prev + 2, topics.length))}
+                      onLoadMore={() => setVisibleCount(10)}
                     />
                   </div>
                 )}
@@ -237,8 +264,8 @@ export default function StudentTopicMakerPage() {
             {creationMode === 'manual' && (
               <div className="flex flex-col gap-5">
                 <div className="text-center mb-2">
-                  <h2 className="text-2xl font-jua text-white mb-2">내가 직접 만들래요</h2>
-                  <p className="text-blue-200 text-lg">이야기에 넣고 싶은 내용을 적어 주세요.</p>
+                  <h2 className="text-2xl font-jua text-[#202330] mb-2">내가 직접 만들래요</h2>
+                  <p className="text-[#626776] text-lg">이야기에 넣고 싶은 내용을 적어 주세요.</p>
                 </div>
 
                 <StoryInputCard
@@ -251,10 +278,10 @@ export default function StudentTopicMakerPage() {
                 
                 {/* AI 추천 결과 목록 (로딩 중이거나 결과가 있을 때) */}
                 {(genState === 'loading' || genState === 'success') && (
-                  <div className="card-glass p-8 md:p-10 min-h-[240px] mt-4 animate-fade-in">
+                  <div className="card-select-panel p-8 md:p-10 min-h-[240px] mt-4 animate-fade-in">
                     {genState === 'success' && (
-                      <h3 className="text-xl font-jua text-purple-200 mb-6 flex items-center">
-                        <Sparkles className="w-6 h-6 mr-2 text-purple-300" />
+                      <h3 className="text-xl font-jua text-[#303442] mb-6 flex items-center">
+                        <Sparkles className="w-6 h-6 mr-2 text-purple-500" />
                         입력한 내용으로 만들어진 이야기예요! 하나를 선택해주세요.
                       </h3>
                     )}
@@ -265,7 +292,7 @@ export default function StudentTopicMakerPage() {
                       genState={genState}
                       visibleCount={visibleCount}
                       totalCount={topics.length}
-                      onLoadMore={() => setVisibleCount(prev => Math.min(prev + 2, topics.length))}
+                      onLoadMore={() => setVisibleCount(10)}
                     />
                   </div>
                 )}

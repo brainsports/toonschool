@@ -20,6 +20,7 @@ import StudentDashboard from '../modules/student/pages/StudentDashboard'
 import StudentUnitSelectPage from '../modules/student/pages/StudentUnitSelectPage'
 import StudentTopicMakerPage from '../modules/student/pages/StudentTopicMakerPage'
 import StudentFrontCoverPage from '../modules/student/pages/StudentFrontCoverPage'
+import StudentScriptPage from '../modules/student/pages/StudentScriptPage'
 import StudentComicCutPage from '../modules/student/pages/StudentComicCutPage'
 import ToonEditor from '../modules/toon/pages/ToonEditor'
 import ToonViewer from '../modules/toon/pages/ToonViewer'
@@ -56,6 +57,7 @@ export default function AppRouter() {
       </Route>
       <Route path="/student/select-unit" element={<StudentUnitSelectPage />} />
       <Route path="/student/topic" element={<StudentTopicMakerPage />} />
+      <Route path="/student/script" element={<StudentScriptPage />} />
       <Route path="/student/front-cover" element={<StudentFrontCoverPage />} />
       <Route path="/student/comic/cut/:cutNumber" element={<StudentComicCutPage />} />
     </Routes>

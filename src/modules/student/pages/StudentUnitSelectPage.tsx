@@ -100,6 +100,16 @@ export default function StudentUnitSelectPage() {
     fetchMiddleUnits()
   }, [selectedMajorUnit])
 
+  // 5. 숨겨진 중단원이 이미 선택된 상태라면 선택 해제
+  useEffect(() => {
+    if (selectedMiddleUnit && middleUnits.length > 0) {
+      const exists = middleUnits.some(u => u.id === selectedMiddleUnit.id)
+      if (!exists) {
+        setSelectedMiddleUnit(null)
+      }
+    }
+  }, [middleUnits, selectedMiddleUnit])
+
 
   // 핸들러 함수들
   const handleGradeSelect = (g: StudentGradeOption) => {
@@ -163,19 +173,20 @@ export default function StudentUnitSelectPage() {
   }
 
   return (
-    <StudentCreationLayout currentStep="unit" bgVariant="space" maxWidth="full">
-      <div className="w-full">
+    <StudentCreationLayout currentStep="unit" bgVariant="pastel" maxWidth="full">
+      <div className="w-full pt-[40px] md:pt-[56px] pb-[48px] px-4 max-w-5xl mx-auto h-full overflow-y-auto">
         {/* 상단 제목 영역 */}
-        <div className="text-center mb-8">
-          <h1 className="text-[2rem] md:text-[2.15rem] font-jua text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">
+        <div className="text-center">
+          <h1 className="text-[2rem] md:text-[2.15rem] font-jua text-[#202330]">
             어떤 모험을 떠날까요?
           </h1>
 
-          <p className="text-base font-bold text-slate-200 mt-3 bg-white/10 backdrop-blur-md border border-white/20 inline-block px-5 py-1.5 rounded-full">
+          <p className="text-base font-bold text-[#626776] mt-[16px] bg-white border border-[rgba(111,78,190,0.18)] inline-block px-5 py-1.5 rounded-full">
             {step === 1 ? '1단계: 학년과 과목 고르기' : '2단계: 단원 고르기'}
           </p>
         </div>
 
+        <div className="mt-[32px]">
         {step === 1 ? (
           <UnitStep1Selection
             grades={grades}
@@ -209,6 +220,7 @@ export default function StudentUnitSelectPage() {
             canProceed={canProceed}
           />
         )}
+        </div>
       </div>
     </StudentCreationLayout>
   )

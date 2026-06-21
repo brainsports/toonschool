@@ -65,6 +65,10 @@
   --student-primary-glow: 0 0 15px rgba(167, 139, 250, 0.6);
   --student-text-main: #ffffff;
   --student-text-muted: #cbd5e1;
+  
+  /* 파스텔 테마용 */
+  --student-pastel-bg: #f4f1ff;
+  --student-pastel-text: #25213b;
 }
 
 /* 베이스 백그라운드 */
@@ -110,6 +114,83 @@
 .student-dark-space-bg > * {
   position: relative;
   z-index: 10;
+}
+
+/* 파스텔 배경 (새로운 UI 개선) */
+.student-pastel-bg {
+  min-height: 100vh;
+  background-color: #f3f4f7;
+  color: #3f4350;
+  font-family: var(--font-game);
+  overflow-x: hidden;
+  position: relative;
+}
+
+.student-pastel-bg > * {
+  position: relative;
+  z-index: 10;
+}
+
+/* 주요 실행 버튼 (승인된 색상) */
+.btn-primary-action {
+  background-color: #ff2778;
+  color: #ffffff;
+  border-radius: 9999px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+}
+.btn-primary-action:hover:not(:disabled) {
+  background-color: #e91e68;
+}
+.btn-primary-action:active:not(:disabled) {
+  background-color: #d7185d;
+}
+.btn-primary-action:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(255, 39, 120, 0.30);
+}
+.btn-primary-action:disabled {
+  background-color: #ff2778 !important;
+  color: #ffffff !important;
+  opacity: 0.45;
+  cursor: not-allowed !important;
+  pointer-events: auto; /* To allow cursor: not-allowed to show */
+}
+
+/* 학년/과목 등 선택 버튼 */
+.btn-select-item {
+  background-color: #ffffff;
+  color: #38314f;
+  border: 1px solid #d9dce5;
+  border-radius: 1.5rem;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.btn-select-item:hover:not(.btn-select-item-active) {
+  background-color: #fff0f6;
+  border-color: #ff2778;
+}
+.btn-select-item-active {
+  background-color: #ff2778;
+  color: #ffffff;
+  border-color: #ff2778;
+}
+
+/* 새 선택 카드 스타일 */
+.card-select-panel {
+  background-color: #ffffff;
+  border: 1px solid #dfe2ea;
+  border-radius: 2rem;
+  box-shadow: 0 6px 18px rgba(38, 42, 58, 0.10);
+  color: #3f4350;
+  position: relative;
 }
 
 /* 제목 폰트 적용 클래스 (유틸리티) */

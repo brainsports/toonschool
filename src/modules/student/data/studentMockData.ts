@@ -50,10 +50,10 @@ export const mockSubUnits: Record<string, string[]> = {
 }
 
 export const mockTopicRecommendations: TopicRecommendation[] = [
-  { id: 't1', title: '우주 탐사선의 분수 연료 계산', shortDescription: '분수 덧셈으로 우주선 연료를 계산해 행성에 도착해요!', storyMood: '우주', learningPoint: '분수의 덧셈 이해하기', difficulty: '보통' },
-  { id: 't2', title: '피자 나눠먹기 대작전', shortDescription: '친구들과 피자를 분수로 나눠먹으며 분수 뺄셈을 배워요!', storyMood: '요리', learningPoint: '분수의 뺄셈 연습', difficulty: '쉬움' },
-  { id: 't3', title: '마법의 분수 케이크 가게', shortDescription: '케이크를 분수로 잘라 판매하는 마법 가게 이야기예요!', storyMood: '신비', learningPoint: '분수의 나눗셈 기초', difficulty: '쉬움' },
-  { id: 't4', title: '수영장 물 채우기 미션', shortDescription: '분수로 표현된 물의 양을 더해서 수영장을 채워요!', storyMood: '미스터리', learningPoint: '단위와 분수 더하기', difficulty: '보통' },
+  { id: 't1', title: '우주 탐사선의 분수 연료 계산', summary: '분수 덧셈으로 우주선 연료를 계산해 행성에 도착해요!', storyType: 'everyday_problem', storyTypeLabel: '생활 속 문제', setting: '우주', incident: '연료 계산', problem: '연료 부족', resolutionDirection: '분수 덧셈', learningConnection: '분수의 덧셈 이해하기', keywords: [], tone: '신비', difficulty: '보통' },
+  { id: 't2', title: '피자 나눠먹기 대작전', summary: '친구들과 피자를 분수로 나눠먹으며 분수 뺄셈을 배워요!', storyType: 'everyday_problem', storyTypeLabel: '생활 속 문제', setting: '식당', incident: '피자 나누기', problem: '분배 문제', resolutionDirection: '분수 뺄셈', learningConnection: '분수의 뺄셈 연습', keywords: [], tone: '발랄', difficulty: '쉬움' },
+  { id: 't3', title: '마법의 분수 케이크 가게', summary: '케이크를 분수로 잘라 판매하는 마법 가게 이야기예요!', storyType: 'mystery', storyTypeLabel: '신비로운 이야기', setting: '가게', incident: '케이크 자르기', problem: '정확히 자르기', resolutionDirection: '분수 나눗셈', learningConnection: '분수의 나눗셈 기초', keywords: [], tone: '신비', difficulty: '쉬움' },
+  { id: 't4', title: '수영장 물 채우기 미션', summary: '분수로 표현된 물의 양을 더해서 수영장을 채워요!', storyType: 'challenge', storyTypeLabel: '도전 미션', setting: '수영장', incident: '물 채우기', problem: '물 양 계산', resolutionDirection: '단위 더하기', learningConnection: '단위와 분수 더하기', keywords: [], tone: '긴장', difficulty: '보통' },
 ]
 
 export const mockComicCuts: ComicCut[] = [

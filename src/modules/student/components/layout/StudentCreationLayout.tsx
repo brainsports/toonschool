@@ -6,7 +6,7 @@ interface StudentCreationLayoutProps {
   currentStep: FlowStepKey
   completedSteps?: FlowStepKey[]
   children: ReactNode
-  bgVariant?: 'default' | 'purple' | 'sky' | 'blue' | 'space'
+  bgVariant?: 'default' | 'purple' | 'sky' | 'blue' | 'space' | 'pastel'
   maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'full'
 }
 

@@ -36,9 +36,9 @@ export default function AiRecommendationCard({
             <button
               type="button"
               onClick={onLoadMore}
-              className="card-glass card-glass-interactive px-8 py-4 text-purple-200 font-jua text-base md:text-lg min-h-[56px] rounded-full inline-flex items-center justify-center"
+              className="btn-primary-action px-8 py-4 font-jua text-base md:text-lg min-h-[56px]"
             >
-              <span>+ 2개 더 보기</span>
+              <span>+ {totalCount - visibleCount}개 더 보기</span>
             </button>
           </div>
         )}

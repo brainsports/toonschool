@@ -48,9 +48,14 @@ export default function Dashboard() {
   const testGemini = async () => {
     setIsLoading(true)
     setGeminiStatus('Gemini API 호출 중...')
-    const result = await geminiClient.generateText('웹툰 교육 플랫폼 "툰스쿨"에 대해 한 줄 격려 메시지를 작성해 줘.')
-    setGeminiStatus(result)
-    setIsLoading(false)
+    try {
+      const result = await geminiClient.generateText('웹툰 교육 플랫폼 "툰스쿨"에 대해 한 줄 격려 메시지를 작성해 줘.')
+      setGeminiStatus(result)
+    } catch (e) {
+      setGeminiStatus((e as Error).message)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (

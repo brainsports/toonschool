@@ -21,12 +21,12 @@ export default function TopicRecommendationGrid({
 
       
       {isLoading ? (
-        <div className="py-12 flex flex-col items-center justify-center space-y-4 bg-white/5 rounded-[2rem] border border-white/10">
+        <div className="py-12 flex flex-col items-center justify-center space-y-4 bg-[#f4f1ff] rounded-[2rem] border border-purple-200">
           <div className="relative">
-            <Loader2 className="w-10 h-10 text-purple-400 animate-spin" />
+            <Loader2 className="w-10 h-10 text-purple-500 animate-spin" />
             <span className="absolute -top-3 -right-3 text-2xl animate-bounce">🤖</span>
           </div>
-          <p className="text-sm font-jua text-purple-300 animate-pulse">
+          <p className="text-sm font-jua text-[#38314f] animate-pulse">
             주제를 고르고 있어요...
           </p>
         </div>

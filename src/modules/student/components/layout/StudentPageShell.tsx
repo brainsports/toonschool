@@ -9,7 +9,7 @@ import '../../styles/student-ui.css'
 interface StudentPageShellProps {
   children: React.ReactNode
   showHUD?: boolean
-  bgVariant?: 'default' | 'purple' | 'sky' | 'blue' | 'space'
+  bgVariant?: 'default' | 'purple' | 'sky' | 'blue' | 'space' | 'pastel'
   activeTab?: 'lobby' | 'map' | 'backpack' | 'none'
   maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'full'
   className?: string
@@ -30,6 +30,7 @@ const bgOverlays = {
   sky: 'student-space-bg from-sky-300/10 via-transparent to-sky-300/10',
   blue: 'student-space-bg from-indigo-300/10 via-transparent to-indigo-300/10',
   space: 'student-dark-space-bg from-transparent to-transparent',
+  pastel: 'student-pastel-bg from-transparent to-transparent',
 }
 
 export default function StudentPageShell({
@@ -50,7 +51,7 @@ export default function StudentPageShell({
       
       {/* 상단 게임 HUD 영역 */}
       {showHUD && (
-        <header className={`hud-panel relative z-50 px-4 py-3 ${isFull ? 'mb-0 shrink-0' : 'mb-6 sticky top-0'} bg-white/80 border-b-2 border-purple-100`}>
+        <header className={`hud-panel relative z-50 px-4 py-3 ${isFull ? 'mb-0 shrink-0' : 'mb-6 sticky top-0'} !bg-[#f19cdb] border-none`}>
           <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
             
             {/* 좌측: 프로필 & 레벨 */}
@@ -66,28 +67,28 @@ export default function StudentPageShell({
               </div>
               <div>
                 <div className="flex items-center gap-1.5">
-                  <span className="font-jua text-xl text-slate-800 tracking-wide">{profile.name}</span>
-                  <span className="bg-purple-100 border border-purple-200 text-purple-700 text-[11px] font-jua px-2 py-0.5 rounded-full">
+                  <span className="font-jua text-xl text-[#2d1f35] tracking-wide">{profile.name}</span>
+                  <span className="bg-white/50 border border-white/60 text-[#2d1f35] text-[11px] font-jua px-2 py-0.5 rounded-full">
                     {profile.grade}
                   </span>
                 </div>
-                <p className="text-slate-500 text-[11px] font-bold mt-0.5">{profile.classNumber} {profile.studentNumber}번 대원</p>
+                <p className="text-[#5f4059] text-[11px] font-bold mt-0.5">{profile.classNumber} {profile.studentNumber}번 대원</p>
               </div>
             </div>
 
             {/* 중앙: 툰스쿨 마크 & 숏컷 */}
-            <div className="hidden md:flex items-center gap-2 bg-purple-50/80 px-5 py-2 rounded-2xl border border-purple-100 shadow-sm">
+            <div className="hidden md:flex items-center gap-2 bg-white/40 px-5 py-2 rounded-2xl border border-white/30 shadow-sm">
               <button 
                 onClick={() => navigate('/student/my')}
-                className="flex items-center gap-1 text-purple-600 font-jua text-sm hover:scale-105 transition-transform"
+                className="flex items-center gap-1 text-[#2d1f35] font-jua text-sm hover:scale-105 transition-transform"
               >
                 <Home className="w-4 h-4" />
                 <span>홈</span>
               </button>
-              <div className="w-px h-4 bg-purple-200 mx-2" />
+              <div className="w-px h-4 bg-white/50 mx-2" />
               <button 
                 onClick={() => navigate('/student/my')}
-                className="text-purple-500 font-jua text-sm hover:scale-105 transition-transform"
+                className="text-[#2d1f35] font-jua text-sm hover:scale-105 transition-transform"
               >
                 🌌 내작품
               </button>

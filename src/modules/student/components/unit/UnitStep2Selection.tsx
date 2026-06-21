@@ -49,7 +49,7 @@ export default function UnitStep2Selection({
       <div className="hidden lg:flex lg:fixed lg:left-60 lg:top-24 z-40">
         <button
           onClick={onPrevStep}
-          className="card-glass card-glass-interactive flex items-center justify-center px-8 py-3.5 rounded-full text-slate-200 font-jua text-base md:text-lg transition-all"
+          className="btn-primary-action px-8 py-3.5 font-jua text-base md:text-lg"
         >
           <ArrowLeft className="w-5 h-5 stroke-[3] mr-2" />
           <span>이전</span>
@@ -58,17 +58,17 @@ export default function UnitStep2Selection({
 
       {/* 단원 선택 */}
       <StudentWideCard className="!gap-8">
-        <div className="flex items-center gap-3 bg-white/10 p-4 rounded-2xl border border-white/20">
+        <div className="flex items-center gap-3 bg-[#f4f1ff] p-4 rounded-2xl border border-purple-200">
           <span className="text-2xl">{gradeEmojis[selectedGrade?.label || ''] || '🎒'}</span>
-          <span className="font-jua text-lg text-purple-200">{selectedGrade?.label}</span>
-          <span className="text-purple-300">/</span>
+          <span className="font-jua text-lg text-[#3f4350]">{selectedGrade?.label}</span>
+          <span className="text-[#8b909e]">/</span>
           <span className="text-2xl">{subjectEmojis[selectedSubject?.name || ''] || '📚'}</span>
-          <span className="font-jua text-lg text-sky-200">{selectedSubject?.name}</span>
+          <span className="font-jua text-lg text-[#3f4350]">{selectedSubject?.name}</span>
         </div>
 
         <div className="space-y-4">
-          <h3 className="font-jua text-xl text-purple-200 flex items-center gap-2">
-            <span className="w-6 h-6 rounded-full bg-purple-500/30 border border-purple-400/50 flex items-center justify-center text-sm text-purple-100">3</span>
+          <h3 className="font-jua text-xl text-[#303442] flex items-center gap-2">
+            <span className="w-6 h-6 rounded-full bg-[#f1ebff] border border-purple-200 flex items-center justify-center text-sm text-purple-600">3</span>
             대단원을 골라요
           </h3>
           {majorUnits.length === 0 && loadState === 'loading' ? (
@@ -81,7 +81,7 @@ export default function UnitStep2Selection({
             <select
               value={selectedMajorUnit?.id || ''}
               onChange={(e) => onMajorUnitSelect(e.target.value)}
-              className="input-glass-soft w-full font-bold"
+              className="input-game-soft w-full font-bold"
             >
               <option value="">대단원을 선택해주세요</option>
               {majorUnits.map((mu) => (
@@ -95,8 +95,8 @@ export default function UnitStep2Selection({
 
         {selectedMajorUnit && (
           <div className="space-y-4 animate-fade-in">
-            <h3 className="font-jua text-xl text-sky-300 flex items-center gap-2">
-              <span className="w-6 h-6 rounded-full bg-sky-500/30 border border-sky-400/50 flex items-center justify-center text-sm text-sky-100">4</span>
+            <h3 className="font-jua text-xl text-[#303442] flex items-center gap-2">
+              <span className="w-6 h-6 rounded-full bg-[#f1ebff] border border-purple-200 flex items-center justify-center text-sm text-purple-600">4</span>
               중단원을 골라요
             </h3>
             {middleUnits.length === 0 && loadState === 'loading' ? (
@@ -104,12 +104,12 @@ export default function UnitStep2Selection({
                 <Loader2 className="animate-spin w-8 h-8" />
               </div>
             ) : middleUnits.length === 0 ? (
-              <StudentInnerPanel>세부 단원이 없습니다.</StudentInnerPanel>
+              <StudentInnerPanel>선택할 수 있는 중단원이 아직 준비되지 않았어요.</StudentInnerPanel>
             ) : (
               <select
                 value={selectedMiddleUnit?.id || ''}
                 onChange={(e) => onMiddleUnitSelect(e.target.value)}
-                className="input-glass-soft w-full font-bold"
+                className="input-game-soft w-full font-bold"
               >
                 <option value="">중단원을 선택해주세요</option>
                 {middleUnits.map((su) => (
@@ -128,7 +128,7 @@ export default function UnitStep2Selection({
         {/* 모바일/태블릿용 이전 버튼 */}
         <button
           onClick={onPrevStep}
-          className="lg:hidden card-glass card-glass-interactive flex items-center justify-center flex-1 py-4 text-slate-200 font-jua text-lg"
+          className="lg:hidden btn-primary-action flex-1 py-4 font-jua text-lg"
         >
           <ArrowLeft className="w-5 h-5 stroke-[3] mr-2" />
           <span>이전</span>

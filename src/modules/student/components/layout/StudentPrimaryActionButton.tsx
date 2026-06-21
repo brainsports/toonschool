@@ -17,9 +17,7 @@ export default function StudentPrimaryActionButton({
     <button
       onClick={onClick}
       disabled={disabled}
-      className={`flex items-center justify-center w-full min-h-[72px] text-xl md:text-2xl font-jua rounded-full transition-all 
-        ${disabled ? 'btn-neon-disabled' : 'btn-neon-purple'} 
-        ${className}`}
+      className={`btn-primary-action w-full min-h-[72px] text-xl md:text-2xl font-jua shadow-md ${className}`}
     >
       {children}
     </button>

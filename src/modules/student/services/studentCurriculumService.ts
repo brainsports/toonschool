@@ -100,7 +100,17 @@ export const getMiddleUnitsByMajorUnit = async (
 
     if (error) throw error
 
-    return data.map(item => ({
+    const HIDDEN_STUDENT_SUBUNITS = new Set([
+      '단원 도입',
+      '단원 정리',
+    ]);
+
+    const visibleSubunits = data.filter((subunit) => {
+      const name = (subunit.subunit_name ?? '').trim();
+      return !HIDDEN_STUDENT_SUBUNITS.has(name);
+    });
+
+    return visibleSubunits.map(item => ({
       id: item.id,
       subunitNumber: item.subunit_number,
       subunitName: item.subunit_name,

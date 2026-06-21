@@ -1,84 +1,196 @@
 import { geminiClient } from '../../../shared/lib/gemini'
+import { supabase } from '../../../shared/lib/supabase'
 import type { TopicRecommendation, TopicGenerationRequest, KeywordItem } from '../types/studentTopic'
+
+interface ExtraData {
+  learningGoal: string
+  keyQuestions: string
+  contentScope: string
+  achievementStandards: string
+}
+
+function normalizeText(text: string) {
+  return text.replace(/[\s\d.,!?]/g, '').toLowerCase()
+}
+
+function deduplicate(recs: TopicRecommendation[], existing: TopicRecommendation[], bannedTitles: string[]): TopicRecommendation[] {
+  const allTitles = [...existing.map(e => e.title), ...bannedTitles]
+  const allIncidents = [...existing.map(e => e.incident)]
+  const uniqueNew: TopicRecommendation[] = []
+
+  for (const rec of recs) {
+    if (!rec.title || !rec.summary || !rec.incident) continue
+
+    const normTitle = normalizeText(rec.title)
+    const normIncident = normalizeText(rec.incident)
+
+    // 금지어 검사
+    if (normTitle.includes('탐험대') || normTitle.includes('비밀을찾아') || normTitle.includes('흥미진진한모험')) {
+      continue
+    }
+
+    // 중복 검사
+    const isDuplicate = allTitles.some(t => normalizeText(t) === normTitle) || 
+                        allIncidents.some(i => normalizeText(i) === normIncident)
+
+    if (!isDuplicate) {
+      uniqueNew.push(rec)
+      allTitles.push(rec.title)
+      allIncidents.push(rec.incident)
+    }
+  }
+
+  return uniqueNew
+}
+
+const buildPrompt = (request: TopicGenerationRequest, existing: TopicRecommendation[], count: number, extraData: ExtraData) => {
+  const { gradeName, subjectName, majorUnitName, middleUnitName, extraRequest, selectedKeywords, previousTitles } = request
+  const { learningGoal, keyQuestions, contentScope, achievementStandards } = extraData
+
+  const allBannedTitles = [
+    ...(previousTitles || []),
+    ...existing.map(r => r.title)
+  ]
+
+  return `당신은 초등학생용 교과 학습만화 기획자입니다.
+
+제공된 학습목표와 핵심 내용을 정확히 반영하여 서로 완전히 다른 만화 주제 ${count}개를 만드세요.
+
+각 주제는 제목, 장소, 사건, 문제, 해결 방향이 달라야 합니다.
+같은 기본 이야기를 복사해 장르나 번호만 바꾸지 마세요.
+모든 주제는 실제 6컷 만화로 전개할 수 있어야 합니다.
+
+‘탐험대’, ‘비밀을 찾아 떠나는’, ‘흥미진진한 모험 이야기’라는 표현을 사용하지 마세요.
+
+제목은 구체적이고 자연스러운 한 편의 만화 제목으로 작성하세요.
+설명에는 주인공이 어디에서 어떤 문제를 만나며 학습 개념을 어떻게 활용하는지가 드러나야 합니다.
+
+${allBannedTitles.length > 0 ? `이전에 생성된 아래 제목이나 사건과 유사한 내용은 제외하고 새로운 내용을 만드세요.\n제외할 제목: ${allBannedTitles.join(', ')}\n` : ''}
+
+[단원 정보]
+학년: ${gradeName}
+과목: ${subjectName}
+대단원: ${majorUnitName}
+중단원(학습 주제): ${middleUnitName}
+${learningGoal ? `학습목표: ${learningGoal}` : ''}
+${keyQuestions ? `핵심 질문: ${keyQuestions}` : ''}
+${contentScope ? `내용 체계: ${contentScope}` : ''}
+${achievementStandards ? `성취기준: ${achievementStandards}` : ''}
+${selectedKeywords?.length ? `선택한 키워드: ${selectedKeywords.join(', ')}` : ''}
+${extraRequest ? `추가 요청: ${extraRequest}` : ''}
+
+[조건]
+1. 한글 기준 8~22자 제목
+2. 설명은 1~2문장 (45~90자)
+3. 10가지 다양한 이야기 유형(everyday_problem 등)을 골고루 배정
+
+응답은 지정된 JSON 형식으로만 반환하세요.
+{
+  "recommendations": [
+    {
+      "title": "제목 (예: 만 원권 열 장은 얼마일까?)",
+      "summary": "구체적인 사건과 문제가 포함된 설명",
+      "storyType": "everyday_problem",
+      "storyTypeLabel": "생활 속 문제",
+      "setting": "장소",
+      "incident": "발생한 사건",
+      "problem": "해결할 문제",
+      "resolutionDirection": "해결 방향",
+      "learningConnection": "학습 개념의 사용 방법",
+      "keywords": ["키워드1", "키워드2"],
+      "tone": "전체적인 톤",
+      "difficulty": "보통"
+    }
+  ]
+}
+`
+}
 
 export const generateTopicRecommendations = async (
   request: TopicGenerationRequest
 ): Promise<TopicRecommendation[]> => {
-  const { gradeName, subjectName, majorUnitName, middleUnitName, extraRequest, selectedKeywords } = request
+  let learningGoal = ''
+  let keyQuestions = ''
+  let contentScope = ''
+  let achievementStandards = ''
 
-  const prompt = `
-너는 초등학생을 위한 학습만화 주제 추천 선생님입니다.
-
-아래 단원 정보${selectedKeywords?.length ? '와 학생이 선택한 핵심 키워드' : ''}를 바탕으로 학습만화로 만들기 좋은 주제 10개를 추천해 주세요.
-
-학년: ${gradeName}
-과목: ${subjectName}
-대단원: ${majorUnitName}
-중단원: ${middleUnitName}
-${selectedKeywords?.length ? `선택한 키워드: ${selectedKeywords.join(', ')}` : ''}
-추가 요청: ${extraRequest || '없음'}
-
-조건:
-1. 반드시 위 단원과 직접 관련 있어야 합니다.
-${selectedKeywords?.length ? '2. 선택한 키워드를 이야기 소재나 배경, 사건에 자연스럽게 반영해야 합니다.' : '2. 초등학생이 좋아할 만한 이야기형 주제여야 합니다.'}
-3. 10개의 추천안은 서로 다른 사건, 배경, 갈등을 가져야 하며, 제목이 비슷하게 반복되면 안 됩니다.
-4. 제목은 20자 이내로 짧게 작성하며 사건형 제목으로 만듭니다.
-5. 설명은 한 문장으로 작성합니다.
-6. 난이도는 쉬움, 보통, 도전 중 하나로 표시합니다.
-7. 배울 점에는 이 주제로 배울 핵심 개념을 적습니다.
-8. 결과는 JSON 배열로만 반환합니다.
-9. 마크다운 코드블록은 쓰지 않습니다.
-
-반환 형식:
-[
-  {
-    "title": "주제 제목",
-    "shortDescription": "짧은 설명",
-    "difficulty": "쉬움",
-    "learningPoint": "배울 점",
-    "storyMood": "탐험"
+  if (request.learningTopicId) {
+    try {
+      const { data } = await supabase
+        .from('curriculum_subunits')
+        .select('*')
+        .eq('id', request.learningTopicId)
+        .single()
+        
+      if (data) {
+        learningGoal = data.learning_goal || ''
+        keyQuestions = data.key_questions || ''
+        contentScope = data.content_scope || ''
+        achievementStandards = data.achievement_standards || data.student_achievement_standards || ''
+      }
+    } catch (e) {
+      console.error('Failed to fetch subunit info:', e)
+    }
   }
-]
-`
 
-  try {
-    const responseText = await geminiClient.generateText(prompt)
+  const extraData: ExtraData = { learningGoal, keyQuestions, contentScope, achievementStandards }
+
+  let validRecommendations: TopicRecommendation[] = []
+  let attempts = 0
+  const MAX_ATTEMPTS = 3
+  
+  while (validRecommendations.length < 10 && attempts < MAX_ATTEMPTS) {
+    const countToGenerate = 10 - validRecommendations.length
+    const prompt = buildPrompt(request, validRecommendations, countToGenerate, extraData)
     
-    // JSON 문자열 파싱 시도 (마크다운 코드블록이 섞여있을 수 있으므로 전처리)
-    const cleanedText = responseText.replace(/```json/gi, '').replace(/```/g, '').trim()
-    const parsedData = JSON.parse(cleanedText)
-    
-    if (Array.isArray(parsedData) && parsedData.length > 0) {
-      // id 부여
-      return parsedData.map((item, index) => ({
-        id: `topic-${Date.now()}-${index}`,
-        title: item.title || '제목 없음',
-        shortDescription: item.shortDescription || '',
-        difficulty: item.difficulty || '보통',
-        learningPoint: item.learningPoint || '',
-        storyMood: item.storyMood || '모험'
-      }))
+    try {
+      const responseText = await geminiClient.generateText(prompt)
+      const cleanedText = responseText.replace(/\`\`\`json/gi, '').replace(/\`\`\`/g, '').trim()
+      
+      let parsedData;
+      try {
+        parsedData = JSON.parse(cleanedText)
+      } catch (parseError) {
+        console.error(`[AI 추천 생성] JSON 파싱 실패:`, parseError)
+        console.error(`[AI 추천 생성] 원본 텍스트:`, cleanedText)
+        attempts++
+        continue
+      }
+      
+      if (parsedData && Array.isArray(parsedData.recommendations)) {
+        console.log(`[AI 추천 생성] 시도 ${attempts + 1}/${MAX_ATTEMPTS}`)
+        console.log(`- 검증 전 추천 개수: ${parsedData.recommendations.length}`)
+        
+        // 11. 한 번의 요청에서 일부 항목만 잘못되어도 전체 결과를 폐기하지 말고 정상 항목은 사용합니다.
+        const wellFormed = parsedData.recommendations.filter((rec: any) => 
+          rec && typeof rec === 'object' && rec.title && rec.summary && rec.incident
+        )
+        console.log(`- 필수 필드 검증 후: ${wellFormed.length}`)
+
+        const unique = deduplicate(wellFormed, validRecommendations, request.previousTitles || [])
+        console.log(`- 검증 후 남은 추천 개수 (중복/금지어 제외): ${unique.length}`)
+        
+        validRecommendations = [...validRecommendations, ...unique]
+      } else {
+        console.warn(`[AI 추천 생성] 실패: 올바른 JSON 배열이 아님`, parsedData)
+      }
+    } catch (error) {
+      console.error(`[AI 추천 생성] 통신 오류 발생 (시도 ${attempts + 1}):`, error)
+      // On error, we just increment attempt and try again
     }
     
-    throw new Error('Invalid JSON format from AI')
-  } catch (error) {
-    console.error('Failed to generate topics from AI:', error)
-    return getFallbackTopics(request)
+    attempts++
   }
-}
-
-// AI 실패 시 규칙 기반 Fallback (단원명 활용)
-const getFallbackTopics = (request: TopicGenerationRequest): TopicRecommendation[] => {
-  const { middleUnitName } = request
-  const unit = middleUnitName || '학습'
   
-  return Array.from({ length: 10 }).map((_, i) => ({
-    id: `fallback-${Date.now()}-${i}`,
-    title: `${unit} 탐험대 ${i + 1}`,
-    shortDescription: `${unit}의 비밀을 찾아 떠나는 흥미진진한 모험 이야기입니다.`,
-    difficulty: i < 3 ? '쉬움' : i < 7 ? '보통' : '도전',
-    learningPoint: `${unit}에 대해 재미있게 배울 수 있어요.`,
-    storyMood: i % 2 === 0 ? '탐험' : '신비'
+  if (validRecommendations.length === 0) {
+    console.error(`[AI 추천 생성] ${MAX_ATTEMPTS}번 시도했으나 유효한 주제를 생성하지 못했습니다.`)
+    throw new Error('AI 추천 주제를 생성하지 못했습니다. 잠시 후 다시 시도해 주세요.')
+  }
+  
+  return validRecommendations.slice(0, 10).map((r, i) => ({
+    ...r,
+    id: `topic-${Date.now()}-${i}`,
+    learningTopicId: request.learningTopicId
   }))
 }
 
@@ -133,7 +245,7 @@ export const generateKeywords = async (
 
   try {
     const responseText = await geminiClient.generateText(prompt)
-    const cleanedText = responseText.replace(/```json/gi, '').replace(/```/g, '').trim()
+    const cleanedText = responseText.replace(/\`\`\`json/gi, '').replace(/\`\`\`/g, '').trim()
     const parsedData = JSON.parse(cleanedText)
 
     if (parsedData && Array.isArray(parsedData.keywords) && parsedData.keywords.length > 0) {

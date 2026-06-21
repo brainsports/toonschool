@@ -19,8 +19,8 @@ export default function ExtraRequestBox({
 }: ExtraRequestBoxProps) {
   return (
     <>
-      <div className="card-glass p-8 md:p-10 min-h-[240px] space-y-4 flex flex-col justify-center">
-      <h3 className="text-lg md:text-xl font-jua text-purple-200 flex items-center gap-2 select-none mb-2">
+      <div className="bg-white border border-[rgba(111,78,190,0.18)] shadow-[0_4px_14px_rgba(69,50,120,0.08)] rounded-[32px] p-8 md:p-10 min-h-[240px] space-y-4 flex flex-col justify-center">
+      <h3 className="text-lg md:text-xl font-jua text-[#38314f] flex items-center gap-2 select-none mb-2">
         <span className="text-2xl">✍️</span> 이야기에 넣고 싶은 것이 있나요?
       </h3>
 
@@ -30,7 +30,7 @@ export default function ExtraRequestBox({
         placeholder="예) 우주 정거장에서 나눗셈을 배우는 이야기로 만들어 주세요"
         rows={3}
         disabled={disabled}
-        className="input-glass-soft w-full h-24 resize-none text-white placeholder:text-slate-400 font-bold"
+        className="input-game-soft w-full h-24 resize-none text-[#25213b] placeholder:text-[#9993aa] font-bold"
       />
 
       </div>
