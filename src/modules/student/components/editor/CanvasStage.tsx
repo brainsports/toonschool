@@ -43,19 +43,24 @@ function CoverBackground({ coverTemplateId, canvasWidth, canvasHeight }: { cover
 export default function CanvasStage({ state, selectedElementId, onSelectElement, onChangeElement, stageRef, containerWidth, containerHeight, zoomPercent }: Props) {
   const trRef = useRef<any>(null);
   
+  const SCROLL_PADDING = 40;
+  
   // Calculate scaling
   const fitScale = Math.min(
-    containerWidth / state.canvasWidth,
-    containerHeight / state.canvasHeight
-  ) * 0.95; // 95% to leave a little padding
+    Math.max(1, containerWidth - SCROLL_PADDING * 2) / state.canvasWidth,
+    Math.max(1, containerHeight - SCROLL_PADDING * 2) / state.canvasHeight
+  );
   
   const scale = zoomPercent === null ? fitScale : zoomPercent / 100;
 
-  const stageWidth = Math.max(containerWidth, state.canvasWidth * scale);
-  const stageHeight = Math.max(containerHeight, state.canvasHeight * scale);
+  const scaledWidth = state.canvasWidth * scale;
+  const scaledHeight = state.canvasHeight * scale;
 
-  const xOffset = (stageWidth - state.canvasWidth * scale) / 2;
-  const yOffset = (stageHeight - state.canvasHeight * scale) / 2;
+  const stageWidth = Math.max(containerWidth, scaledWidth + SCROLL_PADDING * 2);
+  const stageHeight = Math.max(containerHeight, scaledHeight + SCROLL_PADDING * 2);
+
+  const xOffset = (stageWidth - scaledWidth) / 2;
+  const yOffset = (stageHeight - scaledHeight) / 2;
 
   // Render elements ordered by zIndex
   const sortedElements = [...state.elements].sort((a, b) => a.zIndex - b.zIndex);

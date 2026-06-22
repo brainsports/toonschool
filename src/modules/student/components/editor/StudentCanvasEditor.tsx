@@ -4,7 +4,7 @@ import type { EditorState, CanvasElement, EditorToolType, EditorProps } from './
 import { useEditorHistory } from './utils/editorHistory';
 import EditorToolbar from './EditorToolbar';
 import CanvasStage from './CanvasStage';
-import { ArrowLeft, ArrowRight, Save, Download, ZoomIn, ZoomOut, Maximize } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Save, Download, ZoomIn, ZoomOut, Maximize, Sparkles } from 'lucide-react';
 
 import TextPanel from './panels/TextPanel';
 import CharacterPanel from './panels/CharacterPanel';
@@ -13,7 +13,8 @@ import BackgroundPanel from './panels/BackgroundPanel';
 
 export default function StudentCanvasEditor({ 
   initialState, onSave, readOnly = false, canvasWidth = 1400, canvasHeight = 1980,
-  onPrev, onNext, prevText = "이전으로", nextText = "다음 단계로", mode = 'default', subject
+  onPrev, onNext, prevText = "이전으로", nextText = "다음 단계로", mode = 'default', subject,
+  onCompleteCover, isCoverCompleted
 }: EditorProps) {
   const defaultState: EditorState = {
     version: '1.1',
@@ -47,10 +48,11 @@ export default function StudentCanvasEditor({
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  const SCROLL_PADDING = 40;
   const fitScale = Math.min(
-    (containerSize.width || 1400) / currentState.canvasWidth,
-    (containerSize.height || 1980) / currentState.canvasHeight
-  ) * 0.95;
+    Math.max(1, (containerSize.width || 1400) - SCROLL_PADDING * 2) / currentState.canvasWidth,
+    Math.max(1, (containerSize.height || 1980) - SCROLL_PADDING * 2) / currentState.canvasHeight
+  );
   const currentZoom = zoomPercent !== null ? zoomPercent : Math.round(fitScale * 100);
 
   useEffect(() => {
@@ -67,16 +69,17 @@ export default function StudentCanvasEditor({
         const pointerX = e.clientX - rect.left;
         const pointerY = e.clientY - rect.top;
         
-        const scrollX = el.scrollLeft + pointerX;
-        const scrollY = el.scrollTop + pointerY;
+        const SCROLL_PADDING = 40;
+        const contentX = el.scrollLeft + pointerX - SCROLL_PADDING;
+        const contentY = el.scrollTop + pointerY - SCROLL_PADDING;
         
         const zoomRatio = newZoom / currentZoom;
         
         setZoomPercent(newZoom);
         
         requestAnimationFrame(() => {
-           el.scrollLeft = scrollX * zoomRatio - pointerX;
-           el.scrollTop = scrollY * zoomRatio - pointerY;
+           el.scrollLeft = contentX * zoomRatio + SCROLL_PADDING - pointerX;
+           el.scrollTop = contentY * zoomRatio + SCROLL_PADDING - pointerY;
         });
       }
     };
@@ -245,6 +248,23 @@ export default function StudentCanvasEditor({
 
           {/* Right: Actions & Next */}
           <div className="flex items-center justify-end gap-3">
+             {mode === 'front-cover' && onCompleteCover && (
+               <button 
+                 onClick={() => {
+                   const newState = onCompleteCover(currentState);
+                   if (newState) pushState(newState);
+                 }}
+                 disabled={isCoverCompleted}
+                 className={`flex items-center gap-1.5 px-5 py-2.5 font-bold rounded-xl shadow-lg transition-all text-sm border ${
+                   isCoverCompleted 
+                     ? 'bg-slate-700/50 text-slate-400 border-slate-600 cursor-not-allowed'
+                     : 'bg-[#ff2778] hover:bg-[#e91e68] text-white border-[#d7185d]'
+                 }`}
+               >
+                 <Sparkles className="w-4 h-4" />
+                 {isCoverCompleted ? '표지 완성됨' : '표지 완성하기'}
+               </button>
+             )}
              <button 
                onClick={() => onSave?.(currentState)} 
                className="flex items-center gap-1.5 px-5 py-2.5 bg-purple-600/90 hover:bg-purple-500 text-white font-bold rounded-xl shadow-lg transition-all text-sm border border-purple-400/50"
@@ -311,20 +331,18 @@ export default function StudentCanvasEditor({
         </div>
 
         {/* Canvas Area Container */}
-        <div className="flex-1 w-full relative p-2 min-h-0 min-w-0 overflow-auto overscroll-contain" ref={containerRef}>
+        <div className="flex-1 w-full relative min-h-0 min-w-0 overflow-auto overscroll-contain" ref={containerRef}>
           {containerSize.width > 0 && (
-            <div className="w-full h-full flex items-center justify-center">
-              <CanvasStage 
-                state={currentState}
-                selectedElementId={selectedElementId}
-                onSelectElement={setSelectedElementId}
-                onChangeElement={handleUpdateElement}
-                stageRef={stageRef}
-                containerWidth={containerSize.width}
-                containerHeight={containerSize.height}
-                zoomPercent={zoomPercent}
-              />
-            </div>
+            <CanvasStage 
+              state={currentState}
+              selectedElementId={selectedElementId}
+              onSelectElement={setSelectedElementId}
+              onChangeElement={handleUpdateElement}
+              stageRef={stageRef}
+              containerWidth={containerSize.width}
+              containerHeight={containerSize.height}
+              zoomPercent={zoomPercent}
+            />
           )}
         </div>
         
