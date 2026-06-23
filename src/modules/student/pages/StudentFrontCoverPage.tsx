@@ -5,9 +5,10 @@ import type { StudentUnitSelection } from '../types/studentCurriculum'
 import type { TopicRecommendation } from '../types/studentTopic'
 
 import StudentCanvasEditor from '../components/editor/StudentCanvasEditor'
-import { loadEditorState, saveEditorState } from '../components/editor/utils/editorStorage'
 import type { EditorState, CanvasElement } from '../components/editor/types'
 import { SUBJECT_COVER_MAPPING } from '../data/coverTemplates'
+import { projectStorage } from '../utils/projectStorage'
+import { showToast } from '../utils/toast'
 
 export default function StudentFrontCoverPage() {
   const navigate = useNavigate()
@@ -21,6 +22,7 @@ export default function StudentFrontCoverPage() {
     coverDialogue?: any
   } | null>(null)
 
+  const [projectId] = useState<string>(location.state?.projectId || '')
   const [isCoverCompleted, setIsCoverCompleted] = useState(false)
 
   useEffect(() => {
@@ -52,30 +54,38 @@ export default function StudentFrontCoverPage() {
     setSelectionData(data)
   }, [location.state, navigate])
 
-  const storageKey = `canvas_cover_state_${selectionData?.topic?.id || 'default'}`;
-
   useEffect(() => {
-    if (!selectionData) return;
-    const saved = loadEditorState(storageKey);
+    if (!selectionData || !projectId) return;
+    const saved = projectStorage.loadFrontCover<EditorState>(projectId);
     if (saved && saved.elements.some(el => el.id.startsWith('cover-'))) {
       setIsCoverCompleted(true);
     }
-  }, [storageKey, selectionData]);
+  }, [projectId, selectionData]);
 
   if (!selectionData) return null
 
   const { selection } = selectionData
   
-  const handleNext = () => {
-    navigate('/student/comic/full', { state: selectionData });
+  const handleNext = (state: EditorState) => {
+    if (!isCoverCompleted) {
+      alert('먼저 표지 완성하기 버튼을 눌러주세요.');
+      return;
+    }
+    const success = projectStorage.saveFrontCover(projectId, state);
+    if (!success) {
+      alert('저장에 실패했습니다. 저장 공간을 확인해 주세요.');
+      return;
+    }
+    showToast('저장되었습니다');
+    navigate('/student/comic/full', { state: { ...selectionData, projectId } });
   };
 
   const handlePrev = () => {
-    navigate('/student/topic', { state: selectionData });
+    navigate('/student/topic', { state: { ...selectionData, projectId } });
   };
 
   const getInitialEditorState = (): EditorState => {
-    const saved = loadEditorState(storageKey);
+    const saved = projectStorage.loadFrontCover<EditorState>(projectId);
     if (saved) {
       // 🚨 MIGRATION: Convert existing bubble dialogs to text dialogs, and inject saved text if empty
       const updatedElements = saved.elements.map(el => {
@@ -225,9 +235,13 @@ export default function StudentFrontCoverPage() {
       elements: newElements
     };
 
-    saveEditorState(storageKey, newState);
-    setIsCoverCompleted(true);
-    alert('표지가 완성되었습니다');
+    const success = projectStorage.saveFrontCover(projectId, newState);
+    if (success) {
+      setIsCoverCompleted(true);
+      alert('표지가 완성되었습니다');
+    } else {
+      alert('저장에 실패했습니다. 저장 공간을 확인해 주세요.');
+    }
 
     return newState;
   };
@@ -243,7 +257,11 @@ export default function StudentFrontCoverPage() {
           mode="front-cover"
           subject={selection?.subjectId || undefined}
           initialState={getInitialEditorState()}
-          onSave={(state) => saveEditorState(storageKey, state)}
+          onSave={(state) => {
+            const success = projectStorage.saveFrontCover(projectId, state);
+            if (success) showToast('저장되었습니다');
+            else alert('저장에 실패했습니다. 저장 공간을 확인해 주세요.');
+          }}
           onPrev={handlePrev}
           onNext={handleNext}
           onCompleteCover={handleCompleteCover}

@@ -12,12 +12,15 @@ import type { StudentUnitSelection } from '../types/studentCurriculum'
 import type { TopicRecommendation, TopicGenerationState, KeywordItem } from '../types/studentTopic'
 import { generateTopicRecommendations, generateKeywords } from '../services/studentTopicService'
 import { Sparkles, PenTool, ArrowLeft } from 'lucide-react'
+import { projectStorage } from '../utils/projectStorage'
+import { showToast } from '../utils/toast'
 
 export default function StudentTopicMakerPage() {
   const navigate = useNavigate()
   const location = useLocation()
   
   const [creationMode, setCreationMode] = useState<'select' | 'ai' | 'manual'>('select')
+  const [projectId] = useState<string>(location.state?.projectId || '')
   const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null)
   const [extraRequest, setExtraRequest] = useState('')
   const [selection, setSelection] = useState<StudentUnitSelection | null>(null)
@@ -34,9 +37,20 @@ export default function StudentTopicMakerPage() {
   const [selectedKeywords, setSelectedKeywords] = useState<string[]>([])
   const [isKeywordLoading, setIsKeywordLoading] = useState(false)
 
-  // 1. 넘겨받은 실제 단원 선택 정보 가져오기 (location.state 우선, 그다음 localStorage)
+  // 1. 단원 선택 정보 가져오기 (projectStorage 우선, 그다음 location.state, 마지막 localStorage)
   useEffect(() => {
-    let currentSelection = location.state?.selection as StudentUnitSelection | undefined
+    let currentSelection: StudentUnitSelection | null = null;
+    
+    if (projectId) {
+      const storedUnit = projectStorage.loadUnit<StudentUnitSelection>(projectId);
+      if (storedUnit) {
+        currentSelection = storedUnit;
+      }
+    }
+
+    if (!currentSelection && location.state?.selection) {
+      currentSelection = location.state.selection as StudentUnitSelection;
+    }
     
     if (!currentSelection) {
       const stored = localStorage.getItem('studentUnitSelection')
@@ -50,7 +64,24 @@ export default function StudentTopicMakerPage() {
     }
     
     setSelection(currentSelection || null)
-  }, [location.state])
+  }, [location.state, projectId])
+
+  // 이전 단계 데이터 복원
+  useEffect(() => {
+    if (projectId && topics.length === 0) {
+      const savedTopicData = projectStorage.loadTopic<any>(projectId);
+      if (savedTopicData) {
+        if (savedTopicData.extraRequest) setExtraRequest(savedTopicData.extraRequest);
+        if (savedTopicData.selectedKeywords) setSelectedKeywords(savedTopicData.selectedKeywords);
+        if (savedTopicData.topic) {
+          setTopics([savedTopicData.topic]);
+          setSelectedTopicId(savedTopicData.topic.id);
+          setCreationMode('ai');
+          setGenState('success');
+        }
+      }
+    }
+  }, [projectId]);
 
   const canProceed = selectedTopicId !== null
 
@@ -156,17 +187,26 @@ export default function StudentTopicMakerPage() {
   const handleProceedToComic = () => {
     if (!canProceed || !selection || !selectedTopic) return
 
-    // 다음 단계로 넘기기 위해 localStorage에 선택 저장
     const fullSelectionData = {
       selection,
       topic: selectedTopic,
       extraRequest,
       selectedKeywords
     }
+
+    const success = projectStorage.saveTopic(projectId, fullSelectionData)
+    if (!success) {
+      alert('저장에 실패했습니다. 저장 공간을 확인해 주세요.')
+      return
+    }
+
+    showToast('저장되었습니다')
+
+    // 다음 단계로 넘기기 위해 기존 localStorage 에도 저장 (호환성)
     localStorage.setItem('studentSelectedTopic', JSON.stringify(fullSelectionData))
 
     // 대본 생성 화면으로 이동하며 state 전달
-    navigate('/student/script', { state: fullSelectionData })
+    navigate('/student/script', { state: { ...fullSelectionData, projectId } })
   }
 
   return (
@@ -180,7 +220,7 @@ export default function StudentTopicMakerPage() {
         {/* 데스크탑 좌측 상단 이전 버튼 */}
         <TopicActionButtons
           type="desktop-prev"
-          onClick={() => navigate('/student/select-unit')}
+          onClick={() => navigate('/student/select-unit', { state: { projectId } })}
         />
 
         {creationMode === 'select' && (
@@ -327,7 +367,7 @@ export default function StudentTopicMakerPage() {
         {/* 모바일/태블릿 하단 이전 버튼 (lg 미만에서만 표시) */}
         <TopicActionButtons
           type="mobile-prev"
-          onClick={() => navigate('/student/select-unit')}
+          onClick={() => navigate('/student/select-unit', { state: { projectId } })}
         />
 
       </div>

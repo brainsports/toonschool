@@ -32,7 +32,7 @@ export interface EditorProps {
   canvasWidth?: number;
   canvasHeight?: number;
   onPrev?: () => void;
-  onNext?: () => void;
+  onNext?: (state: EditorState) => void;
   prevText?: string;
   nextText?: string;
   mode?: 'front-cover' | 'comic-cut' | 'default';

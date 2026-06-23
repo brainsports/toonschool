@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
+import { v4 as uuidv4 } from 'uuid'
+import { projectStorage } from '../utils/projectStorage'
+import { showToast } from '../utils/toast'
 import StudentCreationLayout from '../components/layout/StudentCreationLayout'
 import type { 
   StudentGradeOption, 
@@ -22,6 +25,8 @@ import UnitStep2Selection from '../components/unit/UnitStep2Selection'
 
 export default function StudentUnitSelectPage() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const [projectId, setProjectId] = useState<string>(location.state?.projectId || '')
   const [step, setStep] = useState<1 | 2>(1) // 1단계: 학년/과목, 2단계: 대단원/중단원
   
   // Data State
@@ -185,12 +190,25 @@ export default function StudentUnitSelectPage() {
       middleUnitId: selectedMiddleUnit?.id || null,
       middleUnitName: selectedMiddleUnit?.subunitName || null
     }
+
+    const currentProjectId = projectId || uuidv4()
+    if (!projectId) {
+      setProjectId(currentProjectId)
+    }
+
+    const success = projectStorage.saveUnit(currentProjectId, selection)
+    if (!success) {
+      alert('저장에 실패했습니다. 저장 공간을 확인해 주세요.')
+      return
+    }
     
-    // localStorage에 저장 (새로고침 시 유지하기 위함)
+    showToast('저장되었습니다')
+    
+    // 기존 호환성 유지용
     localStorage.setItem('studentUnitSelection', JSON.stringify(selection))
 
-    // state로도 전달
-    navigate('/student/topic', { state: { selection } })
+    // state로 데이터 및 projectId 전달
+    navigate('/student/topic', { state: { selection, projectId: currentProjectId } })
   }
 
   return (

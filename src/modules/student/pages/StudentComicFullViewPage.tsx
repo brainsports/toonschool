@@ -5,6 +5,7 @@ import StudentCreationLayout from '../components/layout/StudentCreationLayout';
 import { generateSingleComicCut, type ComicGenerationState } from '../services/studentComicService';
 import { loadComicProjectData, saveComicProjectData, loadComicCutData, saveComicCutData, type ComicProjectData, type ComicCutEditData, type ComicCutElement } from '../components/editor/utils/comicStorage';
 import type { GeneratedComicScript } from '../services/studentScriptService';
+import { projectStorage } from '../utils/projectStorage';
 import { Sparkles, Loader2, ArrowRight, MousePointer2, Layout, Users, MessageSquare, Type, Layers, RefreshCw, ArrowLeft, ZoomIn, ZoomOut, Maximize } from 'lucide-react';
 
 import ComicCanvas from '../components/comic-editor/ComicCanvas';
@@ -26,7 +27,8 @@ function ComicCellWrapper({
   onUpdateElement,
   genState,
   onGenerate,
-  onDoubleClick
+  onDoubleClick,
+  onDropElement
 }: any) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
@@ -41,6 +43,23 @@ function ComicCellWrapper({
     return () => observer.disconnect();
   }, []);
 
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const dataStr = e.dataTransfer.getData('application/json');
+    if (!dataStr) return;
+    try {
+      const data = JSON.parse(dataStr);
+      if (data.type === 'character' && onDropElement && containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        onDropElement(cutNumber, data, e.clientX, e.clientY, rect);
+      }
+    } catch (err) {}
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
   const isGenerated = !!cutData?.backgroundImageUrl;
 
   return (
@@ -48,6 +67,8 @@ function ComicCellWrapper({
       ref={containerRef}
       onClick={onClick}
       onDoubleClick={onDoubleClick}
+      onDrop={handleDrop}
+      onDragOver={handleDragOver}
       className={`relative w-full h-full bg-slate-100 rounded-2xl overflow-hidden cursor-pointer transition-all border-4 ${isSelected ? 'border-purple-500 shadow-xl shadow-purple-500/20' : 'border-slate-300 hover:border-slate-400'}`}
     >
       <div className="absolute top-2 left-2 z-10 bg-slate-800 text-white font-jua text-lg px-3 py-1 rounded-lg shadow">
@@ -101,6 +122,7 @@ export default function StudentComicFullViewPage() {
   const location = useLocation();
   
   const [selectionData, setSelectionData] = useState<any>(null);
+  const [projectId] = useState<string>(location.state?.projectId || '');
   const [projectData, setProjectData] = useState<ComicProjectData | null>(null);
   const [scriptData, setScriptData] = useState<GeneratedComicScript | null>(null);
   
@@ -195,18 +217,22 @@ export default function StudentComicFullViewPage() {
     }
     setSelectionData(data);
 
-    const scriptStored = localStorage.getItem('studentScript');
-    let parsedScript: GeneratedComicScript | null = null;
-    if (scriptStored) {
-      try {
-        parsedScript = JSON.parse(scriptStored);
-        setScriptData(parsedScript);
-      } catch(e) {}
+    const topicId = projectId || data.topic.id;
+
+    let parsedScript = projectStorage.loadScript<GeneratedComicScript>(topicId);
+    if (!parsedScript) {
+      const scriptStored = localStorage.getItem('studentScript');
+      if (scriptStored) {
+        try { parsedScript = JSON.parse(scriptStored); } catch(e) {}
+      }
+    }
+    
+    if (parsedScript) {
+      setScriptData(parsedScript);
+    } else {
+      return;
     }
 
-    if (!parsedScript) return;
-
-    const topicId = data.topic.id;
     let storedProjectData = loadComicProjectData(topicId);
     
     if (!storedProjectData) {
@@ -267,7 +293,7 @@ export default function StudentComicFullViewPage() {
     try {
       saveComicCutData(projectData.projectId, cutNum, updated);
     } catch (e: any) {
-      if (e.message === 'STORAGE_FULL') {
+      if (e.message === 'STORAGE_FULL' || e.name === 'StorageFullError') {
         alert('저장 공간이 부족합니다. 기존 컷 이미지를 정리하거나 이미지 저장 방식을 변경해야 합니다.');
       } else {
         console.error(e);
@@ -299,6 +325,37 @@ export default function StudentComicFullViewPage() {
     });
     setSelectedElementId(newElement.id);
   };
+
+  const handleDropElement = useCallback((cutNumber: number, elementData: any, clientX: number, clientY: number, containerRect: DOMRect) => {
+    const cutData = cutsData[cutNumber];
+    if (!cutData) return;
+    
+    const CANVAS_WIDTH = 1400;
+    const scale = containerRect.width / CANVAS_WIDTH;
+    
+    const relativeX = (clientX - containerRect.left) / scale;
+    const relativeY = (clientY - containerRect.top) / scale;
+
+    const maxZ = cutData.elements.reduce((max, el) => Math.max(max, el.zIndex), 0);
+    const newElement: ComicCutElement = {
+      ...elementData,
+      id: uuidv4(),
+      x: relativeX - (elementData.width / 2),
+      y: relativeY - (elementData.height / 2),
+      rotation: 0,
+      zIndex: maxZ + 1,
+      flipX: false,
+    } as ComicCutElement;
+    
+    saveCutState(cutNumber, {
+      ...cutData,
+      elements: [...cutData.elements, newElement]
+    });
+    
+    setSelectedCutNumber(cutNumber);
+    setSelectedElementId(newElement.id);
+    setActiveTool('character');
+  }, [cutsData, saveCutState]);
 
   const handleDeleteElement = (id: string) => {
     const cutData = cutsData[selectedCutNumber];
@@ -363,6 +420,83 @@ export default function StudentComicFullViewPage() {
     }
   };
 
+  const handleGenerateDialogues = () => {
+    if (!projectData || !projectData.script || !projectData.script.cuts) return;
+
+    const hasExistingBubbles = Object.values(cutsData).some(cut => 
+      cut.elements.some(el => el.type === 'speechBubble')
+    );
+
+    if (hasExistingBubbles) {
+      if (!window.confirm('이미 배치된 대사가 있습니다. 다시 생성하면 기존 말풍선 위치가 초기화됩니다. 계속할까요?')) {
+        return;
+      }
+    }
+
+    const newCutsData = { ...cutsData };
+    let hasChanges = false;
+
+    for (let i = 1; i <= 6; i++) {
+      const cutScript = projectData.script.cuts[i - 1];
+      if (!cutScript || !cutScript.dialogues || cutScript.dialogues.length === 0) continue;
+
+      const currentCutData = newCutsData[i];
+      if (!currentCutData) continue;
+
+      const filteredElements = currentCutData.elements.filter(el => el.type !== 'speechBubble');
+      let maxZ = filteredElements.reduce((max, el) => Math.max(max, el.zIndex), 0);
+
+      const newBubbles: ComicCutElement[] = cutScript.dialogues.map((dialogue, index) => {
+        maxZ += 1;
+        const isSecond = index % 2 === 1;
+        const startX = isSecond ? 600 : 100;
+        const startY = isSecond ? 300 : 100;
+        
+        return {
+          id: uuidv4(),
+          type: 'speechBubble',
+          bubbleType: 'basic',
+          text: dialogue.text,
+          speaker: dialogue.character,
+          x: startX,
+          y: startY + (Math.floor(index / 2) * 200),
+          width: 300,
+          height: 150,
+          rotation: 0,
+          zIndex: maxZ,
+          style: {
+            backgroundColor: '#ffffff',
+            borderColor: '#000000',
+            textColor: '#000000',
+            fontSize: 28
+          }
+        } as ComicCutElement;
+      });
+
+      if (newBubbles.length > 0) {
+        newCutsData[i] = {
+          ...currentCutData,
+          elements: [...filteredElements, ...newBubbles],
+          updatedAt: new Date().toISOString()
+        };
+        hasChanges = true;
+      }
+    }
+
+    if (hasChanges) {
+      setCutsData(newCutsData);
+      Object.entries(newCutsData).forEach(([cutStr, data]) => {
+        try {
+          saveComicCutData(projectData.projectId, parseInt(cutStr), data);
+        } catch (e: any) {
+          console.error(e);
+        }
+      });
+    } else {
+      alert('배치할 대사가 없습니다.');
+    }
+  };
+
   const handleNext = () => {
     const allGenerated = [1,2,3,4,5,6].every(num => cutsData[num]?.backgroundImageUrl);
     if (!allGenerated) {
@@ -370,7 +504,7 @@ export default function StudentComicFullViewPage() {
         return;
       }
     }
-    navigate('/student/unit-summary', { state: selectionData });
+    navigate('/student/unit-summary', { state: { ...selectionData, projectId: projectData?.projectId } });
   };
 
   if (!selectionData || !projectData) {
@@ -435,8 +569,9 @@ export default function StudentComicFullViewPage() {
                 )}
                 {activeTool === 'script' && (
                   <ComicScriptPanel 
-                    scriptData={scriptData} 
-                    cutNumber={selectedCutNumber} 
+                    elements={currentCutData?.elements || []}
+                    onUpdateElement={handleUpdateElement}
+                    onDeleteElement={handleDeleteElement}
                     onAddElement={handleAddElement} 
                   />
                 )}
@@ -531,10 +666,17 @@ export default function StudentComicFullViewPage() {
               <div className="flex items-center gap-3">
                 <button
                   onClick={handleGenerateAll}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-white text-purple-600 font-bold rounded-xl border-2 border-purple-200 shadow-sm hover:bg-purple-50 transition-all text-sm"
+                  className="flex items-center gap-2 px-4 py-2.5 bg-white text-purple-600 font-bold rounded-xl border-2 border-purple-200 shadow-sm hover:bg-purple-50 transition-all text-sm"
                 >
                   <Sparkles className="w-4 h-4" />
-                  6컷 배경 모두 생성
+                  배경 모두 생성
+                </button>
+                <button
+                  onClick={handleGenerateDialogues}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-white text-indigo-600 font-bold rounded-xl border-2 border-indigo-200 shadow-sm hover:bg-indigo-50 transition-all text-sm"
+                >
+                  <MessageSquare className="w-4 h-4" />
+                  대사 생성
                 </button>
                 <button
                   onClick={handleNext}
@@ -572,6 +714,7 @@ export default function StudentComicFullViewPage() {
                       onUpdateElement={handleUpdateElement}
                       genState={genStates[detailedCutNumber]}
                       onGenerate={() => handleGenerateCut(detailedCutNumber)}
+                      onDropElement={handleDropElement}
                     />
                   </div>
                 </div>
@@ -584,16 +727,40 @@ export default function StudentComicFullViewPage() {
                     aspectRatio: '210 / 297'
                   }}
                 >
-                  {/* Top: Title Area */}
-                  <div className="flex flex-col items-center justify-center mb-6 mt-4 shrink-0">
-                    <div className="px-6 py-2 bg-purple-50 rounded-full border border-purple-100 flex items-center justify-center">
-                      <h2 className="text-xl font-jua text-purple-900">
-                        {projectData.subject} · {projectData.topicTitle}
+                  {/* Top: Title Header (약 8% 비율) */}
+                  <div className="h-[76px] mb-4 shrink-0 bg-[#F1E7FF] rounded-xl px-5 flex items-center justify-between border-b-2 border-[#E5D5FF] shadow-sm">
+                    {/* Left: Logo & Subject & Title */}
+                    <div className="flex items-center gap-3 overflow-hidden flex-1 mr-4">
+                      <span className="font-black text-2xl tracking-tighter text-slate-800 shrink-0">TOONSCHOOL</span>
+                      <div className="px-3 py-1 bg-[#DCC7FF] text-[#6D28D9] rounded-md font-bold text-sm shrink-0">
+                        {projectData.subject}
+                      </div>
+                      <span className="text-[#BFA7F2] font-bold shrink-0 mx-1">|</span>
+                      <h2 className="text-xl font-jua text-slate-800 truncate">
+                        {projectData.topicTitle}
                       </h2>
                     </div>
-                    <span className="text-sm font-bold text-slate-500 mt-2">
-                      {projectData.grade}
-                    </span>
+                    {/* Right: Characters */}
+                    <div className="flex items-center gap-5 shrink-0">
+                      <div className="flex flex-col items-center">
+                        <div className="w-[38px] h-[38px] rounded-full bg-orange-50 overflow-hidden border-2 border-orange-100">
+                          <img src="/images/toonschool/characters/official/hana-teacher.png" alt="하나 선생님" className="w-full h-full object-cover object-top scale-110" />
+                        </div>
+                        <span className="text-[10px] font-bold text-slate-600 mt-1">하나 선생님</span>
+                      </div>
+                      <div className="flex flex-col items-center">
+                        <div className="w-[38px] h-[38px] rounded-full bg-blue-50 overflow-hidden border-2 border-blue-100">
+                          <img src="/images/toonschool/characters/official/doyoon-boy.png" alt="도윤" className="w-full h-full object-cover object-top scale-110" />
+                        </div>
+                        <span className="text-[10px] font-bold text-slate-600 mt-1">도윤</span>
+                      </div>
+                      <div className="flex flex-col items-center">
+                        <div className="w-[38px] h-[38px] rounded-full bg-pink-50 overflow-hidden border-2 border-pink-100">
+                          <img src="/images/toonschool/characters/official/seoa-girl.png" alt="서아" className="w-full h-full object-cover object-top scale-110" />
+                        </div>
+                        <span className="text-[10px] font-bold text-slate-600 mt-1">서아</span>
+                      </div>
+                    </div>
                   </div>
                   
                   {/* Center: 6 Cuts (2x3 Grid) */}
@@ -614,6 +781,7 @@ export default function StudentComicFullViewPage() {
                           onUpdateElement={handleUpdateElement}
                           genState={genStates[num]}
                           onGenerate={() => handleGenerateCut(num)}
+                          onDropElement={handleDropElement}
                         />
                         {/* Detail View Overlay Button */}
                         <button 
@@ -627,9 +795,33 @@ export default function StudentComicFullViewPage() {
                     ))}
                   </div>
 
-                  {/* Bottom: Future Summary Area */}
-                  <div className="h-28 mt-6 shrink-0 border-2 border-dashed border-slate-200 bg-slate-50 rounded-xl flex items-center justify-center">
-                    <span className="text-slate-400 font-bold text-sm">핵심정리 영역 자리</span>
+                  {/* Bottom: Summary Area */}
+                  <div className="h-28 mt-6 shrink-0 bg-white border-2 border-indigo-100 rounded-xl flex items-stretch shadow-sm overflow-hidden">
+                    <div className="w-32 bg-indigo-50 flex flex-col items-center justify-center shrink-0 border-r border-indigo-100 gap-1">
+                      <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
+                        <Sparkles className="w-5 h-5 text-indigo-600" />
+                      </div>
+                      <span className="text-sm font-jua text-indigo-800">핵심정리</span>
+                    </div>
+                    <div className="flex-1 p-3 flex flex-col justify-center overflow-y-auto">
+                      {scriptData?.keyConcepts && scriptData.keyConcepts.length > 0 ? (
+                        <ul className="space-y-1.5 flex flex-col justify-center h-full">
+                          {scriptData.keyConcepts.slice(0, 3).map((concept, idx) => (
+                            <li key={concept.id || idx} className="text-sm flex items-start gap-2">
+                              <span className="font-bold text-indigo-600 w-4 text-right shrink-0">{idx + 1}.</span>
+                              <div className="flex-1 leading-snug">
+                                <span className="font-bold text-slate-800 mr-2">{concept.title}</span>
+                                <span className="text-slate-600">{concept.description}</span>
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <div className="h-full flex items-center justify-center text-slate-400 font-bold text-sm">
+                          핵심 개념이 없습니다.
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}

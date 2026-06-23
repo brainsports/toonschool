@@ -8,6 +8,8 @@ import type { TopicRecommendation } from '../../types/studentTopic';
 import { generateScript, generateCoverContent, type GeneratedComicScript, type CoverKeyConcept, type CoverDialogue } from '../../services/studentScriptService';
 import ScriptKeyConceptPanel from './panels/ScriptKeyConceptPanel';
 import ScriptCoverDialoguePanel from './panels/ScriptCoverDialoguePanel';
+import { projectStorage } from '../../utils/projectStorage';
+import { showToast } from '../../utils/toast';
 
 export type ScriptToolType = 'ai' | 'cut' | 'concept' | 'coverDialogue';
 
@@ -18,11 +20,12 @@ interface StudentScriptEditorProps {
     extraRequest?: string;
     selectedKeywords?: string[];
   };
+  projectId: string;
   onPrev: () => void;
-  onNext: (keyConcepts?: CoverKeyConcept[], coverDialogue?: CoverDialogue) => void;
+  onNext: (keyConcepts?: CoverKeyConcept[], coverDialogue?: CoverDialogue, scriptData?: GeneratedComicScript) => void;
 }
 
-export default function StudentScriptEditor({ selectionData, onPrev, onNext }: StudentScriptEditorProps) {
+export default function StudentScriptEditor({ selectionData, projectId, onPrev, onNext }: StudentScriptEditorProps) {
   const [activeTool, setActiveTool] = useState<ScriptToolType>('ai');
   const [isPanelOpen, setIsPanelOpen] = useState(true);
   const [selectedCut, setSelectedCut] = useState<number | null>(null);
@@ -38,19 +41,16 @@ export default function StudentScriptEditor({ selectionData, onPrev, onNext }: S
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const saved = localStorage.getItem('studentScript');
+    if (!projectId) return;
+    const saved = projectStorage.loadScript<GeneratedComicScript>(projectId);
     if (saved) {
-      try {
-        setScriptData(JSON.parse(saved));
-      } catch (e) {
-        console.error('Failed to load saved script', e);
-      }
+      setScriptData(saved);
     }
-  }, []);
+  }, [projectId]);
 
   const handleUpdateScript = (newData: GeneratedComicScript) => {
     setScriptData(newData);
-    localStorage.setItem('studentScript', JSON.stringify(newData));
+    projectStorage.saveScript(projectId, newData);
   };
 
   const isSaveDisabled = !scriptData || scriptData.cuts.some(cut => 
@@ -96,7 +96,7 @@ export default function StudentScriptEditor({ selectionData, onPrev, onNext }: S
       currentScript = await generateScript(requestPayload);
       currentScript.generationStatus = { script: 'success', coverContent: 'idle' };
       setScriptData(currentScript);
-      localStorage.setItem('studentScript', JSON.stringify(currentScript));
+      projectStorage.saveScript(projectId, currentScript);
     } catch (err: any) {
       setErrorMsg(err.message || '6컷 대본을 만들지 못했습니다. 다시 시도해 주세요.');
       setIsGenerating(false);
@@ -115,7 +115,7 @@ export default function StudentScriptEditor({ selectionData, onPrev, onNext }: S
         generationStatus: { script: 'success' as const, coverContent: 'success' as const }
       };
       setScriptData(finalScript);
-      localStorage.setItem('studentScript', JSON.stringify(finalScript));
+      projectStorage.saveScript(projectId, finalScript);
       
       // 생성 완료 후 자동으로 컷 편집으로 이동
       setTimeout(() => {
@@ -128,7 +128,7 @@ export default function StudentScriptEditor({ selectionData, onPrev, onNext }: S
         generationStatus: { script: 'success' as const, coverContent: 'error' as const }
       };
       setScriptData(failedScript);
-      localStorage.setItem('studentScript', JSON.stringify(failedScript));
+      projectStorage.saveScript(projectId, failedScript);
       setErrorMsg(err.message || '대본은 완성됐지만 표지 내용을 만들지 못했습니다.');
     } finally {
       setIsGenerating(false);
@@ -152,7 +152,7 @@ export default function StudentScriptEditor({ selectionData, onPrev, onNext }: S
         generationStatus: { script: 'success' as const, coverContent: 'success' as const }
       };
       setScriptData(finalScript);
-      localStorage.setItem('studentScript', JSON.stringify(finalScript));
+      projectStorage.saveScript(projectId, finalScript);
       
       setTimeout(() => {
         setActiveTool('cut');
@@ -194,7 +194,13 @@ export default function StudentScriptEditor({ selectionData, onPrev, onNext }: S
       return;
     }
     
-    onNext(keyConcepts, coverDialogue);
+    const success = projectStorage.saveScript(projectId, scriptData);
+    if (!success) {
+      alert('저장에 실패했습니다. 저장 공간을 확인해 주세요.');
+      return;
+    }
+    showToast('저장되었습니다');
+    onNext(keyConcepts, coverDialogue, scriptData);
   };
 
   // 태블릿 등에서 패널 자동 닫기 처리
@@ -374,6 +380,13 @@ export default function StudentScriptEditor({ selectionData, onPrev, onNext }: S
              </button>
              <button 
                disabled={isSaveDisabled}
+               onClick={() => {
+                 if (scriptData) {
+                   const success = projectStorage.saveScript(projectId, scriptData);
+                   if (success) showToast('저장되었습니다');
+                   else alert('저장에 실패했습니다. 저장 공간을 확인해 주세요.');
+                 }
+               }}
                className={`flex items-center gap-1.5 px-4 lg:px-5 py-2.5 font-bold rounded-xl shadow-sm transition-all text-sm border ${isSaveDisabled ? 'bg-[#f3f4f7] text-[#8f95a6] border-[#d5d9e2] cursor-not-allowed' : 'bg-[#ffffff] hover:bg-slate-50 text-[#303442] border-[#d5d9e2]'}`}
              >
                <Save className="w-4 h-4" />

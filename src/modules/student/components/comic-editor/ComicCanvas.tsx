@@ -31,6 +31,7 @@ export default function ComicCanvas({
 
   // Resizing state
   const [resizingId, setResizingId] = useState<string | null>(null);
+  const [resizingHandle, setResizingHandle] = useState<'nw' | 'se' | null>(null);
   const [resizeStartPos, setResizeStartPos] = useState({ x: 0, y: 0 });
   const [elStartSize, setElStartSize] = useState({ width: 0, height: 0 });
 
@@ -45,11 +46,14 @@ export default function ComicCanvas({
     onSelectElement(el.id);
     
     // Check if clicking resize handle
-    if ((e.target as HTMLElement).dataset.resizeHandle) {
+    const target = e.target as HTMLElement;
+    if (target.dataset.resizeHandle) {
       setResizingId(el.id);
+      setResizingHandle(target.dataset.resizeHandle as 'nw' | 'se');
       setResizeStartPos({ x: e.clientX, y: e.clientY });
       setElStartSize({ width: el.width, height: el.height });
-      (e.target as HTMLElement).setPointerCapture(e.pointerId);
+      setElStartPos({ x: el.x, y: el.y });
+      target.setPointerCapture(e.pointerId);
     } else {
       setDraggingId(el.id);
       setDragStartPos({ x: e.clientX, y: e.clientY });
@@ -66,24 +70,66 @@ export default function ComicCanvas({
         x: elStartPos.x + dx,
         y: elStartPos.y + dy
       });
-    } else if (resizingId) {
+    } else if (resizingId && resizingHandle) {
       const dx = (e.clientX - resizeStartPos.x) / scale;
       const dy = (e.clientY - resizeStartPos.y) / scale;
       
-      // Preserve aspect ratio for characters
       const el = data.elements.find(e => e.id === resizingId);
-      if (el?.type === 'character') {
-        const ratio = elStartSize.width / elStartSize.height;
-        const newWidth = Math.max(50, elStartSize.width + dx);
-        onUpdateElement(resizingId, {
-          width: newWidth,
-          height: newWidth / ratio
-        });
-      } else {
-        onUpdateElement(resizingId, {
-          width: Math.max(50, elStartSize.width + dx),
-          height: Math.max(30, elStartSize.height + dy)
-        });
+      if (!el) return;
+
+      if (resizingHandle === 'se') {
+        // Preserve aspect ratio for characters
+        if (el.type === 'character') {
+          const ratio = elStartSize.width / elStartSize.height;
+          const newWidth = Math.max(50, elStartSize.width + dx);
+          onUpdateElement(resizingId, {
+            width: newWidth,
+            height: newWidth / ratio
+          });
+        } else {
+          onUpdateElement(resizingId, {
+            width: Math.max(50, elStartSize.width + dx),
+            height: Math.max(30, elStartSize.height + dy)
+          });
+        }
+      } else if (resizingHandle === 'nw') {
+        if (el.type === 'character') {
+          const ratio = elStartSize.width / elStartSize.height;
+          let newWidth = elStartSize.width - dx;
+          if (newWidth < 50) newWidth = 50;
+          
+          const newHeight = newWidth / ratio;
+          const newX = elStartPos.x + elStartSize.width - newWidth;
+          const newY = elStartPos.y + elStartSize.height - newHeight;
+
+          onUpdateElement(resizingId, {
+            x: newX,
+            y: newY,
+            width: newWidth,
+            height: newHeight
+          });
+        } else {
+          let newWidth = elStartSize.width - dx;
+          let newHeight = elStartSize.height - dy;
+          let newX = elStartPos.x + dx;
+          let newY = elStartPos.y + dy;
+
+          if (newWidth < 50) {
+            newWidth = 50;
+            newX = elStartPos.x + elStartSize.width - 50;
+          }
+          if (newHeight < 30) {
+            newHeight = 30;
+            newY = elStartPos.y + elStartSize.height - 30;
+          }
+
+          onUpdateElement(resizingId, {
+            x: newX,
+            y: newY,
+            width: newWidth,
+            height: newHeight
+          });
+        }
       }
     }
   };
@@ -98,6 +144,7 @@ export default function ComicCanvas({
         e.target.releasePointerCapture(e.pointerId);
       }
       setResizingId(null);
+      setResizingHandle(null);
     }
   };
 
@@ -129,7 +176,7 @@ export default function ComicCanvas({
         )}
 
         {/* Elements */}
-        {data.elements.sort((a, b) => a.zIndex - b.zIndex).map(el => {
+        {[...data.elements].sort((a, b) => a.zIndex - b.zIndex).map(el => {
           const isSelected = selectedElementId === el.id;
           
           return (
@@ -176,6 +223,11 @@ export default function ComicCanvas({
                     borderColor: el.style?.borderColor || 'black',
                   }}
                 >
+                  {el.speaker && (
+                    <div className="absolute -top-3 left-4 bg-purple-600 text-white text-[10px] sm:text-xs px-2 py-0.5 rounded-full font-bold z-10 shadow-sm border border-white/20 truncate max-w-[80%]">
+                      {el.speaker}
+                    </div>
+                  )}
                   {/* Bubble Tail - simplified for now */}
                   <div className="absolute -bottom-[20px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-[15px] border-l-transparent border-r-[15px] border-r-transparent border-t-[25px] border-t-black">
                     <div className="absolute -top-[27px] -left-[10px] w-0 h-0 border-l-[10px] border-l-transparent border-r-[10px] border-r-transparent border-t-[20px]" style={{ borderTopColor: el.style?.backgroundColor || 'white' }} />
@@ -194,12 +246,18 @@ export default function ComicCanvas({
                 </div>
               )}
 
-              {/* Resize Handle */}
+              {/* Resize Handles */}
               {isSelected && (
-                <div 
-                  data-resize-handle="true"
-                  className="absolute -bottom-4 -right-4 w-8 h-8 bg-white border-4 border-purple-500 rounded-full cursor-se-resize z-50 hover:scale-110 transition-transform"
-                />
+                <>
+                  <div 
+                    data-resize-handle="nw"
+                    className="absolute -top-4 -left-4 w-8 h-8 bg-white border-4 border-purple-500 rounded-full cursor-nw-resize z-50 hover:scale-110 transition-transform"
+                  />
+                  <div 
+                    data-resize-handle="se"
+                    className="absolute -bottom-4 -right-4 w-8 h-8 bg-white border-4 border-purple-500 rounded-full cursor-se-resize z-50 hover:scale-110 transition-transform"
+                  />
+                </>
               )}
             </div>
           );

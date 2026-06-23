@@ -320,7 +320,7 @@ export default function StudentCanvasEditor({
              </button>
             {onNext && (
               <button
-                onClick={onNext}
+                onClick={() => onNext(currentState)}
                 className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-400 hover:to-indigo-400 text-white font-jua text-base rounded-full shadow-lg shadow-purple-500/30 transition-all ml-2"
               >
                 {nextText}

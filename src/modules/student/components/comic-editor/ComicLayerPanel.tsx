@@ -24,7 +24,7 @@ export default function ComicLayerPanel({
   const getElementLabel = (el: ComicCutElement) => {
     switch(el.type) {
       case 'character': return el.name || '캐릭터';
-      case 'speechBubble': return (el.text || '').substring(0, 10) + '...';
+      case 'speechBubble': return `${el.speaker || '화자 미지정'}: ${(el.text || '').substring(0, 10)}...`;
       case 'text': return (el.text || '').substring(0, 10) + '...';
       case 'image': return '이미지';
       default: return '도형';

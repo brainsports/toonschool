@@ -1,29 +1,27 @@
-import { Plus } from 'lucide-react';
+import { useState } from 'react';
+import { Plus, Trash2, MessageSquare } from 'lucide-react';
 import type { ComicCutElement } from '../editor/utils/comicStorage';
 
 interface Props {
-  scriptData: any;
-  cutNumber: number;
+  elements: ComicCutElement[];
+  onUpdateElement: (id: string, updates: Partial<ComicCutElement>) => void;
+  onDeleteElement: (id: string) => void;
   onAddElement: (element: Omit<ComicCutElement, 'id'>) => void;
 }
 
-export default function ComicScriptPanel({ scriptData, cutNumber, onAddElement }: Props) {
-  const cut = scriptData?.cuts?.find((c: any) => c.cutNumber === cutNumber);
+const AVAILABLE_CHARACTERS = ['하나 선생님', '도윤', '서아', '보보', '화자 미지정'];
 
-  if (!cut) {
-    return (
-      <div className="flex flex-col h-full space-y-6 text-slate-200 p-4">
-        <p className="text-slate-400 text-sm text-center mt-10">대본 데이터를 찾을 수 없습니다.</p>
-      </div>
-    );
-  }
+export default function ComicScriptPanel({ elements, onUpdateElement, onDeleteElement, onAddElement }: Props) {
+  const [lastCharacter, setLastCharacter] = useState(AVAILABLE_CHARACTERS[0]);
 
-  const handleAddDialogue = (dialogue: { character: string; text: string }) => {
+  const speechBubbles = elements.filter(el => el.type === 'speechBubble');
+
+  const handleAddDialogue = () => {
     onAddElement({
       type: 'speechBubble',
       bubbleType: 'basic',
-      speaker: dialogue.character,
-      text: dialogue.text,
+      speaker: lastCharacter,
+      text: '새 대사를 입력하세요',
       x: 100,
       y: 100,
       width: 300,
@@ -42,33 +40,61 @@ export default function ComicScriptPanel({ scriptData, cutNumber, onAddElement }
   return (
     <div className="flex flex-col h-full text-slate-200">
       <div className="p-4 flex-1 overflow-y-auto">
-        <h3 className="text-sm font-bold text-slate-400 mb-2">{cutNumber}컷 대본</h3>
-        <p className="text-xs text-slate-500 mb-6">원하는 대사를 클릭하면 캔버스에 말풍선으로 추가됩니다.</p>
+        <h3 className="text-sm font-bold text-slate-400 mb-2 flex items-center gap-2">
+          <MessageSquare className="w-4 h-4" />
+          대사 관리
+        </h3>
+        <p className="text-xs text-slate-500 mb-6">캔버스 위 말풍선의 대사와 인물을 바로 수정할 수 있습니다.</p>
         
-        {cut.sceneDescription && (
-          <div className="mb-6 p-3 bg-slate-900/50 rounded-xl border border-white/5">
-            <h4 className="text-xs font-bold text-slate-400 mb-1">장면 설명</h4>
-            <p className="text-sm text-slate-300">{cut.sceneDescription}</p>
-          </div>
-        )}
+        <button
+          onClick={handleAddDialogue}
+          className="w-full flex items-center justify-center gap-2 py-3 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl transition-colors mb-6 shadow-md"
+        >
+          <Plus className="w-4 h-4" />
+          대사 추가
+        </button>
 
-        <div className="space-y-3">
-          <h4 className="text-xs font-bold text-slate-400">대사 목록</h4>
-          {cut.dialogues?.map((d: any, idx: number) => (
-            <button
-              key={idx}
-              onClick={() => handleAddDialogue(d)}
-              className="w-full text-left p-3 bg-slate-700/50 hover:bg-slate-600/50 border border-transparent hover:border-purple-500/50 rounded-xl transition-all group flex flex-col gap-1"
-            >
+        <div className="space-y-4">
+          {speechBubbles.map((bubble) => (
+            <div key={bubble.id} className="p-3 bg-slate-900/50 border border-slate-700 rounded-xl space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-purple-400 bg-purple-900/30 px-2 py-0.5 rounded">{d.character}</span>
-                <Plus className="w-4 h-4 text-slate-500 group-hover:text-purple-400 transition-colors" />
+                <select
+                  value={bubble.speaker || '화자 미지정'}
+                  onChange={(e) => {
+                    setLastCharacter(e.target.value);
+                    onUpdateElement(bubble.id, { speaker: e.target.value });
+                  }}
+                  className="bg-slate-800 text-xs font-bold text-purple-300 border border-slate-600 rounded p-1.5 focus:outline-none focus:border-purple-500"
+                >
+                  {AVAILABLE_CHARACTERS.map(char => (
+                    <option key={char} value={char}>{char}</option>
+                  ))}
+                  {!AVAILABLE_CHARACTERS.includes(bubble.speaker || '') && bubble.speaker && (
+                    <option value={bubble.speaker}>{bubble.speaker}</option>
+                  )}
+                </select>
+                <button
+                  onClick={() => onDeleteElement(bubble.id)}
+                  className="p-1.5 text-slate-500 hover:text-red-400 hover:bg-red-400/10 rounded transition-colors"
+                  title="대사 삭제"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
               </div>
-              <span className="text-sm text-white leading-relaxed">{d.text}</span>
-            </button>
+              <textarea
+                value={bubble.text}
+                onChange={(e) => onUpdateElement(bubble.id, { text: e.target.value })}
+                className="w-full h-20 bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white resize-none focus:outline-none focus:border-purple-500 transition-colors"
+                placeholder="대사를 입력하세요..."
+              />
+            </div>
           ))}
-          {(!cut.dialogues || cut.dialogues.length === 0) && (
-            <p className="text-slate-500 text-sm py-4 text-center">이 컷에는 대사가 없습니다.</p>
+          
+          {speechBubbles.length === 0 && (
+            <div className="text-center py-8 bg-slate-900/30 rounded-xl border border-dashed border-slate-700">
+              <p className="text-slate-500 text-sm">현재 추가된 대사가 없습니다.</p>
+              <p className="text-slate-600 text-xs mt-1">대사 추가 버튼을 눌러보세요.</p>
+            </div>
           )}
         </div>
       </div>
