@@ -1,55 +1,213 @@
-import { useState, useRef, useEffect } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
-import StudentCreationLayout from '../components/layout/StudentCreationLayout'
-import { generateFullComic } from '../services/studentComicService'
-import type { ComicGenerationState } from '../services/studentComicService'
-import { loadComicProjectData, saveComicProjectData } from '../components/editor/utils/comicStorage'
-import type { ComicProjectData } from '../components/editor/utils/comicStorage'
-import type { GeneratedComicScript } from '../services/studentScriptService'
-import { Sparkles, Loader2, ArrowLeft, Save, Download, ZoomIn, ZoomOut, Maximize, ArrowRight } from 'lucide-react'
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { v4 as uuidv4 } from 'uuid';
+import StudentCreationLayout from '../components/layout/StudentCreationLayout';
+import { generateSingleComicCut, type ComicGenerationState } from '../services/studentComicService';
+import { loadComicProjectData, saveComicProjectData, loadComicCutData, saveComicCutData, type ComicProjectData, type ComicCutEditData, type ComicCutElement } from '../components/editor/utils/comicStorage';
+import type { GeneratedComicScript } from '../services/studentScriptService';
+import { Sparkles, Loader2, ArrowRight, MousePointer2, Layout, Users, MessageSquare, Type, Layers, RefreshCw, ArrowLeft, ZoomIn, ZoomOut, Maximize } from 'lucide-react';
 
-export default function StudentComicFullViewPage() {
-  const navigate = useNavigate()
-  const location = useLocation()
-  
-  const [selectionData, setSelectionData] = useState<any>(null)
-  const [scriptData, setScriptData] = useState<GeneratedComicScript | null>(null)
-  const [projectData, setProjectData] = useState<ComicProjectData | null>(null)
-  const [genState, setGenState] = useState<ComicGenerationState>({ status: 'idle', progress: 0 })
-  
-  const containerRef = useRef<HTMLDivElement>(null)
-  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 })
-  const [zoomPercent, setZoomPercent] = useState<number | null>(null)
+import ComicCanvas from '../components/comic-editor/ComicCanvas';
+import CharacterToolPanel from '../components/comic-editor/CharacterToolPanel';
+import ComicScriptPanel from '../components/comic-editor/ComicScriptPanel';
+import ComicSpeechBubblePanel from '../components/comic-editor/ComicSpeechBubblePanel';
+import ComicLayerPanel from '../components/comic-editor/ComicLayerPanel';
+
+type ToolType = 'select' | 'background' | 'character' | 'bubble' | 'script' | 'layer';
+
+// 캔버스 사이즈 측정용 래퍼 컴포넌트
+function ComicCellWrapper({ 
+  cutNumber, 
+  cutData, 
+  isSelected, 
+  onClick, 
+  selectedElementId, 
+  onSelectElement, 
+  onUpdateElement,
+  genState,
+  onGenerate,
+  onDoubleClick
+}: any) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [size, setSize] = useState({ width: 0, height: 0 });
 
   useEffect(() => {
-    let data = location.state
+    const observer = new ResizeObserver((entries) => {
+      for (let entry of entries) {
+        setSize({ width: entry.contentRect.width, height: entry.contentRect.height });
+      }
+    });
+    if (containerRef.current) observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  const isGenerated = !!cutData?.backgroundImageUrl;
+
+  return (
+    <div 
+      ref={containerRef}
+      onClick={onClick}
+      onDoubleClick={onDoubleClick}
+      className={`relative w-full h-full bg-slate-100 rounded-2xl overflow-hidden cursor-pointer transition-all border-4 ${isSelected ? 'border-purple-500 shadow-xl shadow-purple-500/20' : 'border-slate-300 hover:border-slate-400'}`}
+    >
+      <div className="absolute top-2 left-2 z-10 bg-slate-800 text-white font-jua text-lg px-3 py-1 rounded-lg shadow">
+        {cutNumber}
+      </div>
+
+      {isGenerated && size.width > 0 && size.height > 0 ? (
+        <ComicCanvas
+          data={cutData}
+          containerWidth={size.width}
+          containerHeight={size.height}
+          selectedElementId={isSelected ? selectedElementId : null}
+          onSelectElement={(id) => { if (isSelected) onSelectElement(id); }}
+          onUpdateElement={(id, updates) => { if (isSelected) onUpdateElement(id, updates); }}
+        />
+      ) : (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-100 text-slate-400">
+          <Sparkles className="w-10 h-10 mb-2 opacity-50" />
+          <span className="font-jua text-xl">그림을 생성하세요</span>
+        </div>
+      )}
+
+      {!isGenerated && !genState && (
+         <button onClick={(e) => { e.stopPropagation(); onGenerate(); }} className="absolute inset-0 bg-transparent flex flex-col items-center justify-center opacity-0 hover:opacity-100 hover:bg-slate-900/10 transition-all z-20 font-bold text-slate-700">
+            클릭하여 생성하기
+         </button>
+      )}
+
+      {genState?.status === 'generating' && (
+        <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center z-20">
+          <Loader2 className="w-10 h-10 text-purple-500 animate-spin mb-3" />
+          <span className="font-bold text-sm text-purple-700">{genState.progress}%</span>
+          <span className="text-xs text-slate-600 mt-1">{genState.message}</span>
+        </div>
+      )}
+      {genState?.status === 'error' && (
+        <div className="absolute inset-0 bg-red-50/95 flex flex-col items-center justify-center z-20 p-4 text-center backdrop-blur-sm">
+          <span className="text-red-600 font-bold mb-1 text-lg">생성 실패</span>
+          <span className="text-red-500 font-bold mb-3 text-sm">원인: {genState.message}</span>
+          <button onClick={(e) => { e.stopPropagation(); onGenerate(); }} className="px-4 py-2 bg-red-500 text-white hover:bg-red-600 rounded-lg text-sm font-bold shadow-md transition-colors">다시 시도</button>
+        </div>
+      )}
+
+      {!isSelected && <div className="absolute inset-0 bg-transparent z-50" />}
+    </div>
+  );
+}
+
+export default function StudentComicFullViewPage() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  
+  const [selectionData, setSelectionData] = useState<any>(null);
+  const [projectData, setProjectData] = useState<ComicProjectData | null>(null);
+  const [scriptData, setScriptData] = useState<GeneratedComicScript | null>(null);
+  
+  const [cutsData, setCutsData] = useState<Record<number, ComicCutEditData>>({});
+  const [genStates, setGenStates] = useState<Record<number, ComicGenerationState>>({});
+  
+  const [selectedCutNumber, setSelectedCutNumber] = useState<number>(1);
+  const [activeTool, setActiveTool] = useState<ToolType>('character');
+  const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
+
+  const [detailedCutNumber, setDetailedCutNumber] = useState<number | null>(null);
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+  const [zoomPercent, setZoomPercent] = useState<number | null>(null);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (containerRef.current) {
+        setContainerSize({
+          width: containerRef.current.clientWidth,
+          height: containerRef.current.clientHeight
+        });
+      }
+    };
+    setTimeout(handleResize, 50);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const A4_WIDTH = 750;
+  const SCROLL_PADDING = 40;
+  const fitScale = Math.min(
+    Math.max(1, (containerSize.width || 1200) - SCROLL_PADDING * 2) / A4_WIDTH,
+    Math.max(1, (containerSize.height || 800) - SCROLL_PADDING * 2) / (A4_WIDTH * 1.414)
+  );
+  const currentZoom = zoomPercent !== null ? zoomPercent : Math.round(fitScale * 100);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const handleWheel = (e: WheelEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        const delta = e.deltaY > 0 ? -5 : 5;
+        let newZoom = currentZoom + delta;
+        newZoom = Math.max(25, Math.min(300, newZoom));
+        
+        const rect = el.getBoundingClientRect();
+        const pointerX = e.clientX - rect.left;
+        const pointerY = e.clientY - rect.top;
+        
+        const contentX = el.scrollLeft + pointerX - SCROLL_PADDING;
+        const contentY = el.scrollTop + pointerY - SCROLL_PADDING;
+        
+        const zoomRatio = newZoom / currentZoom;
+        
+        setZoomPercent(newZoom);
+        
+        requestAnimationFrame(() => {
+           el.scrollLeft = contentX * zoomRatio + SCROLL_PADDING - pointerX;
+           el.scrollTop = contentY * zoomRatio + SCROLL_PADDING - pointerY;
+        });
+      }
+    };
+    el.addEventListener('wheel', handleWheel, { passive: false });
+    return () => el.removeEventListener('wheel', handleWheel);
+  }, [currentZoom]);
+
+  const toggleDetailedCut = (num: number) => {
+    if (detailedCutNumber === num) {
+      setDetailedCutNumber(null);
+    } else {
+      setDetailedCutNumber(num);
+      setSelectedCutNumber(num);
+    }
+  };
+
+  useEffect(() => {
+    let data = location.state;
     if (!data) {
-      const stored = localStorage.getItem('studentSelectedTopic')
+      const stored = localStorage.getItem('studentSelectedTopic');
       if (stored) {
-        try { data = JSON.parse(stored) } catch(e) {}
+        try { data = JSON.parse(stored); } catch(e) {}
       }
     }
     
     if (!data || !data.selection || !data.topic) {
-      alert('학습 정보가 없습니다. 단원 선택부터 다시 진행해주세요.')
-      navigate('/student/select-unit')
-      return
+      alert('학습 정보가 없습니다. 단원 선택부터 다시 진행해주세요.');
+      navigate('/student/select-unit');
+      return;
     }
-    setSelectionData(data)
+    setSelectionData(data);
 
-    const scriptStored = localStorage.getItem('studentScript')
+    const scriptStored = localStorage.getItem('studentScript');
     let parsedScript: GeneratedComicScript | null = null;
     if (scriptStored) {
       try {
-        parsedScript = JSON.parse(scriptStored)
-        setScriptData(parsedScript)
+        parsedScript = JSON.parse(scriptStored);
+        setScriptData(parsedScript);
       } catch(e) {}
     }
 
     if (!parsedScript) return;
 
-    const topicId = data.topic.id
-    let storedProjectData = loadComicProjectData(topicId)
+    const topicId = data.topic.id;
+    let storedProjectData = loadComicProjectData(topicId);
     
     if (!storedProjectData) {
       storedProjectData = {
@@ -71,328 +229,426 @@ export default function StudentComicFullViewPage() {
           })) as any
         },
         characterReferences: { version: 'v2' }
-      }
-      saveComicProjectData(topicId, storedProjectData)
+      };
+      saveComicProjectData(topicId, storedProjectData);
     }
-    setProjectData(storedProjectData)
+    setProjectData(storedProjectData);
 
-    if (storedProjectData.fullComic?.imageUrl) {
-      setGenState({ 
-        status: 'success', 
-        progress: 100, 
-        fullImageUrl: storedProjectData.fullComic.imageUrl 
-      })
+    const loadedCuts: Record<number, ComicCutEditData> = {};
+    for (let i = 1; i <= 6; i++) {
+      let cutData = loadComicCutData(topicId, i);
+      if (!cutData) {
+        cutData = { cutNumber: i, elements: [], updatedAt: new Date().toISOString() };
+      }
+      if (cutData.customBackgroundPrompt === undefined) {
+        cutData.customBackgroundPrompt = storedProjectData.script.cuts[i - 1]?.sceneDescription || '';
+      }
+      loadedCuts[i] = cutData;
     }
-  }, [location.state, navigate])
+    setCutsData(loadedCuts);
+  }, [location.state, navigate]);
 
   useEffect(() => {
-    const handleResize = () => {
-      if (containerRef.current) {
-        setContainerSize({
-          width: containerRef.current.clientWidth,
-          height: containerRef.current.clientHeight
-        })
+    // 키보드 삭제
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (selectedElementId) handleDeleteElement(selectedElementId);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedElementId, cutsData, selectedCutNumber]);
+
+  const saveCutState = useCallback((cutNum: number, newData: ComicCutEditData) => {
+    if (!projectData) return;
+    const updated = { ...newData, updatedAt: new Date().toISOString() };
+    setCutsData(prev => ({ ...prev, [cutNum]: updated }));
+    try {
+      saveComicCutData(projectData.projectId, cutNum, updated);
+    } catch (e: any) {
+      if (e.message === 'STORAGE_FULL') {
+        alert('저장 공간이 부족합니다. 기존 컷 이미지를 정리하거나 이미지 저장 방식을 변경해야 합니다.');
+      } else {
+        console.error(e);
       }
     }
-    setTimeout(handleResize, 50)
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
-  }, [])
+  }, [projectData]);
 
-  const SCROLL_PADDING = 40
-  const A4_WIDTH = 1400
-  const A4_HEIGHT = 1980
-  const fitScale = Math.min(
-    Math.max(1, (containerSize.width || A4_WIDTH) - SCROLL_PADDING * 2) / A4_WIDTH,
-    Math.max(1, (containerSize.height || A4_HEIGHT) - SCROLL_PADDING * 2) / A4_HEIGHT
-  )
-  const currentZoom = zoomPercent !== null ? zoomPercent : Math.round(fitScale * 100)
+  const handleUpdateElement = (id: string, updates: Partial<ComicCutElement>) => {
+    const cutData = cutsData[selectedCutNumber];
+    if (!cutData) return;
+    saveCutState(selectedCutNumber, {
+      ...cutData,
+      elements: cutData.elements.map(el => el.id === id ? { ...el, ...updates } : el)
+    });
+  };
 
-  useEffect(() => {
-    const el = containerRef.current
-    if (!el) return
-    const handleWheel = (e: WheelEvent) => {
-      if (e.ctrlKey || e.metaKey) {
-        e.preventDefault()
-        const delta = e.deltaY > 0 ? -5 : 5
-        let newZoom = currentZoom + delta
-        newZoom = Math.max(25, Math.min(300, newZoom))
-        
-        const rect = el.getBoundingClientRect()
-        const pointerX = e.clientX - rect.left
-        const pointerY = e.clientY - rect.top
-        
-        const contentX = el.scrollLeft + pointerX - SCROLL_PADDING
-        const contentY = el.scrollTop + pointerY - SCROLL_PADDING
-        
-        const zoomRatio = newZoom / currentZoom
-        
-        setZoomPercent(newZoom)
-        
-        requestAnimationFrame(() => {
-           el.scrollLeft = contentX * zoomRatio + SCROLL_PADDING - pointerX
-           el.scrollTop = contentY * zoomRatio + SCROLL_PADDING - pointerY
-        })
+  const handleAddElement = (element: Omit<ComicCutElement, 'id'>) => {
+    const cutData = cutsData[selectedCutNumber];
+    if (!cutData) return;
+    const maxZ = cutData.elements.reduce((max, el) => Math.max(max, el.zIndex), 0);
+    const newElement: ComicCutElement = {
+      ...element,
+      id: uuidv4(),
+      zIndex: maxZ + 1
+    } as ComicCutElement;
+    saveCutState(selectedCutNumber, {
+      ...cutData,
+      elements: [...cutData.elements, newElement]
+    });
+    setSelectedElementId(newElement.id);
+  };
+
+  const handleDeleteElement = (id: string) => {
+    const cutData = cutsData[selectedCutNumber];
+    if (!cutData) return;
+    saveCutState(selectedCutNumber, {
+      ...cutData,
+      elements: cutData.elements.filter(el => el.id !== id)
+    });
+    if (selectedElementId === id) setSelectedElementId(null);
+  };
+
+  const handleReorderElement = (id: string, direction: 'up' | 'down') => {
+    const cutData = cutsData[selectedCutNumber];
+    if (!cutData) return;
+    const elements = [...cutData.elements];
+    const index = elements.findIndex(e => e.id === id);
+    if (index === -1) return;
+
+    if (direction === 'up' && index < elements.length - 1) {
+      const temp = elements[index].zIndex;
+      elements[index].zIndex = elements[index + 1].zIndex;
+      elements[index + 1].zIndex = temp;
+    } else if (direction === 'down' && index > 0) {
+      const temp = elements[index].zIndex;
+      elements[index].zIndex = elements[index - 1].zIndex;
+      elements[index - 1].zIndex = temp;
+    }
+    
+    saveCutState(selectedCutNumber, { ...cutData, elements });
+  };
+
+  const handleGenerateCut = async (cutNumber: number) => {
+    if (!projectData) return;
+
+    if (cutsData[cutNumber]?.backgroundImageUrl) {
+      if (!confirm(`${cutNumber}컷 배경을 다시 만들까요?\\n기존 배경이 사라집니다.`)) {
+        return;
       }
     }
-    el.addEventListener('wheel', handleWheel, { passive: false })
-    return () => el.removeEventListener('wheel', handleWheel)
-  }, [currentZoom])
 
-  const handleGenerate = async () => {
-    if (!projectData || !scriptData || !scriptData.cuts || scriptData.cuts.length !== 6) {
-      alert('6컷 대본 정보가 부족합니다. 대본 만들기부터 다시 확인해 주세요.')
-      navigate('/student/script', { state: selectionData })
-      return
-    }
-
-    if (genState.status === 'success' && !confirm('6컷 전체 만화를 다시 만들까요?\\n현재 그림이 새로운 그림으로 바뀝니다.\\n(추가 비용이 발생할 수 있습니다.)')) {
-      return
-    }
+    setGenStates(prev => ({ ...prev, [cutNumber]: { status: 'generating', progress: 0, message: '시작하는 중...' } }));
 
     try {
-      const fullComicBase64 = await generateFullComic(
-        projectData,
-        scriptData,
-        setGenState
-      )
+      await generateSingleComicCut(projectData, cutNumber, (state) => {
+        setGenStates(prev => ({ ...prev, [cutNumber]: state }));
+      });
       
-      const updatedProjectData = {
-        ...projectData,
-        fullComic: {
-          imageUrl: fullComicBase64,
-          scriptVersion: projectData.script.version,
-          createdAt: new Date().toISOString()
-        }
+      const newCutData = loadComicCutData(projectData.projectId, cutNumber);
+      if (newCutData) {
+        setCutsData(prev => ({ ...prev, [cutNumber]: newCutData }));
       }
-      setProjectData(updatedProjectData)
-      saveComicProjectData(projectData.projectId, updatedProjectData)
-    } catch (err: any) {
-      console.error(err)
+    } catch (err) {
+      console.error(err);
     }
-  }
+  };
 
-  const handlePrev = () => {
-    navigate('/student/front-cover', { state: selectionData })
-  }
+  const handleGenerateAll = async () => {
+    for (let i = 1; i <= 6; i++) {
+      if (!cutsData[i]?.backgroundImageUrl) {
+        await handleGenerateCut(i);
+      }
+    }
+  };
 
   const handleNext = () => {
-    if (genState.status !== 'success') {
-      alert('6컷 만화를 먼저 완성해 주세요.')
-      return
+    const allGenerated = [1,2,3,4,5,6].every(num => cutsData[num]?.backgroundImageUrl);
+    if (!allGenerated) {
+      if (!confirm('아직 그림이 없는 컷이 있어요. 그래도 다음으로 넘어갈까요?')) {
+        return;
+      }
     }
-    navigate('/student/summary', { state: selectionData })
-  }
+    navigate('/student/unit-summary', { state: selectionData });
+  };
 
-  const handleDownload = () => {
-    if (!genState.fullImageUrl) return;
-    const a = document.createElement('a');
-    a.href = genState.fullImageUrl;
-    a.download = `toonschool-comic-${projectData?.projectId}.png`;
-    a.click();
-  }
-
-  if (!selectionData || !scriptData || !projectData) {
+  if (!selectionData || !projectData) {
     return (
-      <StudentCreationLayout currentStep="full" maxWidth="full" bgVariant="default">
+      <StudentCreationLayout currentStep="comic" maxWidth="full" bgVariant="default">
         <div className="flex-1 w-full bg-[#f3f4f7] flex items-center justify-center">
           <Loader2 className="w-12 h-12 text-purple-500 animate-spin" />
         </div>
       </StudentCreationLayout>
-    )
+    );
   }
 
+  const tools: { id: ToolType; icon: any; label: string }[] = [
+    { id: 'select', icon: MousePointer2, label: '선택' },
+    { id: 'character', icon: Users, label: '캐릭터' },
+    { id: 'script', icon: Type, label: '대사' },
+    { id: 'bubble', icon: MessageSquare, label: '말풍선' },
+    { id: 'background', icon: Layout, label: '배경' },
+    { id: 'layer', icon: Layers, label: '레이어' },
+  ];
+
+  const currentCutData = cutsData[selectedCutNumber];
+
   return (
-    <StudentCreationLayout currentStep="full" maxWidth="full" bgVariant="default">
-      <div className="w-full flex-1 flex flex-col min-h-0 bg-[#f3f4f7] animate-fade-in relative">
-        <div className="flex-1 flex w-full h-full overflow-hidden relative">
+    <StudentCreationLayout currentStep="comic" maxWidth="full" bgVariant="pastel">
+      <div className="w-full flex-1 flex flex-col min-h-0 bg-transparent animate-fade-in relative">
+        
+        {/* 메인 에디터 영역 (좌측 툴바 + 우측 6컷 그리드) */}
+        <div className="flex-1 flex min-h-0 relative">
           
-          {/* Center Main Area */}
-          <div className="flex-1 flex flex-col min-w-0 bg-transparent h-full relative">
+          {/* Left Tools Area */}
+          <div className="flex h-full shrink-0 relative z-30 bg-slate-900 shadow-2xl border-r border-white/10">
+            {/* Main Vertical Toolbar */}
+            <div className="w-[72px] h-full shrink-0 z-40 flex flex-col items-center py-4 gap-2 overflow-y-auto">
+              {tools.map(tool => {
+                const Icon = tool.icon;
+                const isActive = activeTool === tool.id;
+                return (
+                  <button
+                    key={tool.id}
+                    onClick={() => setActiveTool(tool.id)}
+                    className={`flex flex-col items-center justify-center w-14 h-14 rounded-xl transition-all ${isActive ? 'bg-purple-600 text-white' : 'text-slate-400 hover:text-slate-200 hover:bg-white/10'}`}
+                    title={tool.label}
+                  >
+                    <Icon className="w-5 h-5 mb-1" />
+                    <span className="text-[10px] font-bold">{tool.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Tool Panels */}
+            {activeTool !== 'select' && (
+              <div className="w-[300px] h-full transition-all shrink-0 bg-slate-800 border-l border-white/10 z-30 overflow-y-auto">
+                {activeTool === 'character' && (
+                  <CharacterToolPanel 
+                    onAddElement={handleAddElement} 
+                    selectedElementId={selectedElementId}
+                    elements={currentCutData?.elements || []}
+                    onUpdateElement={handleUpdateElement}
+                  />
+                )}
+                {activeTool === 'script' && (
+                  <ComicScriptPanel 
+                    scriptData={scriptData} 
+                    cutNumber={selectedCutNumber} 
+                    onAddElement={handleAddElement} 
+                  />
+                )}
+                {activeTool === 'bubble' && (
+                  <ComicSpeechBubblePanel onAddElement={handleAddElement} />
+                )}
+                {activeTool === 'layer' && currentCutData && (
+                  <ComicLayerPanel 
+                    elements={currentCutData.elements}
+                    selectedElementId={selectedElementId}
+                    onSelectElement={setSelectedElementId}
+                    onUpdateElement={handleUpdateElement}
+                    onReorderElement={handleReorderElement}
+                    onDeleteElement={handleDeleteElement}
+                  />
+                )}
+                {activeTool === 'background' && (
+                  <div className="p-4 flex flex-col h-full text-slate-200">
+                    <h3 className="text-sm font-bold text-slate-400 mb-4">배경 관리</h3>
+                    <p className="text-xs text-slate-500 mb-6">AI가 생성한 컷의 배경을 관리합니다.</p>
+                    
+                    {genStates[selectedCutNumber]?.status === 'error' && (
+                       <div className="mb-4 p-3 bg-red-900/30 border border-red-500/50 rounded-xl">
+                          <p className="text-sm font-bold text-red-400 mb-1">생성 실패</p>
+                          <p className="text-xs font-bold text-red-300 mb-2">원인: {genStates[selectedCutNumber]?.message}</p>
+                          {genStates[selectedCutNumber]?.errorMessage && (
+                            <p className="text-[10px] text-red-400/80 leading-relaxed break-words">{genStates[selectedCutNumber]?.errorMessage}</p>
+                          )}
+                       </div>
+                    )}
+                    
+                    <div className="mb-4 flex-1">
+                      <label className="block text-xs font-bold text-slate-300 mb-2 flex items-center justify-between">
+                        <span>{selectedCutNumber}컷 배경 설명</span>
+                      </label>
+                      <textarea
+                        value={currentCutData?.customBackgroundPrompt ?? ''}
+                        onChange={(e) => {
+                          const cutData = cutsData[selectedCutNumber];
+                          if (cutData) {
+                            saveCutState(selectedCutNumber, {
+                              ...cutData,
+                              customBackgroundPrompt: e.target.value
+                            });
+                          }
+                        }}
+                        className="w-full h-40 bg-slate-900 border border-slate-700 rounded-lg p-3 text-sm text-slate-200 resize-none focus:outline-none focus:border-purple-500 transition-colors"
+                        placeholder="배경 설명을 입력하세요..."
+                      />
+                    </div>
+
+                    <button
+                      onClick={() => handleGenerateCut(selectedCutNumber)}
+                      disabled={genStates[selectedCutNumber]?.status === 'generating'}
+                      className="flex items-center justify-center gap-2 w-full py-3 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl transition-colors disabled:opacity-50"
+                    >
+                      <RefreshCw className={`w-4 h-4 ${genStates[selectedCutNumber]?.status === 'generating' ? 'animate-spin' : ''}`} />
+                      수정한 설명으로 다시 만들기
+                    </button>
+                    <p className="text-xs text-purple-300 mt-4 text-center">
+                      배경 생성 시 사람/캐릭터/글자는 포함되지 않습니다.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Right Area: 6 Cuts Grid */}
+          <div className="flex-1 flex flex-col min-w-0 bg-[#f3f4f7] h-full relative">
             
-            {/* Top Taskbar */}
-            <div className="flex justify-between items-center px-6 py-3 shrink-0 relative z-20 bg-white border-b border-gray-200 shadow-sm">
-              <div className="flex justify-start">
+            {/* Top Header / Taskbar */}
+            <div className="flex justify-between items-center px-8 py-4 shrink-0 relative z-20">
+              {/* Left: Prev Button & Title */}
+              <div className="flex items-center gap-4">
                 <button
-                  onClick={handlePrev}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-jua text-base rounded-full border border-slate-300 transition-all shadow-sm"
+                  onClick={() => navigate('/student/front-cover')}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-slate-800/80 hover:bg-slate-700 text-white font-jua text-base rounded-full border border-white/10 transition-all shadow-sm"
                 >
                   <ArrowLeft className="w-4 h-4" />
                   이전으로
                 </button>
+                <div>
+                  <h1 className="text-2xl font-jua text-slate-800">만화제작 (6컷)</h1>
+                  <p className="text-sm font-bold text-slate-600 hidden md:block">
+                    왼쪽 도구를 사용해 선택한 컷({selectedCutNumber}컷)을 편집하세요.
+                  </p>
+                </div>
               </div>
-
-              <div className="flex items-center justify-end gap-3">
-                <button className="flex items-center gap-1.5 px-5 py-2.5 bg-white hover:bg-gray-50 text-slate-700 font-bold rounded-xl shadow-sm border border-slate-300 text-sm transition-all">
-                  <Save className="w-4 h-4" />
-                  진행사항 저장
-                </button>
-                <button 
-                  onClick={handleGenerate}
-                  disabled={genState.status !== 'success'}
-                  className={`flex items-center gap-1.5 px-5 py-2.5 font-bold rounded-xl shadow-sm text-sm border transition-all ${genState.status === 'success' ? 'bg-white hover:bg-purple-50 text-purple-600 border-purple-200' : 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'}`}
+              
+              {/* Right: Actions */}
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleGenerateAll}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-white text-purple-600 font-bold rounded-xl border-2 border-purple-200 shadow-sm hover:bg-purple-50 transition-all text-sm"
                 >
                   <Sparkles className="w-4 h-4" />
-                  6컷 전체 다시 만들기
-                </button>
-                <button 
-                  onClick={handleDownload}
-                  disabled={genState.status !== 'success'}
-                  className={`flex items-center gap-1.5 px-5 py-2.5 font-bold rounded-xl shadow-sm transition-all text-sm border ${genState.status === 'success' ? 'bg-slate-700/90 hover:bg-slate-600 text-white border-slate-500/50' : 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'}`}
-                >
-                  <Download className="w-4 h-4" />
-                  PNG 내보내기
+                  6컷 배경 모두 생성
                 </button>
                 <button
                   onClick={handleNext}
-                  className={`flex items-center gap-2 px-6 py-2.5 font-jua text-base rounded-full shadow-lg transition-all ml-2 ${genState.status === 'success' ? 'bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-400 hover:to-indigo-400 text-white shadow-purple-500/30' : 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-none'}`}
+                  className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-purple-500 to-indigo-500 text-white font-jua text-lg rounded-xl shadow-lg hover:scale-105 transition-transform"
                 >
-                  다음 단계
+                  단원 정리 가기
                   <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
             </div>
 
-            {/* Canvas Container */}
+            {/* Canvas Area Container */}
             <div className="flex-1 w-full relative min-h-0 min-w-0 overflow-auto overscroll-contain" ref={containerRef}>
-              
-              <div className="flex items-start justify-center min-w-max min-h-max p-10">
-                {/* A4 Document Area */}
-                <div 
-                  className="relative bg-white shadow-xl flex flex-col"
-                  style={{
-                    width: A4_WIDTH,
-                    height: A4_HEIGHT,
-                    transform: `scale(${currentZoom / 100})`,
-                    transformOrigin: 'top center',
-                  }}
-                >
-                  {/* Title Area */}
-                  <div className="h-[180px] w-full flex flex-col items-center justify-center border-b-[4px] border-black p-4 text-center shrink-0">
-                    <span className="text-xl font-bold text-gray-500 mb-2">{projectData.subject} &gt; {projectData.mainUnit || selectionData.selection.majorUnitName}</span>
-                    <h1 className="text-[56px] font-jua text-black leading-tight">{projectData.topicTitle}</h1>
+              <div 
+                className="p-8 pb-32 flex justify-center origin-top transition-transform duration-200"
+                style={{ transform: `scale(${currentZoom / 100})`, minWidth: 'max-content', minHeight: 'max-content' }}
+              >
+              {detailedCutNumber ? (
+                // Detailed Mode for single cut
+                <div className="bg-white rounded-lg shadow-2xl flex flex-col p-6 w-[800px] h-[600px] relative">
+                  <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-xl font-jua text-purple-900">{detailedCutNumber}컷 상세 편집</h2>
+                    <button onClick={() => setDetailedCutNumber(null)} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-bold">
+                      전체 보기로 돌아가기
+                    </button>
                   </div>
-
-                  {/* Comic Area */}
-                  <div className="flex-1 relative border-b-[4px] border-black overflow-hidden bg-white">
-                    {genState.status === 'success' && genState.fullImageUrl ? (
-                      <>
-                        <img 
-                          src={genState.fullImageUrl} 
-                          alt="Generated Comic" 
-                          className="w-full h-full object-fill block"
-                        />
-                        {/* 2x3 Grid Overlay for Dialogues */}
-                        <div className="absolute inset-0 grid grid-cols-2 grid-rows-3 pointer-events-none">
-                          {[1,2,3,4,5,6].map(num => {
-                            const cut = projectData.script.cuts.find(c => c.cutNumber === num);
-                            return (
-                              <div key={num} className="relative w-full h-full p-4 border border-black/10 flex flex-col items-center justify-between">
-                                {/* Number Badge */}
-                                <div className="absolute top-2 left-2 bg-white/90 border-2 border-black text-black font-jua text-3xl px-4 py-2 z-30 rounded-xl shadow-md">
-                                  {num}
-                                </div>
-                                
-                                {/* Dialogues Container */}
-                                <div className="w-full h-full flex flex-col gap-2 mt-16 px-4">
-                                  {cut?.dialogues.map((d, i) => (
-                                    <div key={i} className="self-end bg-white/95 border-2 border-slate-300 rounded-3xl p-4 shadow-lg max-w-[80%] pointer-events-auto">
-                                      <div className="bg-purple-500 text-white text-xs font-bold px-2 py-1 rounded-full w-max mb-1">
-                                        {d.character}
-                                      </div>
-                                      <p className="text-slate-800 font-bold text-2xl leading-snug break-keep">
-                                        {d.text}
-                                      </p>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            )
-                          })}
-                        </div>
-                      </>
-                    ) : (
-                      <div className="w-full h-full flex flex-col items-center justify-center bg-gray-50 text-gray-400">
-                        <span className="text-3xl font-bold mb-4">백지 (만화를 그려주세요)</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Bottom Summary Area */}
-                  <div className="h-[220px] w-full bg-gray-50 flex items-center p-8 shrink-0">
-                    <div className="bg-purple-100 text-purple-800 font-jua text-3xl px-6 py-3 rounded-2xl mr-8 whitespace-nowrap">핵심 정리</div>
-                    <div className="flex gap-4 flex-wrap flex-1">
-                      {projectData.script.cuts.filter(c => c.learningPoint && c.learningPoint.length > 0).map((c, i) => (
-                        <span key={i} className="bg-white border-2 border-purple-200 px-4 py-2 rounded-full font-bold text-xl text-slate-700 shadow-sm">
-                          {c.learningPoint}
-                        </span>
-                      ))}
-                    </div>
+                  <div className="flex-1 relative">
+                    <ComicCellWrapper
+                      cutNumber={detailedCutNumber}
+                      cutData={cutsData[detailedCutNumber]}
+                      isSelected={true}
+                      onClick={() => {}}
+                      selectedElementId={selectedElementId}
+                      onSelectElement={setSelectedElementId}
+                      onUpdateElement={handleUpdateElement}
+                      genState={genStates[detailedCutNumber]}
+                      onGenerate={() => handleGenerateCut(detailedCutNumber)}
+                    />
                   </div>
                 </div>
-              </div>
-
-              {/* Generate Overlay (if not generated) */}
-              {(genState.status !== 'success') && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm z-30">
-                  {genState.status === 'idle' || genState.status === 'error' ? (
-                    <div className="flex flex-col items-center gap-6 text-center max-w-lg mx-auto p-8 bg-white rounded-3xl shadow-2xl border border-slate-100">
-                      {genState.status === 'error' && (
-                        <div className="bg-red-50 text-red-600 p-6 rounded-2xl border border-red-100 w-full mb-2">
-                          <p className="font-bold text-xl mb-2 flex items-center justify-center gap-2">
-                            <span>🚨</span> 이미지 생성 실패
-                          </p>
-                          <p className="text-base text-red-500 break-words">{genState.errorMessage}</p>
-                        </div>
-                      )}
-                      
-                      <button 
-                        onClick={handleGenerate}
-                        className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white px-10 py-5 rounded-full font-jua text-3xl shadow-xl hover:scale-105 transition-transform flex items-center justify-center gap-4 border border-purple-300 w-full"
-                      >
-                        <Sparkles className="w-10 h-10"/> 
-                        {genState.status === 'error' ? '전체 다시 시도하기' : '6컷 만화 한 번에 만들기'}
-                      </button>
-                      
-                      {genState.status === 'error' && (
-                        <p className="text-slate-400 text-sm mt-2">
-                          API 요청 오류일 수 있습니다. 프롬프트 또는 할당량을 확인해 주세요.
-                        </p>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center bg-white p-12 rounded-3xl shadow-2xl border-4 border-purple-100">
-                      <Loader2 className="w-20 h-20 text-purple-500 animate-spin mb-6" />
-                      <h2 className="text-3xl font-jua text-slate-800 mb-6">
-                        {genState.message || '만화를 생성하고 있어요...'}
+              ) : (
+                // A4 Canvas Container
+                <div 
+                  className="bg-white rounded-lg shadow-2xl flex flex-col p-6 shrink-0" 
+                  style={{ 
+                    width: '750px', 
+                    aspectRatio: '210 / 297'
+                  }}
+                >
+                  {/* Top: Title Area */}
+                  <div className="flex flex-col items-center justify-center mb-6 mt-4 shrink-0">
+                    <div className="px-6 py-2 bg-purple-50 rounded-full border border-purple-100 flex items-center justify-center">
+                      <h2 className="text-xl font-jua text-purple-900">
+                        {projectData.subject} · {projectData.topicTitle}
                       </h2>
-                      <div className="w-full max-w-md bg-slate-100 rounded-full h-6 overflow-hidden border border-slate-200">
-                        <div 
-                          className="bg-gradient-to-r from-purple-500 to-indigo-500 h-full transition-all duration-300"
-                          style={{ width: `${genState.progress}%` }}
-                        />
-                      </div>
-                      <div className="text-purple-600 font-bold mt-4 text-xl flex flex-col items-center">
-                        <span>{genState.progress}%</span>
-                      </div>
                     </div>
-                  )}
+                    <span className="text-sm font-bold text-slate-500 mt-2">
+                      {projectData.grade}
+                    </span>
+                  </div>
+                  
+                  {/* Center: 6 Cuts (2x3 Grid) */}
+                  <div className="flex-1 grid grid-cols-2 grid-rows-3 gap-3 md:gap-4 lg:gap-5">
+                    {[1, 2, 3, 4, 5, 6].map(num => (
+                      <div key={num} className="w-full h-full relative group">
+                        <ComicCellWrapper
+                          cutNumber={num}
+                          cutData={cutsData[num]}
+                          isSelected={selectedCutNumber === num}
+                          onClick={() => {
+                            setSelectedCutNumber(num);
+                            setSelectedElementId(null);
+                          }}
+                          onDoubleClick={() => toggleDetailedCut(num)}
+                          selectedElementId={selectedElementId}
+                          onSelectElement={setSelectedElementId}
+                          onUpdateElement={handleUpdateElement}
+                          genState={genStates[num]}
+                          onGenerate={() => handleGenerateCut(num)}
+                        />
+                        {/* Detail View Overlay Button */}
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); toggleDetailedCut(num); }}
+                          className="absolute top-2 right-2 p-2 bg-black/50 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity z-30 hover:bg-black/70"
+                          title="크게 편집하기"
+                        >
+                          <Maximize className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Bottom: Future Summary Area */}
+                  <div className="h-28 mt-6 shrink-0 border-2 border-dashed border-slate-200 bg-slate-50 rounded-xl flex items-center justify-center">
+                    <span className="text-slate-400 font-bold text-sm">핵심정리 영역 자리</span>
+                  </div>
                 </div>
               )}
             </div>
+            
+            </div>
 
             {/* Zoom Controls */}
-            <div className="absolute bottom-6 right-6 z-50 flex items-center gap-2 md:gap-3 bg-white/95 backdrop-blur-sm border border-slate-200 px-3 py-2 md:px-4 md:py-2.5 rounded-full shadow-xl text-slate-600">
+            <div className="absolute bottom-6 right-6 z-50 flex items-center gap-2 md:gap-3 bg-slate-800/95 backdrop-blur-sm border border-slate-700/50 px-3 py-2 md:px-4 md:py-2.5 rounded-full shadow-2xl text-slate-200">
               <button 
                 onClick={() => setZoomPercent(Math.max(25, currentZoom - 10))}
                 disabled={currentZoom <= 25}
-                className="hover:text-purple-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors p-1"
-                aria-label="축소" title="축소"
+                className="hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors p-1"
+                aria-label="캔버스 축소" title="축소"
               >
                 <ZoomOut className="w-4 h-4" />
               </button>
               
-              <span className="text-xs md:text-sm font-bold w-[4ch] text-center font-mono text-slate-700">
+              <span className="text-xs md:text-sm font-bold w-[4ch] text-center font-mono">
                 {currentZoom}%
               </span>
               
@@ -402,32 +658,37 @@ export default function StudentComicFullViewPage() {
                 value={currentZoom}
                 onChange={(e) => setZoomPercent(parseInt(e.target.value))}
                 className="w-16 md:w-24 accent-purple-500 cursor-pointer"
+                aria-label="캔버스 확대 비율"
+                aria-valuemin={25}
+                aria-valuemax={300}
+                aria-valuenow={currentZoom}
               />
               
               <button 
                 onClick={() => setZoomPercent(Math.min(300, currentZoom + 10))}
                 disabled={currentZoom >= 300}
-                className="hover:text-purple-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors p-1"
-                aria-label="확대" title="확대"
+                className="hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors p-1"
+                aria-label="캔버스 확대" title="확대"
               >
                 <ZoomIn className="w-4 h-4" />
               </button>
               
-              <div className="w-px h-4 md:h-5 bg-slate-300 mx-0.5 md:mx-1" />
+              <div className="w-px h-4 md:h-5 bg-slate-600 mx-0.5 md:mx-1" />
               
               <button 
                 onClick={() => setZoomPercent(null)}
-                className={`hover:text-purple-600 transition-colors flex items-center gap-1.5 text-xs font-bold p-1 ${zoomPercent === null ? 'text-purple-600' : 'text-slate-500'}`}
-                aria-label="화면 맞춤" title="화면 맞춤"
+                className={`hover:text-white transition-colors flex items-center gap-1.5 text-xs font-bold p-1 ${zoomPercent === null ? 'text-purple-400' : 'text-slate-300'}`}
+                aria-label="캔버스를 화면에 맞추기" title="화면 맞춤"
               >
                 <Maximize className="w-3.5 h-3.5 md:w-4 md:h-4" />
                 <span className="hidden md:inline">맞춤</span>
               </button>
             </div>
-            
+
           </div>
+          
         </div>
       </div>
     </StudentCreationLayout>
-  )
+  );
 }

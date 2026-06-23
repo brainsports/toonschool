@@ -1,24 +1,25 @@
 import { Check } from 'lucide-react'
+import { useNavigate, useLocation } from 'react-router-dom'
 
-export type FlowStepKey = 'unit' | 'topic' | 'script' | 'frontCover' | 'comic' | 'full' | 'summary' | 'quiz' | 'backCover' | 'complete'
+export type FlowStepKey = 'unit' | 'topic' | 'script' | 'frontCover' | 'comic' | 'summary' | 'quiz' | 'backCover' | 'viewer' | 'complete'
 
 interface FlowStep {
   key: FlowStepKey
   label: string
   icon: string
+  path?: string
 }
 
 const steps: FlowStep[] = [
-  { key: 'unit', label: '어떤 공부 할까?', icon: '📚' },
-  { key: 'topic', label: '무엇을 그릴까?', icon: '✨' },
-  { key: 'script', label: '대본 만들기', icon: '📝' },
-  { key: 'frontCover', label: '앞표지 만들기', icon: '📘' },
-  { key: 'comic', label: '뚝딱 만화 만들기', icon: '💬' },
-  { key: 'full', label: '모아보기', icon: '🖼️' },
-  { key: 'summary', label: '알짜배기 정리', icon: '📝' },
-  { key: 'quiz', label: '팡팡! 퀴즈', icon: '❓' },
-  { key: 'backCover', label: '뒷표지 꾸미기', icon: '🎨' },
-  { key: 'complete', label: '짜잔! 책 완성 👑', icon: '🏆' }
+  { key: 'unit', label: '단원 선택', icon: '📚', path: '/student/select-unit' },
+  { key: 'topic', label: '주제 만들기', icon: '✨', path: '/student/topic' },
+  { key: 'script', label: '대본 만들기', icon: '📝', path: '/student/script' },
+  { key: 'frontCover', label: '표지만들기', icon: '📘', path: '/student/front-cover' },
+  { key: 'comic', label: '만화제작', icon: '💬', path: '/student/comic/full' },
+  { key: 'summary', label: '단원 정리', icon: '📝', path: '/student/unit-summary' },
+  { key: 'quiz', label: '퀴즈만들기', icon: '❓', path: '/student/quiz/intro' },
+  { key: 'backCover', label: '뒤표지 꾸미기', icon: '🎨', path: '/student/back-cover' },
+  { key: 'viewer', label: '만화보기', icon: '🖼️', path: '/student/comic/read' }
 ]
 
 interface StudentFlowSidebarProps {
@@ -28,6 +29,8 @@ interface StudentFlowSidebarProps {
 }
 
 export default function StudentFlowSidebar({ currentStep, completedSteps = [], theme = 'light' }: StudentFlowSidebarProps) {
+  const navigate = useNavigate()
+  const location = useLocation()
   const currentIndex = steps.findIndex(s => s.key === currentStep)
 
   const isDark = theme === 'dark'
@@ -49,8 +52,15 @@ export default function StudentFlowSidebar({ currentStep, completedSteps = [], t
 
           return (
             <div key={step.key} className="relative flex flex-col">
-              <div className={`
+              <div 
+                onClick={() => {
+                  if (step.path) {
+                    navigate(step.path, { state: location.state })
+                  }
+                }}
+                className={`
                 flex items-center gap-3 px-3 py-2.5 rounded-[1.25rem] transition-all relative z-10
+                ${step.path ? 'cursor-pointer hover:bg-white/10' : ''}
                 ${isCurrent 
                   ? (isDark ? 'bg-purple-600/50 text-white shadow-[0_0_15px_rgba(167,139,250,0.5)] border border-purple-400/50 scale-105 my-1' : 'bg-purple-500 text-white shadow-sm scale-105 my-1') 
                   : ''}

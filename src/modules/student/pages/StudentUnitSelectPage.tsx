@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import StudentCreationLayout from '../components/layout/StudentCreationLayout'
 import type { 
   StudentGradeOption, 
+  StudentSemesterOption,
   StudentSubjectOption, 
   StudentMajorUnitOption, 
   StudentMiddleUnitOption,
@@ -11,8 +12,8 @@ import type {
 } from '../types/studentCurriculum'
 import { 
   getStudentGrades, 
-  getSubjectsByGrade, 
-  getMajorUnitsByGradeAndSubject, 
+  getSubjectsByGradeAndSemester, 
+  getMajorUnitsByGradeSemesterAndSubject, 
   getMiddleUnitsByMajorUnit 
 } from '../services/studentCurriculumService'
 
@@ -25,12 +26,17 @@ export default function StudentUnitSelectPage() {
   
   // Data State
   const [grades, setGrades] = useState<StudentGradeOption[]>([])
+  const semesters: StudentSemesterOption[] = [
+    { id: 'sem-1', label: '1학기', value: 1 },
+    { id: 'sem-2', label: '2학기', value: 2 }
+  ]
   const [subjects, setSubjects] = useState<StudentSubjectOption[]>([])
   const [majorUnits, setMajorUnits] = useState<StudentMajorUnitOption[]>([])
   const [middleUnits, setMiddleUnits] = useState<StudentMiddleUnitOption[]>([])
 
   // Selection State
   const [selectedGrade, setSelectedGrade] = useState<StudentGradeOption | null>(null)
+  const [selectedSemester, setSelectedSemester] = useState<StudentSemesterOption | null>(null)
   const [selectedSubject, setSelectedSubject] = useState<StudentSubjectOption | null>(null)
   const [selectedMajorUnit, setSelectedMajorUnit] = useState<StudentMajorUnitOption | null>(null)
   const [selectedMiddleUnit, setSelectedMiddleUnit] = useState<StudentMiddleUnitOption | null>(null)
@@ -58,32 +64,37 @@ export default function StudentUnitSelectPage() {
     fetchGrades()
   }, [])
 
-  // 2. 학년 선택 시 과목 로드
+  // 2. 학년/학기 선택 시 과목 로드
   useEffect(() => {
     const fetchSubjects = async () => {
-      if (!selectedGrade) {
+      if (!selectedGrade || !selectedSemester) {
         setSubjects([])
         return
       }
       setSubjectLoadState('loading')
-      const data = await getSubjectsByGrade(selectedGrade.value)
+      const data = await getSubjectsByGradeAndSemester(selectedGrade.value, selectedSemester.value)
       setSubjects(data)
       setSubjectLoadState('success')
     }
     fetchSubjects()
-  }, [selectedGrade])
+  }, [selectedGrade, selectedSemester])
 
   // 3. 2단계 진입 및 과목 선택 완료 시 대단원 로드
   useEffect(() => {
     const fetchMajorUnits = async () => {
-      if (!selectedGrade || !selectedSubject || step !== 2) return
+      if (!selectedGrade || !selectedSemester || !selectedSubject || step !== 2) return
       setLoadState('loading')
-      const data = await getMajorUnitsByGradeAndSubject(selectedGrade.value, selectedSubject.id)
+      const data = await getMajorUnitsByGradeSemesterAndSubject(
+        selectedGrade.value, 
+        selectedSemester.value, 
+        selectedSubject.id,
+        selectedSubject.code
+      )
       setMajorUnits(data)
       setLoadState('success')
     }
     fetchMajorUnits()
-  }, [selectedGrade, selectedSubject, step])
+  }, [selectedGrade, selectedSemester, selectedSubject, step])
 
   // 4. 대단원 선택 시 중단원 로드
   useEffect(() => {
@@ -114,6 +125,14 @@ export default function StudentUnitSelectPage() {
   // 핸들러 함수들
   const handleGradeSelect = (g: StudentGradeOption) => {
     setSelectedGrade(g)
+    setSelectedSemester(null)
+    setSelectedSubject(null)
+    setSelectedMajorUnit(null)
+    setSelectedMiddleUnit(null)
+  }
+
+  const handleSemesterSelect = (s: StudentSemesterOption) => {
+    setSelectedSemester(s)
     setSelectedSubject(null)
     setSelectedMajorUnit(null)
     setSelectedMiddleUnit(null)
@@ -136,8 +155,8 @@ export default function StudentUnitSelectPage() {
     setSelectedMiddleUnit(mu)
   }
 
-  const isStep1Complete = !!(selectedGrade && selectedSubject)
-  const isStep2Complete = !!(selectedMajorUnit && selectedMiddleUnit)
+  const isStep1Complete = !!(selectedGrade && selectedSemester)
+  const isStep2Complete = !!(selectedSubject && selectedMajorUnit && selectedMiddleUnit)
   const canProceed = isStep1Complete && isStep2Complete
 
   const handleNextStep = () => {
@@ -157,6 +176,8 @@ export default function StudentUnitSelectPage() {
     const selection: StudentUnitSelection = {
       gradeValue: selectedGrade?.value || null,
       gradeName: selectedGrade?.label || null,
+      semesterValue: selectedSemester?.value || null,
+      semesterName: selectedSemester?.label || null,
       subjectId: selectedSubject?.id || null,
       subjectName: selectedSubject?.name || null,
       majorUnitId: selectedMajorUnit?.id || null,
@@ -174,52 +195,56 @@ export default function StudentUnitSelectPage() {
 
   return (
     <StudentCreationLayout currentStep="unit" bgVariant="pastel" maxWidth="full">
-      <div className="w-full pt-[40px] md:pt-[56px] pb-[48px] px-4 max-w-5xl mx-auto h-full overflow-y-auto">
-        {/* 상단 제목 영역 */}
-        <div className="text-center">
-          <h1 className="text-[2rem] md:text-[2.15rem] font-jua text-[#202330]">
-            어떤 모험을 떠날까요?
-          </h1>
+      <div className="flex-1 w-full h-full overflow-y-auto pr-4 lg:pr-8">
+        <div className="w-full pt-[40px] md:pt-[56px] pb-[48px] px-4 max-w-5xl mx-auto">
+          {/* 상단 제목 영역 */}
+          <div className="text-center">
+            <h1 className="text-[2rem] md:text-[2.15rem] font-jua text-[#202330]">
+              어떤 모험을 떠날까요?
+            </h1>
 
-          <p className="text-base font-bold text-[#626776] mt-[16px] bg-white border border-[rgba(111,78,190,0.18)] inline-block px-5 py-1.5 rounded-full">
-            {step === 1 ? '1단계: 학년과 과목 고르기' : '2단계: 단원 고르기'}
-          </p>
-        </div>
+            <p className="text-base font-bold text-[#626776] mt-[16px] bg-white border border-[rgba(111,78,190,0.18)] inline-block px-5 py-1.5 rounded-full">
+              {step === 1 ? '1단계: 학년·학기 고르기' : '2단계: 과목과 단원 고르기'}
+            </p>
+          </div>
 
-        <div className="mt-[32px]">
-        {step === 1 ? (
-          <UnitStep1Selection
-            grades={grades}
-            subjects={subjects}
-            selectedGrade={selectedGrade}
-            selectedSubject={selectedSubject}
-            loadState={loadState}
-            subjectLoadState={subjectLoadState}
-            gradeEmojis={gradeEmojis}
-            subjectEmojis={subjectEmojis}
-            onGradeSelect={handleGradeSelect}
-            onSubjectSelect={handleSubjectSelect}
-            onNextStep={handleNextStep}
-            isStep1Complete={isStep1Complete}
-          />
-        ) : (
-          <UnitStep2Selection
-            selectedGrade={selectedGrade}
-            selectedSubject={selectedSubject}
-            majorUnits={majorUnits}
-            middleUnits={middleUnits}
-            selectedMajorUnit={selectedMajorUnit}
-            selectedMiddleUnit={selectedMiddleUnit}
-            loadState={loadState}
-            gradeEmojis={gradeEmojis}
-            subjectEmojis={subjectEmojis}
-            onMajorUnitSelect={handleMajorUnitSelect}
-            onMiddleUnitSelect={handleMiddleUnitSelect}
-            onPrevStep={handlePrevStep}
-            onProceed={handleProceed}
-            canProceed={canProceed}
-          />
-        )}
+          <div className="mt-[32px]">
+          {step === 1 ? (
+            <UnitStep1Selection
+              grades={grades}
+              semesters={semesters}
+              selectedGrade={selectedGrade}
+              selectedSemester={selectedSemester}
+              loadState={loadState}
+              gradeEmojis={gradeEmojis}
+              onGradeSelect={handleGradeSelect}
+              onSemesterSelect={handleSemesterSelect}
+              onNextStep={handleNextStep}
+              isStep1Complete={isStep1Complete}
+            />
+          ) : (
+            <UnitStep2Selection
+              selectedGrade={selectedGrade}
+              selectedSemester={selectedSemester}
+              subjects={subjects}
+              selectedSubject={selectedSubject}
+              majorUnits={majorUnits}
+              middleUnits={middleUnits}
+              selectedMajorUnit={selectedMajorUnit}
+              selectedMiddleUnit={selectedMiddleUnit}
+              loadState={loadState}
+              subjectLoadState={subjectLoadState}
+              gradeEmojis={gradeEmojis}
+              subjectEmojis={subjectEmojis}
+              onSubjectSelect={handleSubjectSelect}
+              onMajorUnitSelect={handleMajorUnitSelect}
+              onMiddleUnitSelect={handleMiddleUnitSelect}
+              onPrevStep={handlePrevStep}
+              onProceed={handleProceed}
+              canProceed={canProceed}
+            />
+          )}
+          </div>
         </div>
       </div>
     </StudentCreationLayout>

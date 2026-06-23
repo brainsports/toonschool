@@ -6,6 +6,12 @@ export interface StudentGradeOption {
   value: number
 }
 
+export interface StudentSemesterOption {
+  id: string
+  label: string
+  value: number
+}
+
 export interface StudentSubjectOption {
   id: string
   name: string
@@ -28,6 +34,8 @@ export interface StudentMiddleUnitOption {
 export interface StudentUnitSelection {
   gradeValue: number | null
   gradeName: string | null
+  semesterValue: number | null
+  semesterName: string | null
   subjectId: string | null
   subjectName: string | null
   majorUnitId: string | null

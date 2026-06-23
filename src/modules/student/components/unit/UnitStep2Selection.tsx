@@ -1,6 +1,7 @@
 import { Loader2, ArrowLeft } from 'lucide-react'
 import type { 
   StudentGradeOption, 
+  StudentSemesterOption,
   StudentSubjectOption, 
   StudentMajorUnitOption, 
   StudentMiddleUnitOption, 
@@ -12,14 +13,18 @@ import StudentPrimaryActionButton from '../layout/StudentPrimaryActionButton'
 
 interface UnitStep2SelectionProps {
   selectedGrade: StudentGradeOption | null
+  selectedSemester: StudentSemesterOption | null
+  subjects: StudentSubjectOption[]
   selectedSubject: StudentSubjectOption | null
   majorUnits: StudentMajorUnitOption[]
   middleUnits: StudentMiddleUnitOption[]
   selectedMajorUnit: StudentMajorUnitOption | null
   selectedMiddleUnit: StudentMiddleUnitOption | null
   loadState: CurriculumLoadState
+  subjectLoadState: CurriculumLoadState
   gradeEmojis: Record<string, string>
   subjectEmojis: Record<string, string>
+  onSubjectSelect: (s: StudentSubjectOption) => void
   onMajorUnitSelect: (id: string) => void
   onMiddleUnitSelect: (id: string) => void
   onPrevStep: () => void
@@ -29,14 +34,18 @@ interface UnitStep2SelectionProps {
 
 export default function UnitStep2Selection({
   selectedGrade,
+  selectedSemester,
+  subjects,
   selectedSubject,
   majorUnits,
   middleUnits,
   selectedMajorUnit,
   selectedMiddleUnit,
   loadState,
+  subjectLoadState,
   gradeEmojis,
   subjectEmojis,
+  onSubjectSelect,
   onMajorUnitSelect,
   onMiddleUnitSelect,
   onPrevStep,
@@ -62,41 +71,76 @@ export default function UnitStep2Selection({
           <span className="text-2xl">{gradeEmojis[selectedGrade?.label || ''] || '🎒'}</span>
           <span className="font-jua text-lg text-[#3f4350]">{selectedGrade?.label}</span>
           <span className="text-[#8b909e]">/</span>
-          <span className="text-2xl">{subjectEmojis[selectedSubject?.name || ''] || '📚'}</span>
-          <span className="font-jua text-lg text-[#3f4350]">{selectedSubject?.name}</span>
+          <span className="text-2xl">{selectedSemester?.value === 1 ? '🌸' : '🍁'}</span>
+          <span className="font-jua text-lg text-[#3f4350]">{selectedSemester?.label}</span>
         </div>
 
+        {/* 과목 선택 */}
         <div className="space-y-4">
           <h3 className="font-jua text-xl text-[#303442] flex items-center gap-2">
             <span className="w-6 h-6 rounded-full bg-[#f1ebff] border border-purple-200 flex items-center justify-center text-sm text-purple-600">3</span>
-            대단원을 골라요
+            과목을 골라주세요
           </h3>
-          {majorUnits.length === 0 && loadState === 'loading' ? (
-            <div className="py-4 flex justify-center text-purple-300">
-              <Loader2 className="animate-spin w-8 h-8" />
+          
+          {subjects.length === 0 && subjectLoadState === 'loading' ? (
+            <div className="py-8 flex justify-center text-sky-300">
+              <Loader2 className="animate-spin w-10 h-10" />
             </div>
-          ) : majorUnits.length === 0 ? (
-            <StudentInnerPanel>단원이 없습니다.</StudentInnerPanel>
+          ) : subjects.length === 0 ? (
+            <StudentInnerPanel>준비된 과목이 없습니다.</StudentInnerPanel>
           ) : (
-            <select
-              value={selectedMajorUnit?.id || ''}
-              onChange={(e) => onMajorUnitSelect(e.target.value)}
-              className="input-game-soft w-full font-bold"
-            >
-              <option value="">대단원을 선택해주세요</option>
-              {majorUnits.map((mu) => (
-                <option key={mu.id} value={mu.id}>
-                  {mu.unitNumber}단원. {mu.unitName}
-                </option>
-              ))}
-            </select>
+            <div className="flex flex-wrap justify-center gap-4 md:gap-6 lg:gap-8">
+              {subjects.map((s) => {
+                const isSelected = selectedSubject?.id === s.id
+                return (
+                  <button
+                    key={s.id}
+                    onClick={() => onSubjectSelect(s)}
+                    className={`btn-select-item flex-col w-[100px] h-[110px] md:w-[120px] md:h-[130px] py-2 px-2 gap-2
+                      ${isSelected ? 'btn-select-item-active scale-105 shadow-md' : ''}`}
+                  >
+                    <span className="text-4xl md:text-5xl select-none mb-1">{subjectEmojis[s.name] || '📚'}</span>
+                    <span className={`font-jua text-base md:text-xl ${isSelected ? 'text-white' : 'text-[#3f4350]'}`}>{s.name}</span>
+                  </button>
+                )
+              })}
+            </div>
           )}
         </div>
+
+        {selectedSubject && (
+          <div className="space-y-4 animate-fade-in">
+            <h3 className="font-jua text-xl text-[#303442] flex items-center gap-2">
+              <span className="w-6 h-6 rounded-full bg-[#f1ebff] border border-purple-200 flex items-center justify-center text-sm text-purple-600">4</span>
+              대단원을 골라요
+            </h3>
+            {majorUnits.length === 0 && loadState === 'loading' ? (
+              <div className="py-4 flex justify-center text-purple-300">
+                <Loader2 className="animate-spin w-8 h-8" />
+              </div>
+            ) : majorUnits.length === 0 ? (
+              <StudentInnerPanel>단원이 없습니다.</StudentInnerPanel>
+            ) : (
+              <select
+                value={selectedMajorUnit?.id || ''}
+                onChange={(e) => onMajorUnitSelect(e.target.value)}
+                className="input-game-soft w-full font-bold"
+              >
+                <option value="">대단원을 선택해주세요</option>
+                {majorUnits.map((mu) => (
+                  <option key={mu.id} value={mu.id}>
+                    {mu.unitNumber}단원. {mu.unitName}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+        )}
 
         {selectedMajorUnit && (
           <div className="space-y-4 animate-fade-in">
             <h3 className="font-jua text-xl text-[#303442] flex items-center gap-2">
-              <span className="w-6 h-6 rounded-full bg-[#f1ebff] border border-purple-200 flex items-center justify-center text-sm text-purple-600">4</span>
+              <span className="w-6 h-6 rounded-full bg-[#f1ebff] border border-purple-200 flex items-center justify-center text-sm text-purple-600">5</span>
               중단원을 골라요
             </h3>
             {middleUnits.length === 0 && loadState === 'loading' ? (

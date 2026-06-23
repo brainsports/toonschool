@@ -55,8 +55,11 @@ export interface ComicProjectData {
 export const saveComicProjectData = (projectId: string, data: ComicProjectData) => {
   try {
     localStorage.setItem(`comic_project_data_${projectId}`, JSON.stringify(data));
-  } catch (e) {
+  } catch (e: any) {
     console.error('Failed to save comic project data', e);
+    if (e.name === 'QuotaExceededError' || e.message?.includes('exceeded the quota')) {
+      throw new Error('STORAGE_FULL');
+    }
   }
 };
 
@@ -80,8 +83,11 @@ export interface ComicMasterData {
 export const saveComicMasterData = (topicId: string, data: ComicMasterData) => {
   try {
     localStorage.setItem(`comic_master_data_${topicId}`, JSON.stringify(data));
-  } catch (e) {
+  } catch (e: any) {
     console.error('Failed to save master data', e);
+    if (e.name === 'QuotaExceededError' || e.message?.includes('exceeded the quota')) {
+      throw new Error('STORAGE_FULL');
+    }
   }
 };
 
@@ -93,3 +99,80 @@ export const loadComicMasterData = (topicId: string): ComicMasterData | null => 
     return null;
   }
 };
+
+// ----------------------------------------------------------------------
+// New V2 Comic Cut Editor Storage
+// ----------------------------------------------------------------------
+
+export interface ComicCutElement {
+  id: string;
+  type: "character" | "speechBubble" | "image" | "text" | "shape";
+  characterId?: "hana" | "doyoon" | "seoa";
+  speaker?: string;
+  text?: string;
+  bubbleType?: "basic" | "thought" | "explain" | "emphasis";
+  imageUrl?: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  rotation?: number;
+  flipX?: boolean;
+  zIndex: number;
+  crop?: {
+    top: number;
+    right: number;
+    bottom: number;
+    left: number;
+  };
+  cropScale?: number;
+  cropX?: number;
+  cropY?: number;
+  style?: {
+    backgroundColor?: string;
+    borderColor?: string;
+    textColor?: string;
+    fontSize?: number;
+  };
+  [key: string]: any;
+}
+
+export interface ComicCutEditData {
+  cutNumber: number;
+  backgroundImageUrl?: string;
+  customBackgroundPrompt?: string;
+  backgroundInfo?: {
+    sceneTitle?: string;
+    description?: string;
+    recommendedCharacterPosition?: string;
+    recommendedBubblePosition?: string;
+    caution?: string;
+  };
+  elements: ComicCutElement[];
+  updatedAt: string;
+}
+
+export const getComicCutStorageKey = (topicId: string, cutNumber: number) => {
+  return `toonschool:comic:${topicId}:cut:${cutNumber}`;
+};
+
+export const saveComicCutData = (topicId: string, cutNumber: number, data: ComicCutEditData) => {
+  try {
+    localStorage.setItem(getComicCutStorageKey(topicId, cutNumber), JSON.stringify(data));
+  } catch (e: any) {
+    console.error(`Failed to save comic cut ${cutNumber} data`, e);
+    if (e.name === 'QuotaExceededError' || e.message?.includes('exceeded the quota')) {
+      throw new Error('STORAGE_FULL');
+    }
+  }
+};
+
+export const loadComicCutData = (topicId: string, cutNumber: number): ComicCutEditData | null => {
+  try {
+    const data = localStorage.getItem(getComicCutStorageKey(topicId, cutNumber));
+    return data ? JSON.parse(data) : null;
+  } catch (e) {
+    return null;
+  }
+};
+

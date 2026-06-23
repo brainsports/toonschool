@@ -5,9 +5,11 @@ import ScriptPreviewBoard from './ScriptPreviewBoard';
 import ScriptCutEditor from './ScriptCutEditor';
 import type { StudentUnitSelection } from '../../types/studentCurriculum';
 import type { TopicRecommendation } from '../../types/studentTopic';
-import { generateScript, type GeneratedComicScript } from '../../services/studentScriptService';
+import { generateScript, generateCoverContent, type GeneratedComicScript, type CoverKeyConcept, type CoverDialogue } from '../../services/studentScriptService';
+import ScriptKeyConceptPanel from './panels/ScriptKeyConceptPanel';
+import ScriptCoverDialoguePanel from './panels/ScriptCoverDialoguePanel';
 
-export type ScriptToolType = 'ai' | 'cut' | 'character' | 'setting' | 'review';
+export type ScriptToolType = 'ai' | 'cut' | 'concept' | 'coverDialogue';
 
 interface StudentScriptEditorProps {
   selectionData: {
@@ -17,7 +19,7 @@ interface StudentScriptEditorProps {
     selectedKeywords?: string[];
   };
   onPrev: () => void;
-  onNext: () => void;
+  onNext: (keyConcepts?: CoverKeyConcept[], coverDialogue?: CoverDialogue) => void;
 }
 
 export default function StudentScriptEditor({ selectionData, onPrev, onNext }: StudentScriptEditorProps) {
@@ -28,6 +30,7 @@ export default function StudentScriptEditor({ selectionData, onPrev, onNext }: S
   // Script states
   const [scriptData, setScriptData] = useState<GeneratedComicScript | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [genPhase, setGenPhase] = useState<0 | 1 | 2>(0);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // 줌 상태 관리
@@ -54,8 +57,25 @@ export default function StudentScriptEditor({ selectionData, onPrev, onNext }: S
     cut.dialogues.some(d => Array.from(d.text).length > 20)
   );
 
+  const requestPayload = {
+    gradeName: selectionData.selection.gradeName || '',
+    subjectName: selectionData.selection.subjectName || '',
+    majorUnitName: selectionData.selection.majorUnitName || '',
+    middleUnitName: selectionData.selection.middleUnitName || '',
+    middleUnitId: selectionData.selection.middleUnitId || '',
+    learningTopicId: selectionData.topic.id,
+    storyTitle: selectionData.topic.title,
+    storySummary: selectionData.topic.summary || '',
+    keywords: selectionData.selectedKeywords || selectionData.topic.keywords || [],
+    setting: selectionData.topic.setting || '',
+    incident: selectionData.topic.incident || '',
+    problem: selectionData.topic.problem || '',
+    resolutionDirection: selectionData.topic.resolutionDirection || '',
+    learningConnection: selectionData.topic.learningConnection || ''
+  };
+
   const handleGenerateScript = async () => {
-    if (scriptData) {
+    if (scriptData && (!scriptData.generationStatus || scriptData.generationStatus.script === 'success')) {
       const confirmMsg = '현재 수정한 대본이 새로운 대본으로 바뀝니다. 다시 만들까요?';
       if (!window.confirm(confirmMsg)) return;
     }
@@ -66,33 +86,115 @@ export default function StudentScriptEditor({ selectionData, onPrev, onNext }: S
     }
 
     setIsGenerating(true);
+    setGenPhase(1);
+    setErrorMsg(null);
+
+    let currentScript: GeneratedComicScript;
+
+    // 1단계: 6컷 대본 생성
+    try {
+      currentScript = await generateScript(requestPayload);
+      currentScript.generationStatus = { script: 'success', coverContent: 'idle' };
+      setScriptData(currentScript);
+      localStorage.setItem('studentScript', JSON.stringify(currentScript));
+    } catch (err: any) {
+      setErrorMsg(err.message || '6컷 대본을 만들지 못했습니다. 다시 시도해 주세요.');
+      setIsGenerating(false);
+      setGenPhase(0);
+      return; // 1단계 실패 시 중단 (기존 데이터는 유지됨)
+    }
+
+    // 2단계: 핵심 개념 및 표지 대화 생성
+    setGenPhase(2);
+    try {
+      const coverData = await generateCoverContent(currentScript, requestPayload);
+      const finalScript = {
+        ...currentScript,
+        keyConcepts: coverData.keyConcepts,
+        coverDialogue: coverData.coverDialogue,
+        generationStatus: { script: 'success' as const, coverContent: 'success' as const }
+      };
+      setScriptData(finalScript);
+      localStorage.setItem('studentScript', JSON.stringify(finalScript));
+      
+      // 생성 완료 후 자동으로 컷 편집으로 이동
+      setTimeout(() => {
+        setActiveTool('cut');
+      }, 1500);
+    } catch (err: any) {
+      // 2단계 실패 시 대본은 유지하고 상태만 업데이트
+      const failedScript = {
+        ...currentScript,
+        generationStatus: { script: 'success' as const, coverContent: 'error' as const }
+      };
+      setScriptData(failedScript);
+      localStorage.setItem('studentScript', JSON.stringify(failedScript));
+      setErrorMsg(err.message || '대본은 완성됐지만 표지 내용을 만들지 못했습니다.');
+    } finally {
+      setIsGenerating(false);
+      setGenPhase(0);
+    }
+  };
+
+  const handleRetryCoverContent = async () => {
+    if (!scriptData) return;
+    
+    setIsGenerating(true);
+    setGenPhase(2);
     setErrorMsg(null);
 
     try {
-      const result = await generateScript({
-        gradeName: selectionData.selection.gradeName || '',
-        subjectName: selectionData.selection.subjectName || '',
-        majorUnitName: selectionData.selection.majorUnitName || '',
-        middleUnitName: selectionData.selection.middleUnitName || '',
-        middleUnitId: selectionData.selection.middleUnitId,
-        learningTopicId: selectionData.topic.id,
-        storyTitle: selectionData.topic.title,
-        storySummary: selectionData.topic.summary || '',
-        keywords: selectionData.selectedKeywords || selectionData.topic.keywords || [],
-        setting: selectionData.topic.setting || '',
-        incident: selectionData.topic.incident || '',
-        problem: selectionData.topic.problem || '',
-        resolutionDirection: selectionData.topic.resolutionDirection || '',
-        learningConnection: selectionData.topic.learningConnection || ''
-      });
+      const coverData = await generateCoverContent(scriptData, requestPayload);
+      const finalScript = {
+        ...scriptData,
+        keyConcepts: coverData.keyConcepts,
+        coverDialogue: coverData.coverDialogue,
+        generationStatus: { script: 'success' as const, coverContent: 'success' as const }
+      };
+      setScriptData(finalScript);
+      localStorage.setItem('studentScript', JSON.stringify(finalScript));
       
-      setScriptData(result);
-      localStorage.setItem('studentScript', JSON.stringify(result));
+      setTimeout(() => {
+        setActiveTool('cut');
+      }, 1500);
     } catch (err: any) {
-      setErrorMsg(err.message || '대본 생성 중 오류가 발생했습니다.');
+      setErrorMsg(err.message || '대본은 완성됐지만 표지 내용을 만들지 못했습니다.');
     } finally {
       setIsGenerating(false);
+      setGenPhase(0);
     }
+  };
+
+  const handleProceedNext = () => {
+    if (!scriptData) {
+      alert('먼저 AI로 6컷 대본을 만들어 주세요.');
+      setActiveTool('ai');
+      return;
+    }
+    
+    const keyConcepts = scriptData.keyConcepts || [];
+    const hasValidKeyConcepts = keyConcepts.length === 3 && keyConcepts.every(c => c.title.trim().length > 0 && c.description.trim().length > 0);
+    
+    if (!hasValidKeyConcepts) {
+      alert('핵심 개념 3가지를 확인해 주세요.');
+      setActiveTool('concept');
+      if (!isPanelOpen && window.innerWidth < 1024) {
+        setIsPanelOpen(true);
+      }
+      return;
+    }
+
+    const coverDialogue = scriptData.coverDialogue;
+    if (!coverDialogue || !coverDialogue.hana.trim() || !coverDialogue.doyoon.trim() || !coverDialogue.seoa.trim()) {
+      alert('표지 대화 3개를 확인해 주세요.');
+      setActiveTool('coverDialogue');
+      if (!isPanelOpen && window.innerWidth < 1024) {
+        setIsPanelOpen(true);
+      }
+      return;
+    }
+    
+    onNext(keyConcepts, coverDialogue);
   };
 
   // 태블릿 등에서 패널 자동 닫기 처리
@@ -119,7 +221,7 @@ export default function StudentScriptEditor({ selectionData, onPrev, onNext }: S
         <div className="w-[64px] h-full shrink-0 z-40">
           <ScriptToolbar 
             activeTool={activeTool}
-            onChangeTool={(tool) => {
+            onSelectTool={(tool: ScriptToolType) => {
               setActiveTool(tool);
               if (!isPanelOpen && window.innerWidth < 1024) {
                 setIsPanelOpen(true);
@@ -178,17 +280,12 @@ export default function StudentScriptEditor({ selectionData, onPrev, onNext }: S
                       {isGenerating ? (
                         <>
                           <Loader2 className="w-5 h-5 animate-spin" />
-                          <span>AI가 대본을 만들고 있어요...</span>
+                          <span>{genPhase === 1 ? '1단계: 6컷 대화를 만들고 있어요...' : '2단계: 핵심 개념과 표지 대화를 정리하고 있어요...'}</span>
                         </>
-                      ) : scriptData ? (
+                      ) : scriptData?.generationStatus?.script === 'success' && scriptData?.generationStatus?.coverContent === 'success' ? (
                         <>
                           <Sparkles className="w-5 h-5" />
                           <span>AI로 다시 만들기</span>
-                        </>
-                      ) : errorMsg ? (
-                        <>
-                          <Sparkles className="w-5 h-5" />
-                          <span>다시 시도</span>
                         </>
                       ) : (
                         <>
@@ -197,6 +294,15 @@ export default function StudentScriptEditor({ selectionData, onPrev, onNext }: S
                         </>
                       )}
                     </button>
+                    {scriptData?.generationStatus?.script === 'success' && scriptData?.generationStatus?.coverContent === 'error' && !isGenerating && (
+                      <button 
+                        onClick={handleRetryCoverContent}
+                        className="w-full py-4 rounded-xl font-jua text-lg bg-[#4d82f3] hover:bg-[#396ae1] text-white shadow-lg transition-all flex items-center justify-center gap-2 min-h-[52px]"
+                      >
+                        <Sparkles className="w-5 h-5" />
+                        <span>표지 내용 다시 만들기</span>
+                      </button>
+                    )}
                   </div>
                 </div>
               )}
@@ -215,21 +321,27 @@ export default function StudentScriptEditor({ selectionData, onPrev, onNext }: S
                 </div>
               )}
               
-              {activeTool === 'character' && (
+              {activeTool === 'concept' && scriptData && (
+                <ScriptKeyConceptPanel
+                  scriptData={scriptData}
+                  onChange={handleUpdateScript}
+                />
+              )}
+              {activeTool === 'concept' && !scriptData && (
                 <div className="flex flex-col items-center justify-center h-full text-[#555b6b] font-jua text-lg">
-                  <p>등장인물 도구 준비 중</p>
+                  <p>먼저 AI 대본을 생성해주세요.</p>
                 </div>
               )}
               
-              {activeTool === 'setting' && (
-                <div className="flex flex-col items-center justify-center h-full text-[#555b6b] font-jua text-lg">
-                  <p>이야기 설정 도구 준비 중</p>
-                </div>
+              {activeTool === 'coverDialogue' && scriptData && (
+                <ScriptCoverDialoguePanel
+                  scriptData={scriptData}
+                  onChange={handleUpdateScript}
+                />
               )}
-              
-              {activeTool === 'review' && (
+              {activeTool === 'coverDialogue' && !scriptData && (
                 <div className="flex flex-col items-center justify-center h-full text-[#555b6b] font-jua text-lg">
-                  <p>검토 도구 준비 중</p>
+                  <p>먼저 AI 대본을 생성해주세요.</p>
                 </div>
               )}
             </div>
@@ -269,7 +381,7 @@ export default function StudentScriptEditor({ selectionData, onPrev, onNext }: S
              </button>
              <button
                disabled={isSaveDisabled}
-               onClick={onNext}
+               onClick={handleProceedNext}
                className={`flex items-center gap-2 px-6 py-2.5 font-jua text-base rounded-full shadow-lg transition-all ml-2 ${isSaveDisabled ? 'bg-[#e5e7eb] text-[#8f95a6] cursor-not-allowed' : 'bg-[#ff2778] text-[#ffffff] hover:bg-[#e91e68]'}`}
              >
                앞표지 만들기

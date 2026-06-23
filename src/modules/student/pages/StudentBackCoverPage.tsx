@@ -41,7 +41,7 @@ export default function StudentBackCoverPage() {
         {/* 하단 버튼 영역 */}
         <div className="flex gap-4 pt-8 border-t border-white/10 mt-auto">
           <button
-            onClick={() => navigate('/student/quiz')}
+            onClick={() => navigate('/student/quiz/intro')}
             className="card-glass card-glass-interactive flex-1 min-h-[72px] text-slate-300 font-jua text-xl md:text-2xl flex items-center justify-center rounded-full"
           >
             <ArrowLeft className="w-6 h-6 stroke-[3] mr-2" />
@@ -51,9 +51,9 @@ export default function StudentBackCoverPage() {
           <div className="flex-[2] w-full">
             <StudentPrimaryActionButton
               disabled={!canProceed}
-              onClick={() => { if (canProceed) navigate('/student/complete') }}
+              onClick={() => { if (canProceed) navigate('/student/comic/read') }}
             >
-              <span>완성 🏆</span>
+              <span>만화 보기 🖼️</span>
               <ArrowRight className="w-6 h-6 stroke-[3] ml-2" />
             </StudentPrimaryActionButton>
           </div>

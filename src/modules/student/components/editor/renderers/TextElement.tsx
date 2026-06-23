@@ -56,12 +56,18 @@ export default function TextElement({ element, isSelected, onSelect, onChange, t
       textarea.style.background = 'none';
       textarea.style.outline = 'none';
       textarea.style.resize = 'none';
-      textarea.style.lineHeight = '1.2';
+      textarea.style.lineHeight = (element.props.lineHeight || 1.2).toString();
       textarea.style.fontFamily = element.props.fontFamily || 'Pretendard, sans-serif';
+      textarea.style.fontWeight = (element.props.fontWeight || 400).toString();
       textarea.style.transformOrigin = 'left top';
       textarea.style.textAlign = element.props.align || 'left';
       textarea.style.color = element.props.fill || '#000000';
       textarea.style.zIndex = '99999';
+      
+      if (element.props.textStrokeWidth > 0) {
+        textarea.style.webkitTextStroke = `${element.props.textStrokeWidth * scale}px ${element.props.textStrokeColor || '#000000'}`;
+        textarea.style.paintOrder = 'stroke fill';
+      }
 
       textarea.focus();
 
@@ -152,7 +158,12 @@ export default function TextElement({ element, isSelected, onSelect, onChange, t
         text={element.props.text || '텍스트를 입력하세요'}
         fontSize={element.props.fontSize || 40}
         fontFamily={element.props.fontFamily || 'Pretendard'}
+        fontStyle={(element.props.fontWeight || 400).toString()}
         fill={element.props.fill || '#000000'}
+        stroke={element.props.textStrokeWidth > 0 ? (element.props.textStrokeColor || '#000000') : undefined}
+        strokeWidth={element.props.textStrokeWidth || 0}
+        fillAfterStrokeEnabled={true}
+        lineHeight={element.props.lineHeight || 1.2}
         align={element.props.align || 'left'}
         verticalAlign={element.props.verticalAlign || 'middle'}
         width={element.width}

@@ -43,6 +43,7 @@ export interface TopicGenerationRequest {
   previousTitles?: string[];
   previousIncidents?: string[];
   previousTypes?: string[];
+  count?: number;
 }
 
 export type TopicGenerationState = 'idle' | 'loading' | 'success' | 'error';

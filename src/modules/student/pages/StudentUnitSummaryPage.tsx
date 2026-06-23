@@ -72,7 +72,7 @@ export default function StudentUnitSummaryPage() {
 
           <div className="flex-[2] w-full">
             <StudentPrimaryActionButton
-              onClick={() => navigate('/student/quiz')}
+              onClick={() => navigate('/student/quiz/intro')}
             >
               <span>퀴즈 풀러 가기 🧩</span>
               <ArrowRight className="w-6 h-6 stroke-[3] ml-2" />

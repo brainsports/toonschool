@@ -37,4 +37,6 @@ export interface EditorProps {
   nextText?: string;
   mode?: 'front-cover' | 'comic-cut' | 'default';
   subject?: string;
+  onCompleteCover?: (currentState: EditorState) => EditorState | void;
+  isCoverCompleted?: boolean;
 }

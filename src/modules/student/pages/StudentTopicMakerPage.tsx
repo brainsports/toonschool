@@ -20,12 +20,14 @@ export default function StudentTopicMakerPage() {
   const [creationMode, setCreationMode] = useState<'select' | 'ai' | 'manual'>('select')
   const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null)
   const [extraRequest, setExtraRequest] = useState('')
-  const [visibleCount, setVisibleCount] = useState(4)
   const [selection, setSelection] = useState<StudentUnitSelection | null>(null)
 
-  // AI 추천 관련 상태
+  const MAX_RECOMMENDATIONS = 6
+  const RECOMMENDATIONS_PER_REQUEST = 2
+
   const [topics, setTopics] = useState<TopicRecommendation[]>([])
   const [genState, setGenState] = useState<TopicGenerationState>('idle')
+  const [isGeneratingMore, setIsGeneratingMore] = useState(false)
 
   // 키워드 추천 관련 상태
   const [recommendedKeywords, setRecommendedKeywords] = useState<KeywordItem[]>([])
@@ -84,20 +86,29 @@ export default function StudentTopicMakerPage() {
   }
 
   // 2. AI 추천 실행 함수
-  const handleGenerateTopics = async () => {
+  const handleGenerateTopics = async (isLoadMore = false) => {
     if (!selection) return
+    if (isGeneratingMore || genState === 'loading') return
 
-    if (topics.length > 0) {
+    if (!isLoadMore && topics.length > 0) {
       if (!window.confirm('현재 추천 주제가 새로운 이야기로 바뀝니다. 다시 받을까요?')) {
         return
       }
+    }
+
+    if (isLoadMore && topics.length >= MAX_RECOMMENDATIONS) {
+      return
     }
 
     const previousTitles = topics.map(t => t.title)
     const previousIncidents = topics.map(t => t.incident).filter(Boolean)
     const previousTypes = topics.map(t => t.storyType).filter(Boolean)
 
-    setGenState('loading')
+    if (isLoadMore) {
+      setIsGeneratingMore(true)
+    } else {
+      setGenState('loading')
+    }
 
     const request = {
       gradeName: selection.gradeName || '',
@@ -109,30 +120,34 @@ export default function StudentTopicMakerPage() {
       learningTopicId: selection.middleUnitId || null,
       previousTitles,
       previousIncidents,
-      previousTypes
+      previousTypes,
+      count: RECOMMENDATIONS_PER_REQUEST
     }
 
-    let isSuccess = false
     try {
       const generatedTopics = await generateTopicRecommendations(request)
       
-      setTopics(generatedTopics)
-      setSelectedTopicId(null)
-      setVisibleCount(4)
-      isSuccess = true
+      if (isLoadMore) {
+        setTopics(prev => [...prev, ...generatedTopics])
+      } else {
+        setTopics(generatedTopics)
+        setSelectedTopicId(null)
+      }
+      setGenState('success')
     } catch (error) {
       console.error('AI 추천 주제 생성 중 오류 발생:', error)
-      alert('AI 추천 주제를 생성하지 못했습니다. 잠시 후 다시 시도해 주세요.')
+      alert(isLoadMore ? '새로운 추천 주제를 만들지 못했습니다. 다시 시도해 주세요.' : '추천 주제를 만들지 못했습니다. 다시 시도해 주세요.')
+      if (!isLoadMore && topics.length === 0) {
+        setGenState('idle')
+      }
     } finally {
-      if (isSuccess) {
-        setGenState('success')
-      } else {
-        setGenState(topics.length > 0 ? 'success' : 'idle')
+      if (isLoadMore) {
+        setIsGeneratingMore(false)
       }
     }
   }
 
-  const visibleTopics = topics.slice(0, visibleCount)
+
 
   // 선택한 스토리의 설명 정보 가져오기
   const selectedTopic = topics.find(t => t.id === selectedTopicId)
@@ -156,9 +171,10 @@ export default function StudentTopicMakerPage() {
 
   return (
     <StudentCreationLayout currentStep="topic" bgVariant="pastel" maxWidth="full">
-      <div className="flex flex-col gap-8 animate-fade-in w-full pt-[40px] md:pt-[56px] px-4 max-w-5xl mx-auto pb-[48px] relative overflow-y-auto h-full">
-        
-        {/* 헤더 영역 (제목 & 단원 배지) */}
+      <div className="flex-1 w-full h-full overflow-y-auto pr-4 lg:pr-8">
+        <div className="flex flex-col gap-8 animate-fade-in w-full pt-[40px] md:pt-[56px] px-4 max-w-5xl mx-auto pb-[48px] relative">
+          
+          {/* 헤더 영역 (제목 & 단원 배지) */}
         <TopicStepTitle selection={selection} />
 
         {/* 데스크탑 좌측 상단 이전 버튼 */}
@@ -242,21 +258,21 @@ export default function StudentTopicMakerPage() {
                 {(genState === 'loading' || genState === 'success') && (
                   <div className="card-select-panel p-8 md:p-10 min-h-[240px] animate-fade-in">
                     <AiRecommendationCard
-                      visibleTopics={visibleTopics}
+                      visibleTopics={topics}
                       selectedTopicId={selectedTopicId}
                       onSelectTopic={setSelectedTopicId}
                       genState={genState}
-                      visibleCount={visibleCount}
+                      isGeneratingMore={isGeneratingMore}
                       totalCount={topics.length}
-                      onLoadMore={() => setVisibleCount(10)}
+                      onLoadMore={() => handleGenerateTopics(true)}
                     />
                   </div>
                 )}
 
                 <AiMagicButton
                   genState={genState}
-                  disabled={genState === 'loading' || !selection || selectedKeywords.length < 2}
-                  onClick={handleGenerateTopics}
+                  disabled={genState === 'loading' || isGeneratingMore || !selection || selectedKeywords.length < 2}
+                  onClick={() => handleGenerateTopics(false)}
                 />
               </div>
             )}
@@ -271,8 +287,8 @@ export default function StudentTopicMakerPage() {
                 <StoryInputCard
                   extraRequest={extraRequest}
                   onExtraRequestChange={setExtraRequest}
-                  onFillExample={handleGenerateTopics}
-                  disabled={genState === 'loading'}
+                  onFillExample={() => handleGenerateTopics(false)}
+                  disabled={genState === 'loading' || isGeneratingMore}
                   loading={genState === 'loading'}
                 />
                 
@@ -286,13 +302,13 @@ export default function StudentTopicMakerPage() {
                       </h3>
                     )}
                     <AiRecommendationCard
-                      visibleTopics={visibleTopics}
+                      visibleTopics={topics}
                       selectedTopicId={selectedTopicId}
                       onSelectTopic={setSelectedTopicId}
                       genState={genState}
-                      visibleCount={visibleCount}
+                      isGeneratingMore={isGeneratingMore}
                       totalCount={topics.length}
-                      onLoadMore={() => setVisibleCount(10)}
+                      onLoadMore={() => handleGenerateTopics(true)}
                     />
                   </div>
                 )}
@@ -314,6 +330,7 @@ export default function StudentTopicMakerPage() {
           onClick={() => navigate('/student/select-unit')}
         />
 
+      </div>
       </div>
     </StudentCreationLayout>
   )

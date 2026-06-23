@@ -1,4 +1,4 @@
-import { Plus, Trash2, ArrowUp, ArrowDown, Users } from 'lucide-react';
+import { Plus, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
 import type { GeneratedComicScript, ScriptCut, ScriptDialogue } from '../../services/studentScriptService';
 
 interface ScriptCutEditorProps {
@@ -51,10 +51,6 @@ export default function ScriptCutEditor({ scriptData, onChange, selectedCut, onS
     handleCutChange('dialogues', newDialogues);
   };
 
-  const handleCharactersChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const chars = e.target.value.split(',').map(s => s.trim()).filter(Boolean);
-    handleCutChange('characters', chars);
-  };
 
   return (
     <div className="flex flex-col h-full text-[#303442]">
@@ -102,20 +98,6 @@ export default function ScriptCutEditor({ scriptData, onChange, selectedCut, onS
           />
         </div>
 
-        {/* 등장인물 */}
-        <div className="space-y-1.5">
-          <label className="text-xs font-bold text-[#626776]">등장인물 (쉼표로 구분)</label>
-          <div className="relative">
-            <input
-              type="text"
-              value={currentCut.characters.join(', ')}
-              onChange={handleCharactersChange}
-              className="w-full p-2.5 pl-8 text-sm bg-white border border-[#dfe2ea] rounded-xl focus:border-[#ff2778] focus:ring-1 focus:ring-[#ff2778] outline-none transition-all"
-              placeholder="하나 선생님, 도윤, 서아"
-            />
-            <Users className="w-4 h-4 text-[#8f95a6] absolute left-2.5 top-3" />
-          </div>
-        </div>
 
         {/* 대사 목록 */}
         <div className="space-y-2 pt-2 border-t border-[#dfe2ea]">

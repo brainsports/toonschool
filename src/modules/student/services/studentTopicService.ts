@@ -135,13 +135,14 @@ export const generateTopicRecommendations = async (
 
   const extraData: ExtraData = { learningGoal, keyQuestions, contentScope, achievementStandards }
 
+  const countToGenerate = request.count || 2
   let validRecommendations: TopicRecommendation[] = []
   let attempts = 0
   const MAX_ATTEMPTS = 3
   
-  while (validRecommendations.length < 10 && attempts < MAX_ATTEMPTS) {
-    const countToGenerate = 10 - validRecommendations.length
-    const prompt = buildPrompt(request, validRecommendations, countToGenerate, extraData)
+  while (validRecommendations.length < countToGenerate && attempts < MAX_ATTEMPTS) {
+    const currentCountToGenerate = countToGenerate - validRecommendations.length
+    const prompt = buildPrompt(request, validRecommendations, currentCountToGenerate, extraData)
     
     try {
       const responseText = await geminiClient.generateText(prompt)
@@ -187,7 +188,7 @@ export const generateTopicRecommendations = async (
     throw new Error('AI 추천 주제를 생성하지 못했습니다. 잠시 후 다시 시도해 주세요.')
   }
   
-  return validRecommendations.slice(0, 10).map((r, i) => ({
+  return validRecommendations.slice(0, countToGenerate).map((r, i) => ({
     ...r,
     id: `topic-${Date.now()}-${i}`,
     learningTopicId: request.learningTopicId

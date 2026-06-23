@@ -15,10 +15,28 @@ export interface ScriptCut {
   learningPoint: string;
 }
 
+export interface CoverKeyConcept {
+  id: string;
+  title: string;
+  description: string;
+}
+
+export interface CoverDialogue {
+  hana: string;
+  doyoon: string;
+  seoa: string;
+}
+
 export interface GeneratedComicScript {
   title: string;
   learningTopicId: string;
   learningGoal: string;
+  keyConcepts?: CoverKeyConcept[];
+  coverDialogue?: CoverDialogue;
+  generationStatus?: {
+    script: 'idle' | 'loading' | 'success' | 'error';
+    coverContent: 'idle' | 'loading' | 'success' | 'error';
+  };
   cuts: ScriptCut[];
 }
 
@@ -197,11 +215,104 @@ export const generateScript = async (
   throw new Error('AI 대본 생성에 실패했습니다.');
 };
 
+export const generateCoverContent = async (
+  script: GeneratedComicScript,
+  request: ScriptGenerationRequest
+): Promise<{ keyConcepts: CoverKeyConcept[], coverDialogue: CoverDialogue }> => {
+  const prompt = `중단원 학습 목표와 완성된 6컷 대본을 바탕으로 앞표지에 사용할 핵심 개념 3가지와 표지 대화 3개를 작성한다.
+
+[학습 정보]
+- 학년/과목: ${request.gradeName} ${request.subjectName}
+- 단원: ${request.majorUnitName} > ${request.middleUnitName}
+- 중단원 학습 목표: ${script.learningGoal}
+
+[대본 정보]
+- 주제: ${request.storyTitle}
+- 컷별 학습 요점:
+${script.cuts.map(c => `  ${c.cutNumber}컷: ${c.learningPoint}`).join('\n')}
+
+[핵심 개념 추출 규칙]
+핵심 개념은 이야기 줄거리가 아니라 교과에서 꼭 알아야 할 지식이어야 한다.
+핵심 개념은 정확히 3개다.
+1. 핵심 개념 또는 용어
+2. 원리 또는 방법
+3. 적용 또는 문제 해결
+
+각 핵심 개념 제목은 10자 이내다.
+각 설명은 30자 이내의 한 문장이다.
+
+[표지 대화 작성 규칙]
+표지 대화는 하나 선생님, 도윤, 서아에게 한 문장씩 작성한다.
+
+하나 선생님은 학습 주제에 관한 호기심 질문을 한다.
+도윤은 핵심 개념이나 원리를 설명한다.
+서아는 적용 방법이나 자신의 생각을 말한다.
+
+세 문장은 질문과 답으로 자연스럽게 이어져야 한다.
+각 문장은 28자 이내다.
+대본의 사건만 요약하지 않는다.
+막연한 감탄이나 홍보 문구를 작성하지 않는다.
+
+JSON 이외의 설명은 출력하지 않는다. 반드시 아래 JSON 구조만 반환한다:
+{
+  "keyConcepts": [
+    { "title": "개념 제목", "description": "설명" },
+    { "title": "원리 제목", "description": "설명" },
+    { "title": "적용 제목", "description": "설명" }
+  ],
+  "coverDialogue": {
+    "hana": "질문",
+    "doyoon": "개념이나 원리 답",
+    "seoa": "적용이나 생각 답"
+  }
+}
+`;
+
+  const responseText = await geminiClient.generateText(prompt);
+  const cleanedText = responseText.replace(/```json/gi, '').replace(/```/g, '').trim();
+  const parsedData = JSON.parse(cleanedText);
+
+  if (!parsedData.keyConcepts || parsedData.keyConcepts.length !== 3) {
+    throw new Error('핵심 개념 3개가 생성되지 않았습니다.');
+  }
+
+  if (!parsedData.coverDialogue || !parsedData.coverDialogue.hana || !parsedData.coverDialogue.doyoon || !parsedData.coverDialogue.seoa) {
+    throw new Error('표지 대화 3개가 생성되지 않았습니다.');
+  }
+
+  return {
+    keyConcepts: parsedData.keyConcepts.map((c: any, i: number) => ({
+      id: `concept-${i + 1}`,
+      title: Array.from(c.title).slice(0, 10).join(''),
+      description: Array.from(c.description).slice(0, 30).join('')
+    })),
+    coverDialogue: {
+      hana: Array.from(parsedData.coverDialogue.hana).slice(0, 28).join(''),
+      doyoon: Array.from(parsedData.coverDialogue.doyoon).slice(0, 28).join(''),
+      seoa: Array.from(parsedData.coverDialogue.seoa).slice(0, 28).join('')
+    }
+  };
+};
+
 export const getFallbackScript = (request: ScriptGenerationRequest, learningObjective: string): GeneratedComicScript => {
   return {
     title: request.storyTitle,
     learningTopicId: request.learningTopicId,
     learningGoal: learningObjective,
+    keyConcepts: [
+      { id: 'concept-1', title: '무엇인지', description: `${request.middleUnitName}의 뜻과 의미를 이해해요.` },
+      { id: 'concept-2', title: '어떤 원리인지', description: `개념에 숨어있는 핵심 원리를 알 수 있어요.` },
+      { id: 'concept-3', title: '어디에 적용하는지', description: `배운 원리를 실제 문제 해결에 활용해요.` }
+    ],
+    coverDialogue: {
+      hana: `${request.middleUnitName}은 무엇일까요?`,
+      doyoon: `핵심 원리를 적용하면 쉽게 이해할 수 있어요!`,
+      seoa: `우리 생활 속에서도 찾아볼 수 있어요!`
+    },
+    generationStatus: {
+      script: 'success',
+      coverContent: 'success'
+    },
     cuts: [
       {
         cutNumber: 1,

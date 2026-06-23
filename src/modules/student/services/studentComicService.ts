@@ -7,7 +7,7 @@ export interface ComicGenerationState {
   errorMessage?: string;
   progress: number;
   message?: string;
-  fullImageUrl?: string;
+  cutImages?: string[];
 }
 
 export interface StorySceneBible {
@@ -23,29 +23,7 @@ export interface StorySceneBible {
   forbiddenLocations: string[];
 }
 
-const loadReferenceImage = async (url: string, _role: string, id: number) => {
-  try {
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-    const blob = await response.blob();
-    const arrayBuffer = await blob.arrayBuffer();
-    const base64 = btoa(
-      new Uint8Array(arrayBuffer)
-        .reduce((data, byte) => data + String.fromCharCode(byte), '')
-    );
-    
-    return {
-      referenceType: 'SUBJECT',
-      referenceId: id,
-      referenceImage: {
-        bytesBase64Encoded: base64
-      }
-    };
-  } catch (error) {
-    console.error(`Failed to load reference image: ${url}`, error);
-    return null;
-  }
-};
+// Removed unused TOONSCHOOL_V2_CHARACTER_REFERENCES and loadReferenceImage
 
 const generateSceneBible = async (projectData: ComicProjectData): Promise<StorySceneBible> => {
   const prompt = `You are a professional comic director setting the overarching scene bible for an educational comic.
@@ -86,7 +64,8 @@ Ensure the location and visual mood match the educational topic perfectly.
 
 const extractVisualPrompt = async (cut: any, bible: StorySceneBible): Promise<string> => {
   const prompt = `Extract purely visual instructions for one comic panel. 
-DO NOT include any actual dialogue text in the prompt. We only need the actions, expressions, and objects needed for the picture.
+DO NOT include any actual dialogue text in the prompt. We only need the objects, background, and environment needed for the picture.
+CRITICAL REQUIREMENT: There should be NO human characters and NO people in this description.
 
 Background Bible:
 Location: ${bible.primaryLocation}
@@ -95,79 +74,26 @@ Time: ${bible.timeOfDay}
 
 Panel Data:
 Scene Description: ${cut.sceneDescription || cut.scene || 'None'}
-Original Dialogues (For context only, do NOT draw text): ${cut.dialogues?.map((d: any) => `${d.character || d.speaker}: ${d.text}`).join(' / ') || 'None'}
 
-Create a concise, descriptive visual prompt in English for an image generation model. 
-Describe the character's facial expressions, poses, and interactions with objects.
+Create a concise, descriptive visual prompt in English for an image generation model focusing on the BACKGROUND and OBJECTS.
 DO NOT put any text or speech bubbles in the description.
+DO NOT include any human characters.
 Just return the prompt text.
 `;
   return await geminiClient.generateText(prompt);
 };
 
-const stitchImagesToGrid = async (imagesBase64: string[]): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const canvas = document.createElement('canvas');
-    // A4 size
-    const A4_WIDTH = 1400;
-    const A4_HEIGHT = 1980;
-    
-    // Panel grid: 2 cols x 3 rows
-    const PADDING = 20;
-    const BORDER_WIDTH = 4;
-    const PANEL_WIDTH = Math.floor((A4_WIDTH - PADDING * 3) / 2);
-    const PANEL_HEIGHT = Math.floor((A4_HEIGHT - PADDING * 4) / 3);
 
-    canvas.width = A4_WIDTH;
-    canvas.height = A4_HEIGHT;
-    
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return reject(new Error('Canvas context not available'));
-
-    // Draw white background
-    ctx.fillStyle = '#FFFFFF';
-    ctx.fillRect(0, 0, A4_WIDTH, A4_HEIGHT);
-
-    let loadedCount = 0;
-    const imgElements = imagesBase64.map((base64, index) => {
-      const img = new Image();
-      img.onload = () => {
-        loadedCount++;
-        if (loadedCount === 6) {
-          // All images loaded, draw them
-          imagesBase64.forEach((_, i) => {
-             const col = i % 2;
-             const row = Math.floor(i / 2);
-             const x = PADDING + col * (PANEL_WIDTH + PADDING);
-             const y = PADDING + row * (PANEL_HEIGHT + PADDING);
-             
-             // Draw the image
-             ctx.drawImage(imgElements[i], x, y, PANEL_WIDTH, PANEL_HEIGHT);
-             
-             // Draw border
-             ctx.strokeStyle = '#000000';
-             ctx.lineWidth = BORDER_WIDTH;
-             ctx.strokeRect(x, y, PANEL_WIDTH, PANEL_HEIGHT);
-          });
-          resolve(canvas.toDataURL('image/jpeg', 0.9));
-        }
-      };
-      img.onerror = () => reject(new Error(`Failed to load image for panel ${index + 1}`));
-      img.src = base64;
-      return img;
-    });
-  });
-};
 
 export const generateFullComic = async (
   projectData: ComicProjectData,
-  script: GeneratedComicScript,
+  _script: GeneratedComicScript,
   onProgress: (state: ComicGenerationState) => void
-): Promise<string> => {
+): Promise<string[]> => {
   let currentState: ComicGenerationState = {
     status: 'generating',
     progress: 0,
-    message: '레퍼런스 이미지 불러오는 중...'
+    message: '이야기 배경 분석 중...'
   };
 
   const updateState = (update: Partial<ComicGenerationState>) => {
@@ -176,35 +102,12 @@ export const generateFullComic = async (
   };
 
   try {
-    const referenceImagesPool: any[] = [];
-    let refIdCount = 1;
-    
-    // Load V2 Character Reference Images
-    const lineup = await loadReferenceImage('/images/toonschool/characters/v2/character-lineup/toonschool-v2-character-lineup.png', 'V2 전체 캐릭터 라인업', refIdCount++);
-    if (lineup) referenceImagesPool.push(lineup);
-    
-    const refSheet = await loadReferenceImage('/images/toonschool/characters/v2/character-reference-sheet/toonschool-v2-character-reference-sheet.png', 'V2 캐릭터 레퍼런스 시트', refIdCount++);
-    if (refSheet) referenceImagesPool.push(refSheet);
-
-    const loadCharImage = async (url: string, role: string) => {
-        const img = await loadReferenceImage(url, role, refIdCount++);
-        if (img) referenceImagesPool.push(img);
-    };
-
-    await Promise.all([
-        loadCharImage('/images/toonschool/characters/v2/hana-master/hana-v2-fullbody.png', '하나 선생님 전신'),
-        loadCharImage('/images/toonschool/characters/v2/doyoon-master/doyoon-v2-fullbody.png', '도윤 전신'),
-        loadCharImage('/images/toonschool/characters/v2/seoa-master/seoa-v2-fullbody.png', '서아 전신')
-    ]);
-
-    updateState({ progress: 10, message: '이야기 배경 분석 중...' });
-    
     // 1. Generate Scene Bible
     const sceneBible = await generateSceneBible(projectData);
 
     // 2. Extract visual prompts and generate images panel by panel
     const generatedImages: string[] = [];
-    const cuts = projectData.script.cuts; // Use saved script in projectData, not generated script which could be new
+    const cuts = projectData.script.cuts; 
 
     if (!cuts || cuts.length !== 6) {
       throw new Error('정확히 6컷의 대본 데이터가 필요합니다.');
@@ -217,42 +120,211 @@ export const generateFullComic = async (
         message: `${cutNumber}번째 컷 시각 장면 데이터 만드는 중...` 
       });
 
-      const visualPrompt = await extractVisualPrompt(cuts[i], sceneBible);
+      const { loadComicCutData } = await import('../components/editor/utils/comicStorage');
+      const cutData = loadComicCutData(projectData.projectId, cutNumber);
+
+      let visualPrompt = '';
+      if (cutData?.customBackgroundPrompt) {
+        visualPrompt = cutData.customBackgroundPrompt;
+      } else {
+        visualPrompt = await extractVisualPrompt(cuts[i], sceneBible);
+      }
 
       updateState({ 
         progress: 10 + Math.floor(((i + 0.5) / 6) * 70), 
         message: `${cutNumber}번째 컷 스케치 중...` 
       });
 
-      const fullPrompt = `A high quality, bright, and colorful educational comic panel for elementary school students.
-DO NOT generate speech bubbles, captions, or any text (no Korean, no English). We will add text overlay later.
-Maintain consistent character appearances referencing the provided images (Hana, Doyoon, Seoa).
-Only draw one single panel. No split screen, no collage.
+      const fullPrompt = `A high quality, bright, and colorful educational scene background for elementary school students.
+CRITICAL INSTRUCTIONS:
+- single background scene only
+- no comic panels
+- no panel grid
+- no page layout
+- no speech bubbles
+- no text
+- no characters
+- no people
+- background only
+- object-focused educational scene
+
+한국어 추가 지침: 만화 프레임이나 칸을 절대 그리지 마세요. 4컷/6컷 페이지 레이아웃 금지. 말풍선 없음, 글자 없음, 사람/캐릭터 없음. 오직 하나의 단일 배경 장면만 꽉 차게 그리세요. 학습 개념과 상황을 보여주는 배경과 사물 중심의 초등학생용 밝고 선명한 그림.
 
 Scene Bible Context:
 Location: ${sceneBible.primaryLocation}
 Mood: ${sceneBible.visualMood}
 Time: ${sceneBible.timeOfDay}
 
-Panel Visual Action:
+Background Visual Action (Focus on environment and objects ONLY):
 ${visualPrompt}
 `;
-      // Generate individual panel image (1:1 ratio)
-      const panelImageBase64 = await geminiClient.generateImage(fullPrompt, '1:1', referenceImagesPool);
-      generatedImages.push(panelImageBase64);
+      // Generate individual panel image (1:1 ratio) without character references
+      const panelImageBase64 = await geminiClient.generateImage(fullPrompt, '1:1', []);
+      
+      updateState({ 
+        progress: 10 + Math.floor(((i + 0.8) / 6) * 70), 
+        message: `${cutNumber}번째 컷 최적화 중...` 
+      });
+      
+      const { compressImageDataUrl } = await import('../../../shared/lib/imageUtils');
+      const compressedImage = await compressImageDataUrl(panelImageBase64, 800, 0.8);
+      
+      generatedImages.push(compressedImage);
     }
 
-    updateState({ progress: 85, message: '생성된 6장의 그림을 조립하는 중...' });
+    updateState({ progress: 95, message: '생성된 6장의 그림을 저장하는 중...' });
 
-    // 3. Stitch images together using Canvas
-    const stitchedImageBase64 = await stitchImagesToGrid(generatedImages);
+    // Store each image individually in ComicCutEditData
+    const { loadComicCutData, saveComicCutData } = await import('../components/editor/utils/comicStorage');
+    for (let i = 0; i < cuts.length; i++) {
+      const cutNumber = i + 1;
+      let cutData = loadComicCutData(projectData.projectId, cutNumber);
+      if (!cutData) {
+        cutData = {
+          cutNumber,
+          elements: [],
+          updatedAt: new Date().toISOString()
+        };
+      }
+      cutData.backgroundImageUrl = generatedImages[i];
+      cutData.updatedAt = new Date().toISOString();
+      saveComicCutData(projectData.projectId, cutNumber, cutData);
+    }
 
-    updateState({ status: 'success', progress: 100, message: '만화 완성!', fullImageUrl: stitchedImageBase64 });
-    return stitchedImageBase64;
+    updateState({ status: 'success', progress: 100, message: '만화 배경 생성 완료!', cutImages: generatedImages });
+    return generatedImages;
 
   } catch (error: any) {
     console.error('Error generating full comic:', error);
-    updateState({ status: 'error', progress: 0, message: '오류가 발생했습니다.', errorMessage: error.message });
+    
+    let displayMessage = '생성 중 오류가 발생했습니다.';
+    let detailedError = error.message;
+
+    if (error.message === 'STORAGE_FULL') {
+      displayMessage = '저장 공간 부족';
+      detailedError = '저장 공간이 부족합니다. 기존 컷 이미지를 정리하거나 이미지 저장 방식을 변경해야 합니다.';
+    } else if (error.message?.toLowerCase().includes('fetch') || error.message?.includes('API') || error.message?.includes('HTTP')) {
+      displayMessage = '네트워크/API 오류';
+    } else if (error.message?.toLowerCase().includes('parse') || error.message?.includes('JSON')) {
+      displayMessage = '데이터 처리 오류';
+    }
+
+    updateState({ 
+      status: 'error', 
+      progress: 0, 
+      message: displayMessage, 
+      errorMessage: detailedError 
+    });
     throw error;
   }
 };
+
+export const generateSingleComicCut = async (
+  projectData: ComicProjectData,
+  cutNumber: number,
+  onProgress: (state: ComicGenerationState) => void
+): Promise<string> => {
+  let currentState: ComicGenerationState = {
+    status: 'generating',
+    progress: 0,
+    message: '이야기 배경 분석 중...'
+  };
+
+  const updateState = (update: Partial<ComicGenerationState>) => {
+    currentState = { ...currentState, ...update };
+    onProgress(currentState);
+  };
+
+  try {
+    const { loadComicCutData, saveComicCutData } = await import('../components/editor/utils/comicStorage');
+    let cutData = loadComicCutData(projectData.projectId, cutNumber);
+
+    updateState({ progress: 20, message: '이야기 배경 분석 중...' });
+    
+    const sceneBible = await generateSceneBible(projectData);
+    
+    const cutIndex = cutNumber - 1;
+    const cut = projectData.script.cuts[cutIndex];
+    if (!cut) throw new Error('대본 데이터를 찾을 수 없습니다.');
+
+    updateState({ progress: 40, message: '시각 장면 데이터 만드는 중...' });
+    
+    let visualPrompt = '';
+    if (cutData?.customBackgroundPrompt) {
+      visualPrompt = cutData.customBackgroundPrompt;
+    } else {
+      visualPrompt = await extractVisualPrompt(cut, sceneBible);
+    }
+
+    updateState({ progress: 60, message: '스케치 중...' });
+    const fullPrompt = `A high quality, bright, and colorful educational scene background for elementary school students.
+CRITICAL INSTRUCTIONS:
+- single background scene only
+- no comic panels
+- no panel grid
+- no page layout
+- no speech bubbles
+- no text
+- no characters
+- no people
+- background only
+- object-focused educational scene
+
+한국어 추가 지침: 만화 프레임이나 칸을 절대 그리지 마세요. 4컷/6컷 페이지 레이아웃 금지. 말풍선 없음, 글자 없음, 사람/캐릭터 없음. 오직 하나의 단일 배경 장면만 꽉 차게 그리세요. 학습 개념과 상황을 보여주는 배경과 사물 중심의 초등학생용 밝고 선명한 그림.
+
+Scene Bible Context:
+Location: ${sceneBible.primaryLocation}
+Mood: ${sceneBible.visualMood}
+Time: ${sceneBible.timeOfDay}
+
+Background Visual Action (Focus on environment and objects ONLY):
+${visualPrompt}
+`;
+
+    const panelImageBase64 = await geminiClient.generateImage(fullPrompt, '1:1', []);
+
+    updateState({ progress: 80, message: '그림 최적화 중...' });
+
+    const { compressImageDataUrl } = await import('../../../shared/lib/imageUtils');
+    const compressedImage = await compressImageDataUrl(panelImageBase64, 800, 0.8);
+
+    updateState({ progress: 90, message: '그림을 저장하는 중...' });
+
+    if (!cutData) {
+      cutData = {
+        cutNumber,
+        elements: [],
+        updatedAt: new Date().toISOString()
+      };
+    }
+    cutData.backgroundImageUrl = compressedImage;
+    cutData.updatedAt = new Date().toISOString();
+    saveComicCutData(projectData.projectId, cutNumber, cutData);
+
+    updateState({ status: 'success', progress: 100, message: '완료!' });
+    return compressedImage;
+  } catch (error: any) {
+    console.error(`Error generating comic cut ${cutNumber}:`, error);
+    
+    let displayMessage = '생성 중 오류가 발생했습니다.';
+    let detailedError = error.message;
+
+    if (error.message === 'STORAGE_FULL') {
+      displayMessage = '저장 공간 부족';
+      detailedError = '저장 공간이 부족합니다. 기존 컷 이미지를 정리하거나 이미지 저장 방식을 변경해야 합니다.';
+    } else if (error.message?.toLowerCase().includes('fetch') || error.message?.includes('API') || error.message?.includes('HTTP')) {
+      displayMessage = '네트워크/API 오류';
+    } else if (error.message?.toLowerCase().includes('parse') || error.message?.includes('JSON')) {
+      displayMessage = '데이터 처리 오류';
+    }
+
+    updateState({ 
+      status: 'error', 
+      progress: 0, 
+      message: displayMessage, 
+      errorMessage: detailedError 
+    });
+    throw error;
+  }
+};
+

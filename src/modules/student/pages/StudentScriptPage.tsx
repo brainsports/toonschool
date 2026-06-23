@@ -4,6 +4,7 @@ import StudentCreationLayout from '../components/layout/StudentCreationLayout'
 import StudentScriptEditor from '../components/script/StudentScriptEditor'
 import type { StudentUnitSelection } from '../types/studentCurriculum'
 import type { TopicRecommendation } from '../types/studentTopic'
+import type { CoverKeyConcept, CoverDialogue } from '../services/studentScriptService'
 
 export default function StudentScriptPage() {
   const navigate = useNavigate()
@@ -38,8 +39,8 @@ export default function StudentScriptPage() {
 
   if (!selectionData) return null
 
-  const handleNext = () => {
-    navigate('/student/front-cover', { state: selectionData });
+  const handleNext = (keyConcepts?: CoverKeyConcept[], coverDialogue?: CoverDialogue) => {
+    navigate('/student/front-cover', { state: { ...selectionData, keyConcepts, coverDialogue } });
   };
 
   const handlePrev = () => {
