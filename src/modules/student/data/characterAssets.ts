@@ -15,6 +15,39 @@ export type CharacterAsset = {
   layerName: string;
 };
 
+export const V2_CHARACTER_AVATARS = {
+  hana: '/images/toonschool/characters/v2/hana-v2-front.png',
+  doyoon: '/images/toonschool/characters/v2/doyoon-v2-front.png',
+  seoa: '/images/toonschool/characters/v2/seoa-v2-front.png',
+};
+
+export const V2_CHARACTER_EXPRESSIONS = {
+  hana: {
+    normal: '/images/toonschool/characters/v2/expressions/hana/hana-normal.png',
+    smile: '/images/toonschool/characters/v2/expressions/hana/hana-smile.png',
+    thinking: '/images/toonschool/characters/v2/expressions/hana/hana-thinking.png',
+    surprise: '/images/toonschool/characters/v2/expressions/hana/hana-surprise.png',
+    explain: '/images/toonschool/characters/v2/expressions/hana/hana-explain.png',
+    cheer: '/images/toonschool/characters/v2/expressions/hana/hana-cheer.png',
+  },
+  doyoon: {
+    normal: '/images/toonschool/characters/v2/expressions/doyoon/doyoon-normal.png',
+    smile: '/images/toonschool/characters/v2/expressions/doyoon/doyoon-smile.png',
+    thinking: '/images/toonschool/characters/v2/expressions/doyoon/doyoon-thinking.png',
+    surprise: '/images/toonschool/characters/v2/expressions/doyoon/doyoon-surprise.png',
+    explain: '/images/toonschool/characters/v2/expressions/doyoon/doyoon-explain.png',
+    cheer: '/images/toonschool/characters/v2/expressions/doyoon/doyoon-cheer.png',
+  },
+  seoa: {
+    normal: '/images/toonschool/characters/v2/expressions/seoa/seoa-normal.png',
+    smile: '/images/toonschool/characters/v2/expressions/seoa/seoa-smile.png',
+    thinking: '/images/toonschool/characters/v2/expressions/seoa/seoa-thinking.png',
+    surprise: '/images/toonschool/characters/v2/expressions/seoa/seoa-surprise.png',
+    explain: '/images/toonschool/characters/v2/expressions/seoa/seoa-explain.png',
+    cheer: '/images/toonschool/characters/v2/expressions/seoa/seoa-cheer.png',
+  },
+};
+
 export const CHARACTER_ASSETS: CharacterAsset[] = [
   // 공용 (Official)
   {
@@ -22,7 +55,7 @@ export const CHARACTER_ASSETS: CharacterAsset[] = [
     name: '공용 하나 선생님',
     characterName: '하나 선생님',
     subject: 'official',
-    imageUrl: '/images/toonschool/characters/official/hana-teacher.png',
+    imageUrl: V2_CHARACTER_AVATARS.hana,
     layerName: '공용 하나 선생님'
   },
   {
@@ -30,7 +63,7 @@ export const CHARACTER_ASSETS: CharacterAsset[] = [
     name: '공용 도윤',
     characterName: '도윤',
     subject: 'official',
-    imageUrl: '/images/toonschool/characters/official/doyoon-boy.png',
+    imageUrl: V2_CHARACTER_AVATARS.doyoon,
     layerName: '공용 도윤'
   },
   {
@@ -38,7 +71,7 @@ export const CHARACTER_ASSETS: CharacterAsset[] = [
     name: '공용 서아',
     characterName: '서아',
     subject: 'official',
-    imageUrl: '/images/toonschool/characters/official/seoa-girl.png',
+    imageUrl: V2_CHARACTER_AVATARS.seoa,
     layerName: '공용 서아'
   },
 

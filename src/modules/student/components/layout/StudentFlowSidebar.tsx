@@ -17,7 +17,6 @@ const steps: FlowStep[] = [
   { key: 'frontCover', label: '표지만들기', icon: '📘', path: '/student/front-cover' },
   { key: 'comic', label: '만화제작', icon: '💬', path: '/student/comic/full' },
   { key: 'summary', label: '단원 정리', icon: '📝', path: '/student/unit-summary' },
-  { key: 'quiz', label: '퀴즈만들기', icon: '❓', path: '/student/quiz/intro' },
   { key: 'backCover', label: '뒤표지 꾸미기', icon: '🎨', path: '/student/back-cover' },
   { key: 'viewer', label: '만화보기', icon: '🖼️', path: '/student/comic/read' }
 ]

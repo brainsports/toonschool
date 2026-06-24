@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { v4 as uuidv4 } from 'uuid';
-import StudentCreationLayout from '../components/layout/StudentCreationLayout';
+import StudentCreationLayout from '../components/layout/StudentCreationLayout'
 import { generateSingleComicCut, type ComicGenerationState } from '../services/studentComicService';
 import { loadComicProjectData, saveComicProjectData, loadComicCutData, saveComicCutData, type ComicProjectData, type ComicCutEditData, type ComicCutElement } from '../components/editor/utils/comicStorage';
 import type { GeneratedComicScript } from '../services/studentScriptService';
@@ -13,6 +13,7 @@ import CharacterToolPanel from '../components/comic-editor/CharacterToolPanel';
 import ComicScriptPanel from '../components/comic-editor/ComicScriptPanel';
 import ComicSpeechBubblePanel from '../components/comic-editor/ComicSpeechBubblePanel';
 import ComicLayerPanel from '../components/comic-editor/ComicLayerPanel';
+import ToonSchoolCharacterBadgeGroup from '../components/layout/ToonSchoolCharacterBadgeGroup';
 
 type ToolType = 'select' | 'background' | 'character' | 'bubble' | 'script' | 'layer';
 
@@ -741,26 +742,7 @@ export default function StudentComicFullViewPage() {
                       </h2>
                     </div>
                     {/* Right: Characters */}
-                    <div className="flex items-center gap-5 shrink-0">
-                      <div className="flex flex-col items-center">
-                        <div className="w-[38px] h-[38px] rounded-full bg-orange-50 overflow-hidden border-2 border-orange-100">
-                          <img src="/images/toonschool/characters/official/hana-teacher.png" alt="하나 선생님" className="w-full h-full object-cover object-top scale-110" />
-                        </div>
-                        <span className="text-[10px] font-bold text-slate-600 mt-1">하나 선생님</span>
-                      </div>
-                      <div className="flex flex-col items-center">
-                        <div className="w-[38px] h-[38px] rounded-full bg-blue-50 overflow-hidden border-2 border-blue-100">
-                          <img src="/images/toonschool/characters/official/doyoon-boy.png" alt="도윤" className="w-full h-full object-cover object-top scale-110" />
-                        </div>
-                        <span className="text-[10px] font-bold text-slate-600 mt-1">도윤</span>
-                      </div>
-                      <div className="flex flex-col items-center">
-                        <div className="w-[38px] h-[38px] rounded-full bg-pink-50 overflow-hidden border-2 border-pink-100">
-                          <img src="/images/toonschool/characters/official/seoa-girl.png" alt="서아" className="w-full h-full object-cover object-top scale-110" />
-                        </div>
-                        <span className="text-[10px] font-bold text-slate-600 mt-1">서아</span>
-                      </div>
-                    </div>
+                    <ToonSchoolCharacterBadgeGroup textColorClass="text-slate-600" />
                   </div>
                   
                   {/* Center: 6 Cuts (2x3 Grid) */}

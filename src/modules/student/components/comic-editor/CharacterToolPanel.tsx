@@ -20,7 +20,12 @@ export default function CharacterToolPanel({ onAddElement, selectedElementId, el
         { id: 'hana-fullbody', name: '전신', src: '/images/toonschool/characters/v2/hana-master/hana-v2-fullbody.png', width: 250, height: 500 },
         { id: 'hana-front', name: '정면', src: '/images/toonschool/characters/v2/hana-master/hana-v2-front.png', width: 250, height: 500 },
         { id: 'hana-side', name: '측면', src: '/images/toonschool/characters/v2/hana-master/hana-v2-side.png', width: 250, height: 500 },
-        { id: 'hana-expression', name: '표정 시트', src: '/images/toonschool/characters/v2/hana-master/hana-v2-expression-sheet.png', width: 400, height: 400 },
+        { id: 'hana-exp-normal', name: '기본', src: '/images/toonschool/characters/v2/expressions/hana/hana-normal.png', width: 250, height: 250 },
+        { id: 'hana-exp-smile', name: '웃음', src: '/images/toonschool/characters/v2/expressions/hana/hana-smile.png', width: 250, height: 250 },
+        { id: 'hana-exp-thinking', name: '생각', src: '/images/toonschool/characters/v2/expressions/hana/hana-thinking.png', width: 250, height: 250 },
+        { id: 'hana-exp-surprise', name: '놀람', src: '/images/toonschool/characters/v2/expressions/hana/hana-surprise.png', width: 250, height: 250 },
+        { id: 'hana-exp-explain', name: '설명', src: '/images/toonschool/characters/v2/expressions/hana/hana-explain.png', width: 250, height: 250 },
+        { id: 'hana-exp-cheer', name: '응원', src: '/images/toonschool/characters/v2/expressions/hana/hana-cheer.png', width: 250, height: 250 },
       ]
     },
     {
@@ -30,7 +35,12 @@ export default function CharacterToolPanel({ onAddElement, selectedElementId, el
         { id: 'doyoon-fullbody', name: '전신', src: '/images/toonschool/characters/v2/doyoon-master/doyoon-v2-fullbody.png', width: 250, height: 480 },
         { id: 'doyoon-front', name: '정면', src: '/images/toonschool/characters/v2/doyoon-master/doyoon-v2-front.png', width: 250, height: 480 },
         { id: 'doyoon-side', name: '측면', src: '/images/toonschool/characters/v2/doyoon-master/doyoon-v2-side.png', width: 250, height: 480 },
-        { id: 'doyoon-expression', name: '표정 시트', src: '/images/toonschool/characters/v2/doyoon-master/doyoon-v2-expression-sheet.png', width: 400, height: 400 },
+        { id: 'doyoon-exp-normal', name: '기본', src: '/images/toonschool/characters/v2/expressions/doyoon/doyoon-normal.png', width: 250, height: 250 },
+        { id: 'doyoon-exp-smile', name: '웃음', src: '/images/toonschool/characters/v2/expressions/doyoon/doyoon-smile.png', width: 250, height: 250 },
+        { id: 'doyoon-exp-thinking', name: '생각', src: '/images/toonschool/characters/v2/expressions/doyoon/doyoon-thinking.png', width: 250, height: 250 },
+        { id: 'doyoon-exp-surprise', name: '놀람', src: '/images/toonschool/characters/v2/expressions/doyoon/doyoon-surprise.png', width: 250, height: 250 },
+        { id: 'doyoon-exp-explain', name: '설명', src: '/images/toonschool/characters/v2/expressions/doyoon/doyoon-explain.png', width: 250, height: 250 },
+        { id: 'doyoon-exp-cheer', name: '응원', src: '/images/toonschool/characters/v2/expressions/doyoon/doyoon-cheer.png', width: 250, height: 250 },
       ]
     },
     {
@@ -40,7 +50,12 @@ export default function CharacterToolPanel({ onAddElement, selectedElementId, el
         { id: 'seoa-fullbody', name: '전신', src: '/images/toonschool/characters/v2/seoa-master/seoa-v2-fullbody.png', width: 250, height: 480 },
         { id: 'seoa-front', name: '정면', src: '/images/toonschool/characters/v2/seoa-master/seoa-v2-front.png', width: 250, height: 480 },
         { id: 'seoa-side', name: '측면', src: '/images/toonschool/characters/v2/seoa-master/seoa-v2-side.png', width: 250, height: 480 },
-        { id: 'seoa-expression', name: '표정 시트', src: '/images/toonschool/characters/v2/seoa-master/seoa-v2-expression-sheet.png', width: 400, height: 400 },
+        { id: 'seoa-exp-normal', name: '기본', src: '/images/toonschool/characters/v2/expressions/seoa/seoa-normal.png', width: 250, height: 250 },
+        { id: 'seoa-exp-smile', name: '웃음', src: '/images/toonschool/characters/v2/expressions/seoa/seoa-smile.png', width: 250, height: 250 },
+        { id: 'seoa-exp-thinking', name: '생각', src: '/images/toonschool/characters/v2/expressions/seoa/seoa-thinking.png', width: 250, height: 250 },
+        { id: 'seoa-exp-surprise', name: '놀람', src: '/images/toonschool/characters/v2/expressions/seoa/seoa-surprise.png', width: 250, height: 250 },
+        { id: 'seoa-exp-explain', name: '설명', src: '/images/toonschool/characters/v2/expressions/seoa/seoa-explain.png', width: 250, height: 250 },
+        { id: 'seoa-exp-cheer', name: '응원', src: '/images/toonschool/characters/v2/expressions/seoa/seoa-cheer.png', width: 250, height: 250 },
       ]
     }
   ];
