@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import StudentCreationLayout from '../components/layout/StudentCreationLayout'
 import StudentScriptEditor from '../components/script/StudentScriptEditor'
 import type { StudentUnitSelection } from '../types/studentCurriculum'
 import type { TopicRecommendation } from '../types/studentTopic'
@@ -62,15 +61,11 @@ export default function StudentScriptPage() {
   };
 
   return (
-    <StudentCreationLayout currentStep="script" bgVariant="space" maxWidth="full">
-      <div className="w-full flex-1 flex flex-col min-h-0 animate-fade-in">
-        <StudentScriptEditor 
-          selectionData={selectionData}
-          projectId={projectId}
-          onPrev={handlePrev}
-          onNext={handleNext}
-        />
-      </div>
-    </StudentCreationLayout>
+    <StudentScriptEditor 
+      selectionData={selectionData}
+      projectId={projectId}
+      onPrev={handlePrev}
+      onNext={handleNext}
+    />
   )
 }

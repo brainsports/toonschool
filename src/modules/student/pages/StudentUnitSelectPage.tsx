@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { v4 as uuidv4 } from 'uuid'
 import { projectStorage } from '../utils/projectStorage'
 import { showToast } from '../utils/toast'
-import StudentCreationLayout from '../components/layout/StudentCreationLayout'
+import StudentWorkspaceLayout from '../components/layout/StudentWorkspaceLayout'
 import type { 
   StudentGradeOption, 
   StudentSemesterOption,
@@ -211,22 +211,35 @@ export default function StudentUnitSelectPage() {
     navigate('/student/topic', { state: { selection, projectId: currentProjectId } })
   }
 
+  const actionButtons = step === 1 ? (
+    <button
+      disabled={!isStep1Complete}
+      onClick={handleNextStep}
+      className="btn-student btn-student-primary btn-student-md"
+    >
+      <span>다음 단계 🚀</span>
+    </button>
+  ) : (
+    <button
+      disabled={!canProceed}
+      onClick={handleProceed}
+      className="btn-student btn-student-primary btn-student-md"
+    >
+      <span>주제 만들기 가기 ✨</span>
+    </button>
+  )
+
   return (
-    <StudentCreationLayout currentStep="unit" bgVariant="pastel" maxWidth="full">
-      <div className="flex-1 w-full h-full overflow-y-auto pr-4 lg:pr-8">
-        <div className="w-full pt-[40px] md:pt-[56px] pb-[48px] px-4 max-w-5xl mx-auto">
-          {/* 상단 제목 영역 */}
-          <div className="text-center">
-            <h1 className="text-[2rem] md:text-[2.15rem] font-jua text-[#202330]">
-              어떤 모험을 떠날까요?
-            </h1>
-
-            <p className="text-base font-bold text-[#626776] mt-[16px] bg-white border border-[rgba(111,78,190,0.18)] inline-block px-5 py-1.5 rounded-full">
-              {step === 1 ? '1단계: 학년·학기 고르기' : '2단계: 과목과 단원 고르기'}
-            </p>
-          </div>
-
-          <div className="mt-[32px]">
+    <StudentWorkspaceLayout 
+      currentStep="unit" 
+      bgVariant="pastel"
+      title="어떤 모험을 떠날까요?"
+      subtitle={step === 1 ? '1단계: 학년·학기 고르기' : '2단계: 과목과 단원 고르기'}
+      onBack={step === 2 ? handlePrevStep : () => navigate('/student/dashboard')}
+      actionButtons={actionButtons}
+    >
+      <div className="flex-1 w-full h-full overflow-y-auto student-scrollbar">
+        <div className="w-full pt-8 pb-12 px-4 max-w-[1200px] mx-auto">
           {step === 1 ? (
             <UnitStep1Selection
               grades={grades}
@@ -237,8 +250,6 @@ export default function StudentUnitSelectPage() {
               gradeEmojis={gradeEmojis}
               onGradeSelect={handleGradeSelect}
               onSemesterSelect={handleSemesterSelect}
-              onNextStep={handleNextStep}
-              isStep1Complete={isStep1Complete}
             />
           ) : (
             <UnitStep2Selection
@@ -257,14 +268,10 @@ export default function StudentUnitSelectPage() {
               onSubjectSelect={handleSubjectSelect}
               onMajorUnitSelect={handleMajorUnitSelect}
               onMiddleUnitSelect={handleMiddleUnitSelect}
-              onPrevStep={handlePrevStep}
-              onProceed={handleProceed}
-              canProceed={canProceed}
             />
           )}
-          </div>
         </div>
       </div>
-    </StudentCreationLayout>
+    </StudentWorkspaceLayout>
   )
 }

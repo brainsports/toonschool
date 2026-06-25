@@ -39,4 +39,5 @@ export interface EditorProps {
   subject?: string;
   onCompleteCover?: (currentState: EditorState) => EditorState | void;
   isCoverCompleted?: boolean;
+  topicTitle?: string;
 }

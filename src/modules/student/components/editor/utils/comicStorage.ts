@@ -131,6 +131,7 @@ export interface ComicCutEditData {
   cutNumber: number;
   backgroundImageUrl?: string;
   customBackgroundPrompt?: string;
+  originalBackgroundPrompt?: string;
   backgroundInfo?: {
     sceneTitle?: string;
     description?: string;
@@ -138,6 +139,7 @@ export interface ComicCutEditData {
     recommendedBubblePosition?: string;
     caution?: string;
   };
+  backgroundRegenerateCount?: number;
   elements: ComicCutElement[];
   updatedAt: string;
 }

@@ -1,4 +1,4 @@
-import { Loader2, ArrowLeft } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import type { 
   StudentGradeOption, 
   StudentSemesterOption,
@@ -9,7 +9,6 @@ import type {
 } from '../../types/studentCurriculum'
 import StudentWideCard from '../layout/StudentWideCard'
 import StudentInnerPanel from '../layout/StudentInnerPanel'
-import StudentPrimaryActionButton from '../layout/StudentPrimaryActionButton'
 
 interface UnitStep2SelectionProps {
   selectedGrade: StudentGradeOption | null
@@ -27,9 +26,6 @@ interface UnitStep2SelectionProps {
   onSubjectSelect: (s: StudentSubjectOption) => void
   onMajorUnitSelect: (id: string) => void
   onMiddleUnitSelect: (id: string) => void
-  onPrevStep: () => void
-  onProceed: () => void
-  canProceed: boolean
 }
 
 export default function UnitStep2Selection({
@@ -47,23 +43,10 @@ export default function UnitStep2Selection({
   subjectEmojis,
   onSubjectSelect,
   onMajorUnitSelect,
-  onMiddleUnitSelect,
-  onPrevStep,
-  onProceed,
-  canProceed
+  onMiddleUnitSelect
 }: UnitStep2SelectionProps) {
   return (
     <div className="relative w-full max-w-[1200px] mx-auto space-y-6 animate-fade-in pb-8">
-      {/* 데스크톱 이전 버튼 */}
-      <div className="hidden lg:flex lg:fixed lg:left-60 lg:top-24 z-40">
-        <button
-          onClick={onPrevStep}
-          className="btn-primary-action px-8 py-3.5 font-jua text-base md:text-lg"
-        >
-          <ArrowLeft className="w-5 h-5 stroke-[3] mr-2" />
-          <span>이전</span>
-        </button>
-      </div>
 
       {/* 단원 선택 */}
       <StudentWideCard className="!gap-8">
@@ -167,26 +150,6 @@ export default function UnitStep2Selection({
         )}
       </StudentWideCard>
 
-      {/* 하단 2단계 버튼 */}
-      <div className="flex flex-col md:flex-row gap-4 pt-4">
-        {/* 모바일/태블릿용 이전 버튼 */}
-        <button
-          onClick={onPrevStep}
-          className="lg:hidden btn-primary-action flex-1 py-4 font-jua text-lg"
-        >
-          <ArrowLeft className="w-5 h-5 stroke-[3] mr-2" />
-          <span>이전</span>
-        </button>
-
-        <div className="flex-[2] w-full">
-          <StudentPrimaryActionButton
-            disabled={!canProceed}
-            onClick={onProceed}
-          >
-            주제 고르기 ✨
-          </StudentPrimaryActionButton>
-        </div>
-      </div>
     </div>
   )
 }

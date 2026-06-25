@@ -24,33 +24,37 @@ export default function EditorToolbar({ activeTool, onChangeTool, onUndo, onRedo
   ];
 
   return (
-    <div className="flex flex-col items-center py-4 gap-2 h-full overflow-y-auto w-full">
-      {tools.map(tool => {
-        const Icon = tool.icon;
-        const isActive = activeTool === tool.id;
-        return (
-          <button
-            key={tool.id}
-            onClick={() => onChangeTool(tool.id)}
-            className={`flex flex-col items-center justify-center w-14 h-14 rounded-xl transition-all ${isActive ? 'bg-purple-600 text-white' : 'text-slate-400 hover:text-slate-200 hover:bg-white/10'}`}
-            title={tool.label}
-          >
-            <Icon className="w-5 h-5 mb-1" />
-            <span className="text-[10px] font-bold">{tool.label}</span>
-          </button>
-        );
-      })}
+    <div className="flex flex-col items-center h-full w-full">
+      <div className="flex-1 flex flex-col items-center gap-2 overflow-y-auto w-full pt-4 student-scrollbar">
+        {tools.map(tool => {
+          const Icon = tool.icon;
+          const isActive = activeTool === tool.id;
+          return (
+            <button
+              key={tool.id}
+              onClick={() => onChangeTool(tool.id)}
+              className={`flex flex-col items-center justify-center w-14 h-14 rounded-xl transition-all shrink-0 ${isActive ? 'bg-purple-600 text-white' : 'text-slate-400 hover:text-slate-200 hover:bg-white/10'}`}
+              title={tool.label}
+            >
+              <Icon className="w-5 h-5 mb-1" />
+              <span className="text-[10px] font-bold">{tool.label}</span>
+            </button>
+          );
+        })}
+      </div>
       
-      <div className="h-px w-10 bg-white/10 my-2" />
-      
-      <button onClick={onUndo} disabled={!canUndo} className={`flex flex-col items-center justify-center w-14 h-14 rounded-xl transition-all ${canUndo ? 'text-slate-400 hover:text-slate-200 hover:bg-white/10' : 'text-slate-600 cursor-not-allowed'}`}>
-        <Undo className="w-5 h-5 mb-1" />
-        <span className="text-[10px] font-bold">취소</span>
-      </button>
-      <button onClick={onRedo} disabled={!canRedo} className={`flex flex-col items-center justify-center w-14 h-14 rounded-xl transition-all ${canRedo ? 'text-slate-400 hover:text-slate-200 hover:bg-white/10' : 'text-slate-600 cursor-not-allowed'}`}>
-        <Redo className="w-5 h-5 mb-1" />
-        <span className="text-[10px] font-bold">다시실행</span>
-      </button>
+      <div className="mt-auto flex flex-col items-center w-full pb-4 shrink-0">
+        <div className="h-px w-10 bg-[#e2e8f0] my-2" />
+        
+        <button onClick={onUndo} disabled={!canUndo} className={`flex flex-col items-center justify-center w-14 h-14 rounded-xl transition-all ${canUndo ? 'text-slate-500 hover:text-slate-800 hover:bg-slate-100' : 'text-slate-300 cursor-not-allowed'}`}>
+          <Undo className="w-5 h-5 mb-1" />
+          <span className="text-[10px] font-bold">취소</span>
+        </button>
+        <button onClick={onRedo} disabled={!canRedo} className={`flex flex-col items-center justify-center w-14 h-14 rounded-xl transition-all ${canRedo ? 'text-slate-500 hover:text-slate-800 hover:bg-slate-100' : 'text-slate-300 cursor-not-allowed'}`}>
+          <Redo className="w-5 h-5 mb-1" />
+          <span className="text-[10px] font-bold">다시실행</span>
+        </button>
+      </div>
     </div>
   );
 }

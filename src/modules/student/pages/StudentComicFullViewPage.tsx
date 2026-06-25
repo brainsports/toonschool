@@ -1,12 +1,14 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { v4 as uuidv4 } from 'uuid';
-import StudentCreationLayout from '../components/layout/StudentCreationLayout'
+import StudentWorkspaceLayout from '../components/layout/StudentWorkspaceLayout'
+import StudentToolPanel from '../components/layout/StudentToolPanel'
+import StudentZoomControl from '../components/layout/StudentZoomControl'
 import { generateSingleComicCut, type ComicGenerationState } from '../services/studentComicService';
 import { loadComicProjectData, saveComicProjectData, loadComicCutData, saveComicCutData, type ComicProjectData, type ComicCutEditData, type ComicCutElement } from '../components/editor/utils/comicStorage';
 import type { GeneratedComicScript } from '../services/studentScriptService';
 import { projectStorage } from '../utils/projectStorage';
-import { Sparkles, Loader2, ArrowRight, MousePointer2, Layout, Users, MessageSquare, Type, Layers, RefreshCw, ArrowLeft, ZoomIn, ZoomOut, Maximize } from 'lucide-react';
+import { Sparkles, Loader2, ArrowRight, MousePointer2, Layout, Users, MessageSquare, Type, Layers, RefreshCw, Maximize, Undo, Redo } from 'lucide-react';
 
 import ComicCanvas from '../components/comic-editor/ComicCanvas';
 import CharacterToolPanel from '../components/comic-editor/CharacterToolPanel';
@@ -388,10 +390,24 @@ export default function StudentComicFullViewPage() {
     saveCutState(selectedCutNumber, { ...cutData, elements });
   };
 
-  const handleGenerateCut = async (cutNumber: number) => {
+  const handleGenerateCut = async (cutNumber: number, isManualRegenerate: boolean = false) => {
     if (!projectData) return;
 
-    if (cutsData[cutNumber]?.backgroundImageUrl) {
+    const currentCutData = cutsData[cutNumber];
+    const isRegenerate = !!currentCutData?.backgroundImageUrl;
+
+    if (isRegenerate) {
+      if (isManualRegenerate) {
+        const count = currentCutData?.backgroundRegenerateCount || 0;
+        console.log(`[ToonSchool Background] REGENERATE_LIMIT_CHECK cut=${cutNumber} count=${count}`);
+
+        if (count >= 1) {
+          console.log(`[ToonSchool Background] REGENERATE_LIMIT_REACHED cut=${cutNumber}`);
+          alert('배경 수정은 컷마다 1번만 할 수 있어요.');
+          return;
+        }
+      }
+
       if (!confirm(`${cutNumber}컷 배경을 다시 만들까요?\\n기존 배경이 사라집니다.`)) {
         return;
       }
@@ -406,6 +422,15 @@ export default function StudentComicFullViewPage() {
       
       const newCutData = loadComicCutData(projectData.projectId, cutNumber);
       if (newCutData) {
+        if (isRegenerate && isManualRegenerate) {
+           newCutData.backgroundRegenerateCount = (currentCutData?.backgroundRegenerateCount || 0) + 1;
+           try {
+             saveComicCutData(projectData.projectId, cutNumber, newCutData);
+           } catch (e) {
+             console.error('Failed to save backgroundRegenerateCount', e);
+           }
+           console.log(`[ToonSchool Background] REGENERATE_LIMIT_USED cut=${cutNumber} count=${newCutData.backgroundRegenerateCount}`);
+        }
         setCutsData(prev => ({ ...prev, [cutNumber]: newCutData }));
       }
     } catch (err) {
@@ -510,11 +535,11 @@ export default function StudentComicFullViewPage() {
 
   if (!selectionData || !projectData) {
     return (
-      <StudentCreationLayout currentStep="comic" maxWidth="full" bgVariant="default">
-        <div className="flex-1 w-full bg-[#f3f4f7] flex items-center justify-center">
+      <StudentWorkspaceLayout currentStep="comic" title="만화제작" bgVariant="default">
+        <div className="flex-1 w-full flex items-center justify-center">
           <Loader2 className="w-12 h-12 text-purple-500 animate-spin" />
         </div>
-      </StudentCreationLayout>
+      </StudentWorkspaceLayout>
     );
   }
 
@@ -529,17 +554,52 @@ export default function StudentComicFullViewPage() {
 
   const currentCutData = cutsData[selectedCutNumber];
 
+  const actionButtons = (
+    <>
+      <button
+        onClick={handleGenerateAll}
+        className="btn-student btn-student-secondary btn-student-md"
+      >
+        <Sparkles className="w-5 h-5 text-purple-500" />
+        <span className="text-purple-700">배경 모두 생성</span>
+      </button>
+      <button
+        onClick={handleGenerateDialogues}
+        className="btn-student btn-student-secondary btn-student-md"
+      >
+        <MessageSquare className="w-5 h-5 text-indigo-500" />
+        <span className="text-indigo-700">대사 생성</span>
+      </button>
+      <button
+        onClick={handleNext}
+        className="btn-student btn-student-primary btn-student-md"
+      >
+        <span>단원 정리 가기</span>
+        <ArrowRight className="w-5 h-5" />
+      </button>
+    </>
+  );
+
   return (
-    <StudentCreationLayout currentStep="comic" maxWidth="full" bgVariant="pastel">
-      <div className="w-full flex-1 flex flex-col min-h-0 bg-transparent animate-fade-in relative">
-        
-        {/* 메인 에디터 영역 (좌측 툴바 + 우측 6컷 그리드) */}
-        <div className="flex-1 flex min-h-0 relative">
-          
-          {/* Left Tools Area */}
-          <div className="flex h-full shrink-0 relative z-30 bg-slate-900 shadow-2xl border-r border-white/10">
-            {/* Main Vertical Toolbar */}
-            <div className="w-[72px] h-full shrink-0 z-40 flex flex-col items-center py-4 gap-2 overflow-y-auto">
+    <StudentWorkspaceLayout 
+      currentStep="comic" 
+      bgVariant="pastel"
+      showBackButton={true}
+      title="만화제작 (6컷)"
+      subtitle={`왼쪽 도구를 사용해 선택한 컷(${selectedCutNumber}컷)을 편집하세요.`}
+      onBack={() => navigate('/student/front-cover')}
+      actionButtons={actionButtons}
+    >
+      <div className="flex flex-col w-full h-full relative">
+
+
+        {/* 하단 패널 및 캔버스 영역 */}
+        <div className="flex-1 flex overflow-hidden w-full relative">
+          <StudentToolPanel width="var(--student-layout-tool-panel-width,300px)" className="flex-row !w-auto">
+            <div className="flex h-full shrink-0 relative z-30 bg-[#f8f9fc] shadow-lg border-r border-[#d9deea]">
+          {/* Main Vertical Toolbar */}
+          <div className="w-[72px] h-full shrink-0 z-40 flex flex-col items-center bg-white">
+            <div className="flex-1 flex flex-col items-center gap-2 overflow-y-auto w-full pt-4 student-scrollbar">
               {tools.map(tool => {
                 const Icon = tool.icon;
                 const isActive = activeTool === tool.id;
@@ -547,7 +607,7 @@ export default function StudentComicFullViewPage() {
                   <button
                     key={tool.id}
                     onClick={() => setActiveTool(tool.id)}
-                    className={`flex flex-col items-center justify-center w-14 h-14 rounded-xl transition-all ${isActive ? 'bg-purple-600 text-white' : 'text-slate-400 hover:text-slate-200 hover:bg-white/10'}`}
+                    className={`flex flex-col items-center justify-center w-14 h-14 rounded-xl transition-all shrink-0 ${isActive ? 'bg-purple-600 text-white' : 'text-[#555b6b] hover:text-[#303442] hover:bg-[#f3f4f7]'}`}
                     title={tool.label}
                   >
                     <Icon className="w-5 h-5 mb-1" />
@@ -556,313 +616,256 @@ export default function StudentComicFullViewPage() {
                 );
               })}
             </div>
-
-            {/* Tool Panels */}
-            {activeTool !== 'select' && (
-              <div className="w-[300px] h-full transition-all shrink-0 bg-slate-800 border-l border-white/10 z-30 overflow-y-auto">
-                {activeTool === 'character' && (
-                  <CharacterToolPanel 
-                    onAddElement={handleAddElement} 
-                    selectedElementId={selectedElementId}
-                    elements={currentCutData?.elements || []}
-                    onUpdateElement={handleUpdateElement}
-                  />
-                )}
-                {activeTool === 'script' && (
-                  <ComicScriptPanel 
-                    elements={currentCutData?.elements || []}
-                    onUpdateElement={handleUpdateElement}
-                    onDeleteElement={handleDeleteElement}
-                    onAddElement={handleAddElement} 
-                  />
-                )}
-                {activeTool === 'bubble' && (
-                  <ComicSpeechBubblePanel onAddElement={handleAddElement} />
-                )}
-                {activeTool === 'layer' && currentCutData && (
-                  <ComicLayerPanel 
-                    elements={currentCutData.elements}
-                    selectedElementId={selectedElementId}
-                    onSelectElement={setSelectedElementId}
-                    onUpdateElement={handleUpdateElement}
-                    onReorderElement={handleReorderElement}
-                    onDeleteElement={handleDeleteElement}
-                  />
-                )}
-                {activeTool === 'background' && (
-                  <div className="p-4 flex flex-col h-full text-slate-200">
-                    <h3 className="text-sm font-bold text-slate-400 mb-4">배경 관리</h3>
-                    <p className="text-xs text-slate-500 mb-6">AI가 생성한 컷의 배경을 관리합니다.</p>
-                    
-                    {genStates[selectedCutNumber]?.status === 'error' && (
-                       <div className="mb-4 p-3 bg-red-900/30 border border-red-500/50 rounded-xl">
-                          <p className="text-sm font-bold text-red-400 mb-1">생성 실패</p>
-                          <p className="text-xs font-bold text-red-300 mb-2">원인: {genStates[selectedCutNumber]?.message}</p>
-                          {genStates[selectedCutNumber]?.errorMessage && (
-                            <p className="text-[10px] text-red-400/80 leading-relaxed break-words">{genStates[selectedCutNumber]?.errorMessage}</p>
-                          )}
-                       </div>
-                    )}
-                    
-                    <div className="mb-4 flex-1">
-                      <label className="block text-xs font-bold text-slate-300 mb-2 flex items-center justify-between">
-                        <span>{selectedCutNumber}컷 배경 설명</span>
-                      </label>
-                      <textarea
-                        value={currentCutData?.customBackgroundPrompt ?? ''}
-                        onChange={(e) => {
-                          const cutData = cutsData[selectedCutNumber];
-                          if (cutData) {
-                            saveCutState(selectedCutNumber, {
-                              ...cutData,
-                              customBackgroundPrompt: e.target.value
-                            });
-                          }
-                        }}
-                        className="w-full h-40 bg-slate-900 border border-slate-700 rounded-lg p-3 text-sm text-slate-200 resize-none focus:outline-none focus:border-purple-500 transition-colors"
-                        placeholder="배경 설명을 입력하세요..."
-                      />
-                    </div>
-
-                    <button
-                      onClick={() => handleGenerateCut(selectedCutNumber)}
-                      disabled={genStates[selectedCutNumber]?.status === 'generating'}
-                      className="flex items-center justify-center gap-2 w-full py-3 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl transition-colors disabled:opacity-50"
-                    >
-                      <RefreshCw className={`w-4 h-4 ${genStates[selectedCutNumber]?.status === 'generating' ? 'animate-spin' : ''}`} />
-                      수정한 설명으로 다시 만들기
-                    </button>
-                    <p className="text-xs text-purple-300 mt-4 text-center">
-                      배경 생성 시 사람/캐릭터/글자는 포함되지 않습니다.
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
+            
+            {/* Undo/Redo Group */}
+            <div className="mt-auto flex flex-col items-center w-full pb-4 shrink-0">
+              <div className="h-px w-10 bg-[#e2e8f0] my-2" />
+              
+              <button 
+                onClick={() => {}} 
+                disabled={true} 
+                className="flex flex-col items-center justify-center w-14 h-14 rounded-xl transition-all text-slate-300 cursor-not-allowed"
+                title="취소"
+              >
+                <Undo className="w-5 h-5 mb-1" />
+                <span className="text-[10px] font-bold">취소</span>
+              </button>
+              <button 
+                onClick={() => {}} 
+                disabled={true} 
+                className="flex flex-col items-center justify-center w-14 h-14 rounded-xl transition-all text-slate-300 cursor-not-allowed"
+                title="다시실행"
+              >
+                <Redo className="w-5 h-5 mb-1" />
+                <span className="text-[10px] font-bold">다시실행</span>
+              </button>
+            </div>
           </div>
 
-          {/* Right Area: 6 Cuts Grid */}
-          <div className="flex-1 flex flex-col min-w-0 bg-[#f3f4f7] h-full relative">
-            
-            {/* Top Header / Taskbar */}
-            <div className="flex justify-between items-center px-8 py-4 shrink-0 relative z-20">
-              {/* Left: Prev Button & Title */}
-              <div className="flex items-center gap-4">
-                <button
-                  onClick={() => navigate('/student/front-cover')}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-slate-800/80 hover:bg-slate-700 text-white font-jua text-base rounded-full border border-white/10 transition-all shadow-sm"
-                >
-                  <ArrowLeft className="w-4 h-4" />
-                  이전으로
-                </button>
-                <div>
-                  <h1 className="text-2xl font-jua text-slate-800">만화제작 (6컷)</h1>
-                  <p className="text-sm font-bold text-slate-600 hidden md:block">
-                    왼쪽 도구를 사용해 선택한 컷({selectedCutNumber}컷)을 편집하세요.
-                  </p>
-                </div>
-              </div>
-              
-              {/* Right: Actions */}
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={handleGenerateAll}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-white text-purple-600 font-bold rounded-xl border-2 border-purple-200 shadow-sm hover:bg-purple-50 transition-all text-sm"
-                >
-                  <Sparkles className="w-4 h-4" />
-                  배경 모두 생성
-                </button>
-                <button
-                  onClick={handleGenerateDialogues}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-white text-indigo-600 font-bold rounded-xl border-2 border-indigo-200 shadow-sm hover:bg-indigo-50 transition-all text-sm"
-                >
-                  <MessageSquare className="w-4 h-4" />
-                  대사 생성
-                </button>
-                <button
-                  onClick={handleNext}
-                  className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-purple-500 to-indigo-500 text-white font-jua text-lg rounded-xl shadow-lg hover:scale-105 transition-transform"
-                >
-                  단원 정리 가기
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-
-            {/* Canvas Area Container */}
-            <div className="flex-1 w-full relative min-h-0 min-w-0 overflow-auto overscroll-contain" ref={containerRef}>
-              <div 
-                className="p-8 pb-32 flex justify-center origin-top transition-transform duration-200"
-                style={{ transform: `scale(${currentZoom / 100})`, minWidth: 'max-content', minHeight: 'max-content' }}
-              >
-              {detailedCutNumber ? (
-                // Detailed Mode for single cut
-                <div className="bg-white rounded-lg shadow-2xl flex flex-col p-6 w-[800px] h-[600px] relative">
-                  <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-xl font-jua text-purple-900">{detailedCutNumber}컷 상세 편집</h2>
-                    <button onClick={() => setDetailedCutNumber(null)} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-bold">
-                      전체 보기로 돌아가기
-                    </button>
-                  </div>
-                  <div className="flex-1 relative">
-                    <ComicCellWrapper
-                      cutNumber={detailedCutNumber}
-                      cutData={cutsData[detailedCutNumber]}
-                      isSelected={true}
-                      onClick={() => {}}
-                      selectedElementId={selectedElementId}
-                      onSelectElement={setSelectedElementId}
-                      onUpdateElement={handleUpdateElement}
-                      genState={genStates[detailedCutNumber]}
-                      onGenerate={() => handleGenerateCut(detailedCutNumber)}
-                      onDropElement={handleDropElement}
+          {/* Tool Panels */}
+          {activeTool !== 'select' && (
+            <div className="w-[300px] h-full transition-all shrink-0 bg-[#ffffff] border-l border-[#d9deea] z-30 overflow-y-auto student-scrollbar">
+              {activeTool === 'character' && (
+                <CharacterToolPanel 
+                  onAddElement={handleAddElement} 
+                  selectedElementId={selectedElementId}
+                  elements={currentCutData?.elements || []}
+                  onUpdateElement={handleUpdateElement}
+                />
+              )}
+              {activeTool === 'script' && (
+                <ComicScriptPanel 
+                  elements={currentCutData?.elements || []}
+                  onUpdateElement={handleUpdateElement}
+                  onDeleteElement={handleDeleteElement}
+                  onAddElement={handleAddElement} 
+                />
+              )}
+              {activeTool === 'bubble' && (
+                <ComicSpeechBubblePanel onAddElement={handleAddElement} />
+              )}
+              {activeTool === 'layer' && currentCutData && (
+                <ComicLayerPanel 
+                  elements={currentCutData.elements}
+                  selectedElementId={selectedElementId}
+                  onSelectElement={setSelectedElementId}
+                  onUpdateElement={handleUpdateElement}
+                  onReorderElement={handleReorderElement}
+                  onDeleteElement={handleDeleteElement}
+                />
+              )}
+              {activeTool === 'background' && (
+                <div className="p-4 flex flex-col h-full text-[#303442]">
+                  <h3 className="text-sm font-bold text-[#555b6b] mb-4">배경 관리</h3>
+                  <p className="text-xs text-[#8b909e] mb-6">AI가 생성한 컷의 배경을 관리합니다.</p>
+                  
+                  {genStates[selectedCutNumber]?.status === 'error' && (
+                     <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl">
+                        <p className="text-sm font-bold text-red-600 mb-1">생성 실패</p>
+                        <p className="text-xs font-bold text-red-500 mb-2">원인: {genStates[selectedCutNumber]?.message}</p>
+                        {genStates[selectedCutNumber]?.errorMessage && (
+                          <p className="text-[10px] text-red-400 leading-relaxed break-words">{genStates[selectedCutNumber]?.errorMessage}</p>
+                        )}
+                     </div>
+                  )}
+                  
+                  <div className="mb-4 flex-1">
+                    <label className="block text-xs font-bold text-[#555b6b] mb-2 flex items-center justify-between">
+                      <span>{selectedCutNumber}컷 배경 설명</span>
+                    </label>
+                    <textarea
+                      value={currentCutData?.customBackgroundPrompt ?? ''}
+                      onChange={(e) => {
+                        const cutData = cutsData[selectedCutNumber];
+                        if (cutData) {
+                          saveCutState(selectedCutNumber, {
+                            ...cutData,
+                            customBackgroundPrompt: e.target.value
+                          });
+                        }
+                      }}
+                      className="w-full h-40 bg-white border border-[#d9deea] rounded-lg p-3 text-sm text-[#303442] resize-none focus:outline-none focus:border-purple-500 transition-colors"
+                      placeholder="배경 설명을 입력하세요..."
                     />
                   </div>
-                </div>
-              ) : (
-                // A4 Canvas Container
-                <div 
-                  className="bg-white rounded-lg shadow-2xl flex flex-col p-6 shrink-0" 
-                  style={{ 
-                    width: '750px', 
-                    aspectRatio: '210 / 297'
-                  }}
-                >
-                  {/* Top: Title Header (약 8% 비율) */}
-                  <div className="h-[76px] mb-4 shrink-0 bg-[#F1E7FF] rounded-xl px-5 flex items-center justify-between border-b-2 border-[#E5D5FF] shadow-sm">
-                    {/* Left: Logo & Subject & Title */}
-                    <div className="flex items-center gap-3 overflow-hidden flex-1 mr-4">
-                      <span className="font-black text-2xl tracking-tighter text-slate-800 shrink-0">TOONSCHOOL</span>
-                      <div className="px-3 py-1 bg-[#DCC7FF] text-[#6D28D9] rounded-md font-bold text-sm shrink-0">
-                        {projectData.subject}
-                      </div>
-                      <span className="text-[#BFA7F2] font-bold shrink-0 mx-1">|</span>
-                      <h2 className="text-xl font-jua text-slate-800 truncate">
-                        {projectData.topicTitle}
-                      </h2>
-                    </div>
-                    {/* Right: Characters */}
-                    <ToonSchoolCharacterBadgeGroup textColorClass="text-slate-600" />
-                  </div>
-                  
-                  {/* Center: 6 Cuts (2x3 Grid) */}
-                  <div className="flex-1 grid grid-cols-2 grid-rows-3 gap-3 md:gap-4 lg:gap-5">
-                    {[1, 2, 3, 4, 5, 6].map(num => (
-                      <div key={num} className="w-full h-full relative group">
-                        <ComicCellWrapper
-                          cutNumber={num}
-                          cutData={cutsData[num]}
-                          isSelected={selectedCutNumber === num}
-                          onClick={() => {
-                            setSelectedCutNumber(num);
-                            setSelectedElementId(null);
-                          }}
-                          onDoubleClick={() => toggleDetailedCut(num)}
-                          selectedElementId={selectedElementId}
-                          onSelectElement={setSelectedElementId}
-                          onUpdateElement={handleUpdateElement}
-                          genState={genStates[num]}
-                          onGenerate={() => handleGenerateCut(num)}
-                          onDropElement={handleDropElement}
-                        />
-                        {/* Detail View Overlay Button */}
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); toggleDetailedCut(num); }}
-                          className="absolute top-2 right-2 p-2 bg-black/50 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity z-30 hover:bg-black/70"
-                          title="크게 편집하기"
-                        >
-                          <Maximize className="w-4 h-4" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
 
-                  {/* Bottom: Summary Area */}
-                  <div className="h-28 mt-6 shrink-0 bg-white border-2 border-indigo-100 rounded-xl flex items-stretch shadow-sm overflow-hidden">
-                    <div className="w-32 bg-indigo-50 flex flex-col items-center justify-center shrink-0 border-r border-indigo-100 gap-1">
-                      <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
-                        <Sparkles className="w-5 h-5 text-indigo-600" />
-                      </div>
-                      <span className="text-sm font-jua text-indigo-800">핵심정리</span>
-                    </div>
-                    <div className="flex-1 p-3 flex flex-col justify-center overflow-y-auto">
-                      {scriptData?.keyConcepts && scriptData.keyConcepts.length > 0 ? (
-                        <ul className="space-y-1.5 flex flex-col justify-center h-full">
-                          {scriptData.keyConcepts.slice(0, 3).map((concept, idx) => (
-                            <li key={concept.id || idx} className="text-sm flex items-start gap-2">
-                              <span className="font-bold text-indigo-600 w-4 text-right shrink-0">{idx + 1}.</span>
-                              <div className="flex-1 leading-snug">
-                                <span className="font-bold text-slate-800 mr-2">{concept.title}</span>
-                                <span className="text-slate-600">{concept.description}</span>
-                              </div>
-                            </li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <div className="h-full flex items-center justify-center text-slate-400 font-bold text-sm">
-                          핵심 개념이 없습니다.
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                  <button
+                    onClick={() => handleGenerateCut(selectedCutNumber, true)}
+                    disabled={genStates[selectedCutNumber]?.status === 'generating' || (currentCutData?.backgroundRegenerateCount || 0) >= 1}
+                    className={`flex items-center justify-center gap-2 w-full py-3 font-bold rounded-xl transition-colors disabled:opacity-50 ${
+                      (currentCutData?.backgroundRegenerateCount || 0) >= 1 
+                        ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                        : 'bg-purple-600 hover:bg-purple-500 text-white'
+                    }`}
+                  >
+                    <RefreshCw className={`w-4 h-4 ${genStates[selectedCutNumber]?.status === 'generating' ? 'animate-spin' : ''}`} />
+                    {(currentCutData?.backgroundRegenerateCount || 0) >= 1 ? '배경 수정 완료' : '수정한 설명으로 다시 만들기'}
+                  </button>
+                  <p className="text-xs text-purple-500 mt-4 text-center">
+                    배경 생성 시 사람/캐릭터/글자는 포함되지 않습니다.
+                  </p>
                 </div>
               )}
             </div>
-            
-            </div>
-
-            {/* Zoom Controls */}
-            <div className="absolute bottom-6 right-6 z-50 flex items-center gap-2 md:gap-3 bg-slate-800/95 backdrop-blur-sm border border-slate-700/50 px-3 py-2 md:px-4 md:py-2.5 rounded-full shadow-2xl text-slate-200">
-              <button 
-                onClick={() => setZoomPercent(Math.max(25, currentZoom - 10))}
-                disabled={currentZoom <= 25}
-                className="hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors p-1"
-                aria-label="캔버스 축소" title="축소"
-              >
-                <ZoomOut className="w-4 h-4" />
-              </button>
-              
-              <span className="text-xs md:text-sm font-bold w-[4ch] text-center font-mono">
-                {currentZoom}%
-              </span>
-              
-              <input 
-                type="range"
-                min="25" max="300" step="5"
-                value={currentZoom}
-                onChange={(e) => setZoomPercent(parseInt(e.target.value))}
-                className="w-16 md:w-24 accent-purple-500 cursor-pointer"
-                aria-label="캔버스 확대 비율"
-                aria-valuemin={25}
-                aria-valuemax={300}
-                aria-valuenow={currentZoom}
-              />
-              
-              <button 
-                onClick={() => setZoomPercent(Math.min(300, currentZoom + 10))}
-                disabled={currentZoom >= 300}
-                className="hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors p-1"
-                aria-label="캔버스 확대" title="확대"
-              >
-                <ZoomIn className="w-4 h-4" />
-              </button>
-              
-              <div className="w-px h-4 md:h-5 bg-slate-600 mx-0.5 md:mx-1" />
-              
-              <button 
-                onClick={() => setZoomPercent(null)}
-                className={`hover:text-white transition-colors flex items-center gap-1.5 text-xs font-bold p-1 ${zoomPercent === null ? 'text-purple-400' : 'text-slate-300'}`}
-                aria-label="캔버스를 화면에 맞추기" title="화면 맞춤"
-              >
-                <Maximize className="w-3.5 h-3.5 md:w-4 md:h-4" />
-                <span className="hidden md:inline">맞춤</span>
-              </button>
-            </div>
-
-          </div>
-          
+          )}
         </div>
+      </StudentToolPanel>
+
+      {/* Center Main Area */}
+      <div className="flex-1 flex flex-col min-w-0 bg-transparent h-full relative">
+        {/* Canvas Area Container */}
+        <div className="flex-1 w-full relative min-h-0 min-w-0 overflow-auto overscroll-contain student-scrollbar mt-6" ref={containerRef}>
+          <div 
+            className="p-8 pb-32 flex justify-center origin-top transition-transform duration-200"
+            style={{ transform: `scale(${currentZoom / 100})`, minWidth: 'max-content', minHeight: 'max-content' }}
+          >
+            {detailedCutNumber ? (
+              // Detailed Mode for single cut
+              <div className="bg-white rounded-lg shadow-2xl flex flex-col p-6 w-[800px] h-[600px] relative">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-jua text-[#303442]">{detailedCutNumber}컷 상세 편집</h2>
+                  <button onClick={() => setDetailedCutNumber(null)} className="btn-student btn-student-secondary btn-student-md">
+                    전체 보기로 돌아가기
+                  </button>
+                </div>
+                <div className="flex-1 relative">
+                  <ComicCellWrapper
+                    cutNumber={detailedCutNumber}
+                    cutData={cutsData[detailedCutNumber]}
+                    isSelected={true}
+                    onClick={() => {}}
+                    selectedElementId={selectedElementId}
+                    onSelectElement={setSelectedElementId}
+                    onUpdateElement={handleUpdateElement}
+                    genState={genStates[detailedCutNumber]}
+                    onGenerate={() => handleGenerateCut(detailedCutNumber)}
+                    onDropElement={handleDropElement}
+                  />
+                </div>
+              </div>
+            ) : (
+              // A4 Canvas Container
+              <div 
+                className="bg-white rounded-lg shadow-2xl flex flex-col p-6 shrink-0" 
+                style={{ 
+                  width: '750px', 
+                  aspectRatio: '210 / 297'
+                }}
+              >
+                {/* Top: Title Header (약 8% 비율) */}
+                <div className="h-[76px] mb-4 shrink-0 bg-[#F1E7FF] rounded-xl px-5 flex items-center justify-between border-b-2 border-[#E5D5FF] shadow-sm">
+                  {/* Left: Logo & Subject & Title */}
+                  <div className="flex items-center gap-3 overflow-hidden flex-1 mr-4">
+                    <span className="font-black text-2xl tracking-tighter text-[#303442] shrink-0">TOONSCHOOL</span>
+                    <div className="px-3 py-1 bg-[#DCC7FF] text-[#6D28D9] rounded-md font-bold text-sm shrink-0">
+                      {projectData.subject}
+                    </div>
+                    <span className="text-[#BFA7F2] font-bold shrink-0 mx-1">|</span>
+                    <h2 className="text-xl font-jua text-[#303442] truncate">
+                      {projectData.topicTitle}
+                    </h2>
+                  </div>
+                  {/* Right: Characters */}
+                  <ToonSchoolCharacterBadgeGroup textColorClass="text-[#555b6b]" />
+                </div>
+                
+                {/* Center: 6 Cuts (2x3 Grid) */}
+                <div className="flex-1 grid grid-cols-2 grid-rows-3 gap-3 md:gap-4 lg:gap-5">
+                  {[1, 2, 3, 4, 5, 6].map(num => (
+                    <div key={num} className="w-full h-full relative group">
+                      <ComicCellWrapper
+                        cutNumber={num}
+                        cutData={cutsData[num]}
+                        isSelected={selectedCutNumber === num}
+                        onClick={() => {
+                          setSelectedCutNumber(num);
+                          setSelectedElementId(null);
+                        }}
+                        onDoubleClick={() => toggleDetailedCut(num)}
+                        selectedElementId={selectedElementId}
+                        onSelectElement={setSelectedElementId}
+                        onUpdateElement={handleUpdateElement}
+                        genState={genStates[num]}
+                        onGenerate={() => handleGenerateCut(num)}
+                        onDropElement={handleDropElement}
+                      />
+                      {/* Detail View Overlay Button */}
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); toggleDetailedCut(num); }}
+                        className="absolute top-2 right-2 p-2 bg-black/50 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity z-30 hover:bg-black/70"
+                        title="크게 편집하기"
+                      >
+                        <Maximize className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Bottom: Summary Area */}
+                <div className="h-28 mt-6 shrink-0 bg-white border-2 border-indigo-100 rounded-xl flex items-stretch shadow-sm overflow-hidden">
+                  <div className="w-32 bg-indigo-50 flex flex-col items-center justify-center shrink-0 border-r border-indigo-100 gap-1">
+                    <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
+                      <Sparkles className="w-5 h-5 text-indigo-600" />
+                    </div>
+                    <span className="text-sm font-jua text-indigo-800">핵심정리</span>
+                  </div>
+                  <div className="flex-1 p-3 flex flex-col justify-center overflow-y-auto student-scrollbar">
+                    {scriptData?.keyConcepts && scriptData.keyConcepts.length > 0 ? (
+                      <ul className="space-y-1.5 flex flex-col justify-center h-full">
+                        {scriptData.keyConcepts.slice(0, 3).map((concept, idx) => (
+                          <li key={concept.id || idx} className="text-sm flex items-start gap-2">
+                            <span className="font-bold text-indigo-600 w-4 text-right shrink-0">{idx + 1}.</span>
+                            <div className="flex-1 leading-snug">
+                              <span className="font-bold text-[#303442] mr-2">{concept.title}</span>
+                              <span className="text-[#555b6b]">{concept.description}</span>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <div className="h-full flex items-center justify-center text-[#8b909e] font-bold text-sm">
+                        핵심 개념이 없습니다.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Zoom Controls */}
+        <StudentZoomControl
+          scale={(currentZoom) / 100}
+          onZoomIn={() => setZoomPercent(Math.min(300, currentZoom + 10))}
+          onZoomOut={() => setZoomPercent(Math.max(25, currentZoom - 10))}
+          onFitToScreen={() => setZoomPercent(null)}
+          minScale={0.25}
+          maxScale={3.0}
+        />
       </div>
-    </StudentCreationLayout>
+      </div>
+      </div>
+    </StudentWorkspaceLayout>
   );
 }

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import StudentCreationLayout from '../components/layout/StudentCreationLayout'
+import StudentWorkspaceLayout from '../components/layout/StudentWorkspaceLayout'
 import { loadComicProjectData, loadComicCutData } from '../components/editor/utils/comicStorage'
 import type { ComicProjectData, ComicCutEditData, ComicCutElement } from '../components/editor/utils/comicStorage'
 import { ArrowLeft, ArrowRight, Home, RefreshCcw } from 'lucide-react'
@@ -79,9 +79,9 @@ export default function StudentComicViewerPage() {
 
   if (!projectData) {
     return (
-      <StudentCreationLayout currentStep="viewer" maxWidth="full" bgVariant="pastel">
+      <StudentWorkspaceLayout currentStep="viewer" title="로딩 중..." subtitle="데이터를 불러오고 있습니다." onBack={() => navigate('/student')} bgVariant="pastel">
         <div className="flex-1 w-full flex items-center justify-center">로딩 중...</div>
-      </StudentCreationLayout>
+      </StudentWorkspaceLayout>
     )
   }
 
@@ -185,30 +185,47 @@ export default function StudentComicViewerPage() {
     return '뒤표지 10 / 10'
   }
 
+  const actionButtons = (
+    <button
+      onClick={() => navigate('/student')}
+      className="btn-student btn-student-secondary btn-student-md"
+    >
+      <Home className="w-5 h-5" />
+      <span>홈으로 나가기</span>
+    </button>
+  );
+
   return (
-    <StudentCreationLayout currentStep="viewer" maxWidth="md" bgVariant="default">
-      <div className="w-full flex-1 flex flex-col min-h-0 relative bg-slate-900/5 backdrop-blur-sm px-4 py-6 md:py-10">
+    <StudentWorkspaceLayout
+      currentStep="viewer"
+      title="만화 보기"
+      subtitle="우리가 만든 만화를 감상해 보세요!"
+      onBack={() => navigate('/student/back-cover')}
+      actionButtons={actionButtons}
+      bgVariant="default"
+    >
+      <div className="w-full flex-1 flex flex-col min-h-0 relative bg-transparent px-4 py-6 md:py-10 overflow-auto student-scrollbar">
         
         {/* 상단 진행 표시 */}
-        <div className="flex justify-center mb-6">
-          <div className="bg-white/80 backdrop-blur border border-slate-200 px-6 py-2 rounded-full shadow-sm">
-            <span className="font-jua text-slate-700 text-lg">{getPageLabel()}</span>
+        <div className="flex justify-center mb-6 shrink-0">
+          <div className="bg-white/80 backdrop-blur border border-[#d9deea] px-6 py-2 rounded-full shadow-sm">
+            <span className="font-jua text-[#303442] text-lg">{getPageLabel()}</span>
           </div>
         </div>
 
         {/* 메인 뷰어 영역 */}
-        <div className="flex-1 w-full max-w-4xl mx-auto flex items-center justify-center relative min-h-0">
+        <div className="flex-1 w-full max-w-4xl mx-auto flex items-center justify-center relative min-h-0 shrink-0">
           
           {/* 이전 버튼 (왼쪽) */}
           <button
             onClick={handlePrev}
-            className="absolute left-0 md:-left-16 z-10 p-3 md:p-4 bg-white/90 hover:bg-white text-slate-700 rounded-full shadow-lg border border-slate-200 transition-transform hover:scale-110 active:scale-95"
+            className="absolute left-0 md:-left-16 z-10 p-3 md:p-4 bg-white/90 hover:bg-white text-[#555b6b] hover:text-[#303442] rounded-full shadow-lg border border-[#d9deea] transition-transform hover:scale-110 active:scale-95"
           >
             <ArrowLeft className="w-6 h-6 md:w-8 md:h-8 stroke-[3]" />
           </button>
 
           {/* 콘텐츠 */}
-          <div className="w-full h-full max-h-[800px] aspect-[3/4] md:aspect-auto md:h-[70vh]">
+          <div className="w-full h-[60vh] max-h-[800px] min-h-[500px] aspect-[3/4] md:aspect-auto md:h-[70vh]">
             {renderContent()}
           </div>
 
@@ -216,25 +233,14 @@ export default function StudentComicViewerPage() {
           {currentPage < 9 && (
             <button
               onClick={handleNext}
-              className="absolute right-0 md:-right-16 z-10 p-3 md:p-4 bg-white/90 hover:bg-white text-purple-600 rounded-full shadow-lg border border-slate-200 transition-transform hover:scale-110 active:scale-95"
+              className="absolute right-0 md:-right-16 z-10 p-3 md:p-4 bg-white/90 hover:bg-white text-purple-600 hover:text-purple-700 rounded-full shadow-lg border border-[#d9deea] transition-transform hover:scale-110 active:scale-95"
             >
               <ArrowRight className="w-6 h-6 md:w-8 md:h-8 stroke-[3]" />
             </button>
           )}
         </div>
 
-        {/* 모바일 하단 홈 버튼 */}
-        <div className="mt-8 flex justify-center">
-          <button
-            onClick={() => navigate('/student')}
-            className="flex items-center gap-2 px-6 py-3 bg-slate-800 text-white font-bold rounded-full shadow-md"
-          >
-            <Home className="w-4 h-4" />
-            홈으로 나가기
-          </button>
-        </div>
-
       </div>
-    </StudentCreationLayout>
+    </StudentWorkspaceLayout>
   )
 }

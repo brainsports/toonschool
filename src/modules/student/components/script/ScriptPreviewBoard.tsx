@@ -34,7 +34,7 @@ export default function ScriptPreviewBoard({ zoomPercent, selectionData, selecte
           <span className="bg-[#f3f4f7] px-3 py-1 rounded-full">{selectionData.selection.gradeName} {selectionData.selection.subjectName}</span>
           <span className="bg-[#ffe8f0] text-[#ff2778] px-3 py-1 rounded-full">{selectionData.topic.title}</span>
         </div>
-        <h1 className="text-4xl font-jua text-[#202330] mb-4">{selectionData.topic.summary}</h1>
+        <h1 className="text-2xl leading-relaxed font-jua text-[#202330] mb-4 px-4">{selectionData.topic.summary}</h1>
         <p className="text-xl text-[#555b6b] font-medium">6컷 만화 대본</p>
       </div>
 

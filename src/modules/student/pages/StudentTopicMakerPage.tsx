@@ -1,12 +1,12 @@
 // 주제 만들기 페이지 - 태블릿 좌우 배치 & AI 추천 연동
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import StudentCreationLayout from '../components/layout/StudentCreationLayout'
+import StudentWorkspaceLayout from '../components/layout/StudentWorkspaceLayout'
 import TopicStepTitle from '../components/topic/TopicStepTitle'
 import StoryInputCard from '../components/topic/StoryInputCard'
 import AiMagicButton from '../components/topic/AiMagicButton'
 import AiRecommendationCard from '../components/topic/AiRecommendationCard'
-import TopicActionButtons from '../components/topic/TopicActionButtons'
+
 import KeywordSelectionCard from '../components/topic/KeywordSelectionCard'
 import type { StudentUnitSelection } from '../types/studentCurriculum'
 import type { TopicRecommendation, TopicGenerationState, KeywordItem } from '../types/studentTopic'
@@ -209,19 +209,30 @@ export default function StudentTopicMakerPage() {
     navigate('/student/script', { state: { ...fullSelectionData, projectId } })
   }
 
-  return (
-    <StudentCreationLayout currentStep="topic" bgVariant="pastel" maxWidth="full">
-      <div className="flex-1 w-full h-full overflow-y-auto pr-4 lg:pr-8">
-        <div className="flex flex-col gap-8 animate-fade-in w-full pt-[40px] md:pt-[56px] px-4 max-w-5xl mx-auto pb-[48px] relative">
-          
-          {/* 헤더 영역 (제목 & 단원 배지) */}
-        <TopicStepTitle selection={selection} />
+  const actionButtons = (
+    <button
+      disabled={!canProceed || !selection}
+      onClick={handleProceedToComic}
+      className="btn-student btn-student-primary btn-student-md"
+    >
+      <span>대본 만들기 가기 🚀</span>
+    </button>
+  )
 
-        {/* 데스크탑 좌측 상단 이전 버튼 */}
-        <TopicActionButtons
-          type="desktop-prev"
-          onClick={() => navigate('/student/select-unit', { state: { projectId } })}
-        />
+  return (
+    <StudentWorkspaceLayout 
+      currentStep="topic" 
+      bgVariant="pastel"
+      title="주제 만들기"
+      subtitle="어떤 이야기를 만들까요?"
+      onBack={() => navigate('/student/select-unit', { state: { projectId } })}
+      actionButtons={actionButtons}
+    >
+      <div className="flex-1 w-full h-full overflow-y-auto student-scrollbar">
+        <div className="flex flex-col gap-8 animate-fade-in w-full pt-8 px-4 max-w-[1200px] mx-auto pb-12 relative">
+          
+          {/* 단원 정보 배지 */}
+        <TopicStepTitle selection={selection} />
 
         {creationMode === 'select' && (
           <div className="animate-fade-in">
@@ -356,22 +367,8 @@ export default function StudentTopicMakerPage() {
             )}
           </div>
         )}
-        
-        {/* 우측 상단(데스크탑) 및 하단(모바일) 다음 버튼 */}
-        <TopicActionButtons
-          type="next"
-          disabled={!canProceed || !selection}
-          onClick={handleProceedToComic}
-        />
-        
-        {/* 모바일/태블릿 하단 이전 버튼 (lg 미만에서만 표시) */}
-        <TopicActionButtons
-          type="mobile-prev"
-          onClick={() => navigate('/student/select-unit', { state: { projectId } })}
-        />
-
       </div>
       </div>
-    </StudentCreationLayout>
+    </StudentWorkspaceLayout>
   )
 }

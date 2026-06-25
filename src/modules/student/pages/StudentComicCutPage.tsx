@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
-import StudentCreationLayout from '../components/layout/StudentCreationLayout'
 import HalfwayPraiseMessage from '../components/comic/HalfwayPraiseMessage'
 import ComicCutEditor from '../components/comic-editor/ComicCutEditor'
 
@@ -43,17 +42,14 @@ export default function StudentComicCutPage() {
   if (!selectionData) return null;
 
   return (
-    <StudentCreationLayout currentStep="comic" bgVariant="space" maxWidth="full">
+    <>
       <HalfwayPraiseMessage visible={showPraise} />
-
-      <div className="w-full flex-1 flex flex-col min-h-0 animate-fade-in relative">
-        <ComicCutEditor 
-          key={`comic-cut-editor-${currentCutNumber}`}
-          topicId={topicId}
-          cutNumber={currentCutNumber}
-          scriptData={scriptData}
-        />
-      </div>
-    </StudentCreationLayout>
+      <ComicCutEditor 
+        key={`comic-cut-editor-${currentCutNumber}`}
+        topicId={topicId}
+        cutNumber={currentCutNumber}
+        scriptData={scriptData}
+      />
+    </>
   )
 }

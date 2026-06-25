@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import StudentCreationLayout from '../components/layout/StudentCreationLayout'
 import type { StudentUnitSelection } from '../types/studentCurriculum'
 import type { TopicRecommendation } from '../types/studentTopic'
 
@@ -247,29 +246,22 @@ export default function StudentFrontCoverPage() {
   };
 
   return (
-    <StudentCreationLayout currentStep="frontCover" bgVariant="pastel" maxWidth="full">
-      {/* 
-        h-[calc(100vh-80px)] or something to fill the screen. 
-        Since StudentCreationLayout adds pt-6 md:pt-12, let's use h-[calc(100vh-140px)] or h-[80vh] min-h-[600px] 
-      */}
-      <div className="w-full flex-1 flex flex-col min-h-0 animate-fade-in">
-        <StudentCanvasEditor 
-          mode="front-cover"
-          subject={selection?.subjectId || undefined}
-          initialState={getInitialEditorState()}
-          onSave={(state) => {
-            const success = projectStorage.saveFrontCover(projectId, state);
-            if (success) showToast('저장되었습니다');
-            else alert('저장에 실패했습니다. 저장 공간을 확인해 주세요.');
-          }}
-          onPrev={handlePrev}
-          onNext={handleNext}
-          onCompleteCover={handleCompleteCover}
-          isCoverCompleted={isCoverCompleted}
-          prevText="이전으로"
-          nextText="만화 만들기"
-        />
-      </div>
-    </StudentCreationLayout>
+    <StudentCanvasEditor 
+      mode="front-cover"
+      subject={selection?.subjectId || undefined}
+      initialState={getInitialEditorState()}
+      onSave={(state) => {
+        const success = projectStorage.saveFrontCover(projectId, state);
+        if (success) showToast('저장되었습니다');
+        else alert('저장에 실패했습니다. 저장 공간을 확인해 주세요.');
+      }}
+      onPrev={handlePrev}
+      onNext={handleNext}
+      onCompleteCover={handleCompleteCover}
+      isCoverCompleted={isCoverCompleted}
+      prevText="이전으로"
+      nextText="만화 만들기"
+      topicTitle={selectionData?.topic?.title}
+    />
   )
 }

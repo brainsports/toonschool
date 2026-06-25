@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import StudentCreationLayout from '../components/layout/StudentCreationLayout'
+import StudentWorkspaceLayout from '../components/layout/StudentWorkspaceLayout'
 import ToonSchoolCharacterBadgeGroup from '../components/layout/ToonSchoolCharacterBadgeGroup'
-import { ArrowLeft, ArrowRight, Loader2, BookOpen, PenTool, Edit3, Landmark, Newspaper, Home, Globe, Bot, Lightbulb, Clock, Magnet, Droplet, ShoppingBag, ScrollText } from 'lucide-react'
+import { ArrowRight, BookOpen, PenTool, Loader2, Edit3, Landmark, Newspaper, Home, Globe, Bot, Lightbulb, Clock, Magnet, Droplet, ShoppingBag, ScrollText } from 'lucide-react'
 
 type StoryType = 'history' | 'latest' | 'life';
 
@@ -117,64 +117,51 @@ export default function StudentUnitSummaryPage() {
     setQuestions(questions.map(q => q.id === id ? { ...q, answer: q.answer === 'O' ? 'X' : 'O' } : q))
   }
 
-  return (
-    <StudentCreationLayout currentStep="summary" maxWidth="full" bgVariant="default">
-      <div className="w-full flex-1 flex flex-col min-h-0 bg-[#f3f4f7] relative">
-        
-        {/* 상단 툴바 영역 */}
-        <div className="flex justify-between items-center px-4 md:px-8 py-4 shrink-0 relative z-20">
-          {/* Left: Prev Button & Title */}
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => navigate('/student/comic/full')}
-              className="flex items-center gap-2 px-5 py-2.5 bg-slate-800/80 hover:bg-slate-700 text-white font-jua text-base rounded-full border border-white/10 transition-all shadow-sm"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              이전으로
-            </button>
-            <div>
-              <h1 className="text-2xl font-jua text-slate-800">단원 정리</h1>
-              <p className="text-sm font-bold text-slate-600 hidden md:block">
-                세상과 연결하고, 내가 문제를 만들어 봐요!
-              </p>
-            </div>
-          </div>
-          
-          {/* Right: Actions */}
-          <div className="flex items-center gap-2 md:gap-3">
-            <button
-              onClick={handleGenerateStory}
-              disabled={isGeneratingStory}
-              className="flex items-center gap-2 px-4 py-2.5 bg-white text-purple-600 font-bold rounded-xl border-2 border-purple-200 shadow-sm hover:bg-purple-50 transition-all text-sm disabled:opacity-50"
-            >
-              {isGeneratingStory ? <Loader2 className="w-4 h-4 animate-spin" /> : <BookOpen className="w-4 h-4" />}
-              <span className="hidden sm:inline">세상 속 이야기 만들기</span>
-              <span className="sm:hidden">이야기</span>
-            </button>
-            <button
-              onClick={handleGenerateQuiz}
-              disabled={isGeneratingQuiz}
-              className="flex items-center gap-2 px-4 py-2.5 bg-white text-purple-600 font-bold rounded-xl border-2 border-purple-200 shadow-sm hover:bg-purple-50 transition-all text-sm disabled:opacity-50"
-            >
-              {isGeneratingQuiz ? <Loader2 className="w-4 h-4 animate-spin" /> : <PenTool className="w-4 h-4" />}
-              <span className="hidden sm:inline">OX 문제 만들기</span>
-              <span className="sm:hidden">문제</span>
-            </button>
-            <button
-              onClick={() => navigate('/student/back-cover')}
-              className="flex items-center gap-2 px-4 md:px-6 py-2.5 bg-gradient-to-r from-purple-500 to-indigo-500 text-white font-jua text-sm md:text-lg rounded-xl shadow-lg hover:scale-105 transition-transform"
-            >
-              <span className="hidden sm:inline">뒤표지 만들기</span>
-              <span className="sm:hidden">다음</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
+  const actionButtons = (
+    <>
+      <button
+        onClick={handleGenerateStory}
+        disabled={isGeneratingStory}
+        className="btn-student btn-student-secondary btn-student-md disabled:opacity-50"
+      >
+        {isGeneratingStory ? <Loader2 className="w-5 h-5 animate-spin" /> : <BookOpen className="w-5 h-5" />}
+        <span className="hidden sm:inline">세상 속 이야기 만들기</span>
+        <span className="sm:hidden">이야기</span>
+      </button>
+      <button
+        onClick={handleGenerateQuiz}
+        disabled={isGeneratingQuiz}
+        className="btn-student btn-student-secondary btn-student-md disabled:opacity-50"
+      >
+        {isGeneratingQuiz ? <Loader2 className="w-5 h-5 animate-spin" /> : <PenTool className="w-5 h-5" />}
+        <span className="hidden sm:inline">OX 문제 만들기</span>
+        <span className="sm:hidden">문제</span>
+      </button>
+      <button
+        onClick={() => navigate('/student/back-cover')}
+        className="btn-student btn-student-primary btn-student-md"
+      >
+        <span className="hidden sm:inline">뒤표지 만들기</span>
+        <span className="sm:hidden">다음</span>
+        <ArrowRight className="w-5 h-5" />
+      </button>
+    </>
+  );
 
+  return (
+    <StudentWorkspaceLayout
+      currentStep="summary"
+      title="단원 정리"
+      subtitle="세상과 연결하고, 내가 문제를 만들어 봐요!"
+      onBack={() => navigate('/student/comic/full')}
+      actionButtons={actionButtons}
+      bgVariant="default"
+    >
+      <div className="w-full flex-1 flex flex-col min-h-0 bg-transparent relative">
         {/* 중앙 A4 학습지 스크롤 영역 */}
-        <div className="flex-1 w-full overflow-auto flex justify-center py-8">
+        <div className="flex-1 w-full overflow-auto flex justify-center py-8 student-scrollbar">
           <div 
-            className="bg-white shadow-sm border border-slate-200 flex flex-col relative shrink-0"
+            className="bg-white shadow-sm border border-[#d9deea] flex flex-col relative shrink-0"
             style={{ 
               width: '100%',
               maxWidth: '800px', 
@@ -184,28 +171,20 @@ export default function StudentUnitSummaryPage() {
             }}
           >
             {/* A4 헤더 */}
-            <div className="w-full bg-gradient-to-r from-[#a78bfa] to-[#ec4899] rounded-[16px] min-h-[90px] mb-6 p-4 md:px-6 flex flex-col justify-center relative overflow-hidden shadow-sm">
-              <div className="flex justify-between items-center w-full z-10">
-                <div className="flex flex-col text-white">
-                  <div className="font-bold text-[10px] md:text-xs tracking-widest text-white/90 mb-1">
-                    TOONSCHOOL {subject} | 단원 마무리
-                  </div>
-                  <h1 className="text-2xl md:text-3xl font-jua mb-1">단원 정리</h1>
-                  <p className="text-[11px] md:text-[13px] font-bold text-white/95">
-                    {unitTitle}을 세상과 연결하고, 문제로 만들어 봐요!
-                  </p>
+            <div className="h-[76px] mb-6 shrink-0 bg-[#F1E7FF] rounded-xl px-5 flex items-center justify-between border-b-2 border-[#E5D5FF] shadow-sm w-full">
+              {/* Left: Logo & Subject & Title */}
+              <div className="flex items-center gap-3 overflow-hidden flex-1 mr-4">
+                <span className="font-black text-2xl tracking-tighter text-[#303442] shrink-0">TOONSCHOOL</span>
+                <div className="px-3 py-1 bg-[#DCC7FF] text-[#6D28D9] rounded-md font-bold text-sm shrink-0">
+                  {subject}
                 </div>
-                
-                {/* 우측 캐릭터 영역 */}
-                <ToonSchoolCharacterBadgeGroup 
-                  className="hidden sm:flex self-end mb-1" 
-                  textColorClass="text-slate-800" 
-                />
+                <span className="text-[#BFA7F2] font-bold shrink-0 mx-1">|</span>
+                <h2 className="text-xl font-jua text-[#303442] truncate">
+                  {unitTitle}
+                </h2>
               </div>
-              
-              {/* 장식용 원형 배경 */}
-              <div className="absolute top-[-20%] right-[-5%] w-32 h-32 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
-              <div className="absolute bottom-[-20%] left-[20%] w-40 h-40 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
+              {/* Right: Characters */}
+              <ToonSchoolCharacterBadgeGroup textColorClass="text-[#555b6b]" />
             </div>
 
             {/* 본문 콘텐츠 영역 */}
@@ -215,7 +194,7 @@ export default function StudentUnitSummaryPage() {
               <div className="flex flex-col gap-4">
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center font-bold text-lg shadow-sm">1</div>
-                  <h2 className="text-xl md:text-2xl font-jua text-slate-800">세상 속 이야기</h2>
+                  <h2 className="text-xl md:text-2xl font-jua text-[#303442]">세상 속 이야기</h2>
                 </div>
                 
                 <div className="pl-2 md:pl-10 flex flex-col">
@@ -277,16 +256,16 @@ export default function StudentUnitSummaryPage() {
                         
                         {/* 기사 텍스트 영역 */}
                         <div className="flex flex-col">
-                          <h3 className="text-xl md:text-2xl font-jua text-slate-800 mb-2 md:mb-3">{stories[activeStoryTab]?.title}</h3>
-                          <p className="text-slate-700 font-medium leading-[1.6] whitespace-pre-wrap text-[13px] md:text-[14px]">
+                          <h3 className="text-xl md:text-2xl font-jua text-[#303442] mb-2 md:mb-3">{stories[activeStoryTab]?.title}</h3>
+                          <p className="text-[#555b6b] font-medium leading-[1.6] whitespace-pre-wrap text-[13px] md:text-[14px]">
                             {stories[activeStoryTab]?.content}
                           </p>
                         </div>
                       </div>
                     ) : (
                       <div className="flex flex-col items-center justify-center min-h-[160px] gap-3 opacity-60">
-                        <BookOpen className="w-10 h-10 text-slate-400" />
-                        <p className="text-slate-500 font-bold text-[13px] md:text-sm">상단에 있는 '세상 속 이야기 만들기' 버튼을 눌러보세요!</p>
+                        <BookOpen className="w-10 h-10 text-[#8b909e]" />
+                        <p className="text-[#555b6b] font-bold text-[13px] md:text-sm">상단에 있는 '세상 속 이야기 만들기' 버튼을 눌러보세요!</p>
                       </div>
                     )}
                   </div>
@@ -297,7 +276,7 @@ export default function StudentUnitSummaryPage() {
               <div className="flex flex-col gap-4">
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-xl bg-pink-100 text-pink-600 flex items-center justify-center font-bold text-lg shadow-sm">2</div>
-                  <h2 className="text-xl md:text-2xl font-jua text-slate-800">문제 만들기</h2>
+                  <h2 className="text-xl md:text-2xl font-jua text-[#303442]">문제 만들기</h2>
                 </div>
                 
                 <div className="pl-2 md:pl-10">
@@ -312,7 +291,7 @@ export default function StudentUnitSummaryPage() {
                     
                     {/* 문제 목록 */}
                     <div className="p-3 md:p-4 flex flex-col gap-3">
-                      <p className="text-[12px] md:text-[13px] text-slate-500 font-medium px-1 md:px-2">
+                      <p className="text-[12px] md:text-[13px] text-[#555b6b] font-medium px-1 md:px-2">
                         친구에게 낼 문제를 만들고, 정답 O/X를 골라 주세요.
                       </p>
                       {questions.length > 0 ? (
@@ -325,10 +304,10 @@ export default function StudentUnitSummaryPage() {
                                 </div>
                                 <button
                                   onClick={() => handleAnswerToggle(q.id)}
-                                  className="flex bg-white border-2 border-slate-200 rounded-lg overflow-hidden shadow-sm h-[34px]"
+                                  className="flex bg-white border-2 border-[#d9deea] rounded-lg overflow-hidden shadow-sm h-[34px]"
                                 >
-                                  <div className={`w-8 flex items-center justify-center font-bold text-sm transition-colors ${q.answer === 'O' ? 'bg-emerald-500 text-white' : 'text-slate-400 hover:bg-slate-50'}`}>O</div>
-                                  <div className={`w-8 flex items-center justify-center font-bold text-sm transition-colors ${q.answer === 'X' ? 'bg-rose-500 text-white' : 'text-slate-400 hover:bg-slate-50'}`}>X</div>
+                                  <div className={`w-8 flex items-center justify-center font-bold text-sm transition-colors ${q.answer === 'O' ? 'bg-emerald-500 text-white' : 'text-[#8b909e] hover:bg-slate-50'}`}>O</div>
+                                  <div className={`w-8 flex items-center justify-center font-bold text-sm transition-colors ${q.answer === 'X' ? 'bg-rose-500 text-white' : 'text-[#8b909e] hover:bg-slate-50'}`}>X</div>
                                 </button>
                               </div>
                               <div className="flex-1 flex items-center gap-2 relative">
@@ -336,9 +315,9 @@ export default function StudentUnitSummaryPage() {
                                   type="text"
                                   value={q.question}
                                   onChange={(e) => handleQuestionChange(q.id, e.target.value)}
-                                  className="w-full px-3.5 py-2 bg-white border-2 border-slate-100 rounded-lg focus:border-pink-300 focus:outline-none focus:ring-2 focus:ring-pink-100 transition-all text-slate-700 font-medium text-[13px] md:text-[14px]"
+                                  className="w-full px-3.5 py-2 bg-white border-2 border-slate-100 rounded-lg focus:border-pink-300 focus:outline-none focus:ring-2 focus:ring-pink-100 transition-all text-[#303442] font-medium text-[13px] md:text-[14px]"
                                 />
-                                <div className="absolute right-3 text-slate-300 pointer-events-none group-hover:text-pink-300 transition-colors">
+                                <div className="absolute right-3 text-[#d9deea] pointer-events-none group-hover:text-pink-300 transition-colors">
                                   <Edit3 className="w-3.5 h-3.5" />
                                 </div>
                               </div>
@@ -347,8 +326,8 @@ export default function StudentUnitSummaryPage() {
                         </div>
                       ) : (
                         <div className="flex flex-col items-center justify-center h-[160px] gap-3 opacity-60">
-                          <PenTool className="w-10 h-10 text-slate-400" />
-                          <p className="text-slate-500 font-bold text-[13px] md:text-[14px]">상단에 있는 'OX 문제 만들기' 버튼을 눌러보세요!</p>
+                          <PenTool className="w-10 h-10 text-[#8b909e]" />
+                          <p className="text-[#555b6b] font-bold text-[13px] md:text-[14px]">상단에 있는 'OX 문제 만들기' 버튼을 눌러보세요!</p>
                         </div>
                       )}
                     </div>
@@ -359,14 +338,14 @@ export default function StudentUnitSummaryPage() {
             </div>
 
             {/* A4 하단: 마무리 영역 */}
-            <div className="mt-8 pt-4 pb-2 border-t-2 border-slate-200 text-center relative z-10">
-              <p className="text-slate-400 font-bold tracking-widest text-xs md:text-sm">
+            <div className="mt-8 pt-4 pb-2 border-t-2 border-[#d9deea] text-center relative z-10">
+              <p className="text-[#8b909e] font-bold tracking-widest text-xs md:text-sm">
                 TOONSCHOOL 단원 마무리 학습지
               </p>
             </div>
           </div>
         </div>
       </div>
-    </StudentCreationLayout>
+    </StudentWorkspaceLayout>
   )
 }

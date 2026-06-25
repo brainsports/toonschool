@@ -1,4 +1,4 @@
-import { Loader2, ArrowRight, Flower2 } from 'lucide-react'
+import { Loader2, Flower2 } from 'lucide-react'
 import type { StudentGradeOption, StudentSemesterOption, CurriculumLoadState } from '../../types/studentCurriculum'
 import StudentWideCard from '../layout/StudentWideCard'
 import StudentInnerPanel from '../layout/StudentInnerPanel'
@@ -12,8 +12,6 @@ interface UnitStep1SelectionProps {
   gradeEmojis: Record<string, string>
   onGradeSelect: (g: StudentGradeOption) => void
   onSemesterSelect: (s: StudentSemesterOption) => void
-  onNextStep: () => void
-  isStep1Complete: boolean
 }
 
 export default function UnitStep1Selection({
@@ -24,9 +22,7 @@ export default function UnitStep1Selection({
   loadState,
   gradeEmojis,
   onGradeSelect,
-  onSemesterSelect,
-  onNextStep,
-  isStep1Complete
+  onSemesterSelect
 }: UnitStep1SelectionProps) {
   return (
     <div className="w-full max-w-[1200px] mx-auto space-y-6 animate-fade-in pb-8">
@@ -101,17 +97,6 @@ export default function UnitStep1Selection({
         </div>
       </StudentWideCard>
 
-      {/* 하단 1단계 버튼 */}
-      <div className="flex justify-end pt-2 lg:fixed lg:right-10 lg:top-24 lg:pt-0 z-40">
-        <button
-          disabled={!isStep1Complete}
-          onClick={onNextStep}
-          className="btn-primary-action px-10 py-3.5 font-jua text-base md:text-lg"
-        >
-          <span>다음 🚀</span>
-          <ArrowRight className="w-5 h-5 ml-2" />
-        </button>
-      </div>
     </div>
   )
 }

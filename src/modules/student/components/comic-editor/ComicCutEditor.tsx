@@ -1,13 +1,15 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { v4 as uuidv4 } from 'uuid';
-import { MousePointer2, Layout, Users, MessageSquare, Type, Crop, Layers, Undo, Redo, ArrowLeft, ArrowRight, Save, LayoutGrid } from 'lucide-react';
+import { MousePointer2, Layout, Users, MessageSquare, Type, Crop, Layers, Undo, Redo, ArrowLeft, ArrowRight, Save } from 'lucide-react';
 
 import type { ComicCutEditData, ComicCutElement } from '../editor/utils/comicStorage';
 import { saveComicCutData, loadComicCutData } from '../editor/utils/comicStorage';
 import ComicCanvas from './ComicCanvas';
 import BackgroundInfoPanel from './BackgroundInfoPanel';
 import CharacterToolPanel from './CharacterToolPanel';
+import StudentWorkspaceLayout from '../layout/StudentWorkspaceLayout';
+import StudentToolPanel from '../layout/StudentToolPanel';
 
 type ToolType = 'select' | 'background' | 'character' | 'bubble' | 'dialogue' | 'crop' | 'layer';
 
@@ -104,139 +106,132 @@ export default function ComicCutEditor({ topicId, cutNumber, scriptData }: Props
     { id: 'layer', icon: Layers, label: '레이어' },
   ];
 
-  return (
-    <div className="flex-1 flex w-full bg-transparent overflow-hidden relative min-h-0">
-      
-      {/* Left Tools Area (Black/Dark) */}
-      <div className="flex h-full shrink-0 relative z-30 bg-slate-900 shadow-2xl border-r border-white/10">
-        
-        {/* Main Vertical Toolbar */}
-        <div className="w-[64px] h-full shrink-0 z-40 flex flex-col items-center py-4 gap-2 overflow-y-auto">
-          {tools.map(tool => {
-            const Icon = tool.icon;
-            const isActive = activeTool === tool.id;
-            return (
-              <button
-                key={tool.id}
-                onClick={() => setActiveTool(tool.id)}
-                className={`flex flex-col items-center justify-center w-14 h-14 rounded-xl transition-all ${isActive ? 'bg-purple-600 text-white' : 'text-slate-400 hover:text-slate-200 hover:bg-white/10'}`}
-                title={tool.label}
-              >
-                <Icon className="w-5 h-5 mb-1" />
-                <span className="text-[10px] font-bold">{tool.label.replace(' 설명', '')}</span>
-              </button>
-            );
-          })}
-          
-          <div className="h-px w-10 bg-white/10 my-2" />
-          
-          <button disabled className="flex flex-col items-center justify-center w-14 h-14 rounded-xl transition-all text-slate-600 cursor-not-allowed">
-            <Undo className="w-5 h-5 mb-1" />
-            <span className="text-[10px] font-bold">취소</span>
+  const actionButtons = (
+    <>
+      <div className="flex items-center gap-2 mr-4">
+        {[1, 2, 3, 4, 5, 6].map(num => (
+          <button
+            key={num}
+            onClick={() => navigate(`/student/comic/cut/${num}`)}
+            className={`w-10 h-10 rounded-xl font-jua text-lg transition-all ${num === cutNumber ? 'bg-purple-600 text-white shadow-md scale-110' : 'bg-[#e9ecef] text-[#555b6b] hover:bg-[#d9deea]'}`}
+          >
+            {num}
           </button>
-          <button disabled className="flex flex-col items-center justify-center w-14 h-14 rounded-xl transition-all text-slate-600 cursor-not-allowed">
-            <Redo className="w-5 h-5 mb-1" />
-            <span className="text-[10px] font-bold">다시실행</span>
-          </button>
-        </div>
-
-        {/* Tool Panels (Dark styling) */}
-        {activeTool !== 'select' && (
-          <div className="w-[280px] h-full transition-all shrink-0 bg-slate-800 border-l border-white/10 z-30 overflow-y-auto p-4 flex flex-col">
-            {activeTool === 'background' ? (
-              <BackgroundInfoPanel 
-                cutNumber={cutNumber} 
-                scriptData={scriptData} 
-                onRegenBackground={() => { alert('AI 배경 다시 만들기 기능은 추후 연결됩니다.') }} 
-              />
-            ) : activeTool === 'character' ? (
-              <CharacterToolPanel onAddElement={handleAddElement} />
-            ) : (
-              <div className="flex flex-col items-center justify-center h-full text-slate-400 space-y-4">
-                <span className="text-4xl">🛠️</span>
-                <p className="font-bold text-slate-300 text-center">
-                  {tools.find(t => t.id === activeTool)?.label} 도구<br/>준비 중입니다
-                </p>
-              </div>
-            )}
-          </div>
-        )}
+        ))}
       </div>
+      <div className="w-px h-6 bg-[#d9deea] mr-2 hidden md:block" />
+      <button 
+        onClick={() => {
+          if (cutNumber > 1) navigate(`/student/comic/cut/${cutNumber - 1}`);
+        }}
+        disabled={cutNumber === 1}
+        className="btn-student btn-student-secondary btn-student-md disabled:opacity-50 hidden md:flex"
+      >
+        <ArrowLeft className="w-5 h-5" /> 이전 컷
+      </button>
+      <button 
+        onClick={() => saveComicCutData(topicId, cutNumber, editData)}
+        className="btn-student btn-student-secondary btn-student-md hidden md:flex"
+      >
+        <Save className="w-5 h-5" /> 임시 저장
+      </button>
+      <button 
+        onClick={() => {
+          if (cutNumber < 6) navigate(`/student/comic/cut/${cutNumber + 1}`);
+          else navigate('/student/comic/full');
+        }}
+        className="btn-student btn-student-primary btn-student-md"
+      >
+        <span>{cutNumber === 6 ? '만화보기' : '다음 컷'}</span>
+        <ArrowRight className="w-5 h-5" />
+      </button>
+    </>
+  );
 
-      {/* Center Main Area */}
-      <div className="flex-1 flex flex-col min-w-0 bg-[#f3f4f7] h-full relative">
-        
-        {/* Top Header / Taskbar */}
-        <div className="h-[68px] bg-white border-b border-gray-200 flex items-center justify-between px-6 shrink-0 z-20 shadow-sm">
+  return (
+    <StudentWorkspaceLayout
+      currentStep="comic"
+      title={`${cutNumber}컷 편집`}
+      onBack={() => navigate('/student/comic/full')}
+      actionButtons={actionButtons}
+      bgVariant="pastel"
+    >
+      <StudentToolPanel width="var(--student-layout-tool-panel-width,280px)" className="flex-row !w-auto">
+        {/* Left Tools Area */}
+        <div className="flex h-full shrink-0 relative z-30 bg-[#f8f9fc] shadow-lg border-r border-[#d9deea]">
           
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => navigate('/student/comic/full')}
-              className="flex items-center gap-2 text-slate-600 hover:text-purple-600 font-bold transition-colors"
-            >
-              <LayoutGrid className="w-5 h-5" />
-              만화보기
+          {/* Main Vertical Toolbar */}
+          <div className="w-[64px] h-full shrink-0 z-40 flex flex-col items-center py-4 gap-2 overflow-y-auto bg-white">
+            {tools.map(tool => {
+              const Icon = tool.icon;
+              const isActive = activeTool === tool.id;
+              return (
+                <button
+                  key={tool.id}
+                  onClick={() => setActiveTool(tool.id)}
+                  className={`flex flex-col items-center justify-center w-14 h-14 rounded-xl transition-all ${isActive ? 'bg-purple-600 text-white' : 'text-[#555b6b] hover:text-[#303442] hover:bg-[#f3f4f7]'}`}
+                  title={tool.label}
+                >
+                  <Icon className="w-5 h-5 mb-1" />
+                  <span className="text-[10px] font-bold">{tool.label.replace(' 설명', '')}</span>
+                </button>
+              );
+            })}
+            
+            <div className="h-px w-10 bg-[#d9deea] my-2" />
+            
+            <button disabled className="flex flex-col items-center justify-center w-14 h-14 rounded-xl transition-all text-[#8b909e] cursor-not-allowed">
+              <Undo className="w-5 h-5 mb-1" />
+              <span className="text-[10px] font-bold">취소</span>
             </button>
-            <div className="w-px h-6 bg-slate-300" />
-            <h2 className="font-jua text-2xl text-slate-800">
-              {cutNumber}컷 편집
-            </h2>
-          </div>
-
-          <div className="flex items-center gap-2 absolute left-1/2 -translate-x-1/2">
-            {[1, 2, 3, 4, 5, 6].map(num => (
-              <button
-                key={num}
-                onClick={() => navigate(`/student/comic/cut/${num}`)}
-                className={`w-10 h-10 rounded-xl font-jua text-lg transition-all ${num === cutNumber ? 'bg-purple-600 text-white shadow-md scale-110' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
-              >
-                {num}
-              </button>
-            ))}
-          </div>
-
-          <div className="flex items-center gap-3">
-            <button 
-              onClick={() => {
-                if (cutNumber > 1) navigate(`/student/comic/cut/${cutNumber - 1}`);
-              }}
-              disabled={cutNumber === 1}
-              className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 disabled:opacity-50 text-slate-700 font-bold rounded-xl transition-colors flex items-center gap-1.5 border border-slate-200 text-sm"
-            >
-              <ArrowLeft className="w-4 h-4" /> 이전 컷
-            </button>
-            <button 
-              onClick={() => saveComicCutData(topicId, cutNumber, editData)}
-              className="px-5 py-2.5 bg-white hover:bg-gray-50 text-slate-700 font-bold rounded-xl transition-colors flex items-center gap-1.5 border border-slate-300 shadow-sm text-sm"
-            >
-              <Save className="w-4 h-4" /> 임시 저장
-            </button>
-            <button 
-              onClick={() => {
-                if (cutNumber < 6) navigate(`/student/comic/cut/${cutNumber + 1}`);
-                else navigate('/student/comic/full');
-              }}
-              className="px-5 py-2.5 bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-400 hover:to-indigo-400 text-white font-bold rounded-xl shadow-md transition-colors flex items-center gap-1.5 text-sm"
-            >
-              {cutNumber === 6 ? '만화보기' : '다음 컷'} <ArrowRight className="w-4 h-4" />
+            <button disabled className="flex flex-col items-center justify-center w-14 h-14 rounded-xl transition-all text-[#8b909e] cursor-not-allowed">
+              <Redo className="w-5 h-5 mb-1" />
+              <span className="text-[10px] font-bold">다시실행</span>
             </button>
           </div>
-        </div>
 
-        {/* Canvas Area */}
-        <div className="flex-1 relative overflow-hidden" ref={containerRef}>
-          {canvasSize.width > 0 && (
-            <ComicCanvas
-              data={editData}
-              containerWidth={canvasSize.width}
-              containerHeight={canvasSize.height}
-              selectedElementId={selectedElementId}
-              onSelectElement={setSelectedElementId}
-              onUpdateElement={handleUpdateElement}
-            />
+          {/* Tool Panels */}
+          {activeTool !== 'select' && (
+            <div className="w-[280px] h-full transition-all shrink-0 bg-[#ffffff] border-l border-[#d9deea] z-30 overflow-y-auto p-4 flex flex-col student-scrollbar">
+              {activeTool === 'background' ? (
+                <BackgroundInfoPanel 
+                  cutNumber={cutNumber} 
+                  scriptData={scriptData} 
+                  onRegenBackground={() => { alert('AI 배경 다시 만들기 기능은 추후 연결됩니다.') }} 
+                />
+              ) : activeTool === 'character' ? (
+                <CharacterToolPanel onAddElement={handleAddElement} />
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full text-[#8b909e] space-y-4">
+                  <span className="text-4xl">🛠️</span>
+                  <p className="font-bold text-[#555b6b] text-center">
+                    {tools.find(t => t.id === activeTool)?.label} 도구<br/>준비 중입니다
+                  </p>
+                </div>
+              )}
+            </div>
           )}
         </div>
+      </StudentToolPanel>
+
+      {/* Center Main Area */}
+      <div className="flex-1 flex flex-col min-w-0 bg-transparent h-full relative">
+        {/* Canvas Area */}
+        <div className="flex-1 relative overflow-auto p-4 lg:p-8 student-scrollbar" ref={containerRef}>
+          <div className="w-full h-full flex justify-center items-center min-w-min min-h-min">
+            {canvasSize.width > 0 && (
+              <ComicCanvas
+                data={editData}
+                containerWidth={canvasSize.width}
+                containerHeight={canvasSize.height}
+                selectedElementId={selectedElementId}
+                onSelectElement={setSelectedElementId}
+                onUpdateElement={handleUpdateElement}
+              />
+            )}
+          </div>
+        </div>
       </div>
-    </div>
+    </StudentWorkspaceLayout>
   );
 }

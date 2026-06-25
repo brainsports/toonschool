@@ -27,18 +27,17 @@ interface StudentFlowSidebarProps {
   theme?: 'light' | 'dark'
 }
 
-export default function StudentFlowSidebar({ currentStep, completedSteps = [], theme = 'light' }: StudentFlowSidebarProps) {
+export default function StudentFlowSidebar({ currentStep, completedSteps = [] }: StudentFlowSidebarProps) {
   const navigate = useNavigate()
   const location = useLocation()
   const currentIndex = steps.findIndex(s => s.key === currentStep)
 
-  const isDark = theme === 'dark'
 
   return (
-    <div className={`flex flex-col gap-2 w-full max-w-[200px] ${isDark ? 'bg-transparent p-4' : 'bg-transparent p-4'}`}>
-      <div className="flex items-center justify-center gap-1.5 mb-2 px-2">
-        <span className={`w-2 h-2 rounded-full animate-pulse ${isDark ? 'bg-purple-300' : 'bg-purple-400'}`}></span>
-        <h3 className={`text-xs font-jua tracking-wider ${isDark ? 'text-purple-300' : 'text-purple-500'}`}>
+    <div className="flex flex-col gap-2 w-full h-full p-4 bg-transparent">
+      <div className="flex items-center justify-center gap-1.5 mb-4 px-2">
+        <span className="w-2 h-2 rounded-full animate-pulse bg-purple-400"></span>
+        <h3 className="text-xs font-jua tracking-wider text-purple-400">
           작품 제작 흐름
         </h3>
       </div>
@@ -59,37 +58,38 @@ export default function StudentFlowSidebar({ currentStep, completedSteps = [], t
                 }}
                 className={`
                 flex items-center gap-3 px-3 py-2.5 rounded-[1.25rem] transition-all relative z-10
-                ${step.path ? 'cursor-pointer hover:bg-white/10' : ''}
+                ${step.path ? 'cursor-pointer hover:scale-[1.02]' : ''}
                 ${isCurrent 
-                  ? (isDark ? 'bg-purple-600/50 text-white shadow-[0_0_15px_rgba(167,139,250,0.5)] border border-purple-400/50 scale-105 my-1' : 'bg-purple-500 text-white shadow-sm scale-105 my-1') 
+                  ? 'bg-gradient-to-r from-purple-600 to-pink-500 text-white shadow-[0_0_15px_rgba(167,139,250,0.4)] border border-purple-400/50 scale-105 my-1' 
                   : ''}
-                ${isCompleted 
-                  ? (isDark ? 'text-slate-300 bg-white/5 border border-white/10' : 'text-slate-600 bg-slate-50 border border-slate-100') 
+                ${isCompleted && !isCurrent
+                  ? 'text-[#1f2433] bg-white border border-[#d9deea] shadow-sm' 
                   : ''}
                 ${isUpcoming 
-                  ? (isDark ? 'text-slate-400 border border-transparent' : 'text-slate-400 border border-transparent') 
+                  ? 'text-slate-400 bg-white/5 border border-transparent' 
                   : ''}
               `}>
                 <div className={`
                   w-8 h-8 rounded-xl flex items-center justify-center text-sm shrink-0
-                  ${isCurrent ? (isDark ? 'bg-white/10' : 'bg-white/20') : (isDark ? 'bg-white/5' : 'bg-white shadow-sm')}
-                  ${isUpcoming ? 'opacity-75' : ''}
+                  ${isCurrent ? 'bg-white/20' : ''}
+                  ${isCompleted && !isCurrent ? 'bg-[#f3f4f7]' : ''}
+                  ${isUpcoming ? 'bg-black/20 opacity-75' : ''}
                 `}>
                   {isCompleted && !isCurrent ? (
-                    <Check className="w-4 h-4 text-emerald-400 stroke-[4]" />
+                    <Check className="w-4 h-4 text-[#00c48c] stroke-[4]" />
                   ) : (
                     <span className={isCurrent ? 'animate-bounce-gentle select-none' : 'select-none'}>{step.icon}</span>
                   )}
                 </div>
-                <span className={`text-base font-jua leading-snug break-keep ${isCurrent ? 'text-white' : ''}`}>
-                  {step.label}
+                <span className={`text-[15px] font-jua leading-snug break-keep ${isCurrent ? 'text-white' : ''}`}>
+                  {index + 1} {step.label}
                 </span>
               </div>
               
               {/* 연결선 */}
               {index < steps.length - 1 && (
                 <div className="w-full flex justify-center py-1">
-                  <div className={`w-1 h-3 rounded-full ${isCompleted ? (isDark ? 'bg-purple-400/50' : 'bg-purple-200') : (isDark ? 'bg-white/10' : 'bg-slate-100')}`} />
+                  <div className={`w-1 h-3 rounded-full ${isCompleted ? 'bg-purple-400/50' : 'bg-white/10'}`} />
                 </div>
               )}
             </div>

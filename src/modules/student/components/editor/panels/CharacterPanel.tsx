@@ -1,19 +1,15 @@
 import { useState } from 'react';
 import type { CanvasElement } from '../types';
-import { CHARACTER_ASSETS, normalizeSubject } from '../../../data/characterAssets';
-import type { CharacterSubject } from '../../../data/characterAssets';
+import { CHARACTER_ASSETS } from '../../../data/characterAssets';
+import type { CharacterName } from '../../../data/characterAssets';
 
 interface Props {
   onAddElement: (element: Omit<CanvasElement, 'id'>) => void;
   subject?: string;
 }
 
-export default function CharacterPanel({ onAddElement, subject }: Props) {
-  const normSubject = normalizeSubject(subject);
-  
-  const [activeTab, setActiveTab] = useState<CharacterSubject | 'all' | 'current'>(
-    normSubject !== 'official' ? 'current' : 'official'
-  );
+export default function CharacterPanel({ onAddElement }: Props) {
+  const [activeTab, setActiveTab] = useState<CharacterName | 'all'>('하나 선생님');
 
   const handleAddCharacter = (src: string, layerName: string) => {
     onAddElement({
@@ -27,20 +23,15 @@ export default function CharacterPanel({ onAddElement, subject }: Props) {
   };
 
   const tabs = [
-    ...(normSubject !== 'official' ? [{ id: 'current', label: '현재 과목' }] : []),
+    { id: '하나 선생님', label: '하나 선생님' },
+    { id: '도윤', label: '도윤' },
+    { id: '서아', label: '서아' },
     { id: 'all', label: '전체' },
-    { id: 'official', label: '공용' },
-    { id: 'korean', label: '국어' },
-    { id: 'english', label: '영어' },
-    { id: 'math', label: '수학' },
-    { id: 'science', label: '과학' },
-    { id: 'social', label: '사회' },
   ] as const;
 
   const filteredCharacters = CHARACTER_ASSETS.filter(char => {
     if (activeTab === 'all') return true;
-    if (activeTab === 'current') return char.subject === normSubject;
-    return char.subject === activeTab;
+    return char.characterName === activeTab;
   });
 
   return (
@@ -80,8 +71,9 @@ export default function CharacterPanel({ onAddElement, subject }: Props) {
                 alt={char.name} 
                 className="h-full object-contain drop-shadow-md group-hover:scale-110 transition-transform" 
                 onError={(e) => {
-                  (e.target as HTMLImageElement).src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MCIgaGVpZ2h0PSI1MCIgdmlld0JveD0iMCAwIDUwIDUwIj48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1zaXplPSIyMCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPj88L3RleHQ+PC9zdmc+'; // simple SVG fallback
-                  console.error('Image load failed:', char.imageUrl);
+                  const target = e.target as HTMLElement;
+                  const button = target.closest('button');
+                  if (button) button.style.display = 'none';
                 }}
               />
             </div>

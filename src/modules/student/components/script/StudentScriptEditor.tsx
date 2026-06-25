@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { ArrowLeft, ArrowRight, Save, ZoomIn, ZoomOut, Maximize, Eye, Sparkles, Loader2 } from 'lucide-react';
+import { ArrowRight, Sparkles, Loader2 } from 'lucide-react';
 import ScriptToolbar from './ScriptToolbar';
 import ScriptPreviewBoard from './ScriptPreviewBoard';
 import ScriptCutEditor from './ScriptCutEditor';
@@ -10,6 +10,9 @@ import ScriptKeyConceptPanel from './panels/ScriptKeyConceptPanel';
 import ScriptCoverDialoguePanel from './panels/ScriptCoverDialoguePanel';
 import { projectStorage } from '../../utils/projectStorage';
 import { showToast } from '../../utils/toast';
+import StudentWorkspaceLayout from '../layout/StudentWorkspaceLayout';
+import StudentToolPanel from '../layout/StudentToolPanel';
+import StudentZoomControl from '../layout/StudentZoomControl';
 
 export type ScriptToolType = 'ai' | 'cut' | 'concept' | 'coverDialogue';
 
@@ -217,14 +220,31 @@ export default function StudentScriptEditor({ selectionData, projectId, onPrev, 
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  const actionButtons = (
+    <button
+      disabled={isSaveDisabled}
+      onClick={handleProceedNext}
+      className={`btn-student btn-student-primary btn-student-md ${isSaveDisabled ? 'disabled' : ''}`}
+    >
+      <span>표지만들기</span>
+      <ArrowRight className="w-5 h-5" />
+    </button>
+  );
+
   return (
-    <div className="flex-1 flex w-full bg-[#f3f4f7] overflow-hidden relative min-h-0">
-      
+    <StudentWorkspaceLayout
+      currentStep="script"
+      showBackButton={true}
+      title="대본 만들기"
+      subtitle={selectionData.topic.title}
+      onBack={onPrev}
+      actionButtons={actionButtons}
+      bgVariant="space"
+    >
       {/* Left Tools Area */}
-      <div className="flex h-full shrink-0 relative z-30 bg-[#f3f4f7] border-r border-[#dfe2ea]">
-        
+      <StudentToolPanel width="var(--student-layout-tool-panel-width,320px)" className="flex-row !w-auto">
         {/* Main Vertical Toolbar */}
-        <div className="w-[64px] h-full shrink-0 z-40">
+        <div className="w-[64px] h-full shrink-0 z-40 bg-[var(--student-color-tool-panel-bg,#f8f9fc)]">
           <ScriptToolbar 
             activeTool={activeTool}
             onSelectTool={(tool: ScriptToolType) => {
@@ -238,7 +258,7 @@ export default function StudentScriptEditor({ selectionData, projectId, onPrev, 
 
         {/* Tool Panels */}
         {isPanelOpen && (
-          <div className="w-[300px] lg:w-[320px] h-full transition-all shrink-0 bg-[#f3f4f7] border-r border-[#dfe2ea] z-30 flex flex-col relative">
+          <div className="w-[300px] lg:w-[320px] h-full transition-all shrink-0 bg-[#ffffff] border-l border-[var(--student-color-border,#d9deea)] z-30 flex flex-col relative">
             {/* 태블릿용 닫기 버튼 */}
             <button 
               className="lg:hidden absolute top-2 right-2 text-[#555b6b] hover:text-[#ff2778] p-2"
@@ -247,12 +267,12 @@ export default function StudentScriptEditor({ selectionData, projectId, onPrev, 
               ✕
             </button>
             
-            <div className="p-5 flex-1 overflow-y-auto">
+            <div className="p-5 flex-1 overflow-y-auto student-scrollbar">
               {activeTool === 'ai' && (
                 <div className="flex flex-col h-full text-[#303442]">
-                  <h2 className="text-xl font-jua text-[#202330] mb-6">AI 대본 만들기</h2>
+                  <h2 className="text-xl font-jua text-[var(--student-color-text-main,#1f2433)] mb-6">AI 대본 만들기</h2>
                   
-                  <div className="bg-[#ffffff] border border-[#dfe2ea] rounded-xl p-4 mb-6 space-y-3 text-sm">
+                  <div className="bg-[#f8f9fc] border border-[#d9deea] rounded-xl p-4 mb-6 space-y-3 text-sm">
                     <div className="flex justify-between">
                       <span className="text-[#626776]">학년</span>
                       <span className="font-bold">{selectionData.selection.gradeName}</span>
@@ -281,12 +301,12 @@ export default function StudentScriptEditor({ selectionData, projectId, onPrev, 
                       onClick={handleGenerateScript}
                       disabled={isGenerating}
                       aria-label="AI로 6컷 대본 생성하기"
-                      className="w-full py-4 rounded-xl font-jua text-lg bg-[#ff2778] hover:bg-[#e91e68] active:bg-[#d7185d] disabled:bg-[#ff9ebc] disabled:cursor-not-allowed text-white shadow-lg transition-all flex items-center justify-center gap-2 min-h-[52px]"
+                      className="btn-student btn-student-primary w-full min-h-[52px]"
                     >
                       {isGenerating ? (
                         <>
                           <Loader2 className="w-5 h-5 animate-spin" />
-                          <span>{genPhase === 1 ? '1단계: 6컷 대화를 만들고 있어요...' : '2단계: 핵심 개념과 표지 대화를 정리하고 있어요...'}</span>
+                          <span>{genPhase === 1 ? '1단계: 대본 생성중...' : '2단계: 표지 내용 생성중...'}</span>
                         </>
                       ) : scriptData?.generationStatus?.script === 'success' && scriptData?.generationStatus?.coverContent === 'success' ? (
                         <>
@@ -303,7 +323,7 @@ export default function StudentScriptEditor({ selectionData, projectId, onPrev, 
                     {scriptData?.generationStatus?.script === 'success' && scriptData?.generationStatus?.coverContent === 'error' && !isGenerating && (
                       <button 
                         onClick={handleRetryCoverContent}
-                        className="w-full py-4 rounded-xl font-jua text-lg bg-[#4d82f3] hover:bg-[#396ae1] text-white shadow-lg transition-all flex items-center justify-center gap-2 min-h-[52px]"
+                        className="btn-student btn-student-purple w-full min-h-[52px]"
                       >
                         <Sparkles className="w-5 h-5" />
                         <span>표지 내용 다시 만들기</span>
@@ -353,68 +373,14 @@ export default function StudentScriptEditor({ selectionData, projectId, onPrev, 
             </div>
           </div>
         )}
-      </div>
+      </StudentToolPanel>
 
       {/* Center Main Area */}
-      <div className="flex-1 flex flex-col min-w-0 bg-[#f3f4f7] h-full relative">
-        
-        {/* Top Header / Taskbar */}
-        <div className="flex justify-between items-center px-6 lg:px-8 py-4 shrink-0 relative z-20">
-          
-          <div className="flex justify-start">
-            <button
-              onClick={onPrev}
-              className="flex items-center gap-2 px-5 py-2.5 bg-[#ffffff] hover:bg-slate-50 text-[#303442] font-jua text-base rounded-full border border-[#d5d9e2] transition-all shadow-sm"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              이전으로
-            </button>
-          </div>
-
-          <div className="flex items-center justify-end gap-3">
-             <button 
-               className="flex items-center gap-1.5 px-4 lg:px-5 py-2.5 bg-[#ffffff] hover:bg-slate-50 text-[#303442] font-bold rounded-xl shadow-sm transition-all text-sm border border-[#d5d9e2]"
-             >
-               <Eye className="w-4 h-4" />
-               <span className="hidden sm:inline">대본 미리보기</span>
-             </button>
-             <button 
-               disabled={isSaveDisabled}
-               onClick={() => {
-                 if (scriptData) {
-                   const success = projectStorage.saveScript(projectId, scriptData);
-                   if (success) showToast('저장되었습니다');
-                   else alert('저장에 실패했습니다. 저장 공간을 확인해 주세요.');
-                 }
-               }}
-               className={`flex items-center gap-1.5 px-4 lg:px-5 py-2.5 font-bold rounded-xl shadow-sm transition-all text-sm border ${isSaveDisabled ? 'bg-[#f3f4f7] text-[#8f95a6] border-[#d5d9e2] cursor-not-allowed' : 'bg-[#ffffff] hover:bg-slate-50 text-[#303442] border-[#d5d9e2]'}`}
-             >
-               <Save className="w-4 h-4" />
-               <span className="hidden sm:inline">진행사항 저장</span>
-             </button>
-             <button
-               disabled={isSaveDisabled}
-               onClick={handleProceedNext}
-               className={`flex items-center gap-2 px-6 py-2.5 font-jua text-base rounded-full shadow-lg transition-all ml-2 ${isSaveDisabled ? 'bg-[#e5e7eb] text-[#8f95a6] cursor-not-allowed' : 'bg-[#ff2778] text-[#ffffff] hover:bg-[#e91e68]'}`}
-             >
-               앞표지 만들기
-               <ArrowRight className="w-4 h-4" />
-             </button>
-          </div>
-          {/* 에러 메시지: 20자 초과 시 */}
-          {isSaveDisabled && scriptData && (
-            <div className="absolute -bottom-6 right-8 text-xs font-bold text-[#ff2778] bg-white px-3 py-1 rounded-full shadow-sm border border-[#ffccdc]">
-              20자를 초과한 대사가 있어 저장할 수 없습니다.
-            </div>
-          )}
-        </div>
+      <div className="flex-1 flex flex-col min-w-0 bg-transparent h-full relative" ref={containerRef}>
 
         {/* Canvas Area Container */}
-        <div 
-          className="flex-1 w-full relative p-4 lg:p-8 min-h-0 min-w-0 overflow-auto overscroll-contain" 
-          ref={containerRef}
-        >
-          <div className="w-full h-full flex justify-center items-start min-w-min min-h-min">
+        <div className="flex-1 w-full relative p-4 lg:p-8 min-h-0 min-w-0 overflow-auto overscroll-contain student-scrollbar">
+          <div className="w-full h-full flex justify-center items-center min-w-min min-h-min">
              <ScriptPreviewBoard 
                 zoomPercent={zoomPercent} 
                 selectionData={selectionData}
@@ -425,48 +391,23 @@ export default function StudentScriptEditor({ selectionData, projectId, onPrev, 
           </div>
         </div>
         
-        {/* Zoom Controls */}
-        <div className="absolute bottom-6 right-6 z-50 flex items-center gap-2 md:gap-3 bg-[#ffffff] bg-opacity-95 backdrop-blur-sm border border-[#dfe2ea] px-3 py-2 md:px-4 md:py-2.5 rounded-full shadow-lg text-[#303442]">
-          <button 
-            onClick={() => setZoomPercent(Math.max(25, zoomPercent - 10))}
-            disabled={zoomPercent <= 25}
-            className="hover:text-[#ff2778] disabled:opacity-30 disabled:cursor-not-allowed transition-colors p-1"
-          >
-            <ZoomOut className="w-4 h-4" />
-          </button>
-          
-          <span className="text-xs md:text-sm font-bold w-[4ch] text-center font-mono">
-            {zoomPercent}%
-          </span>
-          
-          <input 
-            type="range"
-            min="25" max="200" step="5"
-            value={zoomPercent}
-            onChange={(e) => setZoomPercent(parseInt(e.target.value))}
-            className="w-16 md:w-24 accent-[#ff2778] cursor-pointer"
-          />
-          
-          <button 
-            onClick={() => setZoomPercent(Math.min(200, zoomPercent + 10))}
-            disabled={zoomPercent >= 200}
-            className="hover:text-[#ff2778] disabled:opacity-30 disabled:cursor-not-allowed transition-colors p-1"
-          >
-            <ZoomIn className="w-4 h-4" />
-          </button>
-          
-          <div className="w-px h-4 md:h-5 bg-[#d5d9e2] mx-0.5 md:mx-1" />
-          
-          <button 
-            onClick={() => setZoomPercent(100)}
-            className="hover:text-[#ff2778] transition-colors flex items-center gap-1.5 text-xs font-bold p-1 text-[#555b6b]"
-          >
-            <Maximize className="w-3.5 h-3.5 md:w-4 md:h-4" />
-            <span className="hidden md:inline">맞춤</span>
-          </button>
-        </div>
+        {/* 에러 메시지: 20자 초과 시 */}
+        {isSaveDisabled && scriptData && (
+          <div className="absolute top-4 right-4 z-50 text-xs font-bold text-[#ff2778] bg-white px-3 py-1 rounded-full shadow-sm border border-[#ffccdc]">
+            20자를 초과한 대사가 있어 저장할 수 없습니다.
+          </div>
+        )}
 
+        {/* Zoom Controls */}
+        <StudentZoomControl
+          scale={zoomPercent / 100}
+          onZoomIn={() => setZoomPercent(Math.min(200, zoomPercent + 10))}
+          onZoomOut={() => setZoomPercent(Math.max(25, zoomPercent - 10))}
+          onFitToScreen={() => setZoomPercent(100)}
+          minScale={0.25}
+          maxScale={2.0}
+        />
       </div>
-    </div>
+    </StudentWorkspaceLayout>
   );
 }
