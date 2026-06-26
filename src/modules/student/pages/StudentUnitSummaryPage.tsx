@@ -1,22 +1,12 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import StudentWorkspaceLayout from '../components/layout/StudentWorkspaceLayout'
 import ToonSchoolCharacterBadgeGroup from '../components/layout/ToonSchoolCharacterBadgeGroup'
 import { ArrowRight, BookOpen, PenTool, Loader2, Edit3, Landmark, Newspaper, Home, Globe, Bot, Lightbulb, Clock, Magnet, Droplet, ShoppingBag, ScrollText } from 'lucide-react'
+import { projectStorage } from '../utils/projectStorage'
+import { generateWorldStories, generateOXQuizzes, type WorldStory, type OXQuestion } from '../services/studentUnitSummaryService'
 
 type StoryType = 'history' | 'latest' | 'life';
-
-interface WorldStory {
-  type: StoryType;
-  title: string;
-  content: string;
-}
-
-interface OXQuestion {
-  id: string;
-  answer: 'O' | 'X';
-  question: string;
-}
 
 const getStoryIcon = (title: string, type: StoryType) => {
   const t = title.toLowerCase();
@@ -53,7 +43,15 @@ const getStoryIcon = (title: string, type: StoryType) => {
 
 export default function StudentUnitSummaryPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   
+  const state = location.state as any || {}
+  // ✅ 'default-project' fallback 제거 — projectId 없으면 빈 상태 유지 (샘플 데이터 혼입 방지)
+  const projectId = state.projectId || localStorage.getItem('studentCurrentProjectId') || ''
+
+
+  const [projectData, setProjectData] = useState<any>(null)
+
   // 상태 관리
   const [isGeneratingStory, setIsGeneratingStory] = useState(false)
   const [activeStoryTab, setActiveStoryTab] = useState<StoryType>('history')
@@ -66,79 +64,200 @@ export default function StudentUnitSummaryPage() {
   const [isGeneratingQuiz, setIsGeneratingQuiz] = useState(false)
   const [questions, setQuestions] = useState<OXQuestion[]>([])
 
-  // 기존 저장 데이터 연동 (현재는 하드코딩 또는 mock 데이터 사용)
-  const subject = '수학'
-  const unitTitle = '분수의 덧셈과 뺄셈'
+  useEffect(() => {
+    // ✅ projectId가 없으면 샘플 데이터 혼입 방지를 위해 빈 상태로 설정
+    if (!projectId) {
+      console.warn('[UnitSummary] projectId가 없습니다. 빈 상태로 시작합니다.')
+      setStories({ history: null, latest: null, life: null })
+      setQuestions([])
+      return
+    }
 
-  // AI 연동을 위한 함수
-  const handleGenerateStory = () => {
-    setIsGeneratingStory(true)
-    setTimeout(() => {
-      setStories({
-        history: {
-          type: 'history',
-          title: '분수는 어디에서 시작되었을까?',
-          content: '아주 오래전, 사람들은 빵이나 곡식을 공평하게 나누는 것이 필요했어요.\n그래서 어떤 양을 똑같이 나누는 방법을 생각해 냈지요.\n이렇게 생겨난 생각이 바로 분수의 시작이 되었답니다!'
-        },
-        latest: {
-          type: 'latest',
-          title: '우주에서도 분수를 쓴다고?',
-          content: '우주선이 목적지까지 가려면 연료를 얼마나 써야 할지 정확히 계산해야 해요.\n이때 전체 연료를 몇 분의 몇으로 나눌지 계산하는 데 분수가 꼭 필요하답니다!\n과학자들은 지금도 매일 분수 계산을 하고 있어요.'
-        },
-        life: {
-          type: 'life',
-          title: '피자를 나눌 때 쓰는 마법',
-          content: '친구들과 피자 한 판을 똑같이 나누어 먹을 때, 어떻게 자르나요?\n8조각으로 자른 피자 중 2조각을 먹었다면, 전체의 2/8를 먹은 거예요!\n분수는 이렇게 우리 주변에서 쉽게 찾을 수 있어요.'
-        }
-      })
-      setIsGeneratingStory(false)
-    }, 1500)
+    const storageTopicData = projectStorage.loadTopic<any>(projectId)
+    const storageComicData = projectStorage.loadComic<any>(projectId)
+    const summaryData = projectStorage.loadSummary<any>(projectId)
+
+    const topicData = state.topicData || storageTopicData
+    const comicData = state.comicData || storageComicData
+
+    if (topicData) {
+      setProjectData({ topicData, comicData })
+    }
+
+    if (summaryData && topicData) {
+      const currentSubject = topicData.selection?.subjectName
+      const currentTopic = topicData.topic?.title
+
+      // ✅ projectId + 과목 + 주제 모두 일치할 때만 저장된 summary 복원
+      const isMatch =
+        summaryData.subjectName === currentSubject &&
+        summaryData.topicTitle === currentTopic &&
+        // projectId가 summary에 저장되어 있으면 추가 검증
+        (!summaryData.projectId || summaryData.projectId === projectId)
+
+      if (isMatch) {
+        if (summaryData.stories) setStories(summaryData.stories)
+        if (summaryData.activeStoryTab) setActiveStoryTab(summaryData.activeStoryTab)
+        if (summaryData.questions) setQuestions(summaryData.questions)
+      } else {
+        console.warn('[UnitSummary] 저장된 summary 데이터와 현재 작품이 불일치합니다. 빈 상태로 시작합니다.', {
+          saved: { subject: summaryData.subjectName, topic: summaryData.topicTitle, projectId: summaryData.projectId },
+          current: { subject: currentSubject, topic: currentTopic, projectId }
+        })
+        setStories({ history: null, latest: null, life: null })
+        setQuestions([])
+      }
+    } else {
+      setStories({ history: null, latest: null, life: null })
+      setQuestions([])
+    }
+
+  }, [projectId, location.state])
+
+  const saveSummaryState = (newStories: any, newTab: any, newQuestions: any) => {
+    if (!projectId) return // projectId 없으면 저장 안 함
+    projectStorage.saveSummary(projectId, {
+      stories: newStories,
+      activeStoryTab: newTab,
+      questions: newQuestions,
+      subjectName: projectData?.topicData?.selection?.subjectName,
+      topicTitle: projectData?.topicData?.topic?.title,
+      // ✅ projectId도 함께 저장하여 향후 불일치 감지에 사용
+      projectId
+    })
   }
 
-  const handleGenerateQuiz = () => {
+  // AI 연동을 위한 함수
+  const handleGenerateStory = async () => {
+    if (!projectData?.topicData) return;
+    setIsGeneratingStory(true)
+    
+    try {
+      const { selection, topic, selectedKeywords } = projectData.topicData
+      const panels = projectData.comicData?.panels || []
+      const comicText = panels.map((p: any) => p.dialogues?.map((d: any) => d.text).join(' ')).join(' | ')
+
+      const generatedStories = await generateWorldStories({
+        gradeName: selection?.gradeName,
+        subjectName: selection?.subjectName,
+        majorUnitName: selection?.majorUnitName,
+        middleUnitName: selection?.middleUnitName,
+        learningGoal: selection?.learningGoal,
+        selectedKeywords: selectedKeywords,
+        topicTitle: topic?.title,
+        topicSummary: topic?.summary,
+        comicText: comicText
+      })
+
+      setStories(generatedStories)
+      saveSummaryState(generatedStories, activeStoryTab, questions)
+    } catch (error: any) {
+      alert(error.message)
+    } finally {
+      setIsGeneratingStory(false)
+    }
+  }
+
+  const handleGenerateQuiz = async () => {
+    if (!projectData?.topicData) return;
     setIsGeneratingQuiz(true)
-    setTimeout(() => {
-      setQuestions([
-        { id: '1', answer: 'O', question: '1/2은 전체를 똑같이 두 부분으로 나눈 것 중 하나이다.' },
-        { id: '2', answer: 'O', question: '분모는 전체를 나눈 조각의 개수를 나타낸다.' },
-        { id: '3', answer: 'X', question: '3/4와 4/3은 같은 크기의 분수이다.' },
-        { id: '4', answer: 'O', question: '분수는 일상생활에서 여러 가지로 활용된다.' },
-        { id: '5', answer: 'X', question: '1보다 큰 분수는 가분수라고 한다.' }
-      ])
+
+    try {
+      const { selection, topic } = projectData.topicData
+      const panels = projectData.comicData?.panels || []
+      const comicText = panels.map((p: any) => p.dialogues?.map((d: any) => d.text).join(' ')).join(' | ')
+
+      const generatedQuizzes = await generateOXQuizzes({
+        gradeName: selection?.gradeName,
+        subjectName: selection?.subjectName,
+        majorUnitName: selection?.majorUnitName,
+        middleUnitName: selection?.middleUnitName,
+        learningGoal: selection?.learningGoal,
+        topicTitle: topic?.title,
+        topicSummary: topic?.summary,
+        comicText: comicText
+      })
+
+      setQuestions(generatedQuizzes)
+      saveSummaryState(stories, activeStoryTab, generatedQuizzes)
+    } catch (error: any) {
+      alert(error.message)
+    } finally {
       setIsGeneratingQuiz(false)
-    }, 1500)
+    }
   }
 
   const handleQuestionChange = (id: string, newText: string) => {
-    setQuestions(questions.map(q => q.id === id ? { ...q, question: newText } : q))
+    const newQuestions = questions.map(q => q.id === id ? { ...q, question: newText } : q)
+    setQuestions(newQuestions)
+    saveSummaryState(stories, activeStoryTab, newQuestions)
   }
 
   const handleAnswerToggle = (id: string) => {
-    setQuestions(questions.map(q => q.id === id ? { ...q, answer: q.answer === 'O' ? 'X' : 'O' } : q))
+    const newQuestions = questions.map(q => q.id === id ? { ...q, answer: (q.answer === 'O' ? 'X' : 'O') as "O" | "X" } : q)
+    setQuestions(newQuestions)
+    saveSummaryState(stories, activeStoryTab, newQuestions)
   }
+
+  const handleTabChange = (tab: StoryType) => {
+    setActiveStoryTab(tab)
+    saveSummaryState(stories, tab, questions)
+  }
+
+  // 기존 저장 데이터 연동
+  const subject = projectData?.topicData?.selection?.subjectName || '과목 정보 없음'
+  const unitTitle = projectData?.topicData?.topic?.title || projectData?.topicData?.selection?.middleUnitName || projectData?.topicData?.selection?.majorUnitName || '단원 정보 없음'
+
+  const isDataMissing = !projectData?.topicData;
+  const isStoryCompleted = !!(stories.history?.content || stories.latest?.content || stories.life?.content);
+  const isQuizCompleted = questions.length >= 5;
 
   const actionButtons = (
     <>
       <button
         onClick={handleGenerateStory}
-        disabled={isGeneratingStory}
-        className="btn-student btn-student-secondary btn-student-md disabled:opacity-50"
+        disabled={isGeneratingStory || isDataMissing || isStoryCompleted}
+        className={`btn-student btn-student-md disabled:opacity-70 ${
+          isStoryCompleted
+            ? '!bg-[#F3F4F6] !border-[#D1D5DB] !text-[#9CA3AF] !cursor-not-allowed'
+            : 'btn-student-secondary'
+        }`}
       >
-        {isGeneratingStory ? <Loader2 className="w-5 h-5 animate-spin" /> : <BookOpen className="w-5 h-5" />}
-        <span className="hidden sm:inline">세상 속 이야기 만들기</span>
-        <span className="sm:hidden">이야기</span>
+        {isGeneratingStory ? (
+          <Loader2 className="w-5 h-5 animate-spin" />
+        ) : (
+          <BookOpen className={`w-5 h-5 ${isStoryCompleted ? 'text-[#9CA3AF]' : ''}`} />
+        )}
+        <span className="hidden sm:inline">
+          {isStoryCompleted ? '세상 속 이야기 완료' : isGeneratingStory ? '세상 속 이야기 생성 중...' : '세상 속 이야기 만들기'}
+        </span>
+        <span className="sm:hidden">
+          {isStoryCompleted ? '완료' : isGeneratingStory ? '생성 중...' : '이야기'}
+        </span>
       </button>
       <button
         onClick={handleGenerateQuiz}
-        disabled={isGeneratingQuiz}
-        className="btn-student btn-student-secondary btn-student-md disabled:opacity-50"
+        disabled={isGeneratingQuiz || isDataMissing || isQuizCompleted}
+        className={`btn-student btn-student-md disabled:opacity-70 ${
+          isQuizCompleted
+            ? '!bg-[#F3F4F6] !border-[#D1D5DB] !text-[#9CA3AF] !cursor-not-allowed'
+            : 'btn-student-secondary'
+        }`}
       >
-        {isGeneratingQuiz ? <Loader2 className="w-5 h-5 animate-spin" /> : <PenTool className="w-5 h-5" />}
-        <span className="hidden sm:inline">OX 문제 만들기</span>
-        <span className="sm:hidden">문제</span>
+        {isGeneratingQuiz ? (
+          <Loader2 className="w-5 h-5 animate-spin" />
+        ) : (
+          <PenTool className={`w-5 h-5 ${isQuizCompleted ? 'text-[#9CA3AF]' : ''}`} />
+        )}
+        <span className="hidden sm:inline">
+          {isQuizCompleted ? 'OX 문제 완료' : isGeneratingQuiz ? 'OX 문제 생성 중...' : 'OX 문제 만들기'}
+        </span>
+        <span className="sm:hidden">
+          {isQuizCompleted ? '완료' : isGeneratingQuiz ? '생성 중...' : '문제'}
+        </span>
       </button>
       <button
-        onClick={() => navigate('/student/back-cover')}
+        onClick={() => navigate('/student/back-cover', { state: { projectId } })}
         className="btn-student btn-student-primary btn-student-md"
       >
         <span className="hidden sm:inline">뒤표지 만들기</span>
@@ -153,7 +272,7 @@ export default function StudentUnitSummaryPage() {
       currentStep="summary"
       title="단원 정리"
       subtitle="세상과 연결하고, 내가 문제를 만들어 봐요!"
-      onBack={() => navigate('/student/comic/full')}
+      onBack={() => navigate('/student/comic/full', { state: { projectId } })}
       actionButtons={actionButtons}
       bgVariant="default"
     >
@@ -189,9 +308,17 @@ export default function StudentUnitSummaryPage() {
 
             {/* 본문 콘텐츠 영역 */}
             <div className="flex flex-col gap-10 flex-1 py-2">
-              
-              {/* 1. 세상 속 이야기 영역 */}
-              <div className="flex flex-col gap-4">
+              {isDataMissing ? (
+                <div className="flex flex-col items-center justify-center flex-1 min-h-[300px] text-center gap-4">
+                  <BookOpen className="w-16 h-16 text-slate-300" />
+                  <p className="text-lg font-bold text-slate-500">
+                    아직 단원정리 내용을 만들 준비가 되지 않았어요.<br/>먼저 주제, 대본, 만화를 완성해 주세요.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  {/* 1. 세상 속 이야기 영역 */}
+                  <div className="flex flex-col gap-4">
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center font-bold text-lg shadow-sm">1</div>
                   <h2 className="text-xl md:text-2xl font-jua text-[#303442]">세상 속 이야기</h2>
@@ -201,7 +328,7 @@ export default function StudentUnitSummaryPage() {
                   {/* 탭 버튼들 */}
                   <div className="flex gap-2 px-4 mb-[-2px] relative z-10 overflow-x-auto scrollbar-hide">
                     <button
-                      onClick={() => setActiveStoryTab('history')}
+                      onClick={() => handleTabChange('history')}
                       className={`px-4 py-2 rounded-t-xl font-bold text-xs md:text-sm flex items-center gap-1.5 border-2 transition-colors shrink-0 ${
                         activeStoryTab === 'history' 
                           ? 'bg-purple-50 border-purple-200 border-b-purple-50 text-purple-700' 
@@ -212,7 +339,7 @@ export default function StudentUnitSummaryPage() {
                       역사 이야기
                     </button>
                     <button
-                      onClick={() => setActiveStoryTab('latest')}
+                      onClick={() => handleTabChange('latest')}
                       className={`px-4 py-2 rounded-t-xl font-bold text-xs md:text-sm flex items-center gap-1.5 border-2 transition-colors shrink-0 ${
                         activeStoryTab === 'latest' 
                           ? 'bg-sky-50 border-sky-200 border-b-sky-50 text-sky-700' 
@@ -223,7 +350,7 @@ export default function StudentUnitSummaryPage() {
                       최신 이야기
                     </button>
                     <button
-                      onClick={() => setActiveStoryTab('life')}
+                      onClick={() => handleTabChange('life')}
                       className={`px-4 py-2 rounded-t-xl font-bold text-xs md:text-sm flex items-center gap-1.5 border-2 transition-colors shrink-0 ${
                         activeStoryTab === 'life' 
                           ? 'bg-teal-50 border-teal-200 border-b-teal-50 text-teal-700' 
@@ -334,7 +461,8 @@ export default function StudentUnitSummaryPage() {
                   </div>
                 </div>
               </div>
-
+            </>
+            )}
             </div>
 
             {/* A4 하단: 마무리 영역 */}

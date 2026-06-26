@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import StudentWorkspaceLayout from '../components/layout/StudentWorkspaceLayout'
 import StudentToolPanel from '../components/layout/StudentToolPanel'
 import StudentZoomControl from '../components/layout/StudentZoomControl'
@@ -7,6 +7,7 @@ import SNSBackCoverPreview from '../components/back-cover/SNSBackCoverPreview'
 import { ArrowRight, Settings2, LayoutTemplate, Share2 } from 'lucide-react'
 import { mockStudentProfile } from '../data/studentMockData'
 import { showToast } from '../utils/toast'
+import { projectStorage } from '../utils/projectStorage'
 
 const subjectBackCoverThemes: Record<string, { name: string, brand: string, background: string, patternColor: string }> = {
   korean: { name: '국어', brand: '#422C8C', background: '#F2ECFF', patternColor: 'rgba(244, 114, 182, 0.12)' },
@@ -39,59 +40,102 @@ const getThemeBySubject = (subjectName: string) => {
   return theme || subjectBackCoverThemes.default;
 };
 
-const getStoredData = () => {
-  try {
-    const stored = localStorage.getItem('studentSelectedTopic');
-    if (stored) {
-      const data = JSON.parse(stored);
-      return {
-        subjectName: data?.selection?.subjectName || '',
-        unitName: data?.selection?.middleUnitName || data?.selection?.majorUnitName || '',
-        topicName: data?.topic?.title || ''
-      };
-    }
-  } catch(e) {}
-  return { subjectName: '', unitName: '', topicName: '' };
-};
-
 export default function StudentBackCoverPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   
   // Zoom & Resize logic
   const containerRef = useRef<HTMLDivElement>(null)
   const [zoomPercent, setZoomPercent] = useState<number | null>(null)
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 })
 
-  const storedData = getStoredData();
-
   // Editable State
-  const [authorName, setAuthorName] = useState<string>(() => localStorage.getItem('backCoverAuthor') || mockStudentProfile.name);
-  const [gradeClassInfo, setGradeClassInfo] = useState<string>(() => localStorage.getItem('backCoverGradeClass') || `${mockStudentProfile.grade} ${mockStudentProfile.classNumber}반`);
-  const [subjectName, setSubjectName] = useState<string>(() => localStorage.getItem('backCoverSubject') || storedData.subjectName || "과학");
-  const [unitName, setUnitName] = useState<string>(() => localStorage.getItem('backCoverUnit') || storedData.unitName || "선택한 단원");
-  const [topicName, setTopicName] = useState<string>(() => localStorage.getItem('backCoverTopic') || storedData.topicName || "만든 주제");
-  const [createdDate, setCreatedDate] = useState<string>(() => {
-    const storedDate = localStorage.getItem('backCoverDate');
-    if (storedDate) return storedDate;
-    const now = new Date();
-    return `${now.getFullYear()}.${String(now.getMonth() + 1).padStart(2, '0')}.${String(now.getDate()).padStart(2, '0')}`;
-  });
-  const [bgColor, setBgColor] = useState<string>(() => localStorage.getItem('backCoverBgColor') || '');
-  const [backCoverBgOpacity, setBackCoverBgOpacity] = useState<number>(() => {
-    const stored = localStorage.getItem('backCoverBgOpacity');
-    return stored ? Number(stored) : 1;
-  });
+  const [authorName, setAuthorName] = useState<string>('');
+  const [gradeClassInfo, setGradeClassInfo] = useState<string>('');
+  const [subjectName, setSubjectName] = useState<string>('');
+  const [unitName, setUnitName] = useState<string>('');
+  const [topicName, setTopicName] = useState<string>('');
+  const [createdDate, setCreatedDate] = useState<string>('');
+  const [bgColor, setBgColor] = useState<string>('');
+  const [backCoverBgOpacity, setBackCoverBgOpacity] = useState<number>(1);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   const [previewInfo, setPreviewInfo] = useState({
-    authorName,
-    gradeClassInfo,
-    subjectName,
-    unitName,
-    topicName,
-    createdDate
+    authorName: '',
+    gradeClassInfo: '',
+    subjectName: '',
+    unitName: '',
+    topicName: '',
+    createdDate: ''
   });
 
-  const handleGenerateInfo = () => {
+  useEffect(() => {
+    const stateProjectId = location.state?.projectId;
+    const currentProjectId = stateProjectId || localStorage.getItem('currentProjectId');
+
+    const todayStr = (() => {
+      const now = new Date();
+      return `${now.getFullYear()}.${String(now.getMonth() + 1).padStart(2, '0')}.${String(now.getDate()).padStart(2, '0')}`;
+    })();
+
+    if (!currentProjectId) {
+      setAuthorName(mockStudentProfile.name);
+      setGradeClassInfo('-');
+      setSubjectName('-');
+      setUnitName('-');
+      setTopicName('-');
+      setCreatedDate(todayStr);
+      setBgColor(getThemeBySubject('-').background);
+      setBackCoverBgOpacity(1);
+      setIsLoaded(true);
+      return;
+    }
+
+    const topicData = projectStorage.loadTopic<any>(currentProjectId);
+    const unitData = projectStorage.loadUnit<any>(currentProjectId);
+    
+    const activeData = topicData || location.state || {};
+    const selection = activeData?.selection || unitData || {};
+    const topic = activeData?.topic || {};
+
+    const currentSubjectName = selection?.subjectName || '-';
+    const currentUnitName = selection?.middleUnitName || selection?.majorUnitName || selection?.unitTitle || selection?.lessonTitle || '-';
+    const currentTopicTitle = topic?.title || topic?.topicTitle || '-';
+    const gradeVal = selection?.gradeName || selection?.grade || mockStudentProfile.grade;
+    const currentGradeClass = `${gradeVal}${mockStudentProfile.classNumber ? ` ${mockStudentProfile.classNumber}반` : ''}`;
+
+    const savedBackCover = projectStorage.loadBackCover<any>(currentProjectId);
+    
+    const isMatchingProject = savedBackCover 
+      && savedBackCover.projectId === currentProjectId
+      && savedBackCover.subjectName === currentSubjectName
+      && savedBackCover.topicTitle === currentTopicTitle;
+
+    if (isMatchingProject) {
+      setAuthorName(savedBackCover.authorName || mockStudentProfile.name);
+      setGradeClassInfo(savedBackCover.gradeClassInfo || currentGradeClass);
+      setSubjectName(savedBackCover.subjectName || currentSubjectName);
+      setUnitName(savedBackCover.unitName || currentUnitName);
+      setTopicName(savedBackCover.topicName || currentTopicTitle);
+      setCreatedDate(savedBackCover.createdDate || todayStr);
+      setBgColor(savedBackCover.bgColor || getThemeBySubject(savedBackCover.subjectName || currentSubjectName).background);
+      setBackCoverBgOpacity(savedBackCover.bgOpacity ?? 1);
+    } else {
+      setAuthorName(mockStudentProfile.name);
+      setGradeClassInfo(currentGradeClass);
+      setSubjectName(currentSubjectName);
+      setUnitName(currentUnitName);
+      setTopicName(currentTopicTitle);
+      setCreatedDate(todayStr);
+      setBgColor(getThemeBySubject(currentSubjectName).background);
+      setBackCoverBgOpacity(1);
+    }
+    
+    setIsLoaded(true);
+  }, [location.state]);
+
+  useEffect(() => {
+    if (!isLoaded) return;
     setPreviewInfo({
       authorName,
       gradeClassInfo,
@@ -100,10 +144,40 @@ export default function StudentBackCoverPage() {
       topicName,
       createdDate
     });
-    showToast('정보가 반영되었습니다.');
-  };
+  }, [authorName, gradeClassInfo, subjectName, unitName, topicName, createdDate, isLoaded]);
 
   useEffect(() => {
+    if (!isLoaded) return;
+    const currentProjectId = location.state?.projectId || localStorage.getItem('currentProjectId');
+    if (!currentProjectId) return;
+
+    const topicData = projectStorage.loadTopic<any>(currentProjectId);
+    const unitData = projectStorage.loadUnit<any>(currentProjectId);
+    const selection = topicData?.selection || unitData || {};
+    const topic = topicData?.topic || {};
+
+    const backCoverData = {
+      projectId: currentProjectId,
+      subject: selection?.subjectId || '',
+      subjectName: subjectName,
+      grade: selection?.gradeValue || selection?.grade || '',
+      topicTitle: topicName,
+      topicId: topic?.id || '',
+      unitTitle: selection?.majorUnitName || '',
+      lessonTitle: selection?.middleUnitName || '',
+      updatedAt: new Date().toISOString(),
+      
+      authorName,
+      gradeClassInfo,
+      unitName,
+      createdDate,
+      bgColor,
+      bgOpacity: backCoverBgOpacity
+    };
+
+    projectStorage.saveBackCover(currentProjectId, backCoverData);
+    
+    // Legacy support
     localStorage.setItem('backCoverBgColor', bgColor);
     localStorage.setItem('backCoverBgOpacity', String(backCoverBgOpacity));
     localStorage.setItem('backCoverAuthor', authorName);
@@ -112,7 +186,42 @@ export default function StudentBackCoverPage() {
     localStorage.setItem('backCoverUnit', unitName);
     localStorage.setItem('backCoverTopic', topicName);
     localStorage.setItem('backCoverDate', createdDate);
-  }, [bgColor, backCoverBgOpacity, authorName, gradeClassInfo, subjectName, unitName, topicName, createdDate]);
+  }, [bgColor, backCoverBgOpacity, authorName, gradeClassInfo, subjectName, unitName, topicName, createdDate, isLoaded, location.state]);
+
+  const handleGenerateInfo = () => {
+    const currentProjectId = location.state?.projectId || localStorage.getItem('currentProjectId');
+    if (!currentProjectId) {
+      showToast('현재 작품 정보를 찾을 수 없습니다.');
+      return;
+    }
+    
+    const topicData = projectStorage.loadTopic<any>(currentProjectId);
+    const unitData = projectStorage.loadUnit<any>(currentProjectId);
+    
+    const activeData = topicData || location.state || {};
+    const selection = activeData?.selection || unitData || {};
+    const topic = activeData?.topic || {};
+
+    const currentSubjectName = selection?.subjectName || '-';
+    const currentUnitName = selection?.middleUnitName || selection?.majorUnitName || selection?.unitTitle || selection?.lessonTitle || '-';
+    const currentTopicTitle = topic?.title || topic?.topicTitle || '-';
+    const gradeVal = selection?.gradeName || selection?.grade || mockStudentProfile.grade;
+    const currentGradeClass = `${gradeVal}${mockStudentProfile.classNumber ? ` ${mockStudentProfile.classNumber}반` : ''}`;
+
+    setAuthorName(mockStudentProfile.name);
+    setGradeClassInfo(currentGradeClass);
+    setSubjectName(currentSubjectName);
+    setUnitName(currentUnitName);
+    setTopicName(currentTopicTitle);
+    
+    const now = new Date();
+    setCreatedDate(`${now.getFullYear()}.${String(now.getMonth() + 1).padStart(2, '0')}.${String(now.getDate()).padStart(2, '0')}`);
+    
+    setBgColor(getThemeBySubject(currentSubjectName).background);
+    setBackCoverBgOpacity(1);
+
+    showToast('현재 작품 정보로 갱신되었습니다.');
+  };
 
   const activeBgColor = bgColor || getThemeBySubject(subjectName).background;
   const backCoverBackgroundWithOpacity = hexToRgba(activeBgColor, backCoverBgOpacity);
@@ -185,7 +294,12 @@ export default function StudentBackCoverPage() {
         <span>정보 생성하기</span>
       </button>
       <button
-        onClick={() => navigate('/student/comic/read')}
+        onClick={() => {
+          const projectId = location.state?.projectId || localStorage.getItem('currentProjectId');
+          navigate('/student/comic/read', {
+            state: { projectId }
+          });
+        }}
         className="btn-student btn-student-primary btn-student-md"
       >
         <span>만화 보기 🖼️</span>

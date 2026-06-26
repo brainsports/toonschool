@@ -8,7 +8,7 @@ import { generateSingleComicCut, type ComicGenerationState } from '../services/s
 import { loadComicProjectData, saveComicProjectData, loadComicCutData, saveComicCutData, type ComicProjectData, type ComicCutEditData, type ComicCutElement } from '../components/editor/utils/comicStorage';
 import type { GeneratedComicScript } from '../services/studentScriptService';
 import { projectStorage } from '../utils/projectStorage';
-import { Sparkles, Loader2, ArrowRight, MousePointer2, Layout, Users, MessageSquare, Type, Layers, RefreshCw, Maximize, Undo, Redo } from 'lucide-react';
+import { Sparkles, Loader2, MousePointer2, Layout, Users, MessageSquare, Type, Layers, RefreshCw, Maximize, Undo, Redo } from 'lucide-react';
 
 import ComicCanvas from '../components/comic-editor/ComicCanvas';
 import CharacterToolPanel from '../components/comic-editor/CharacterToolPanel';
@@ -205,14 +205,32 @@ export default function StudentComicFullViewPage() {
   };
 
   useEffect(() => {
-    let data = location.state;
-    if (!data) {
-      const stored = localStorage.getItem('studentSelectedTopic');
-      if (stored) {
-        try { data = JSON.parse(stored); } catch(e) {}
+    // ✅ 1순위: location.state (직전 단계에서 전달된 현재 작품 데이터)
+    let data = location.state as any;
+
+    // ✅ 2순위: projectId로 projectStorage에서 현재 작품 데이터 복원
+    if ((!data || !data.selection || !data.topic) && projectId) {
+      const topicData = projectStorage.loadTopic<any>(projectId);
+      if (topicData && topicData.selection && topicData.topic) {
+        data = topicData;
       }
     }
-    
+
+    // ⚠️ 3순위: localStorage.studentSelectedTopic — 현재 projectId와 일치할 때만 사용
+    if (!data || !data.selection || !data.topic) {
+      const stored = localStorage.getItem('studentSelectedTopic');
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          if (projectId && parsed.projectId && parsed.projectId !== projectId) {
+            console.warn('[ComicFullView] localStorage 데이터의 projectId가 현재와 다릅니다. 무시합니다.');
+          } else if (parsed && parsed.selection && parsed.topic) {
+            data = parsed;
+          }
+        } catch(e) {}
+      }
+    }
+
     if (!data || !data.selection || !data.topic) {
       alert('학습 정보가 없습니다. 단원 선택부터 다시 진행해주세요.');
       navigate('/student/select-unit');
@@ -220,29 +238,42 @@ export default function StudentComicFullViewPage() {
     }
     setSelectionData(data);
 
+    // ✅ topicId: projectId를 최우선 사용 (topic.id는 projectId가 없을 때만 fallback)
     const topicId = projectId || data.topic.id;
+    const currentSubject = data.selection.subjectName;
+    const currentGrade = data.selection.gradeName;
+    const currentTopicTitle = data.topic.title;
 
-    let parsedScript = projectStorage.loadScript<GeneratedComicScript>(topicId);
+    // ✅ 대본 데이터: projectStorage.loadScript 만 사용 (studentScript localStorage는 미사용)
+    const parsedScript = projectStorage.loadScript<GeneratedComicScript>(topicId);
+
     if (!parsedScript) {
-      const scriptStored = localStorage.getItem('studentScript');
-      if (scriptStored) {
-        try { parsedScript = JSON.parse(scriptStored); } catch(e) {}
-      }
-    }
-    
-    if (parsedScript) {
-      setScriptData(parsedScript);
-    } else {
+      // 대본이 없으면 만화제작 불가 — 사용자에게 안내 후 대기 (대본 없이 빈 상태 유지)
+      console.warn('[ComicFullView] 대본 데이터를 찾을 수 없습니다. projectId:', topicId);
       return;
     }
 
+    setScriptData(parsedScript);
+
+    // ✅ storedProjectData 검증: 과목·학년·주제 모두 일치해야만 재사용
     let storedProjectData = loadComicProjectData(topicId);
-    
-    if (!storedProjectData) {
+    const isStoredDataValid = storedProjectData &&
+      storedProjectData.subject === currentSubject &&
+      storedProjectData.grade === currentGrade &&
+      storedProjectData.topicTitle === currentTopicTitle;
+
+    if (!isStoredDataValid) {
+      if (storedProjectData) {
+        console.warn('[ComicFullView] 저장된 만화 데이터와 현재 작품이 불일치합니다. 새로 생성합니다.', {
+          stored: { subject: storedProjectData.subject, grade: storedProjectData.grade, title: storedProjectData.topicTitle },
+          current: { subject: currentSubject, grade: currentGrade, title: currentTopicTitle }
+        });
+      }
+      // 불일치 시 현재 대본 기준으로 새 ComicProjectData 생성
       storedProjectData = {
         projectId: topicId,
-        grade: data.selection.gradeName,
-        subject: data.selection.subjectName,
+        grade: currentGrade,
+        subject: currentSubject,
         topicTitle: parsedScript.title,
         selectedStoryDescription: data.topic.summary || '',
         coreConcepts: parsedScript.keyConcepts?.map((c: any) => c.title) || [],
@@ -263,14 +294,15 @@ export default function StudentComicFullViewPage() {
     }
     setProjectData(storedProjectData);
 
+    // ✅ 컷 데이터 로드: 불일치했다면 이전 컷 이미지를 새 대본의 장면 설명으로 초기화
     const loadedCuts: Record<number, ComicCutEditData> = {};
     for (let i = 1; i <= 6; i++) {
-      let cutData = loadComicCutData(topicId, i);
+      let cutData = isStoredDataValid ? loadComicCutData(topicId, i) : null;
       if (!cutData) {
         cutData = { cutNumber: i, elements: [], updatedAt: new Date().toISOString() };
       }
-      if (cutData.customBackgroundPrompt === undefined) {
-        cutData.customBackgroundPrompt = storedProjectData.script.cuts[i - 1]?.sceneDescription || '';
+      if (cutData.customBackgroundPrompt === undefined || !cutData.customBackgroundPrompt.trim()) {
+        cutData.customBackgroundPrompt = storedProjectData?.script?.cuts?.[i - 1]?.sceneDescription || '';
       }
       loadedCuts[i] = cutData;
     }
@@ -554,28 +586,52 @@ export default function StudentComicFullViewPage() {
 
   const currentCutData = cutsData[selectedCutNumber];
 
+  const allBackgroundsGenerated = [1, 2, 3, 4, 5, 6].every(num => cutsData[num]?.backgroundImageUrl);
+
+  const expectedDialogues = [1, 2, 3, 4, 5, 6].filter(num => {
+    const cutScript = projectData?.script?.cuts?.[num - 1];
+    return cutScript && cutScript.dialogues && cutScript.dialogues.length > 0;
+  });
+
+  const allDialoguesGenerated = expectedDialogues.length > 0 && expectedDialogues.every(num => 
+    cutsData[num]?.elements.some(el => el.type === 'speechBubble')
+  );
+
   const actionButtons = (
     <>
       <button
         onClick={handleGenerateAll}
-        className="btn-student btn-student-secondary btn-student-md"
+        disabled={allBackgroundsGenerated}
+        className={`btn-student btn-student-md ${
+          allBackgroundsGenerated
+            ? 'bg-[#E5E7EB] border-2 border-[#D1D5DB] text-[#9CA3AF] shadow-none cursor-not-allowed'
+            : 'btn-student-secondary'
+        }`}
       >
-        <Sparkles className="w-5 h-5 text-purple-500" />
-        <span className="text-purple-700">배경 모두 생성</span>
+        <Sparkles className={`w-5 h-5 ${allBackgroundsGenerated ? 'text-[#9CA3AF]' : 'text-purple-500'}`} />
+        <span className={allBackgroundsGenerated ? 'text-[#9CA3AF]' : 'text-purple-700'}>
+          {allBackgroundsGenerated ? '배경 생성 완료' : '배경 모두 생성'}
+        </span>
       </button>
       <button
         onClick={handleGenerateDialogues}
-        className="btn-student btn-student-secondary btn-student-md"
+        disabled={allDialoguesGenerated}
+        className={`btn-student btn-student-md ${
+          allDialoguesGenerated
+            ? 'bg-[#E5E7EB] border-2 border-[#D1D5DB] text-[#9CA3AF] shadow-none cursor-not-allowed'
+            : 'btn-student-secondary'
+        }`}
       >
-        <MessageSquare className="w-5 h-5 text-indigo-500" />
-        <span className="text-indigo-700">대사 생성</span>
+        <MessageSquare className={`w-5 h-5 ${allDialoguesGenerated ? 'text-[#9CA3AF]' : 'text-indigo-500'}`} />
+        <span className={allDialoguesGenerated ? 'text-[#9CA3AF]' : 'text-indigo-700'}>
+          {allDialoguesGenerated ? '대사 생성 완료' : '대사 생성'}
+        </span>
       </button>
       <button
         onClick={handleNext}
         className="btn-student btn-student-primary btn-student-md"
       >
-        <span>단원 정리 가기</span>
-        <ArrowRight className="w-5 h-5" />
+        <span>단원 정리 →</span>
       </button>
     </>
   );
@@ -587,7 +643,7 @@ export default function StudentComicFullViewPage() {
       showBackButton={true}
       title="만화제작 (6컷)"
       subtitle={`왼쪽 도구를 사용해 선택한 컷(${selectedCutNumber}컷)을 편집하세요.`}
-      onBack={() => navigate('/student/front-cover')}
+      onBack={() => navigate('/student/front-cover', { state: { ...selectionData, projectId } })}
       actionButtons={actionButtons}
     >
       <div className="flex flex-col w-full h-full relative">

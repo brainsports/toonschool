@@ -212,25 +212,29 @@ const getFallbackKeywords = (subjectName: string): KeywordItem[] => {
 }
 
 export const generateKeywords = async (
-  request: TopicGenerationRequest
+  request: TopicGenerationRequest & { count?: number; existingKeywords?: string[] }
 ): Promise<KeywordItem[]> => {
-  const { gradeName, subjectName, majorUnitName, middleUnitName } = request
+  const { gradeName, subjectName, majorUnitName, middleUnitName, count = 2, existingKeywords = [] } = request
+
+  const existingKeywordsText = existingKeywords.length > 0 
+    ? `\n\n이미 생성된 다음 키워드들은 제외하고 완전히 새로운 단어로 만들어주세요:\n[${existingKeywords.join(', ')}]` 
+    : ''
 
   const prompt = `
 너는 초등학생을 위한 학습만화 선생님입니다.
-아래 단원 정보를 바탕으로 학습만화 이야기에 쓸 만한 핵심 키워드 10개를 추천해 주세요.
+아래 단원 정보를 바탕으로 학습만화 이야기에 쓸 만한 핵심 키워드 ${count}개를 추천해 주세요.
 
 학년: ${gradeName}
 과목: ${subjectName}
 대단원: ${majorUnitName}
-중단원: ${middleUnitName}
+중단원: ${middleUnitName}${existingKeywordsText}
 
 조건:
 1. 키워드는 반드시 학습 내용과 관련 있어야 합니다.
 2. 초등학생이 이해할 수 있는 쉬운 명사형 단어여야 합니다.
 3. 이야기 소재, 배경, 사건 등으로 활용하기 좋아야 합니다.
 4. 너무 어려운 전문 용어는 피하거나 쉬운 표현으로 바꿉니다.
-5. 10개 키워드는 서로 너무 비슷하면 안 됩니다.
+5. ${count}개 키워드는 서로 너무 비슷하면 안 됩니다.
 6. 결과는 JSON 형태로만 반환합니다. 마크다운 코드블록은 쓰지 않습니다.
 
 반환 형식:
@@ -250,12 +254,12 @@ export const generateKeywords = async (
     const parsedData = JSON.parse(cleanedText)
 
     if (parsedData && Array.isArray(parsedData.keywords) && parsedData.keywords.length > 0) {
-      return parsedData.keywords
+      return parsedData.keywords.slice(0, count)
     }
     
     throw new Error('Invalid JSON format from AI')
   } catch (error) {
     console.error('Failed to generate keywords from AI:', error)
-    return getFallbackKeywords(subjectName)
+    return getFallbackKeywords(subjectName).slice(0, count)
   }
 }

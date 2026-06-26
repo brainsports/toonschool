@@ -11,7 +11,7 @@ export default function TextPanel({ onAddElement, selectedElement, onUpdateEleme
   const handleAddText = (preset: 'title' | 'body' | 'bubble') => {
     const config = {
       title: { fontSize: 80, text: '제목', fill: '#000000', fontFamily: 'SCoreDream', fontWeight: 800, align: 'center' as const, verticalAlign: 'middle' as const },
-      body: { fontSize: 40, text: '본문', fill: '#000000', fontFamily: 'Pretendard', fontWeight: 400, align: 'left' as const, verticalAlign: 'middle' as const },
+      body: { fontSize: 40, text: '본문', fill: '#000000', fontFamily: "'Pretendard', 'Noto Sans KR', sans-serif", fontWeight: 400, align: 'left' as const, verticalAlign: 'middle' as const },
       bubble: { fontSize: 32, text: '말풍선 텍스트', fill: '#000000', fontFamily: 'Gaegu', fontWeight: 400, align: 'center' as const, verticalAlign: 'middle' as const }
     };
 
@@ -28,13 +28,47 @@ export default function TextPanel({ onAddElement, selectedElement, onUpdateEleme
   const isTextSelected = selectedElement?.type === 'text';
 
   const fonts = [
-    { label: 'Pretendard', value: 'Pretendard' },
+    { label: 'Pretendard', value: "'Pretendard', 'Noto Sans KR', sans-serif" },
+    { label: 'Noto Sans KR', value: "'Noto Sans KR', 'Pretendard', sans-serif" },
+    { label: 'NanumSquareRound', value: "'NanumSquareRound', 'Pretendard', sans-serif" },
+    { label: 'Gmarket Sans', value: "'Gmarket Sans', 'Pretendard', sans-serif" },
+    { label: 'Cafe24 Ssurround', value: "'Cafe24 Ssurround', 'Pretendard', sans-serif" },
+    { label: 'SUIT', value: "'SUIT', 'Pretendard', sans-serif" },
     { label: 'S-Core Dream', value: 'SCoreDream' },
     { label: 'Gaegu', value: 'Gaegu' }
   ];
 
   const FONT_WEIGHTS: Record<string, { label: string; value: number }[]> = {
-    Pretendard: [
+    "'Pretendard', 'Noto Sans KR', sans-serif": [
+      { label: 'Pretendard 400 Regular', value: 400 },
+      { label: 'Pretendard 500 Medium', value: 500 },
+      { label: 'Pretendard 600 SemiBold', value: 600 },
+      { label: 'Pretendard 700 Bold', value: 700 }
+    ],
+    "'Noto Sans KR', 'Pretendard', sans-serif": [
+      { label: 'Noto Sans KR 400 Regular', value: 400 },
+      { label: 'Noto Sans KR 500 Medium', value: 500 },
+      { label: 'Noto Sans KR 700 Bold', value: 700 }
+    ],
+    "'NanumSquareRound', 'Pretendard', sans-serif": [
+      { label: 'NanumSquareRound Regular', value: 400 },
+      { label: 'NanumSquareRound Bold', value: 700 }
+    ],
+    "'Gmarket Sans', 'Pretendard', sans-serif": [
+      { label: 'Gmarket Sans Light', value: 300 },
+      { label: 'Gmarket Sans Medium', value: 500 },
+      { label: 'Gmarket Sans Bold', value: 700 }
+    ],
+    "'Cafe24 Ssurround', 'Pretendard', sans-serif": [
+      { label: 'Cafe24 Ssurround Regular', value: 400 }
+    ],
+    "'SUIT', 'Pretendard', sans-serif": [
+      { label: 'SUIT 400 Regular', value: 400 },
+      { label: 'SUIT 500 Medium', value: 500 },
+      { label: 'SUIT 600 SemiBold', value: 600 },
+      { label: 'SUIT 700 Bold', value: 700 }
+    ],
+    Pretendard: [ // Legacy fallback
       { label: 'Pretendard 400 Regular', value: 400 },
       { label: 'Pretendard 500 Medium', value: 500 },
       { label: 'Pretendard 600 SemiBold', value: 600 },
@@ -53,7 +87,7 @@ export default function TextPanel({ onAddElement, selectedElement, onUpdateEleme
 
   const handleFontFamilyChange = (newFont: string) => {
     if (!selectedElement) return;
-    const availableWeights = FONT_WEIGHTS[newFont] || FONT_WEIGHTS['Pretendard'];
+    const availableWeights = FONT_WEIGHTS[newFont] || FONT_WEIGHTS["'Pretendard', 'Noto Sans KR', sans-serif"];
     let currentWeight = selectedElement.props.fontWeight || 400;
     
     if (!availableWeights.some(w => w.value === currentWeight)) {
@@ -66,6 +100,10 @@ export default function TextPanel({ onAddElement, selectedElement, onUpdateEleme
       props: { ...selectedElement.props, fontFamily: newFont, fontWeight: currentWeight } 
     });
   };
+
+  const currentFontFamily = selectedElement?.props.fontFamily === 'Pretendard' 
+    ? "'Pretendard', 'Noto Sans KR', sans-serif" 
+    : (selectedElement?.props.fontFamily || "'Pretendard', 'Noto Sans KR', sans-serif");
 
   return (
     <div className="w-full bg-slate-800 h-full p-4 overflow-hidden flex flex-col min-h-0">
@@ -102,10 +140,10 @@ export default function TextPanel({ onAddElement, selectedElement, onUpdateEleme
             <div>
               <label className="text-xs text-slate-400 block mb-1">글꼴</label>
               <select 
-                value={selectedElement.props.fontFamily || 'Pretendard'}
+                value={currentFontFamily}
                 onChange={(e) => handleFontFamilyChange(e.target.value)}
                 className="w-full bg-slate-900 text-white rounded-lg p-2 text-sm border border-slate-700 outline-none focus:border-purple-500"
-                style={{ fontFamily: selectedElement.props.fontFamily || 'Pretendard' }}
+                style={{ fontFamily: currentFontFamily }}
               >
                 {fonts.map(font => (
                   <option key={font.value} value={font.value} style={{ fontFamily: font.value }}>
@@ -121,9 +159,9 @@ export default function TextPanel({ onAddElement, selectedElement, onUpdateEleme
                 value={selectedElement.props.fontWeight || 400}
                 onChange={(e) => onUpdateElement(selectedElement.id, { props: { ...selectedElement.props, fontWeight: parseInt(e.target.value) } })}
                 className="w-full bg-slate-900 text-white rounded-lg p-2 text-sm border border-slate-700 outline-none focus:border-purple-500"
-                style={{ fontFamily: selectedElement.props.fontFamily || 'Pretendard' }}
+                style={{ fontFamily: currentFontFamily }}
               >
-                {(FONT_WEIGHTS[selectedElement.props.fontFamily || 'Pretendard'] || FONT_WEIGHTS['Pretendard']).map(weight => (
+                {(FONT_WEIGHTS[currentFontFamily] || FONT_WEIGHTS["'Pretendard', 'Noto Sans KR', sans-serif"]).map(weight => (
                   <option key={weight.value} value={weight.value}>
                     {weight.label}
                   </option>

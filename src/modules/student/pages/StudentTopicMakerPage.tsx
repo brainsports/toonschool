@@ -85,24 +85,36 @@ export default function StudentTopicMakerPage() {
 
   const canProceed = selectedTopicId !== null
 
-  // 키워드 자동 추천 효과
-  useEffect(() => {
-    if (creationMode === 'ai' && recommendedKeywords.length === 0 && selection && !isKeywordLoading) {
-      const fetchKeywords = async () => {
-        setIsKeywordLoading(true)
-        const request = {
-          gradeName: selection.gradeName || '',
-          subjectName: selection.subjectName || '',
-          majorUnitName: selection.majorUnitName || '',
-          middleUnitName: selection.middleUnitName || ''
-        }
-        const keywords = await generateKeywords(request)
-        setRecommendedKeywords(keywords)
-        setIsKeywordLoading(false)
-      }
-      fetchKeywords()
+  // 키워드 직접 생성 (수동)
+  const handleGenerateKeywords = async () => {
+    if (!selection) return
+    setIsKeywordLoading(true)
+    const request = {
+      gradeName: selection.gradeName || '',
+      subjectName: selection.subjectName || '',
+      majorUnitName: selection.majorUnitName || '',
+      middleUnitName: selection.middleUnitName || '',
+      existingKeywords: recommendedKeywords.map(k => k.word),
+      count: 2
     }
-  }, [creationMode, selection, recommendedKeywords.length, isKeywordLoading])
+    try {
+      const keywords = await generateKeywords(request)
+      
+      setRecommendedKeywords(prev => {
+        // 중복 제거 및 최대 10개 유지
+        const combined = [...prev, ...keywords]
+        const unique = combined.filter((kw, index, self) => 
+          index === self.findIndex(t => t.word === kw.word)
+        )
+        return unique.slice(0, 10)
+      })
+    } catch (error) {
+      console.error('키워드 생성 실패:', error)
+      alert('키워드를 만들지 못했습니다. 다시 시도해 주세요.')
+    } finally {
+      setIsKeywordLoading(false)
+    }
+  }
 
   const handleToggleKeyword = (word: string) => {
     if (selectedKeywords.includes(word)) {
@@ -215,7 +227,7 @@ export default function StudentTopicMakerPage() {
       onClick={handleProceedToComic}
       className="btn-student btn-student-primary btn-student-md"
     >
-      <span>대본 만들기 가기 🚀</span>
+      <span>대본 만들기 🚀</span>
     </button>
   )
 
@@ -289,10 +301,10 @@ export default function StudentTopicMakerPage() {
                   setSelectedTopicId(null)
                   setExtraRequest('')
                 }}
-                className="btn-primary-action flex items-center font-jua text-lg px-6 py-2.5 shadow-sm"
+                className="flex items-center justify-center font-jua text-lg px-6 py-2.5 shadow-sm rounded-full bg-[#4B5563] hover:bg-[#374151] text-white transition-colors"
               >
                 <ArrowLeft className="w-5 h-5 mr-2 stroke-[3]" />
-                방법 다시 선택하기
+                이전
               </button>
             </div>
 
@@ -304,6 +316,7 @@ export default function StudentTopicMakerPage() {
                   selectedKeywords={selectedKeywords}
                   onToggleKeyword={handleToggleKeyword}
                   isLoading={isKeywordLoading}
+                  onGenerateKeywords={handleGenerateKeywords}
                 />
 
                 {(genState === 'loading' || genState === 'success') && (

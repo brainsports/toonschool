@@ -225,7 +225,7 @@ export default function StudentUnitSelectPage() {
       onClick={handleProceed}
       className="btn-student btn-student-primary btn-student-md"
     >
-      <span>주제 만들기 가기 ✨</span>
+      <span>주제 만들기 ✨</span>
     </button>
   )
 

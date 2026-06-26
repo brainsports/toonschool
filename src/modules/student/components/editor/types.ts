@@ -21,6 +21,16 @@ export interface EditorState {
   coverTemplateId?: string; // New
   canvasWidth: number;
   canvasHeight: number;
+  metadata?: {
+    projectId?: string;
+    subject?: string;
+    subjectName?: string;
+    grade?: string;
+    topicTitle?: string;
+    topicId?: string;
+    lessonTitle?: string;
+    unitTitle?: string;
+  };
 }
 
 export type EditorToolType = 'select' | 'text' | 'character' | 'bubble' | 'graphic' | 'shape' | 'background' | 'layer';

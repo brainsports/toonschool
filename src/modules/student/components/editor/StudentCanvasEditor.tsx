@@ -4,7 +4,7 @@ import type { EditorState, CanvasElement, EditorToolType, EditorProps } from './
 import { useEditorHistory } from './utils/editorHistory';
 import EditorToolbar from './EditorToolbar';
 import CanvasStage from './CanvasStage';
-import { ArrowRight, Save, Sparkles } from 'lucide-react';
+import { ArrowRight, Sparkles } from 'lucide-react';
 
 import TextPanel from './panels/TextPanel';
 import CharacterPanel from './panels/CharacterPanel';
@@ -15,7 +15,7 @@ import StudentToolPanel from '../layout/StudentToolPanel';
 import StudentZoomControl from '../layout/StudentZoomControl';
 
 export default function StudentCanvasEditor({ 
-  initialState, onSave, readOnly = false, canvasWidth = 1400, canvasHeight = 1980,
+  initialState, readOnly = false, canvasWidth = 1400, canvasHeight = 1980,
   onPrev, onNext, nextText = "다음 단계로", mode = 'default', subject,
   onCompleteCover, isCoverCompleted, topicTitle
 }: EditorProps) {
@@ -182,19 +182,12 @@ export default function StudentCanvasEditor({
             if (newState) pushState(newState);
           }}
           disabled={isCoverCompleted}
-          className={`btn-student btn-student-primary btn-student-md ${isCoverCompleted ? 'disabled' : ''}`}
+          className={`btn-student btn-student-md btn-student-secondary ${isCoverCompleted ? 'opacity-50 cursor-not-allowed' : ''}`}
         >
           <Sparkles className="w-5 h-5" />
-          <span>{isCoverCompleted ? '표지 완성됨' : '표지 완성하기'}</span>
+          <span>{isCoverCompleted ? '표지 완성됨' : '표지 만들기'}</span>
         </button>
       )}
-      <button 
-        onClick={() => onSave?.(currentState)} 
-        className="btn-student btn-student-secondary btn-student-md"
-      >
-        <Save className="w-5 h-5" />
-        <span className="hidden sm:inline">진행사항 저장</span>
-      </button>
 
       {onNext && (
         <button

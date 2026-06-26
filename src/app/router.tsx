@@ -32,6 +32,7 @@ import StudentUnitSummaryPage from '../modules/student/pages/StudentUnitSummaryP
 import StudentQuizMakerPage from '../modules/student/pages/StudentQuizMakerPage'
 import StudentBackCoverPage from '../modules/student/pages/StudentBackCoverPage'
 import StudentComicViewerPage from '../modules/student/pages/StudentComicViewerPage'
+import SharedComicViewerPage from '../modules/student/pages/SharedComicViewerPage'
 
 export default function AppRouter() {
   return (
@@ -71,6 +72,7 @@ export default function AppRouter() {
       <Route path="/student/quiz/intro" element={<StudentQuizMakerPage />} />
       <Route path="/student/back-cover" element={<StudentBackCoverPage />} />
       <Route path="/student/comic/read" element={<StudentComicViewerPage />} />
+      <Route path="/book/:slug" element={<SharedComicViewerPage />} />
     </Routes>
   )
 }
