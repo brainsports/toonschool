@@ -18,6 +18,9 @@ interface StudentWorkspaceLayoutProps {
   // Right top actions
   actionButtons?: ReactNode
   
+  // Center top content
+  centerContent?: ReactNode
+
   bgVariant?: 'default' | 'pastel' | 'space'
 }
 
@@ -30,6 +33,7 @@ export default function StudentWorkspaceLayout({
   onBack,
   showBackButton = true,
   actionButtons,
+  centerContent,
   bgVariant = 'pastel'
 }: StudentWorkspaceLayoutProps) {
   const navigate = useNavigate()
@@ -71,9 +75,16 @@ export default function StudentWorkspaceLayout({
               )}
             </div>
 
+            {/* Center Content */}
+            {centerContent && (
+              <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 hidden lg:flex items-center justify-center shrink-0 pointer-events-none whitespace-nowrap">
+                {centerContent}
+              </div>
+            )}
+
             {/* Right Action Buttons */}
             {actionButtons && (
-              <div className="flex items-center gap-3 flex-wrap shrink-0">
+              <div className="flex items-center gap-3 flex-wrap shrink-0 relative z-10">
                 {actionButtons}
               </div>
             )}

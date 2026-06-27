@@ -31,7 +31,7 @@ export default function ComicCanvas({
 
   // Resizing state
   const [resizingId, setResizingId] = useState<string | null>(null);
-  const [resizingHandle, setResizingHandle] = useState<'nw' | 'se' | null>(null);
+  const [resizingHandle, setResizingHandle] = useState<'nw' | 'se' | 'ne' | 'sw' | null>(null);
   const [resizeStartPos, setResizeStartPos] = useState({ x: 0, y: 0 });
   const [elStartSize, setElStartSize] = useState({ width: 0, height: 0 });
 
@@ -49,7 +49,7 @@ export default function ComicCanvas({
     const target = e.target as HTMLElement;
     if (target.dataset.resizeHandle) {
       setResizingId(el.id);
-      setResizingHandle(target.dataset.resizeHandle as 'nw' | 'se');
+      setResizingHandle(target.dataset.resizeHandle as 'nw' | 'se' | 'ne' | 'sw');
       setResizeStartPos({ x: e.clientX, y: e.clientY });
       setElStartSize({ width: el.width, height: el.height });
       setElStartPos({ x: el.x, y: el.y });
@@ -62,6 +62,62 @@ export default function ComicCanvas({
     }
   };
 
+  const resizeSelectedCharacter = (
+    handle: 'nw' | 'se' | 'ne' | 'sw',
+    pointerPosition: { clientX: number; clientY: number }
+  ) => {
+    if (!canvasRef.current || !resizingId) return;
+
+    const rect = canvasRef.current.getBoundingClientRect();
+    const currentX = (pointerPosition.clientX - rect.left) / scale;
+    const currentY = (pointerPosition.clientY - rect.top) / scale;
+    
+    const startX = (resizeStartPos.x - rect.left) / scale;
+    const startY = (resizeStartPos.y - rect.top) / scale;
+
+    const dx = currentX - startX;
+    const dy = currentY - startY;
+
+    const MIN_SIZE = 50;
+    const ratio = elStartSize.width / elStartSize.height;
+
+    let newX = elStartPos.x;
+    let newY = elStartPos.y;
+    let newWidth = elStartSize.width;
+    let newHeight = elStartSize.height;
+
+    if (handle === 'se') {
+      newWidth = elStartSize.width + dx;
+      if (newWidth < MIN_SIZE) newWidth = MIN_SIZE;
+      newHeight = newWidth / ratio;
+    } else if (handle === 'nw') {
+      newWidth = elStartSize.width - dx;
+      if (newWidth < MIN_SIZE) newWidth = MIN_SIZE;
+      newHeight = newWidth / ratio;
+      newX = elStartPos.x + elStartSize.width - newWidth;
+      newY = elStartPos.y + elStartSize.height - newHeight;
+    } else if (handle === 'ne') {
+      newWidth = elStartSize.width + dx;
+      if (newWidth < MIN_SIZE) newWidth = MIN_SIZE;
+      newHeight = newWidth / ratio;
+      newY = elStartPos.y + elStartSize.height - newHeight;
+    } else if (handle === 'sw') {
+      newWidth = elStartSize.width - dx;
+      if (newWidth < MIN_SIZE) newWidth = MIN_SIZE;
+      newHeight = newWidth / ratio;
+      newX = elStartPos.x + elStartSize.width - newWidth;
+    }
+
+    console.log(`[Resize Dev Log] handle: ${handle}, dx: ${dx.toFixed(2)}, dy: ${dy.toFixed(2)}, newX: ${newX.toFixed(2)}, newY: ${newY.toFixed(2)}, newWidth: ${newWidth.toFixed(2)}, newHeight: ${newHeight.toFixed(2)}`);
+
+    onUpdateElement(resizingId, {
+      x: newX,
+      y: newY,
+      width: newWidth,
+      height: newHeight
+    });
+  };
+
   const handlePointerMove = (e: React.PointerEvent) => {
     if (draggingId) {
       const dx = (e.clientX - dragStartPos.x) / scale;
@@ -71,44 +127,21 @@ export default function ComicCanvas({
         y: elStartPos.y + dy
       });
     } else if (resizingId && resizingHandle) {
-      const dx = (e.clientX - resizeStartPos.x) / scale;
-      const dy = (e.clientY - resizeStartPos.y) / scale;
-      
       const el = data.elements.find(e => e.id === resizingId);
       if (!el) return;
 
-      if (resizingHandle === 'se') {
-        // Preserve aspect ratio for characters
-        if (el.type === 'character') {
-          const ratio = elStartSize.width / elStartSize.height;
-          const newWidth = Math.max(50, elStartSize.width + dx);
-          onUpdateElement(resizingId, {
-            width: newWidth,
-            height: newWidth / ratio
-          });
-        } else {
+      if (el.type === 'character') {
+        resizeSelectedCharacter(resizingHandle, { clientX: e.clientX, clientY: e.clientY });
+      } else {
+        const dx = (e.clientX - resizeStartPos.x) / scale;
+        const dy = (e.clientY - resizeStartPos.y) / scale;
+        
+        if (resizingHandle === 'se') {
           onUpdateElement(resizingId, {
             width: Math.max(50, elStartSize.width + dx),
             height: Math.max(30, elStartSize.height + dy)
           });
-        }
-      } else if (resizingHandle === 'nw') {
-        if (el.type === 'character') {
-          const ratio = elStartSize.width / elStartSize.height;
-          let newWidth = elStartSize.width - dx;
-          if (newWidth < 50) newWidth = 50;
-          
-          const newHeight = newWidth / ratio;
-          const newX = elStartPos.x + elStartSize.width - newWidth;
-          const newY = elStartPos.y + elStartSize.height - newHeight;
-
-          onUpdateElement(resizingId, {
-            x: newX,
-            y: newY,
-            width: newWidth,
-            height: newHeight
-          });
-        } else {
+        } else if (resizingHandle === 'nw') {
           let newWidth = elStartSize.width - dx;
           let newHeight = elStartSize.height - dy;
           let newX = elStartPos.x + dx;
@@ -149,7 +182,12 @@ export default function ComicCanvas({
   };
 
   return (
-    <div className="w-full h-full overflow-hidden relative">
+    <div 
+      className="w-full h-full overflow-hidden relative"
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerLeave={handlePointerUp}
+    >
       <div 
         ref={canvasRef}
         onPointerDown={handlePointerDownBg}
@@ -183,8 +221,6 @@ export default function ComicCanvas({
             <div
               key={el.id}
               onPointerDown={(e) => handleElementPointerDown(e, el)}
-              onPointerMove={handlePointerMove}
-              onPointerUp={handlePointerUp}
               className={`absolute cursor-move outline-none touch-none ${isSelected ? 'ring-4 ring-purple-500 ring-offset-2' : ''}`}
               style={{
                 left: el.x,
@@ -246,22 +282,54 @@ export default function ComicCanvas({
                 </div>
               )}
 
-              {/* Resize Handles */}
-              {isSelected && (
+              {/* Resize handles moved to overlay */}
+            </div>
+          );
+        })}
+
+        {/* Resize Handles Overlay (Always on top) */}
+        {selectedElementId && (() => {
+          const el = data.elements.find(e => e.id === selectedElementId);
+          if (!el) return null;
+          return (
+            <div
+              className="absolute pointer-events-none touch-none"
+              style={{
+                left: el.x,
+                top: el.y,
+                width: el.width,
+                height: el.height,
+                zIndex: 9999,
+                transform: `rotate(${el.rotation || 0}deg)`,
+              }}
+            >
+              <div 
+                data-resize-handle="nw"
+                onPointerDown={(e) => handleElementPointerDown(e, el)}
+                className="absolute -top-4 -left-4 w-8 h-8 bg-white border-4 border-purple-500 rounded-full cursor-nw-resize z-50 pointer-events-auto hover:scale-110 transition-transform"
+              />
+              <div 
+                data-resize-handle="se"
+                onPointerDown={(e) => handleElementPointerDown(e, el)}
+                className="absolute -bottom-4 -right-4 w-8 h-8 bg-white border-4 border-purple-500 rounded-full cursor-se-resize z-50 pointer-events-auto hover:scale-110 transition-transform"
+              />
+              {el.type === 'character' && (
                 <>
                   <div 
-                    data-resize-handle="nw"
-                    className="absolute -top-4 -left-4 w-8 h-8 bg-white border-4 border-purple-500 rounded-full cursor-nw-resize z-50 hover:scale-110 transition-transform"
+                    data-resize-handle="ne"
+                    onPointerDown={(e) => handleElementPointerDown(e, el)}
+                    className="absolute -top-4 -right-4 w-8 h-8 bg-white border-4 border-purple-500 rounded-full cursor-ne-resize z-50 pointer-events-auto hover:scale-110 transition-transform"
                   />
                   <div 
-                    data-resize-handle="se"
-                    className="absolute -bottom-4 -right-4 w-8 h-8 bg-white border-4 border-purple-500 rounded-full cursor-se-resize z-50 hover:scale-110 transition-transform"
+                    data-resize-handle="sw"
+                    onPointerDown={(e) => handleElementPointerDown(e, el)}
+                    className="absolute -bottom-4 -left-4 w-8 h-8 bg-white border-4 border-purple-500 rounded-full cursor-sw-resize z-50 pointer-events-auto hover:scale-110 transition-transform"
                   />
                 </>
               )}
             </div>
           );
-        })}
+        })()}
       </div>
     </div>
   );

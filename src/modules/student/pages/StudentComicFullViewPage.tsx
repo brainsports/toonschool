@@ -4,11 +4,15 @@ import { v4 as uuidv4 } from 'uuid';
 import StudentWorkspaceLayout from '../components/layout/StudentWorkspaceLayout'
 import StudentToolPanel from '../components/layout/StudentToolPanel'
 import StudentZoomControl from '../components/layout/StudentZoomControl'
-import { generateSingleComicCut, type ComicGenerationState } from '../services/studentComicService';
+import { generateSingleComicCut, checkCutGenerationStatus, type ComicGenerationState } from '../services/studentComicService';
 import { loadComicProjectData, saveComicProjectData, loadComicCutData, saveComicCutData, type ComicProjectData, type ComicCutEditData, type ComicCutElement } from '../components/editor/utils/comicStorage';
 import type { GeneratedComicScript } from '../services/studentScriptService';
 import { projectStorage } from '../utils/projectStorage';
 import { Sparkles, Loader2, MousePointer2, Layout, Users, MessageSquare, Type, Layers, RefreshCw, Maximize, Undo, Redo } from 'lucide-react';
+import { runGeminiSmokeTest } from '../../../shared/lib/geminiDiagnostics';
+import { getErrorMessageByCode } from '../../../shared/lib/geminiLogger';
+
+const IS_DEBUG_MODE = false; // 관리자/디버그 모드용 플래그 (true시 시간 및 상세 메시지 표시)
 
 import ComicCanvas from '../components/comic-editor/ComicCanvas';
 import CharacterToolPanel from '../components/comic-editor/CharacterToolPanel';
@@ -35,6 +39,27 @@ function ComicCellWrapper({
 }: any) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
+  const [elapsedNow, setElapsedNow] = useState<number>(0);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (genState?.status === 'generating' && genState.startedAt) {
+      interval = setInterval(() => {
+        setElapsedNow(Date.now() - genState.startedAt!);
+      }, 1000);
+    } else {
+      setElapsedNow(0);
+    }
+    return () => clearInterval(interval);
+  }, [genState?.status, genState?.startedAt]);
+
+  const formatTime = (ms: number) => {
+    const totalSeconds = Math.floor(ms / 1000);
+    const m = Math.floor(totalSeconds / 60);
+    const s = totalSeconds % 60;
+    if (m > 0) return `${m}분 ${s}초`;
+    return `${s}초`;
+  };
 
   useEffect(() => {
     const observer = new ResizeObserver((entries) => {
@@ -101,19 +126,50 @@ function ComicCellWrapper({
       )}
 
       {genState?.status === 'generating' && (
-        <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center z-20">
+        <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center z-20 p-4 text-center">
           <Loader2 className="w-10 h-10 text-purple-500 animate-spin mb-3" />
-          <span className="font-bold text-sm text-purple-700">{genState.progress}%</span>
-          <span className="text-xs text-slate-600 mt-1">{genState.message}</span>
+          {/* 학생 화면 표시용 */}
+          <span className="font-bold text-sm text-purple-700">그림을 만들고 있어요</span>
+          
+          {/* 관리자/디버그 모드용 표시 */}
+          {IS_DEBUG_MODE && (
+            <>
+              <span className="font-bold text-xs text-purple-700 opacity-50 mt-1">{cutNumber}번 컷 생성 중 · {formatTime(elapsedNow)} 경과</span>
+              <span className="text-xs text-slate-600 mt-1 break-all">{genState.message}</span>
+            </>
+          )}
         </div>
       )}
-      {genState?.status === 'error' && (
-        <div className="absolute inset-0 bg-red-50/95 flex flex-col items-center justify-center z-20 p-4 text-center backdrop-blur-sm">
-          <span className="text-red-600 font-bold mb-1 text-lg">생성 실패</span>
-          <span className="text-red-500 font-bold mb-3 text-sm">원인: {genState.message}</span>
-          <button onClick={(e) => { e.stopPropagation(); onGenerate(); }} className="px-4 py-2 bg-red-500 text-white hover:bg-red-600 rounded-lg text-sm font-bold shadow-md transition-colors">다시 시도</button>
+      
+      {/* 관리자/디버그 모드용 완료 시간 뱃지 (학생 화면에서는 숨김) */}
+      {IS_DEBUG_MODE && isGenerated && genState?.status === 'success' && genState.elapsedMs && (
+        <div className="absolute bottom-2 right-2 bg-black/60 text-white text-[10px] px-2 py-1 rounded-md z-20 backdrop-blur-sm">
+          {cutNumber}번 컷 생성 완료 · {formatTime(genState.elapsedMs)}
         </div>
       )}
+      {genState?.status === 'error' && (() => {
+        const errorCode = genState.errorCode || '';
+        const userMsg = errorCode
+          ? getErrorMessageByCode(errorCode)
+          : (genState.errorMessage || genState.message || '알 수 없는 오류가 발생했습니다.');
+        const retryLabel =
+          errorCode === 'GEMINI_503' ? '대체 모델로 다시 시도'
+          : errorCode === 'TIMEOUT' || errorCode === 'POLL_TIMEOUT' ? '이 컷만 다시 생성'
+          : '다시 시도';
+        return (
+          <div className="absolute inset-0 bg-red-50/95 flex flex-col items-center justify-center z-20 p-4 text-center backdrop-blur-sm">
+            <span className="text-red-600 font-bold mb-1 text-lg">{cutNumber}번 컷 생성 실패</span>
+            {errorCode && (
+              <span className="text-[10px] bg-red-100 text-red-400 rounded px-2 py-0.5 mb-1 font-mono">{errorCode}</span>
+            )}
+            <span className="text-red-500 font-bold mb-3 text-sm break-all leading-snug">{userMsg}</span>
+            <button
+              onClick={(e) => { e.stopPropagation(); onGenerate(); }}
+              className="px-4 py-2 bg-red-500 text-white hover:bg-red-600 rounded-lg text-sm font-bold shadow-md transition-colors"
+            >{retryLabel}</button>
+          </div>
+        );
+      })()}
 
       {!isSelected && <div className="absolute inset-0 bg-transparent z-50" />}
     </div>
@@ -131,6 +187,27 @@ export default function StudentComicFullViewPage() {
   
   const [cutsData, setCutsData] = useState<Record<number, ComicCutEditData>>({});
   const [genStates, setGenStates] = useState<Record<number, ComicGenerationState>>({});
+  const [genAllState, setGenAllState] = useState<{ isRunning: boolean, completedCount: number, startedAt: number | null, elapsedMs: number }>({
+    isRunning: false, completedCount: 0, startedAt: null, elapsedMs: 0
+  });
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (genAllState.isRunning && genAllState.startedAt) {
+      interval = setInterval(() => {
+        setGenAllState(prev => ({ ...prev, elapsedMs: Date.now() - prev.startedAt! }));
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [genAllState.isRunning, genAllState.startedAt]);
+
+  const formatTime = (ms: number) => {
+    const totalSeconds = Math.floor(ms / 1000);
+    const m = Math.floor(totalSeconds / 60);
+    const s = totalSeconds % 60;
+    if (m > 0) return `${m}분 ${s}초`;
+    return `${s}초`;
+  };
   
   const [selectedCutNumber, setSelectedCutNumber] = useState<number>(1);
   const [activeTool, setActiveTool] = useState<ToolType>('character');
@@ -309,6 +386,70 @@ export default function StudentComicFullViewPage() {
     setCutsData(loadedCuts);
   }, [location.state, navigate]);
 
+  // 진행 중인 대기열 작업 확인 및 정리 (무한 로딩 버그 수정)
+  useEffect(() => {
+    if (!projectData) return;
+
+    const checkJobs = async () => {
+      for (let i = 1; i <= 6; i++) {
+        // 이미 생성 완료된 이미지거나 현재 활성 생성 중이면 건너뜀
+        if (cutsData[i]?.backgroundImageUrl || genStates[i]?.status === 'generating') continue;
+
+        const job = await checkCutGenerationStatus(projectData.projectId, i);
+        if (!job) continue;
+
+        // DB에 queued/processing 상태가 남아있는 경우 무한 로딩 방지 (수동 재시도 유도)
+        if (job.status === 'queued' || job.status === 'processing') {
+          setGenStates(prev => {
+            if (prev[i]?.status === 'error') return prev;
+            return {
+              ...prev,
+              [i]: {
+                status: 'error',
+                progress: 0,
+                message: '이전 생성이 중단되었습니다. 다시 시도해 주세요.',
+                errorMessage: '페이지 새로고침으로 인해 생성 대기열에서 중단되었습니다.'
+              }
+            };
+          });
+        } else if (job.status === 'failed' && genStates[i]?.status !== 'error') {
+          setGenStates(prev => ({
+            ...prev,
+            [i]: {
+              status: 'error',
+              progress: 0,
+              message: '서버 이미지 생성 실패',
+              errorMessage: job.error_message || '알 수 없는 오류'
+            }
+          }));
+        }
+      }
+    };
+
+    checkJobs();
+    
+    // 이전에 있던 setInterval(checkAndPollJobs, 5000) 폴링을 제거하여 
+    // 사용자가 다시 생성 버튼을 누르기 전까지는 백그라운드 무한 재시작이 일어나지 않게 함
+
+  }, [projectData, cutsData]);
+
+  // 긴급 복구 함수 + smoke test (콘솔 테스트용)
+  useEffect(() => {
+    (window as any).clearStaleGenerationState = () => {
+      setGenStates({});
+      console.log('Stale generation states cleared! 모든 임시 생성 상태가 초기화되었습니다.');
+      alert('생성 상태가 초기화되었습니다. 다시 생성을 시도해주세요.');
+    };
+    // Gemini smoke test: window.runGeminiSmokeTest() 로 실행
+    (window as any).runGeminiSmokeTest = runGeminiSmokeTest;
+    console.log('[ToonSchool] 콘솔 명령어: window.runGeminiSmokeTest() — Gemini API 상태 확인');
+    console.log('[ToonSchool] 콘솔 명령어: window.clearStaleGenerationState() — 생성 상태 초기화');
+    return () => {
+      delete (window as any).clearStaleGenerationState;
+      delete (window as any).runGeminiSmokeTest;
+    };
+  }, []);
+
   useEffect(() => {
     // 키보드 삭제
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -465,17 +606,47 @@ export default function StudentComicFullViewPage() {
         }
         setCutsData(prev => ({ ...prev, [cutNumber]: newCutData }));
       }
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      console.error(`Error generating cut ${cutNumber}:`, err);
+      setGenStates(prev => {
+        const current = prev[cutNumber];
+        if (current?.status === 'error') return prev;
+        const errorCode = err.errorCode || 'UNKNOWN';
+        const displayMsg = getErrorMessageByCode(errorCode);
+        return {
+          ...prev,
+          [cutNumber]: {
+            status: 'error',
+            progress: 0,
+            message: displayMsg,
+            errorMessage: displayMsg,
+            errorCode,
+          }
+        };
+      });
+      throw err;
     }
   };
 
   const handleGenerateAll = async () => {
+    setGenAllState({ isRunning: true, completedCount: Object.values(cutsData).filter(c => c.backgroundImageUrl).length, startedAt: Date.now(), elapsedMs: 0 });
+    
     for (let i = 1; i <= 6; i++) {
-      if (!cutsData[i]?.backgroundImageUrl) {
-        await handleGenerateCut(i);
+      if (!cutsData[i]?.backgroundImageUrl && genStates[i]?.status !== 'generating') {
+        try {
+          await handleGenerateCut(i);
+          setGenAllState(prev => ({ ...prev, completedCount: prev.completedCount + 1 }));
+          if (i < 6) {
+            const delay = Math.floor(Math.random() * 1000) + 1500;
+            await new Promise(r => setTimeout(r, delay));
+          }
+        } catch (e) {
+          console.error(`[StudentComicFullViewPage] handleGenerateCut error for cut ${i}`, e);
+          break; // 실패 시 순차 생성 즉시 중단
+        }
       }
     }
+    setGenAllState(prev => ({ ...prev, isRunning: false }));
   };
 
   const handleGenerateDialogues = () => {
@@ -597,43 +768,81 @@ export default function StudentComicFullViewPage() {
     cutsData[num]?.elements.some(el => el.type === 'speechBubble')
   );
 
+  const hasActiveGenerations = Object.values(genStates).some(state => state.status === 'generating');
+
   const actionButtons = (
-    <>
-      <button
-        onClick={handleGenerateAll}
-        disabled={allBackgroundsGenerated}
-        className={`btn-student btn-student-md ${
-          allBackgroundsGenerated
-            ? 'bg-[#E5E7EB] border-2 border-[#D1D5DB] text-[#9CA3AF] shadow-none cursor-not-allowed'
-            : 'btn-student-secondary'
-        }`}
-      >
-        <Sparkles className={`w-5 h-5 ${allBackgroundsGenerated ? 'text-[#9CA3AF]' : 'text-purple-500'}`} />
-        <span className={allBackgroundsGenerated ? 'text-[#9CA3AF]' : 'text-purple-700'}>
-          {allBackgroundsGenerated ? '배경 생성 완료' : '배경 모두 생성'}
-        </span>
-      </button>
-      <button
-        onClick={handleGenerateDialogues}
-        disabled={allDialoguesGenerated}
-        className={`btn-student btn-student-md ${
-          allDialoguesGenerated
-            ? 'bg-[#E5E7EB] border-2 border-[#D1D5DB] text-[#9CA3AF] shadow-none cursor-not-allowed'
-            : 'btn-student-secondary'
-        }`}
-      >
-        <MessageSquare className={`w-5 h-5 ${allDialoguesGenerated ? 'text-[#9CA3AF]' : 'text-indigo-500'}`} />
-        <span className={allDialoguesGenerated ? 'text-[#9CA3AF]' : 'text-indigo-700'}>
-          {allDialoguesGenerated ? '대사 생성 완료' : '대사 생성'}
-        </span>
-      </button>
-      <button
-        onClick={handleNext}
-        className="btn-student btn-student-primary btn-student-md"
-      >
-        <span>단원 정리 →</span>
-      </button>
-    </>
+    <div className="flex flex-col items-end gap-1.5 pr-8">
+      <div className="flex flex-wrap items-center gap-3 justify-end">
+        <button
+          onClick={handleGenerateAll}
+          disabled={allBackgroundsGenerated || genAllState.isRunning}
+          className={`btn-student btn-student-md ${
+            allBackgroundsGenerated
+              ? 'bg-[#E5E7EB] border-2 border-[#D1D5DB] text-[#9CA3AF] shadow-none cursor-not-allowed'
+              : 'btn-student-secondary'
+          }`}
+        >
+          {genAllState.isRunning ? (
+            <Loader2 className="w-5 h-5 text-purple-500 animate-spin" />
+          ) : (
+            <Sparkles className={`w-5 h-5 ${allBackgroundsGenerated ? 'text-[#9CA3AF]' : 'text-purple-500'}`} />
+          )}
+          <span className={allBackgroundsGenerated ? 'text-[#9CA3AF]' : 'text-purple-700'}>
+            {/* 학생 화면 표시용 */}
+            {genAllState.isRunning 
+              ? `${genAllState.completedCount}/6 완료` 
+              : allBackgroundsGenerated ? '배경 생성 완료' : '배경 모두 생성'}
+            
+            {/* 관리자/디버그 모드용 표시 */}
+            {IS_DEBUG_MODE && (
+              <div className="text-xs opacity-50 mt-1">
+                {genAllState.isRunning 
+                  ? `${genAllState.completedCount}/6 완료 · 누적 ${formatTime(genAllState.elapsedMs)}` 
+                  : allBackgroundsGenerated ? '배경 생성 완료' : '배경 모두 생성'}
+              </div>
+            )}
+          </span>
+        </button>
+
+        <button
+          onClick={handleGenerateDialogues}
+          disabled={allDialoguesGenerated}
+          className={`btn-student btn-student-md ${
+            allDialoguesGenerated
+              ? 'bg-[#E5E7EB] border-2 border-[#D1D5DB] text-[#9CA3AF] shadow-none cursor-not-allowed'
+              : 'btn-student-secondary'
+          }`}
+        >
+          <MessageSquare className={`w-5 h-5 ${allDialoguesGenerated ? 'text-[#9CA3AF]' : 'text-indigo-500'}`} />
+          <span className={allDialoguesGenerated ? 'text-[#9CA3AF]' : 'text-indigo-700'}>
+            {allDialoguesGenerated ? '대사 생성 완료' : '대사 생성'}
+          </span>
+        </button>
+
+        <button
+          onClick={handleNext}
+          className="btn-student btn-student-primary btn-student-md"
+        >
+          <span>단원 정리 →</span>
+        </button>
+      </div>
+    </div>
+  );
+
+  const activePanelWidth = 72 + (activeTool !== 'select' ? 300 : 0);
+  const centerOffset = activePanelWidth / 2;
+
+  const centerContent = !allBackgroundsGenerated && !genAllState.isRunning && (
+    <div 
+      className="px-4 py-1.5 bg-purple-50 text-purple-600 rounded-full font-bold text-[13px] border border-purple-100 shadow-sm flex items-center gap-2 transition-transform duration-300"
+      style={{ transform: `translateX(${centerOffset}px)` }}
+    >
+      <span className="relative flex h-2.5 w-2.5">
+        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
+        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-purple-500"></span>
+      </span>
+      만화제작은 최대 15분이 소요될수 있습니다
+    </div>
   );
 
   return (
@@ -645,8 +854,14 @@ export default function StudentComicFullViewPage() {
       subtitle={`왼쪽 도구를 사용해 선택한 컷(${selectedCutNumber}컷)을 편집하세요.`}
       onBack={() => navigate('/student/front-cover', { state: { ...selectionData, projectId } })}
       actionButtons={actionButtons}
+      centerContent={centerContent}
     >
       <div className="flex flex-col w-full h-full relative">
+        {hasActiveGenerations && (
+          <div className="bg-purple-100 text-purple-800 text-sm font-bold text-center py-2 px-4 shadow-sm z-50 rounded-b-lg">
+            현재 사용자가 많아 순서대로 만들고 있어요. 화면을 닫아도 작업은 계속 진행됩니다.
+          </div>
+        )}
 
 
         {/* 하단 패널 및 캔버스 영역 */}
@@ -707,6 +922,7 @@ export default function StudentComicFullViewPage() {
                   selectedElementId={selectedElementId}
                   elements={currentCutData?.elements || []}
                   onUpdateElement={handleUpdateElement}
+                  projectId={projectData?.projectId}
                 />
               )}
               {activeTool === 'script' && (

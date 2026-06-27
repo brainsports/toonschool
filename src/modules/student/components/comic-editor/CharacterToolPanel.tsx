@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { ComicCutElement } from '../editor/utils/comicStorage';
 
 interface Props {
@@ -6,11 +6,37 @@ interface Props {
   selectedElementId?: string | null;
   elements?: ComicCutElement[];
   onUpdateElement?: (id: string, updates: Partial<ComicCutElement>) => void;
+  projectId?: string;
 }
 
-export default function CharacterToolPanel({ onAddElement, selectedElementId, elements, onUpdateElement }: Props) {
+export default function CharacterToolPanel({ onAddElement, selectedElementId, elements, onUpdateElement, projectId }: Props) {
   const [cropMode, setCropMode] = useState(false);
   const [expandedGroup, setExpandedGroup] = useState<string>('hana');
+  const [selectedCharacterId, setSelectedCharacterId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (projectId) {
+      const saved = localStorage.getItem(`toonschool_selected_character_${projectId}`);
+      if (saved) {
+        setSelectedCharacterId(saved);
+        setExpandedGroup(saved);
+      }
+    }
+  }, [projectId]);
+
+  const handleSelectCharacter = (id: string | null) => {
+    setSelectedCharacterId(id);
+    if (id) {
+      setExpandedGroup(id);
+      if (projectId) {
+        localStorage.setItem(`toonschool_selected_character_${projectId}`, id);
+      }
+    } else {
+      if (projectId) {
+        localStorage.removeItem(`toonschool_selected_character_${projectId}`);
+      }
+    }
+  };
 
   const characterGroups = [
     {
@@ -58,6 +84,12 @@ export default function CharacterToolPanel({ onAddElement, selectedElementId, el
         { id: 'seoa-exp-cheer', name: '응원', src: '/images/toonschool/characters/v2/expressions/seoa/seoa-cheer.png', width: 250, height: 250 },
       ]
     }
+  ];
+
+  const selectableCharacters = [
+    { id: 'hana', name: '하나 선생님', img: '/images/toonschool/characters/v2/expressions/hana/hana-smile.png' },
+    { id: 'doyoon', name: '도윤', img: '/images/toonschool/characters/v2/expressions/doyoon/doyoon-smile.png' },
+    { id: 'seoa', name: '서아', img: '/images/toonschool/characters/v2/expressions/seoa/seoa-smile.png' }
   ];
 
   const handleAddCharacter = (img: typeof characterGroups[0]['images'][0]) => {
@@ -176,27 +208,68 @@ export default function CharacterToolPanel({ onAddElement, selectedElementId, el
     );
   }
 
+  if (!selectedCharacterId) {
+    return (
+      <div className="flex flex-col h-full text-slate-200">
+        <div className="p-4 border-b border-white/10 shrink-0">
+          <h3 className="text-sm font-bold text-slate-400 mb-1">캐릭터 선택</h3>
+          <p className="text-[11px] text-slate-500">만화에 등장할 캐릭터를 선택해주세요.</p>
+        </div>
+        
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          <div className="grid grid-cols-1 gap-4 w-full">
+            {selectableCharacters.map(char => (
+              <button
+                key={char.id}
+                onClick={() => handleSelectCharacter(char.id)}
+                className="flex items-center p-4 bg-slate-800 rounded-xl border border-white/10 hover:bg-slate-700 hover:border-purple-500 hover:shadow-lg hover:shadow-purple-500/20 transition-all text-left group"
+              >
+                <div className="w-16 h-16 rounded-full bg-slate-900/50 flex items-center justify-center mr-4 shrink-0 overflow-hidden group-hover:scale-110 transition-transform">
+                  <img src={char.img} alt={char.name} className="h-full object-contain drop-shadow-md" />
+                </div>
+                <div>
+                  <span className="block text-lg font-bold text-slate-200">{char.name}</span>
+                  <span className="block text-[11px] text-slate-400 mt-1">선택하기</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const selectedGroup = characterGroups.find(g => g.id === selectedCharacterId);
+
   return (
     <div className="flex flex-col h-full text-slate-200">
       <div className="p-4 border-b border-white/10 shrink-0">
-        <h3 className="text-sm font-bold text-slate-400 mb-1">캐릭터 추가</h3>
+        <div className="flex items-center justify-between mb-1">
+          <h3 className="text-sm font-bold text-slate-400">캐릭터 추가</h3>
+          <button 
+            onClick={() => handleSelectCharacter(null)}
+            className="text-[10px] font-bold px-2.5 py-1 bg-slate-800 text-slate-300 border border-slate-600 rounded-md hover:bg-slate-700 hover:text-white transition-colors flex items-center gap-1"
+          >
+            <span>🔄</span> 캐릭터 재선택
+          </button>
+        </div>
         <p className="text-[11px] text-slate-500">클릭하거나 컷으로 드래그하여 추가합니다.</p>
       </div>
       
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {characterGroups.map(group => (
-          <div key={group.id} className="bg-slate-900/50 rounded-xl border border-white/10 overflow-hidden">
+        {selectedGroup && (
+          <div key={selectedGroup.id} className="bg-slate-900/50 rounded-xl border border-white/10 overflow-hidden">
             <button 
-              onClick={() => setExpandedGroup(expandedGroup === group.id ? '' : group.id)}
+              onClick={() => setExpandedGroup(expandedGroup === selectedGroup.id ? '' : selectedGroup.id)}
               className="w-full px-4 py-3 flex items-center justify-between bg-slate-800 hover:bg-slate-700 transition-colors"
             >
-              <span className="font-bold text-sm text-slate-300">{group.name}</span>
-              <span className="text-slate-500 text-xs">{expandedGroup === group.id ? '▼' : '▶'}</span>
+              <span className="font-bold text-sm text-slate-300">{selectedGroup.name}</span>
+              <span className="text-slate-500 text-xs">{expandedGroup === selectedGroup.id ? '▼' : '▶'}</span>
             </button>
             
-            {expandedGroup === group.id && (
+            {expandedGroup === selectedGroup.id && (
               <div className="p-3 grid grid-cols-2 gap-3 bg-slate-800/30">
-                {group.images.map(img => (
+                {selectedGroup.images.map(img => (
                   <div
                     key={img.id}
                     draggable
@@ -217,7 +290,7 @@ export default function CharacterToolPanel({ onAddElement, selectedElementId, el
               </div>
             )}
           </div>
-        ))}
+        )}
       </div>
 
       <div className="p-4 border-t border-white/10 shrink-0">
