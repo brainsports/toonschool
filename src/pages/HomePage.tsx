@@ -1,6 +1,22 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 
+const worldStoryCards = [
+    { id: 0, title: '역사 이야기', desc: '옛날 이야기에서 배움을 찾아요!', image: '/images/main/main-img-6.png' },
+    { id: 1, title: '최신 이야기', desc: '오늘의 세상과 개념을 연결해요!', image: '/images/main/main-img-7.png' },
+    { id: 2, title: '생활 발견', desc: '내 주변에서 배움을 발견해요!', image: '/images/main/main-img-8.png' },
+];
+
 export default function HomePage() {
+    const [currentSlide, setCurrentSlide] = useState(0);
+
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setCurrentSlide((prev) => (prev + 1) % worldStoryCards.length);
+        }, 3000);
+        return () => clearInterval(timer);
+    }, []);
+
     return (
         <div className="text-on-surface smooth-scroll font-body-md overflow-x-hidden bg-surface-dim">
             
@@ -160,12 +176,41 @@ export default function HomePage() {
 <section className="py-24 bg-surface-dim">
 <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center gap-16">
 <div className="w-full md:w-1/2 flex justify-center">
-<div className="bg-white rounded-lg shadow-lg w-full max-w-sm aspect-[1/1.4] p-4 border border-gray-100 flex flex-col relative overflow-hidden">
-<div className="slideshow-container">
-<img alt="인기 이야기" className="slide" src="/images/main/main-img-6.png"/>
-<img alt="최신 이야기" className="slide" src="/images/main/main-img-7.png"/>
-<img alt="생활 발견" className="slide" src="/images/main/main-img-8.png"/>
-</div>
+<div className="bg-white rounded-lg shadow-lg w-full max-w-sm aspect-[1/1.4] p-6 border border-gray-100 flex flex-col relative overflow-hidden group">
+    {worldStoryCards.map((card, index) => (
+        <div 
+            key={card.id}
+            className={`absolute inset-0 p-4 pb-12 flex flex-col items-center justify-center transition-all duration-700 ease-in-out ${
+                index === currentSlide 
+                    ? 'opacity-100 translate-y-0' 
+                    : 'opacity-0 translate-y-8 pointer-events-none'
+            }`}
+        >
+            <div className="w-full flex-1 overflow-hidden rounded-lg mb-4 shadow-sm border border-gray-100">
+                <img alt={card.title} className="w-full h-full object-cover" src={card.image}/>
+            </div>
+            <div className="text-center w-full px-2">
+                <h3 className="font-bold text-xl text-gray-900 mb-1">{card.title}</h3>
+                <p className="text-gray-600 text-sm">{card.desc}</p>
+            </div>
+        </div>
+    ))}
+
+    {/* Dots Indicator */}
+    <div className="absolute bottom-4 left-0 w-full flex justify-center items-center gap-2 z-10">
+        {worldStoryCards.map((card, index) => (
+            <button
+                key={card.id}
+                onClick={() => setCurrentSlide(index)}
+                className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
+                    index === currentSlide 
+                        ? 'bg-primary w-6' 
+                        : 'bg-gray-300 hover:bg-gray-400'
+                }`}
+                aria-label={`${index + 1}번째 슬라이드로 이동`}
+            />
+        ))}
+    </div>
 </div>
 </div>
 <div className="w-full md:w-1/2 space-y-6">
