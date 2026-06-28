@@ -96,7 +96,7 @@ export default function StudentScriptEditor({ selectionData, projectId, onPrev, 
 
     // 1단계: 6컷 대본 생성
     try {
-      currentScript = await generateScript(requestPayload, setErrorMsg);
+      currentScript = await generateScript(requestPayload);
       currentScript.generationStatus = { script: 'success', coverContent: 'idle' };
       setScriptData(currentScript);
       projectStorage.saveScript(projectId, currentScript);
