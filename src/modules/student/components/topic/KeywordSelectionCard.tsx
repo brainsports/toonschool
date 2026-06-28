@@ -75,7 +75,7 @@ export default function KeywordSelectionCard({
               <Wand2 className={`w-6 h-6 mr-3 stroke-[3] ${isLoading ? 'animate-spin' : 'animate-bounce-gentle'}`} />
               <span>
                 {isLoading 
-                  ? '키워드를 만들고 있어요...' 
+                  ? '키워드 만드는 중...' 
                   : keywords.length === 0 
                     ? '키워드 추천 ✨' 
                     : '키워드 2개 더 만들기 ✨'}

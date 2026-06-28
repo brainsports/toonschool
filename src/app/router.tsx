@@ -37,8 +37,8 @@ import SharedComicViewerPage from '../modules/student/pages/SharedComicViewerPag
 export default function AppRouter() {
   return (
     <Routes>
-      <Route path="/" element={<Layout />}>
-        <Route index element={<HomePage />} />
+      <Route path="/" element={<HomePage />} />
+      <Route element={<Layout />}>
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="login" element={<Login />} />
         <Route path="signup" element={<Signup />} />

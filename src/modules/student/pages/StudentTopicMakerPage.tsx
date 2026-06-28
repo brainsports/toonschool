@@ -4,14 +4,13 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import StudentWorkspaceLayout from '../components/layout/StudentWorkspaceLayout'
 import TopicStepTitle from '../components/topic/TopicStepTitle'
 import StoryInputCard from '../components/topic/StoryInputCard'
-import AiMagicButton from '../components/topic/AiMagicButton'
 import AiRecommendationCard from '../components/topic/AiRecommendationCard'
 
 import KeywordSelectionCard from '../components/topic/KeywordSelectionCard'
 import type { StudentUnitSelection } from '../types/studentCurriculum'
-import type { TopicRecommendation, TopicGenerationState, KeywordItem } from '../types/studentTopic'
-import { generateTopicRecommendations, generateKeywords } from '../services/studentTopicService'
-import { Sparkles, PenTool, ArrowLeft } from 'lucide-react'
+import type { TopicRecommendation, TopicGenerationState, KeywordItem, CurriculumContext } from '../types/studentTopic'
+import { generateTopicRecommendations, generateKeywords, fetchCurriculumContext } from '../services/studentTopicService'
+import { Sparkles, PenTool, ArrowLeft, Wand2 } from 'lucide-react'
 import { projectStorage } from '../utils/projectStorage'
 import { showToast } from '../utils/toast'
 
@@ -25,17 +24,20 @@ export default function StudentTopicMakerPage() {
   const [extraRequest, setExtraRequest] = useState('')
   const [selection, setSelection] = useState<StudentUnitSelection | null>(null)
 
-  const MAX_RECOMMENDATIONS = 6
-  const RECOMMENDATIONS_PER_REQUEST = 2
+  const MAX_RECOMMENDED_TOPICS = 10
+  const TOPICS_PER_GENERATION = 2
 
   const [topics, setTopics] = useState<TopicRecommendation[]>([])
   const [genState, setGenState] = useState<TopicGenerationState>('idle')
   const [isGeneratingMore, setIsGeneratingMore] = useState(false)
+  const [curriculumContext, setCurriculumContext] = useState<CurriculumContext | undefined>()
 
   // 키워드 추천 관련 상태
   const [recommendedKeywords, setRecommendedKeywords] = useState<KeywordItem[]>([])
   const [selectedKeywords, setSelectedKeywords] = useState<string[]>([])
   const [isKeywordLoading, setIsKeywordLoading] = useState(false)
+
+  const isMaxTopicsReached = topics.length >= MAX_RECOMMENDED_TOPICS;
 
   // 1. 단원 선택 정보 가져오기 (projectStorage 우선, 그다음 location.state, 마지막 localStorage)
   useEffect(() => {
@@ -66,6 +68,15 @@ export default function StudentTopicMakerPage() {
     setSelection(currentSelection || null)
   }, [location.state, projectId])
 
+  // 1-1. 단원 정보로 교과 컨텍스트 가져오기
+  useEffect(() => {
+    if (selection) {
+      fetchCurriculumContext(selection.majorUnitId, selection.middleUnitId)
+        .then(ctx => setCurriculumContext(ctx))
+        .catch(console.error)
+    }
+  }, [selection])
+
   // 이전 단계 데이터 복원
   useEffect(() => {
     if (projectId && topics.length === 0) {
@@ -85,6 +96,13 @@ export default function StudentTopicMakerPage() {
 
   const canProceed = selectedTopicId !== null
 
+  // 처음 AI 모드 진입 시 자동 키워드 생성
+  useEffect(() => {
+    if (creationMode === 'ai' && selection && recommendedKeywords.length === 0 && !isKeywordLoading) {
+      handleGenerateKeywords()
+    }
+  }, [creationMode, selection])
+
   // 키워드 직접 생성 (수동)
   const handleGenerateKeywords = async () => {
     if (!selection) return
@@ -95,7 +113,8 @@ export default function StudentTopicMakerPage() {
       majorUnitName: selection.majorUnitName || '',
       middleUnitName: selection.middleUnitName || '',
       existingKeywords: recommendedKeywords.map(k => k.word),
-      count: 2
+      count: 2,
+      curriculumContext
     }
     try {
       const keywords = await generateKeywords(request)
@@ -110,7 +129,6 @@ export default function StudentTopicMakerPage() {
       })
     } catch (error) {
       console.error('키워드 생성 실패:', error)
-      alert('키워드를 만들지 못했습니다. 다시 시도해 주세요.')
     } finally {
       setIsKeywordLoading(false)
     }
@@ -128,30 +146,17 @@ export default function StudentTopicMakerPage() {
     }
   }
 
-  // 2. AI 추천 실행 함수
-  const handleGenerateTopics = async (isLoadMore = false) => {
+  // 2. AI 추천 실행 함수 (추가 생성)
+  const handleGenerateMoreTopics = async () => {
     if (!selection) return
     if (isGeneratingMore || genState === 'loading') return
-
-    if (!isLoadMore && topics.length > 0) {
-      if (!window.confirm('현재 추천 주제가 새로운 이야기로 바뀝니다. 다시 받을까요?')) {
-        return
-      }
-    }
-
-    if (isLoadMore && topics.length >= MAX_RECOMMENDATIONS) {
-      return
-    }
+    if (isMaxTopicsReached) return
 
     const previousTitles = topics.map(t => t.title)
     const previousIncidents = topics.map(t => t.incident).filter(Boolean)
     const previousTypes = topics.map(t => t.storyType).filter(Boolean)
 
-    if (isLoadMore) {
-      setIsGeneratingMore(true)
-    } else {
-      setGenState('loading')
-    }
+    setIsGeneratingMore(true)
 
     const request = {
       gradeName: selection.gradeName || '',
@@ -164,29 +169,63 @@ export default function StudentTopicMakerPage() {
       previousTitles,
       previousIncidents,
       previousTypes,
-      count: RECOMMENDATIONS_PER_REQUEST
+      count: TOPICS_PER_GENERATION,
+      curriculumContext
     }
 
     try {
       const generatedTopics = await generateTopicRecommendations(request)
-      
-      if (isLoadMore) {
-        setTopics(prev => [...prev, ...generatedTopics])
-      } else {
-        setTopics(generatedTopics)
-        setSelectedTopicId(null)
+      setTopics(prev => {
+        const combined = [...prev, ...generatedTopics]
+        return combined.slice(0, MAX_RECOMMENDED_TOPICS)
+      })
+    } catch (error) {
+      console.error('AI 추천 주제 추가 생성 중 오류 발생:', error)
+      alert('새로운 추천 주제를 만들지 못했습니다. 다시 시도해 주세요.')
+    } finally {
+      setIsGeneratingMore(false)
+    }
+  }
+
+  // 2-1. AI 추천 실행 함수 (다시 받기 / 초기 생성)
+  const handleRegenerateTopics = async () => {
+    if (!selection) return
+    if (isGeneratingMore || genState === 'loading') return
+    if (isMaxTopicsReached) return
+
+    if (topics.length > 0) {
+      if (!window.confirm('현재 추천 주제가 새로운 이야기로 바뀝니다. 다시 받을까요?')) {
+        return
       }
+    }
+
+    setTopics([])
+    setSelectedTopicId(null)
+    setGenState('loading')
+
+    const request = {
+      gradeName: selection.gradeName || '',
+      subjectName: selection.subjectName || '',
+      majorUnitName: selection.majorUnitName || '',
+      middleUnitName: selection.middleUnitName || '',
+      extraRequest: extraRequest.trim() || undefined,
+      selectedKeywords,
+      learningTopicId: selection.middleUnitId || null,
+      previousTitles: [],
+      previousIncidents: [],
+      previousTypes: [],
+      count: TOPICS_PER_GENERATION,
+      curriculumContext
+    }
+
+    try {
+      const generatedTopics = await generateTopicRecommendations(request)
+      setTopics(generatedTopics)
       setGenState('success')
     } catch (error) {
       console.error('AI 추천 주제 생성 중 오류 발생:', error)
-      alert(isLoadMore ? '새로운 추천 주제를 만들지 못했습니다. 다시 시도해 주세요.' : '추천 주제를 만들지 못했습니다. 다시 시도해 주세요.')
-      if (!isLoadMore && topics.length === 0) {
-        setGenState('idle')
-      }
-    } finally {
-      if (isLoadMore) {
-        setIsGeneratingMore(false)
-      }
+      alert('추천 주제를 만들지 못했습니다. 다시 시도해 주세요.')
+      setGenState('idle')
     }
   }
 
@@ -327,17 +366,53 @@ export default function StudentTopicMakerPage() {
                       onSelectTopic={setSelectedTopicId}
                       genState={genState}
                       isGeneratingMore={isGeneratingMore}
-                      totalCount={topics.length}
-                      onLoadMore={() => handleGenerateTopics(true)}
+                      totalCount={0}
+                      onLoadMore={() => {}}
                     />
+                    {topics.length > 0 && !isMaxTopicsReached && (
+                      <div className="text-center pt-8">
+                        <button
+                          type="button"
+                          onClick={handleGenerateMoreTopics}
+                          disabled={isGeneratingMore || genState === 'loading'}
+                          className={`btn-primary-action px-8 py-4 font-jua text-base md:text-lg min-h-[56px] transition-all ${isGeneratingMore || genState === 'loading' ? 'opacity-70 cursor-not-allowed bg-[#e5e7eb] text-[#8f95a6]' : ''}`}
+                        >
+                          <span>{isGeneratingMore ? '새로운 주제 2개를 만들고 있어요...' : '추천 주제 2개 더 만들기 ✨'}</span>
+                        </button>
+                      </div>
+                    )}
+                    {isMaxTopicsReached && (
+                      <div className="text-center pt-8">
+                        <p className="text-[#626776] font-jua text-lg">추천 주제 10개를 모두 만들었어요</p>
+                      </div>
+                    )}
                   </div>
                 )}
 
-                <AiMagicButton
-                  genState={genState}
-                  disabled={genState === 'loading' || isGeneratingMore || !selection || selectedKeywords.length < 2}
-                  onClick={() => handleGenerateTopics(false)}
-                />
+                <div className="flex flex-col items-center gap-2 mt-2">
+                  <button
+                    disabled={genState === 'loading' || isGeneratingMore || !selection || selectedKeywords.length < 2 || isMaxTopicsReached}
+                    onClick={handleRegenerateTopics}
+                    className="btn-primary-action !bg-[#6366F1] hover:!bg-[#4F46E5] !text-white flex items-center justify-center w-full max-w-[320px] min-w-[260px] py-3 md:py-4 text-xl font-jua shadow-md transition-all disabled:opacity-70 disabled:cursor-not-allowed"
+                    style={isMaxTopicsReached ? {
+                      opacity: 0.45,
+                      cursor: 'not-allowed',
+                      boxShadow: 'none'
+                    } : {}}
+                  >
+                    <Wand2 className={`w-6 h-6 mr-3 stroke-[3] ${genState === 'loading' ? 'animate-spin' : 'animate-bounce-gentle'}`} />
+                    <span>
+                      {genState === 'loading' 
+                        ? '추천 주제를 만들고 있어요...' 
+                        : genState === 'idle' 
+                          ? '이야기 추천 ✨' 
+                          : '새로운 이야기로 다시 받기 🔄'}
+                    </span>
+                  </button>
+                  {isMaxTopicsReached && (
+                    <p className="text-sm text-[#626776] font-medium mt-1">추천 주제 10개를 모두 만들었어요. 마음에 드는 주제를 골라 대본 만들기로 넘어가세요.</p>
+                  )}
+                </div>
               </div>
             )}
 
@@ -351,8 +426,8 @@ export default function StudentTopicMakerPage() {
                 <StoryInputCard
                   extraRequest={extraRequest}
                   onExtraRequestChange={setExtraRequest}
-                  onFillExample={() => handleGenerateTopics(false)}
-                  disabled={genState === 'loading' || isGeneratingMore}
+                  onFillExample={() => handleRegenerateTopics()}
+                  disabled={genState === 'loading' || isGeneratingMore || isMaxTopicsReached}
                   loading={genState === 'loading'}
                 />
                 
@@ -371,9 +446,27 @@ export default function StudentTopicMakerPage() {
                       onSelectTopic={setSelectedTopicId}
                       genState={genState}
                       isGeneratingMore={isGeneratingMore}
-                      totalCount={topics.length}
-                      onLoadMore={() => handleGenerateTopics(true)}
+                      totalCount={0}
+                      onLoadMore={() => {}}
                     />
+                    {topics.length > 0 && !isMaxTopicsReached && (
+                      <div className="text-center pt-8">
+                        <button
+                          type="button"
+                          onClick={handleGenerateMoreTopics}
+                          disabled={isGeneratingMore || genState === 'loading'}
+                          className={`btn-primary-action px-8 py-4 font-jua text-base md:text-lg min-h-[56px] transition-all ${isGeneratingMore || genState === 'loading' ? 'opacity-70 cursor-not-allowed bg-[#e5e7eb] text-[#8f95a6]' : ''}`}
+                        >
+                          <span>{isGeneratingMore ? '새로운 주제 2개를 만들고 있어요...' : '추천 주제 2개 더 만들기 ✨'}</span>
+                        </button>
+                      </div>
+                    )}
+                    {isMaxTopicsReached && (
+                      <div className="text-center pt-8">
+                        <p className="text-[#626776] font-jua text-lg">추천 주제 10개를 모두 만들었어요</p>
+                        <p className="text-sm text-[#626776] font-medium mt-2">마음에 드는 주제를 골라 대본 만들기로 넘어가세요.</p>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

@@ -1,5 +1,6 @@
 import { supabase } from '../../../shared/lib/supabase'
 import { geminiClient } from '../../../shared/lib/gemini'
+import { TEXT_GENERATION_MODEL, TEXT_FALLBACK_MODEL } from '../../../config/models'
 
 export interface ScriptDialogue {
   speaker: string;
@@ -55,6 +56,7 @@ export interface ScriptGenerationRequest {
   problem: string;
   resolutionDirection: string;
   learningConnection: string;
+  onStatusUpdate?: (msg: string) => void;
 }
 
 export const generateScript = async (
@@ -146,73 +148,103 @@ export const generateScript = async (
 }
 `;
 
-  const maxRetries = 1;
-  let attempt = 0;
+  const modelsToTry = [TEXT_GENERATION_MODEL, TEXT_FALLBACK_MODEL];
+  
+  for (let i = 0; i < modelsToTry.length; i++) {
+    const model = modelsToTry[i];
+    if (!model) continue;
+    
+    let attempt = 0;
+    const maxRetries = 1;
 
-  while (attempt <= maxRetries) {
-    try {
-      const responseText = await geminiClient.generateText(prompt);
-      const cleanedText = responseText.replace(/```json/gi, '').replace(/```/g, '').trim();
-      
-      if (cleanedText.includes('API Key가 설정되지 않았습니다') || cleanedText.includes('오류가 발생했습니다')) {
-        throw new Error(cleanedText);
-      }
-
-      const parsedData = JSON.parse(cleanedText) as GeneratedComicScript;
-      parsedData.learningTopicId = request.learningTopicId; // API 응답에 누락될 수 있으므로 직접 세팅
-
-      if (!parsedData.cuts || parsedData.cuts.length !== 6) {
-        throw new Error('6컷이 아닙니다.');
-      }
-
-
-      let hanaCount = 0;
-
-      parsedData.cuts.forEach((cut, index) => {
-        if (cut.cutNumber !== index + 1) throw new Error('컷 번호가 올바르지 않습니다.');
-        if (!cut.scene) throw new Error('장면 설명이 없습니다.');
-        if (!cut.characters || cut.characters.length === 0) throw new Error('등장인물이 없습니다.');
-        if (!cut.dialogues || cut.dialogues.length === 0) throw new Error('대사가 없습니다.');
+    while (attempt <= maxRetries) {
+      try {
+        const responseText = await geminiClient.generateTextWithModel(prompt, model);
+        const cleanedText = responseText.replace(/```json/gi, '').replace(/```/g, '').trim();
         
-        cut.characters = cut.characters.map(char => {
-          if (char.toLowerCase() === 'hana' || char.includes('하나')) return '하나 선생님';
-          if (char.toLowerCase() === 'doyoon' || char.includes('도윤')) return '도윤';
-          if (char.toLowerCase() === 'seoa' || char.includes('서아')) return '서아';
-          return char;
-        });
+        if (cleanedText.includes('API Key가 설정되지 않았습니다') || cleanedText.includes('오류가 발생했습니다')) {
+          throw new Error(cleanedText);
+        }
 
-        cut.dialogues.forEach(dialogue => {
-          if (dialogue.speaker.toLowerCase() === 'hana' || dialogue.speaker.includes('하나')) dialogue.speaker = '하나 선생님';
-          if (dialogue.speaker.toLowerCase() === 'doyoon' || dialogue.speaker.includes('도윤')) dialogue.speaker = '도윤';
-          if (dialogue.speaker.toLowerCase() === 'seoa' || dialogue.speaker.includes('서아')) dialogue.speaker = '서아';
+        const parsedData = JSON.parse(cleanedText) as GeneratedComicScript;
+        parsedData.learningTopicId = request.learningTopicId;
+
+        if (!parsedData.cuts || parsedData.cuts.length !== 6) {
+          throw new Error('6컷이 아닙니다.');
+        }
+
+        let hanaCount = 0;
+
+        parsedData.cuts.forEach((cut, index) => {
+          if (cut.cutNumber !== index + 1) throw new Error('컷 번호가 올바르지 않습니다.');
+          if (!cut.scene) throw new Error('장면 설명이 없습니다.');
+          if (!cut.characters || cut.characters.length === 0) throw new Error('등장인물이 없습니다.');
+          if (!cut.dialogues || cut.dialogues.length === 0) throw new Error('대사가 없습니다.');
           
-          if (Array.from(dialogue.text).length > 20) {
-            dialogue.text = Array.from(dialogue.text).slice(0, 20).join('');
+          cut.characters = cut.characters.map(char => {
+            if (char.toLowerCase() === 'hana' || char.includes('하나')) return '하나 선생님';
+            if (char.toLowerCase() === 'doyoon' || char.includes('도윤')) return '도윤';
+            if (char.toLowerCase() === 'seoa' || char.includes('서아')) return '서아';
+            return char;
+          });
+
+          cut.dialogues.forEach(dialogue => {
+            if (dialogue.speaker.toLowerCase() === 'hana' || dialogue.speaker.includes('하나')) dialogue.speaker = '하나 선생님';
+            if (dialogue.speaker.toLowerCase() === 'doyoon' || dialogue.speaker.includes('도윤')) dialogue.speaker = '도윤';
+            if (dialogue.speaker.toLowerCase() === 'seoa' || dialogue.speaker.includes('서아')) dialogue.speaker = '서아';
+            
+            if (Array.from(dialogue.text).length > 20) {
+              dialogue.text = Array.from(dialogue.text).slice(0, 20).join('');
+            }
+          });
+
+          if (cut.characters.includes('하나 선생님')) {
+            hanaCount++;
           }
         });
 
-        if (cut.characters.includes('하나 선생님')) {
-          hanaCount++;
+        if (hanaCount < 2) {
+          throw new Error('하나 선생님이 최소 2개 컷에 등장해야 합니다.');
         }
-      });
 
-      if (hanaCount < 2) {
-        throw new Error('하나 선생님이 최소 2개 컷에 등장해야 합니다.');
+        return parsedData;
+
+      } catch (error: any) {
+        attempt++;
+        const status = error.httpStatus;
+        
+        console.warn(`대본 생성 실패 (모델: ${model}, 시도 ${attempt}/${maxRetries + 1}):`, error);
+
+        if (status === 404) {
+          break; // 즉시 다음 모델로
+        }
+
+        if (status === 503) {
+          if (attempt <= maxRetries) {
+            if (request.onStatusUpdate) {
+              request.onStatusUpdate('서버가 바쁩니다. 2초 후 다시 시도합니다...');
+            }
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            continue;
+          } else {
+            break;
+          }
+        }
+        
+        break; // 다른 오류도 다음 모델로
       }
-
-      return parsedData;
-
-    } catch (error) {
-      attempt++;
-      console.warn(`대본 생성 실패 (시도 ${attempt}/${maxRetries + 1}):`, error);
-      
-      if (attempt > maxRetries) {
-        throw new Error('AI 대본 생성에 실패했습니다. 다시 시도해주세요.');
-      }
+    }
+    
+    if (i < modelsToTry.length - 1 && request.onStatusUpdate) {
+      request.onStatusUpdate('AI 서버가 바빠 예비 모델로 다시 시도 중입니다...');
     }
   }
 
-  throw new Error('AI 대본 생성에 실패했습니다.');
+  if (request.onStatusUpdate) {
+    request.onStatusUpdate('잠시 후 다시 시도해 주세요. 기본 대본으로 대체합니다.');
+  }
+  console.warn('모든 모델이 실패하여 로컬 기본 대본으로 대체합니다.');
+  return getFallbackScript(request, learningObjective);
 };
 
 export const generateCoverContent = async (

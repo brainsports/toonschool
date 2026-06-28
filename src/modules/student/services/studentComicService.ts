@@ -30,6 +30,18 @@ export interface StorySceneBible {
   forbiddenLocations: string[];
 }
 
+export const getLearningRoleForCut = (cutNumber: number): string => {
+  switch (cutNumber) {
+    case 1: return "퀘스트 시작 / 문제 상황 제시";
+    case 2: return "기초 개념 및 위치 탐색";
+    case 3: return "핵심 개념(지형, 분포 등)의 본격적인 이해";
+    case 4: return "개념이 실제 생활이나 환경에 미치는 영향 파악";
+    case 5: return "오해 바로잡기, 비교 또는 문제 해결의 단서 획득";
+    case 6: return "개념 정리 및 학습 마무리";
+    default: return "장면 전환";
+  }
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Fallback 값 생성 (Gemini 호출 실패 시 로컬에서 즉시 생성)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -72,6 +84,8 @@ const generateSceneBibleAndVisualPrompt = async (
 
   logStage({ cutNumber, stage: 'combinedPromptGen', status: 'start', modelName: 'gemini-text' });
 
+  const fullScriptContext = projectData.script?.cuts?.map(c => `Cut ${c.cutNumber}: ${c.sceneDescription || (c as any).scene || ''}`).join('\n') || 'None';
+
   const prompt = `You are a professional comic director for an educational comic.
 Analyze the story and generate both a scene bible AND a visual prompt for one panel.
 
@@ -80,6 +94,11 @@ Grade: ${projectData.grade}
 Topic Title: ${projectData.topicTitle}
 Story Setting: ${projectData.selectedStoryDescription}
 Core Concepts: ${projectData.coreConcepts.join(', ')}
+Full Story Flow:
+${fullScriptContext}
+
+Current Cut Number: ${cutNumber}
+Current Cut Learning Role: ${getLearningRoleForCut(cutNumber)}
 Current Panel Scene: ${cut.sceneDescription || (cut as any).scene || 'None'}
 
 Output ONLY valid JSON with NO markdown:
@@ -168,7 +187,9 @@ export interface SingleCutPromptParams {
   subject: string;
   topicTitle: string;
   storyTitle: string;
+  fullStoryFlow: string;
   cutNo: number;
+  currentPanelScene: string;
   visualPrompt: string;
   primaryLocation: string;
   visualMood: string;
@@ -179,36 +200,54 @@ export interface SingleCutPromptParams {
   nextCutBackgroundPrompt?: string;
   seriesStylePrompt?: string;
   styleKey?: string;
+  learningRole?: string;
+  educationalConcept?: string;
 }
 
 const buildSingleCutBackgroundPrompt = (params: SingleCutPromptParams): string => {
+  const isFirstCut = params.cutNo === 1;
+  const cutSpecificInstruction = isFirstCut 
+    ? `- This is Cut 1. It creates the opening scene.
+- It provides the "visual style baseline" (color, clarity, tone) for the entire comic.
+- Do NOT assume that subsequent cuts must repeat this exact background.`
+    : `- Maintain the same illustration style, color harmony, clarity, and educational tone as cut 1.
+- CRITICAL: "Maintain style" DOES NOT mean "repeat the background".
+- You MUST change the location, layout, background composition, and visual objects based on this cut's specific script and learning concept.
+- If cut 1 was a forest, mountain path, or entrance, DO NOT repeat those in this cut unless the script explicitly says they are still there. Repeating the same scene composition as cut 1 is a FAILURE.`;
+
   return `A high quality, bright, and colorful educational scene background for elementary school students.
+FINAL IMAGE MUST BE A "BACKGROUND ONLY" IMAGE READY FOR CHARACTER AND SPEECH BUBBLE OVERLAYS.
 
-- Series Context:
-  Subject: ${params.subject}
-  Topic: ${params.topicTitle}
-  Story: ${params.storyTitle}
-  Style/Tone: ${params.seriesStylePrompt || params.styleKey || 'toonschool-v2-single-background-v2'}
+- Full Story Flow:
+${params.fullStoryFlow}
 
-- Current Cut Anchor:
-  Cut Number: ${params.cutNo}
-  Original Background Prompt: ${params.originalBackgroundPrompt || 'None'}
-  Previous Cut Background: ${params.previousCutBackgroundPrompt || 'None'}
-  Next Cut Background: ${params.nextCutBackgroundPrompt || 'None'}
+- Current Cut Learning Role:
+  Cut ${params.cutNo}: ${params.learningRole || 'None'}
 
-- User Edit Request:
-  ${params.editedUserDescription || 'None'}
+- Current Panel Scene:
+  ${params.currentPanelScene}
 
-- Background Only Interpretation:
+- Educational Background Knowledge:
+  ${params.educationalConcept || 'None'}
+
+- Cut Specific Instruction:
+  ${cutSpecificInstruction}
+  User Edit Request: ${params.editedUserDescription || 'None'}
+
+- Visual Difference From Cut 1:
+  - Do not repeat the same background composition from cut 1.
+  - Keep only the visual style consistent, not the location or scene content.
+  - Each cut must have a distinct educational background based on the current script.
+  - The background MUST include visual cues that help explain the learning concept.
+  - If the current cut explains a different concept, change the environment, objects, map-like cues, terrain features, or visual metaphors accordingly.
+
+- Background Only Prompt:
   ${params.visualPrompt}
 
-- Visual Consistency:
-  Keep the exact same visual style, color palette, camera angle, density, and educational illustration tone as the rest of the 6-cut series. Do not change the art style.
+- Hard Negative Rules (CRITICAL):
+  no people, no characters, no human figures, no animals as characters, no text, no words, no letters, no speech bubbles, no comic panels, no comic page layout, no posters, no worksheets, no framed images, background only, full bleed
 
-- Hard Negative Rules:
-  no people, no characters, no animals as characters, no speech bubbles, no text, no letters, no comic panels, no comic page, no worksheet, no poster, no framed image, background only, full bleed
-
-한국어 추가 지침: 오직 하나의 배경 장면만 그려 주세요. 사용자의 수정 요청을 반영하되, 전체 6컷 맥락과 화풍을 반드시 유지하세요. 사람, 캐릭터, 글자, 말풍선은 절대 그리지 마세요.`;
+한국어 추가 지침: 전체 1~6컷의 대본 흐름을 먼저 파악하고 현재 컷의 역할과 교과 개념에 맞는 배경만 생성하세요. 오직 하나의 배경 장면만 그려 주세요. "스타일 유지"는 색감, 선명도, 교육용 일러스트 톤의 유지를 의미하며, 배경 내용이나 장소의 반복을 절대 의미하지 않습니다. 2~6컷에서 1컷과 같은 장소/구도/오브젝트를 무의미하게 반복하면 실패입니다. 배경에는 학습 개념을 돕는 시각 단서가 포함되어야 합니다. 사람, 캐릭터, 글자, 말풍선, 만화 패널은 절대 그리지 마세요. 캐릭터와 말풍선을 올릴 수 있는 '배경 전용 이미지'여야 합니다.`;
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -287,29 +326,33 @@ export const generateFullComic = async (
         message: `${cutNumber}번째 컷 스케치 중...`
       });
 
-      const fullPrompt = `A high quality, bright, and colorful educational scene background for elementary school students.
-CRITICAL INSTRUCTIONS:
-- single background scene only
-- no comic panels
-- no panel grid
-- no page layout
-- no speech bubbles
-- no text
-- no characters
-- no people
-- background only
-- object-focused educational scene
+      const prevCutData = cutNumber > 1 ? loadComicCutData(projectData.projectId, cutNumber - 1) : null;
+      const nextCutData = cutNumber < 6 ? loadComicCutData(projectData.projectId, cutNumber + 1) : null;
 
-한국어 추가 지침: 만화 프레임이나 칸을 절대 그리지 마세요. 4컷/6컷 페이지 레이아웃 금지. 말풍선 없음, 글자 없음, 사람/캐릭터 없음. 오직 하나의 단일 배경 장면만 꽉 차게 그리세요. 학습 개념과 상황을 보여주는 배경과 사물 중심의 초등학생용 밝고 선명한 그림.
+      const fullScriptContext = cuts.map((c: any, idx: number) => `Cut ${idx + 1}: ${c.sceneDescription || c.scene || ''}`).join('\n');
 
-Scene Bible Context:
-Location: ${sceneBible.primaryLocation}
-Mood: ${sceneBible.visualMood}
-Time: ${sceneBible.timeOfDay}
+      const fullPrompt = buildSingleCutBackgroundPrompt({
+        subject: projectData.subject,
+        topicTitle: projectData.topicTitle,
+        storyTitle: projectData.selectedStoryDescription,
+        fullStoryFlow: fullScriptContext,
+        cutNo: cutNumber,
+        currentPanelScene: cuts[i].sceneDescription || (cuts[i] as any).scene || 'None',
+        visualPrompt: visualPrompt,
+        primaryLocation: sceneBible.primaryLocation,
+        visualMood: sceneBible.visualMood,
+        timeOfDay: sceneBible.timeOfDay,
+        originalBackgroundPrompt: visualPrompt,
+        editedUserDescription: cutData?.customBackgroundPrompt || '',
+        previousCutBackgroundPrompt: prevCutData?.originalBackgroundPrompt,
+        nextCutBackgroundPrompt: nextCutData?.originalBackgroundPrompt,
+        seriesStylePrompt: 'toonschool-v2',
+        styleKey: cacheParams.styleKey,
+        learningRole: getLearningRoleForCut(cutNumber),
+        educationalConcept: sceneBible.learningConcept
+      });
 
-Background Visual Action (Focus on environment and objects ONLY):
-${visualPrompt}
-`;
+      console.log(`[ToonSchool Background] GENERATE_FULL_COMIC CUT=${cutNumber} PROMPT:\n${fullPrompt}`);
 
       updateState({ progress: 10 + Math.floor(((i + 0.6) / 6) * 70), message: `${cutNumber}번째 컷 서버 대기열 등록 중...` });
 
@@ -352,26 +395,52 @@ ${visualPrompt}
           continue;
         }
 
-        if (pollData.status === 'queued') {
-          updateState({ progress: 10 + Math.floor(((i + 0.6) / 6) * 70), message: `${cutNumber}번째 컷 순서를 기다리고 있어요...` });
-        } else if (pollData.status === 'processing') {
-          updateState({ progress: 10 + Math.floor(((i + 0.7) / 6) * 70), message: `${cutNumber}번째 컷 그리는 중...` });
-        } else if (pollData.status === 'completed') {
+        const elapsedMs = Date.now() - pollStart;
+        const currentStatus = pollData.status;
+
+        if (elapsedMs % 15000 < 3000) {
+           console.log(`[Job Monitor] job_id=${jobId} | cut=${cutNumber} | status=${currentStatus} | created_at=${pollData.created_at} | started_at=${pollData.started_at || 'null'} | elapsed_ms=${elapsedMs}`);
+        }
+
+        if (currentStatus === 'queued') {
+          if (elapsedMs > 60000) {
+            console.warn(`[Job Monitor] Worker 미실행 의심. 60초 이상 queued 상태입니다. job_id=${jobId}`);
+            updateState({ progress: 10 + Math.floor(((i + 0.6) / 6) * 70), message: '작업자가 아직 작업을 시작하지 않았습니다. 관리자 확인이 필요합니다.' });
+          } else {
+            updateState({ progress: 10 + Math.floor(((i + 0.6) / 6) * 70), message: `${cutNumber}번째 컷 순서를 기다리고 있어요...` });
+          }
+        } else if (currentStatus === 'processing') {
+          if (elapsedMs > 120000) {
+            updateState({ progress: 10 + Math.floor(((i + 0.7) / 6) * 70), message: '이미지 생성 중 시간이 오래 걸리고 있습니다...' });
+          } else {
+            updateState({ progress: 10 + Math.floor(((i + 0.7) / 6) * 70), message: `${cutNumber}번째 컷 그리는 중...` });
+          }
+        } else if (currentStatus === 'completed') {
           panelImageBase64 = pollData.result_url;
           isCompleted = true;
-          logStage({ cutNumber, stage: 'pollImageJob', status: 'success', elapsedMs: Date.now() - pollStart });
+          logStage({ cutNumber, stage: 'pollImageJob', status: 'success', elapsedMs });
           break;
-        } else if (pollData.status === 'failed') {
-          logStage({ cutNumber, stage: 'pollImageJob', status: 'error', errorCode: 'WORKER_FAILED', note: pollData.error_message });
-          throw Object.assign(new Error(pollData.error_message || '서버 이미지 생성 실패'), { errorCode: 'WORKER_FAILED' });
+        } else if (currentStatus === 'failed') {
+          const isWorkerError = pollData.error_message?.includes('만료') || pollData.error_message?.includes('Worker');
+          const errorCode = isWorkerError ? 'WORKER_ERROR' : 'PROVIDER_ERROR';
+          console.error(`[Job Monitor] failed | error_code=${errorCode} | error_message=${pollData.error_message}`);
+          logStage({ cutNumber, stage: 'pollImageJob', status: 'error', errorCode, note: pollData.error_message });
+          throw Object.assign(new Error(pollData.error_message || '서버 이미지 생성 실패'), { errorCode });
         }
 
         await new Promise(r => setTimeout(r, 3000));
       }
 
       if (!isCompleted) {
-        logStage({ cutNumber, stage: 'pollImageJob', status: 'error', errorCode: 'POLL_TIMEOUT', elapsedMs: Date.now() - pollStart });
-        throw Object.assign(new Error('이미지 생성 작업이 지연되고 있습니다. 이 컷만 다시 시도해 주세요.'), { errorCode: 'POLL_TIMEOUT' });
+        const finalStatus = (await supabase.from('generation_jobs').select('status').eq('id', jobId).single()).data?.status || 'unknown';
+        logStage({ cutNumber, stage: 'pollImageJob', status: 'error', errorCode: 'POLL_TIMEOUT', elapsedMs: Date.now() - pollStart, note: `last_status=${finalStatus}` });
+        
+        let msg = '이미지 생성 작업이 지연되고 있습니다. 이 컷만 다시 시도해 주세요.';
+        if (finalStatus === 'queued') msg = 'Worker 미실행 또는 작업 미처리 가능성이 있습니다. (상태: queued)';
+        else if (finalStatus === 'processing') msg = '이미지 생성 API 지연 가능성이 있습니다. (상태: processing)';
+        console.error(`[Job Monitor] POLL_TIMEOUT | status=${finalStatus} | msg=${msg}`);
+
+        throw Object.assign(new Error(msg), { errorCode: 'POLL_TIMEOUT' });
       }
 
       updateState({
@@ -587,11 +656,15 @@ const doGenerateSingleComicCut = async (
 
     // ── buildSingleCutPrompt ─────────────────────────────────────────────────
     logStage({ cutNumber, stage: 'buildSingleCutPrompt', status: 'start' });
+    const fullScriptContext = projectData.script.cuts.map((c: any, idx: number) => `Cut ${idx + 1}: ${c.sceneDescription || c.scene || ''}`).join('\n');
+
     const fullPrompt = buildSingleCutBackgroundPrompt({
       subject: projectData.subject,
       topicTitle: projectData.topicTitle,
       storyTitle: projectData.selectedStoryDescription,
+      fullStoryFlow: fullScriptContext,
       cutNo: cutNumber,
+      currentPanelScene: cut.sceneDescription || (cut as any).scene || 'None',
       visualPrompt: visualPrompt,
       primaryLocation: sceneBible.primaryLocation,
       visualMood: sceneBible.visualMood,
@@ -601,7 +674,9 @@ const doGenerateSingleComicCut = async (
       previousCutBackgroundPrompt: previousCutBackgroundPrompt,
       nextCutBackgroundPrompt: nextCutBackgroundPrompt,
       seriesStylePrompt: 'toonschool-v2',
-      styleKey: cacheParams.styleKey
+      styleKey: cacheParams.styleKey,
+      learningRole: getLearningRoleForCut(cutNumber),
+      educationalConcept: sceneBible.learningConcept
     });
     console.log(`[ToonSchool Background] SINGLE_CUT_PROMPT:\n${fullPrompt}`);
     logStage({ cutNumber, stage: 'buildSingleCutPrompt', status: 'success' });
@@ -653,41 +728,54 @@ const doGenerateSingleComicCut = async (
         continue;
       }
 
-      if (pollData.status === 'queued') {
-        updateState({ progress: 72, message: '생성 순서를 기다리고 있어요...' });
-      } else if (pollData.status === 'processing') {
-        updateState({ progress: 85, message: '그림을 그리는 중이에요...' });
-      } else if (pollData.status === 'completed') {
+      const elapsedMs = Date.now() - pollStart;
+      const currentStatus = pollData.status;
+
+      if (elapsedMs % 15000 < 3000) {
+         console.log(`[Job Monitor] job_id=${jobId} | cut=${cutNumber} | status=${currentStatus} | created_at=${pollData.created_at} | started_at=${pollData.started_at || 'null'} | elapsed_ms=${elapsedMs}`);
+      }
+
+      if (currentStatus === 'queued') {
+        if (elapsedMs > 60000) {
+          console.warn(`[Job Monitor] Worker 미실행 의심. 60초 이상 queued 상태입니다. job_id=${jobId}`);
+          updateState({ progress: 72, message: '작업자가 아직 작업을 시작하지 않았습니다. 관리자 확인이 필요합니다.' });
+        } else {
+          updateState({ progress: 72, message: '생성 순서를 기다리고 있어요...' });
+        }
+      } else if (currentStatus === 'processing') {
+        if (elapsedMs > 120000) {
+          updateState({ progress: 85, message: '이미지 생성 중 시간이 오래 걸리고 있습니다...' });
+        } else {
+          updateState({ progress: 85, message: '그림을 그리는 중이에요...' });
+        }
+      } else if (currentStatus === 'completed') {
         updateState({ progress: 95, message: '생성 완료!' });
         panelImageBase64 = pollData.result_url;
         isCompleted = true;
-        finalElapsedMs = pollData.elapsed_ms || (Date.now() - pollStart);
-        logStage({
-          cutNumber, stage: 'pollImageJob', status: 'success',
-          elapsedMs: finalElapsedMs
-        });
+        finalElapsedMs = pollData.elapsed_ms || elapsedMs;
+        logStage({ cutNumber, stage: 'pollImageJob', status: 'success', elapsedMs: finalElapsedMs });
         break;
-      } else if (pollData.status === 'failed') {
-        const workerError = pollData.error_message || '서버 이미지 생성 실패';
-        logStage({
-          cutNumber, stage: 'pollImageJob', status: 'error',
-          errorCode: 'WORKER_FAILED', note: workerError
-        });
-        throw Object.assign(new Error(workerError), { errorCode: 'WORKER_FAILED' });
+      } else if (currentStatus === 'failed') {
+        const isWorkerError = pollData.error_message?.includes('만료') || pollData.error_message?.includes('Worker');
+        const errorCode = isWorkerError ? 'WORKER_ERROR' : 'PROVIDER_ERROR';
+        console.error(`[Job Monitor] failed | error_code=${errorCode} | error_message=${pollData.error_message}`);
+        logStage({ cutNumber, stage: 'pollImageJob', status: 'error', errorCode, note: pollData.error_message });
+        throw Object.assign(new Error(pollData.error_message || '서버 이미지 생성 실패'), { errorCode });
       }
 
       await new Promise(r => setTimeout(r, 3000));
     }
 
     if (!isCompleted) {
-      logStage({
-        cutNumber, stage: 'pollImageJob', status: 'error',
-        errorCode: 'POLL_TIMEOUT', elapsedMs: Date.now() - pollStart
-      });
-      throw Object.assign(
-        new Error('이미지 생성 작업이 지연되고 있습니다. 이 컷만 다시 시도해 주세요.'),
-        { errorCode: 'POLL_TIMEOUT' }
-      );
+      const finalStatus = (await supabase.from('generation_jobs').select('status').eq('id', jobId).single()).data?.status || 'unknown';
+      logStage({ cutNumber, stage: 'pollImageJob', status: 'error', errorCode: 'POLL_TIMEOUT', elapsedMs: Date.now() - pollStart, note: `last_status=${finalStatus}` });
+      
+      let msg = '이미지 생성 작업이 지연되고 있습니다. 이 컷만 다시 시도해 주세요.';
+      if (finalStatus === 'queued') msg = 'Worker 미실행 또는 작업 미처리 가능성이 있습니다. (상태: queued)';
+      else if (finalStatus === 'processing') msg = '이미지 생성 API 지연 가능성이 있습니다. (상태: processing)';
+      console.error(`[Job Monitor] POLL_TIMEOUT | status=${finalStatus} | msg=${msg}`);
+
+      throw Object.assign(new Error(msg), { errorCode: 'POLL_TIMEOUT' });
     }
 
     const compressedImage = panelImageBase64;

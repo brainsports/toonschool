@@ -307,10 +307,71 @@ async function pollQueue() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// 상태 관리 (Heartbeat) 및 오래된 작업 초기화
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function startHeartbeat() {
+  const updateHeartbeat = async () => {
+    try {
+      await supabase.from('worker_heartbeats').upsert(
+        { id: 'main_worker', last_seen: new Date().toISOString() },
+        { onConflict: 'id' }
+      );
+    } catch (err) {
+      console.error('[Worker] Heartbeat 업데이트 실패:', err);
+    }
+  };
+
+  // 시작 시 바로 1번 실행 후 30초마다 갱신
+  await updateHeartbeat();
+  setInterval(updateHeartbeat, 30000);
+}
+
+async function cleanupStaleJobs() {
+  try {
+    const tenMinsAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    
+    // 10분 이상 queued 또는 processing 상태로 멈춘 job 실패 처리
+    const { data: staleJobs, error } = await supabase
+      .from('generation_jobs')
+      .select('id')
+      .in('status', ['queued', 'processing'])
+      .lt('created_at', tenMinsAgo);
+
+    if (error) {
+      console.error('[Worker] 오래된 작업 조회 실패:', error.message);
+      return;
+    }
+
+    if (staleJobs && staleJobs.length > 0) {
+      wLog({ stage: 'workerStarted', status: 'fallback', note: `오래된 작업 ${staleJobs.length}건 정리 시작...` });
+      for (const job of staleJobs) {
+        await supabase.from('generation_jobs').update({
+          status: 'failed',
+          error_message: 'Worker 미실행 또는 처리 지연으로 인한 만료',
+          completed_at: new Date().toISOString()
+        }).eq('id', job.id);
+      }
+      wLog({ stage: 'workerStarted', status: 'success', note: `오래된 작업 정리 완료` });
+    }
+  } catch (err) {
+    console.error('[Worker] 오래된 작업 정리 중 예외 발생:', err);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // 시작
 // ─────────────────────────────────────────────────────────────────────────────
 
-wLog({ stage: 'workerStarted', status: 'start', note: `maxConcurrent=${MAX_CONCURRENT_IMAGE_JOBS}` });
-console.log(`[Worker] primaryImageModel=${IMAGE_GENERATION_MODEL}`);
-console.log(`[Worker] fallbackImageModel=${FALLBACK_IMAGE_GENERATION_MODEL}`);
-pollQueue();
+async function main() {
+  wLog({ stage: 'workerStarted', status: 'start', note: `maxConcurrent=${MAX_CONCURRENT_IMAGE_JOBS}` });
+  console.log(`[Worker] primaryImageModel=${IMAGE_GENERATION_MODEL}`);
+  console.log(`[Worker] fallbackImageModel=${FALLBACK_IMAGE_GENERATION_MODEL}`);
+  
+  await cleanupStaleJobs();
+  await startHeartbeat();
+  
+  pollQueue();
+}
+
+main();

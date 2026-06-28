@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+
+<html lang="ko" style=""><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>ToonSchool - 공부하지 말고, 공부를 만들자</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&amp;family=Noto+Sans:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary": "#ff2778",
+                        "primary-container": "#e51b68",
+                        "surface": "#ffffff",
+                        "surface-dim": "#f3f4f7",
+                        "on-surface": "#1a1a1a",
+                        "on-surface-variant": "#4a4a4a",
+                        "outline-variant": "#e5e7eb",
+                    },
+                    "fontFamily": {
+                        "title-md": ["Plus Jakarta Sans"],
+                        "headline-lg": ["Plus Jakarta Sans"],
+                        "label-md": ["Plus Jakarta Sans"],
+                        "body-md": ["Noto Sans"],
+                        "display-lg": ["Plus Jakarta Sans"],
+                        "headline-lg-mobile": ["Plus Jakarta Sans"],
+                        "body-lg": ["Noto Sans"]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { background-color: #f3f4f7; }
+        .smooth-scroll { scroll-behavior: smooth; }
+        .hover-lift { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .hover-lift:hover { transform: translateY(-4px); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1); }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .hide-scroll-mobile::-webkit-scrollbar { display: none; }
+        
+        .slideshow-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            border-radius: 0.5rem;
+            background-color: #ffffff;
+        }
+        .slide {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            animation: fadeSlide 4.5s infinite; /* 3 images * 1.5s total time per image (1.2s display + 0.3s transition) */
+            object-fit: contain;
+        }
+        .slide:nth-child(1) {
+            animation-delay: 0s;
+        }
+        .slide:nth-child(2) {
+            animation-delay: 1.5s;
+        }
+        .slide:nth-child(3) {
+            animation-delay: 3s;
+        }
+        @keyframes fadeSlide {
+            0%, 26.66% { opacity: 1; } /* 1.2s / 4.5s = 26.66% */
+            33.33%, 93.33% { opacity: 0; } /* 1.5s / 4.5s = 33.33% */
+            100% { opacity: 1; }
+        }
+    </style>
+</head>
+<body class="text-on-surface smooth-scroll font-body-md overflow-x-hidden bg-surface-dim">
+<!-- Header -->
+<header class="fixed top-0 left-0 w-full z-50 bg-white/90 backdrop-blur-md shadow-sm border-b border-outline-variant">
+<div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+<div class="flex items-center gap-2">
+<div class="w-8 h-8 bg-primary text-white flex items-center justify-center font-bold rounded">TS</div>
+<span class="font-title-md font-bold text-xl text-on-surface">ToonSchool</span>
+</div>
+<nav class="hidden xl:flex items-center space-x-6">
+<a class="text-on-surface-variant font-medium hover:text-primary transition-colors" href="/">Home</a>
+<a class="text-on-surface-variant font-medium hover:text-primary transition-colors" href="/about">About</a>
+<a class="text-on-surface-variant font-medium hover:text-primary transition-colors" href="/editor">Editor</a>
+<a class="text-on-surface-variant font-medium hover:text-primary transition-colors" href="/classroom">Classroom Use</a>
+<a class="text-on-surface-variant font-medium hover:text-primary transition-colors" href="/flipped-learning">Flipped Learning</a>
+<a class="text-on-surface-variant font-medium hover:text-primary transition-colors" href="/share">Share Links</a>
+<a class="text-on-surface-variant font-medium hover:text-primary transition-colors" href="/pricing">Pricing</a>
+</nav>
+<div class="hidden md:flex items-center space-x-4">
+<a class="text-on-surface-variant font-medium hover:text-primary transition-colors" href="/login">Login/Join</a>
+<a class="bg-primary text-white px-6 py-2 rounded-lg font-bold hover:bg-primary-container transition-colors shadow-sm" href="/signup">Start for Free</a>
+</div>
+<button aria-label="Menu" class="xl:hidden text-on-surface-variant p-2">
+<span class="material-symbols-outlined text-2xl">menu</span>
+</button>
+</div>
+</header>
+<main class="pt-24 pb-16">
+<!-- Hero Section -->
+<section class="max-w-7xl mx-auto px-6 py-16 md:py-24 flex flex-col lg:flex-row items-center gap-12 justify-center">
+<div class="w-full lg:w-1/2 text-center lg:text-left space-y-8">
+<h1 class="text-4xl md:text-5xl font-extrabold leading-tight text-on-surface">
+                    공부하지 말고,<br/>
+<span class="text-primary">공부를 만들자.</span>
+</h1>
+<p class="text-lg text-on-surface-variant max-w-xl mx-auto lg:mx-0">
+                    툰스쿨은 초등 교과 단원을 학생이 직접 학습만화로 만드는 AI 수업 플랫폼입니다. 단원 선택부터 대본, 6컷 만화, 단원 정리, OX 문제까지 한 번에 완성합니다.
+                </p>
+<div class="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
+<a class="w-full sm:w-auto bg-primary text-white px-8 py-4 rounded-lg font-bold text-lg hover:bg-primary-container transition-colors shadow-md text-center" href="/signup">무료로 시작하기</a>
+<a class="w-full sm:w-auto bg-white text-primary border-2 border-primary px-8 py-4 rounded-lg font-bold text-lg hover:bg-gray-50 transition-colors text-center" href="/editor">툰스쿨 에디터 보기</a>
+</div>
+</div>
+<div class="w-full lg:w-1/2 flex justify-center">
+<!-- Tablet Frame Mockup -->
+<img alt="ToonSchool Interface" class="w-full h-auto aspect-[16/9] object-cover rounded-[20px] shadow-lg" src="https://lh3.googleusercontent.com/aida-public/AB6AXuACRpiBt7GwGgTtDEPZarlJarvpoaZsVu2-wDqpJ8sObU_d1MQxqKAFNz2k2lps1NpCXhAXPr62usmB5WYC_vZH-ty-8DQxs4U3IvmGtUmvOhyo8DYJ1NMX-jOx4UvEGMQqbxQurLyeINqwcnqPVWOV3hgZN2WFm5axCyGVB7Wls84zzQ-zgaRKRZ3fh4gP1tLDJtm8hwBHLxRAJmvJ-wLzatJMdGVBC8O1Nu3G-NT0SrXlDvvyscXSvt36_-KuMOO7R6oIodTT8gg"/>
+</div>
+</section>
+<!-- Flow Bar -->
+<section class="bg-white border-y border-outline-variant py-8 overflow-x-auto hide-scroll-mobile">
+<div class="max-w-7xl mx-auto px-6">
+<div class="flex items-center justify-between min-w-[800px] text-center">
+<div class="flex flex-col items-center gap-2 flex-1">
+<div class="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold">1</div>
+<span class="font-bold text-sm">표지</span>
+</div>
+<div class="w-8 h-px bg-gray-300"></div>
+<div class="flex flex-col items-center gap-2 flex-1">
+<div class="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold">2</div>
+<span class="font-bold text-sm">내가 만드는 학습 만화</span>
+</div>
+<div class="w-8 h-px bg-gray-300"></div>
+<div class="flex flex-col items-center gap-2 flex-1">
+<div class="w-12 h-12 rounded-full bg-green-100 text-green-600 flex items-center justify-center font-bold">3</div>
+<span class="font-bold text-sm">세상 속 이야기</span>
+</div>
+<div class="w-8 h-px bg-gray-300"></div>
+<div class="flex flex-col items-center gap-2 flex-1">
+<div class="w-12 h-12 rounded-full bg-yellow-100 text-yellow-600 flex items-center justify-center font-bold">4</div>
+<span class="font-bold text-sm">OX 퀴즈</span>
+</div>
+<div class="w-8 h-px bg-gray-300"></div>
+<div class="flex flex-col items-center gap-2 flex-1">
+<div class="w-12 h-12 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center font-bold">5</div>
+<span class="font-bold text-sm">뒤표지</span>
+</div>
+<div class="w-8 h-px bg-gray-300"></div>
+<div class="flex flex-col items-center gap-2 flex-1">
+<div class="w-12 h-12 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center font-bold">6</div>
+<span class="font-bold text-sm">공유하기</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Main Content Sections (Zigzag) -->
+<div class="space-y-0">
+<!-- Section 1: Cover -->
+<section class="py-24 bg-surface-dim">
+<div class="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center gap-16">
+<div class="w-full md:w-1/2 flex justify-center">
+<img alt="ToonSchool Book Covers" class="w-11/12 h-auto object-contain shadow-sm" src="https://lh3.googleusercontent.com/aida-public/AB6AXuANk_e9UbRpbsle3337_uG7qZCh_QxzG97cyR-rMw2kYF1pxvqLksjDH72f3wbj8O9aEEoLR-RuYTIJ6GFM0_I_YqEqA3y_dRO8Akww1DSSBw_70Niw3GqJdhXWvLlnxVH0Zi9rqBEv4dWeT2aWragIuhz_GX9ENO6GMZIoY84lhSxGXK23KsnPmhLmcX_MDf6Al-guravBvXUgm-DsbxjgXwSJheh9Dq67XOEjXwDhxFhCYg3M9PFeazCaLVZD0-d5MOd1VH7DWg0"/>
+</div>
+<div class="w-full md:w-1/2 space-y-6">
+<span class="text-primary font-bold tracking-wider uppercase text-sm">Step 1. Cover</span>
+<h2 class="text-3xl md:text-4xl font-bold">배움의 시작,<br/>나만의 표지 만들기</h2>
+<p class="text-lg text-gray-600">학습할 교과 단원을 선택하고 나만의 책 표지를 만듭니다. 내가 직접 만드는 교과서로 학습 동기를 부여하세요.</p>
+</div>
+</div>
+</section>
+<!-- Section 2: 6-cut Toon -->
+<section class="py-24 bg-white"><div class="max-w-7xl mx-auto px-6">
+<div class="text-center mb-16 space-y-4">
+<span class="text-[#2563ff] font-bold tracking-wider uppercase text-sm">STEP 2. 6-CUT TOON</span>
+<h2 class="text-3xl md:text-4xl font-bold text-gray-900">AI와 함께 내가 만드는 학습 만화</h2>
+<p class="text-lg text-gray-600 max-w-2xl mx-auto">배경을 만들고, 배움을 대사로 바꾸고, 작업도구로 나만의 만화를 완성합니다.</p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+<!-- Card 1: 배경 생성 -->
+<div class="bg-white border border-gray-100 rounded-[20px] shadow-sm p-6 flex flex-col gap-6 hover:shadow-md transition-shadow">
+<div class="aspect-[1/1.4] overflow-hidden rounded-xl bg-white p-4 flex items-center justify-center">
+<img alt="배경 생성" class="w-full h-full object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD2pR03Qpa91REO-s9buQWlkYbN-FsK4n-B7AK_Io5kduiiJtucJ_sDNRjvf3yfeqksfmbmcghX-lQOXSlDzk35YqY0kv3UDA3Pm7rc7c4LIlq4c4NAAvo0nA_EIcSP3XpvchX59NEHLpB8PGdjMm74__9gxhAxojm2jHObf69QOJoj2e9UoKxr2joAaKzc5g7eA3GFoainkkM2S8t3KHERfCi8YFQ1gzls1WzvuwBVTYWcD-Ui7oL-grOH7i9iJMWA7N7bn3sDGjc"/>
+</div>
+<div class="flex items-start gap-4">
+<div class="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-primary">image</span>
+</div>
+<div>
+<h3 class="font-bold text-xl mb-2">배경 생성</h3>
+<p class="text-gray-600 text-sm leading-relaxed">학습 내용을 바탕으로 친근한 장면을 만들어요.</p>
+</div>
+</div>
+</div>
+<!-- Card 2: 대사 생성 -->
+<div class="bg-white border border-gray-100 rounded-[20px] shadow-sm p-6 flex flex-col gap-6 hover:shadow-md transition-shadow">
+<div class="aspect-[1/1.4] overflow-hidden rounded-xl bg-white p-4 flex items-center justify-center">
+<img alt="대사 생성" class="w-full h-full object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBa1FVtvdAdErG1NuzGIIkCFkkYkK0Qb6uJhReMtmgypbFoAYy4O9OcfSD1yQ9XU-N5Esq2MkaPpIs8SAQMIYuapyPZt7DnK8mr_IrROXK3br1yy0rKm2GY0TxWXUdEgsM1-ud-bggWyzhg10izYs_I2an7Fvfh31TYoo1tabl_LqaZEU0VvvAP7r_zKLHltAdYLsKeL_C42VEiKoWTl2YaQ7KPowpvgtTSQggDOTqpQ8JQfj32U2bLPNniIXcHDs28sX3VW0REBXU"/>
+</div>
+<div class="flex items-start gap-4">
+<div class="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-primary">chat_bubble</span>
+</div>
+<div>
+<h3 class="font-bold text-xl mb-2">대사 생성</h3>
+<p class="text-gray-600 text-sm leading-relaxed">배움을 짧은 대화로 바꾸어 자연스럽게 익혀요.</p>
+</div>
+</div>
+</div>
+<!-- Card 3: 작업도구 -->
+<div class="bg-white border border-gray-100 rounded-[20px] shadow-sm p-6 flex flex-col gap-6 hover:shadow-md transition-shadow">
+<div class="aspect-[1/1.4] overflow-hidden rounded-xl bg-white p-4 flex items-center justify-center">
+<img alt="작업도구" class="w-full h-full object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAvA0RBJtNGTVk1Lkl-CBRe9kTXaPUm2Wg5dQ2tC5b9vdO5tDAIa5afhXVQB3Xjli9RVZeB3gANH7BDCxKgN0pG6Bn4jzLQEVjd22RzdOKuM0KAEOXv_wyZGUHDw5DysgMBl_GkzC6h_np-NnqUPrpcgQN8MMeMhHdrTT2Ot_oMFQb2aFXzC83kJoou2TePsosM-5wqSk5tWdRNfEG5fVPKytQo4k-Xixi-rtvp1HxMHzG0rZRrCl68HM5PKiNzzOOVaWYkTlMA97Y"/>
+</div>
+<div class="flex items-start gap-4">
+<div class="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-primary">edit_note</span>
+</div>
+<div>
+<h3 class="font-bold text-xl mb-2">작업도구</h3>
+<p class="text-gray-600 text-sm leading-relaxed">캐릭터와 말풍선을 고치며 내 만화를 더 멋지게 꾸며요.</p>
+</div>
+</div>
+</div>
+</div>
+</div></section>
+<!-- Section 3: World Story -->
+<section class="py-24 bg-surface-dim">
+<div class="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center gap-16">
+<div class="w-full md:w-1/2 flex justify-center">
+<div class="bg-white rounded-lg shadow-lg w-full max-w-sm aspect-[1/1.4] p-4 border border-gray-100 flex flex-col relative overflow-hidden">
+<div class="slideshow-container">
+<img alt="역사 이야기" class="slide" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC8zUFNKDcmOd8QMp228rfo-JbHU-YjU9wM0TecgQu7JFyoEBVjzUvM6_vW3MugumVJksVfMpAAxv_jQb0vQfQaoaRMSOF3wrxGOxRlX2uuA0V-Y8PfzQ7VgupG0b_BXMRpq9x_XJ5ymqtdk-sZhwHlEgjmEL-O1P_JaLG21WF8IZ25qzSJNhP35953QymD1fMD04jBtC3wmBFUVf1MgPINDkBNTeRMsFjnTN56o58PSAltjjk6dVEta5LCcG19Urj7qugVJoPBJbk"/>
+<img alt="최신 이야기" class="slide" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBaBzzS17Enz_rzckRPoHKD9OsqSnHhWz1BgcJ8Sm-SZmuibcJX-gCPL0DgNqoHkxxMd3QVcPa-t06Wyjv3cxyVjo4u1Y-VTpZOT879Lts95v-UI-22suzX4MVqoggldcgX38HKdDL7UrHAfDjMCCadxAkn9LDiY1erep8Vc2p7v7ohGoJVN_rjKwNX1-SdH7TVxNrQJoXJx5rq_eq0zK5didcYVCMpRI9DNjKai6-13NVswjhyy3T7JzeA94tO6k7cvbF6fJe7RPU"/>
+<img alt="생활 발견" class="slide" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAQIDEbPYbIXPqBT8DkRySuJrFHuKSZ6dk8EQ0UkEv2S5NQINVUh5zAztiFGR8x9qKoIcKsYfw0GjeMhnMX4ouvYDOStDJOyrsYfFfQK75wmAl4kVBJnzx-t-lqyV-GW4HDTg6VqBaeSVacd9Phot-AAPoryPnOc60JfylcIip2V0Obg-nyTPq10DUo4YpntFvybFEp3bZRe6vJiY_Owz1zDh4Kr0MpY-9MQpsi29Nc6gSn08KWWMxjhz3a9wGTVqdNkzKvlfBEqyk"/>
+</div>
+</div>
+</div>
+<div class="w-full md:w-1/2 space-y-6">
+<span class="text-green-500 font-bold tracking-wider uppercase text-sm">Step 3. World Story</span>
+<h2 class="text-3xl md:text-4xl font-bold">배운 내용을<br/>세상과 연결하기</h2>
+<p class="text-lg text-gray-600">학습한 개념이 실제 세상에서 어떻게 쓰이는지 정리합니다. 워크시트 형태의 페이지로 생각을 체계화합니다.</p>
+</div>
+</div>
+</section>
+<!-- Section 4: OX Quiz -->
+<section class="py-24 bg-white">
+<div class="max-w-7xl mx-auto px-6 flex flex-col-reverse md:flex-row items-center gap-16">
+<div class="w-full md:w-1/2 space-y-6">
+<span class="text-yellow-500 font-bold tracking-wider uppercase text-sm">Step 4. OX Quiz</span>
+<h2 class="text-3xl md:text-4xl font-bold">문제를 만들어요!<div class="">친구들아 정답을 맞혀 봐라!</div></h2>
+<p class="text-lg text-gray-600">중요한 개념을 OX 문제로 만들어 봅니다. 문제를 직접 내면서 핵심 내용을 다시 한번 기억에 남깁니다.</p>
+</div>
+<div class="w-full md:w-1/2 flex justify-center">
+<div class="bg-yellow-50 rounded-2xl shadow-lg w-full max-w-md p-8 border border-yellow-100 text-center relative overflow-hidden">
+<h3 class="text-xl font-bold mb-8">Q. 태양계에서 가장 큰 행성은 목성이다.</h3>
+<div class="flex justify-center gap-6">
+<button class="w-24 h-24 rounded-full bg-white shadow-md border-4 border-blue-500 flex items-center justify-center text-blue-500 text-4xl font-bold hover:bg-blue-50 transition-colors">O</button>
+<button class="w-24 h-24 rounded-full bg-white shadow-md border-4 border-red-500 flex items-center justify-center text-red-500 text-4xl font-bold hover:bg-red-50 transition-colors">X</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Section 5: Back Cover -->
+<section class="py-24 bg-surface-dim">
+<div class="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center gap-16">
+<div class="w-full md:w-1/2 flex justify-center">
+<div class="bg-white rounded-lg shadow-lg w-full max-w-sm aspect-[1/1.4] border border-gray-100 flex flex-col justify-end overflow-hidden"><img alt="Back Cover Design" class="w-full h-full object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBgc1kuzx6Q3oEgTrZGhMtzM5VpWu9rKafpxiW8od0_deWh8L-byps9AWOPJFXBNX4hzgaU08ji3hHkKQJ2mJ7p96iAK_QkAwFD8a3KndaobDk4iDcGa-9MV7UgDYRJFiDoBBNIX77dMRgZTfvuPUb6k01S9KpjinleHEcUWgdnraEqk1_T7guQYZFANKc0yBKA8JjyubwW8imgNUA8XOClIlCqXgfNKlP5z9kRH-ExL1ZuDPFREG8AYrpqyaX7iOrtyABV4gd7JAo"/></div>
+</div>
+<div class="w-full md:w-1/2 space-y-6">
+<span class="text-purple-500 font-bold tracking-wider uppercase text-sm">Step 5. Back Cover</span>
+<h2 class="text-3xl md:text-4xl font-bold">작가가 되는 경험,<br/>뒤표지 장식하기</h2>
+<p class="text-lg text-gray-600">책의 마지막을 장식합니다. 지은이 이름과 학년을 적어 나만의 학습 만화책을 완성하는 뿌듯함을 느낍니다.</p>
+</div>
+</div>
+</section>
+<!-- Section 6: Sharing -->
+<section class="py-24 bg-white overflow-hidden">
+<div class="max-w-7xl mx-auto px-6 flex flex-col lg:flex-row items-center gap-16">
+<!-- Left Content -->
+<div class="w-full lg:w-1/2 space-y-8">
+<div class="space-y-4">
+<span class="text-gray-500 font-bold tracking-wider uppercase text-sm">STEP 6. SHARE</span>
+<h2 class="text-3xl md:text-4xl font-bold leading-tight">
+          내 만화책을 전용뷰어로 보고,<br/>친구에게 자랑해요
+        </h2>
+<p class="text-lg text-gray-600 leading-relaxed">
+          완성한 학습만화를 툰스쿨 전용뷰어로 넘겨 보고,<br/>링크 하나로 친구와 가족에게 쉽게 공유할 수 있어요.
+        </p>
+</div>
+<!-- Function Badges -->
+<div class="flex flex-wrap gap-3">
+<span class="px-4 py-2 bg-primary/10 text-primary rounded-full text-sm font-bold">전용뷰어 감상</span>
+<span class="px-4 py-2 bg-blue-100 text-blue-600 rounded-full text-sm font-bold">링크 공유</span>
+<span class="px-4 py-2 bg-purple-100 text-purple-600 rounded-full text-sm font-bold">PDF 다운로드</span>
+</div>
+</div>
+<!-- Right Content (Visual Area) -->
+<div class="w-full lg:w-1/2 relative">
+<!-- Tablet Mockup -->
+<div class="relative z-10 bg-gray-900 p-3 rounded-[2.5rem] shadow-2xl border-4 border-gray-800">
+<div class="bg-white rounded-[1.5rem] overflow-hidden aspect-[4/3] relative">
+<!-- Viewer UI -->
+<div class="absolute top-0 left-0 w-full p-4 flex justify-between items-center bg-white/90 border-b border-gray-100 z-20">
+<span class="font-bold text-sm">나만의 우주 탐험</span>
+<div class="flex gap-2">
+<button class="p-1 rounded hover:bg-gray-100"><span class="material-symbols-outlined text-lg">zoom_in</span></button>
+<button class="p-1 rounded hover:bg-gray-100"><span class="material-symbols-outlined text-lg">download</span></button>
+</div>
+</div>
+<!-- Comic Preview -->
+<div class="w-full h-full pt-12 pb-16 px-8 flex items-center justify-center bg-gray-50">
+<img alt="Comic Preview" class="h-full w-auto shadow-lg rounded-sm" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDC4LmDfpVMl2eLvYTROfk-NmIXu5pAWhUvW4Ikh0pk-kqBeafNv1ox0kOmLRfZFQ8hzPFSK3ulBsmcceGsYW2hGzvThWJgMvAoRqWLGC1E73n6jwBofRf1CCRw8vLCJEv-V-mVPve29_a2ceYShHYDebrSk8CG_Ru1PbzjahnKV7tq7F6TnWJRiMkEvcT1ZIxrL3gpQJGQu2Zpi9w80dtJc2_fi15JflUmsCnfHE7HXVXABO2xNH5IzcXh1LMfiboYJEllW9S6oz8"/>
+</div>
+<!-- Viewer Controls -->
+<div class="absolute bottom-0 left-0 w-full p-4 flex justify-between items-center bg-white/90 border-t border-gray-100 z-20">
+<button class="flex items-center gap-1 text-primary font-bold text-xs">
+<span class="material-symbols-outlined text-sm">share</span> 친구에게 공유
+            </button>
+<div class="flex items-center gap-4">
+<button class="material-symbols-outlined text-gray-400">chevron_left</button>
+<span class="text-xs font-medium text-gray-600">1 / 12</span>
+<button class="material-symbols-outlined text-gray-400">chevron_right</button>
+</div>
+<button class="flex items-center gap-1 text-blue-600 font-bold text-xs">
+<span class="material-symbols-outlined text-sm">picture_as_pdf</span> PDF 저장
+            </button>
+</div>
+</div>
+</div>
+<!-- Character: Doyun (Boy) -->
+<div class="absolute -left-12 -bottom-8 z-20 w-40 md:w-48">
+<div class="relative">
+<div class="absolute -top-12 left-0 bg-white p-3 rounded-2xl shadow-md border border-gray-100 text-xs font-bold whitespace-nowrap">
+            내 만화책을 친구에게 보낼 수 있어!
+            <div class="absolute -bottom-2 left-4 w-4 h-4 bg-white border-r border-b border-gray-100 rotate-45"></div>
+</div>
+<div class="w-full aspect-square overflow-hidden">
+<img alt="Doyun" class="w-full h-full object-contain scale-150 translate-y-4" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDCzAfcpYD8IwmeIE5Q7d4jh87t0FJ_tzRPx7ko8GpQylHLvmmtnyI8zlGhdJprt9zlKmX4dag2FllpomFrhJA7gi8KW5UcwycWXro2KoIweH0eECW1RA06blcTy7fZy8jt4OFxDc-8e3Tbs8i0LGfsu7mkYWF-KSnxd6LupzQWpUcG9VM7ncI-hjU12eMHIaQebeBHjdcP5p0qpkCtQk5yqn7RNz0DVuXkJawj8LkqwXao3S1dSLFgAX2PR1uIJtcSQX9CbP7KcbY"/>
+</div>
+</div>
+</div>
+<!-- Character: Seoa (Girl) -->
+<div class="absolute -right-8 -top-8 z-20 w-32 md:w-40">
+<div class="relative">
+<div class="absolute -top-12 right-0 bg-white p-3 rounded-2xl shadow-md border border-gray-100 text-xs font-bold whitespace-nowrap">
+            링크만 누르면 바로 볼 수 있어!
+            <div class="absolute -bottom-2 right-4 w-4 h-4 bg-white border-r border-b border-gray-100 rotate-45"></div>
+</div>
+<div class="w-full aspect-square overflow-hidden">
+<img alt="Seoa" class="w-full h-full object-contain scale-125" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDiX023KVINJ1wWvMzFz-DEO1fry3lQav39FGedDmGiY-R3l9C--KdbJJ1aGgLLvBW-4wicA7-u0GESMYiFhLI-53_mctXBr9fqUQnAhvfGYf5eJ3q2CWWfmWnRO43FCqy7wW1SsDgxb7asM6Zu7r8pf99s02DPh5yzmGyrJ8AoDtbfNC02jXvuzLBlG5jZaccMntCCdIQRZKZu-bsTtLnDNR6IYmtIlbCyYqJx8xLRM16G6EKGVMc_eLBiFNddIc2RIi0n372jDh8"/>
+</div>
+</div>
+</div>
+<!-- Decorative Background Elements -->
+<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-primary/5 rounded-full -z-10 blur-3xl"></div>
+</div>
+</div>
+</section>
+</div>
+<!-- Teacher Operation Section -->
+<!-- Subjects -->
+<!-- Pricing -->
+<!-- FAQ -->
+<section class="py-24 bg-surface-dim"><div class="max-w-3xl mx-auto px-6">
+<div class="text-center mb-12">
+<h2 class="text-3xl font-bold">자주 묻는 질문</h2>
+</div>
+<div class="space-y-4">
+<details class="group bg-white border border-gray-200 rounded-xl overflow-hidden cursor-pointer open:bg-white transition-colors">
+<summary class="flex justify-between items-center font-bold p-6 text-gray-900 list-none">
+                            학생은 어떻게 가입하나요?
+                            <span class="material-symbols-outlined transition-transform group-open:rotate-180">expand_more</span>
+</summary>
+<div class="p-6 pt-0 text-gray-600 text-sm border-t border-gray-100 mt-2">
+                            선생님이 교사 계정으로 로그인한 후, 클래스를 생성하고 학생 계정(아이디/비밀번호)을 일괄 생성하여 배포할 수 있습니다. 학생은 개인정보 입력 없이 발급받은 계정으로 바로 로그인할 수 있습니다.
+                        </div>
+</details>
+<details class="group bg-white border border-gray-200 rounded-xl overflow-hidden cursor-pointer open:bg-white transition-colors">
+<summary class="flex justify-between items-center font-bold p-6 text-gray-900 list-none">
+                            태블릿에서도 사용할 수 있나요?
+                            <span class="material-symbols-outlined transition-transform group-open:rotate-180">expand_more</span>
+</summary>
+<div class="p-6 pt-0 text-gray-600 text-sm border-t border-gray-100 mt-2">
+                            네, 툰스쿨은 PC, 크롬북, 태블릿(아이패드, 갤럭시탭 등) 다양한 기기에서 웹 브라우저를 원활하게 사용할 수 있도록 최적화되어 있습니다.
+                        </div>
+</details>
+<details class="group bg-white border border-gray-200 rounded-xl overflow-hidden cursor-pointer open:bg-white transition-colors">
+<summary class="flex justify-between items-center font-bold p-6 text-gray-900 list-none">
+                            만든 만화는 어떻게 공유하나요?
+                            <span class="material-symbols-outlined transition-transform group-open:rotate-180">expand_more</span>
+</summary>
+<div class="p-6 pt-0 text-gray-600 text-sm border-t border-gray-100 mt-2">
+                            제작이 완료된 만화는 고유 링크(URL)가 생성되어 친구들이나 학부모님께 메신저로 쉽게 공유할 수 있으며, PDF 파일로 다운로드하여 인쇄물로도 활용 가능합니다.
+                        </div>
+</details>
+<details class="group bg-white border border-gray-200 rounded-xl overflow-hidden cursor-pointer open:bg-white transition-colors">
+<summary class="flex justify-between items-center font-bold p-6 text-gray-900 list-none">
+                            어떤 교과 과정이 포함되어 있나요?
+                            <span class="material-symbols-outlined transition-transform group-open:rotate-180">expand_more</span>
+</summary>
+<div class="p-6 pt-0 text-gray-600 text-sm border-t border-gray-100 mt-2">
+                            현재 초등학교 전 학년, 전 과목의 성취기준을 기반으로 한 단원 정보가 기본 제공되며, 선생님이 직접 필요한 단원이나 주제를 추가하여 수업을 구성할 수도 있습니다.
+                        </div>
+</details>
+</div>
+</div></section>
+</main>
+<!-- Footer -->
+<footer class="w-full px-6 py-12 flex flex-col items-center text-center space-y-6 bg-surface-dim border-t border-outline-variant">
+<div class="flex items-center gap-2 mb-2 opacity-50 grayscale hover:grayscale-0 hover:opacity-100 transition-all">
+<div class="w-6 h-6 bg-gray-400 text-white flex items-center justify-center font-bold rounded text-xs">TS</div>
+<span class="font-title-md font-bold text-gray-500">ToonSchool</span>
+</div>
+<p class="text-gray-500 font-medium text-sm">공부하지 말고, 공부를 만들자.</p>
+<div class="flex flex-wrap justify-center gap-4 text-sm text-gray-500">
+<a class="hover:text-primary transition-colors" href="/">Home</a>
+<a class="hover:text-primary transition-colors" href="/about">About</a>
+<a class="hover:text-primary transition-colors" href="/editor">Editor</a>
+<a class="hover:text-primary transition-colors" href="/classroom">Classroom Use</a>
+<a class="hover:text-primary transition-colors" href="/flipped-learning">Flipped Learning</a>
+<a class="hover:text-primary transition-colors" href="/share">Share Links</a>
+<a class="hover:text-primary transition-colors" href="/pricing">Pricing</a>
+<a class="hover:text-primary transition-colors" href="/contact">Contact Us</a>
+</div>
+<p class="text-sm text-gray-400 mt-4">© 2024 ToonSchool. All rights reserved.</p>
+</footer>
+</body></html>
