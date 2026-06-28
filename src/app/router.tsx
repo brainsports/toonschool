@@ -21,17 +21,24 @@ import StudentUnitSelectPage from '../modules/student/pages/StudentUnitSelectPag
 import StudentTopicMakerPage from '../modules/student/pages/StudentTopicMakerPage'
 import StudentFrontCoverPage from '../modules/student/pages/StudentFrontCoverPage'
 import StudentScriptPage from '../modules/student/pages/StudentScriptPage'
+import StudentComicFullViewPage from '../modules/student/pages/StudentComicFullViewPage'
 import StudentComicCutPage from '../modules/student/pages/StudentComicCutPage'
 import ToonEditor from '../modules/toon/pages/ToonEditor'
 import ToonViewer from '../modules/toon/pages/ToonViewer'
 import QuizPage from '../modules/quiz/pages/QuizPage'
 import AnalyticsDashboard from '../modules/analytics/pages/AnalyticsDashboard'
 
+import StudentUnitSummaryPage from '../modules/student/pages/StudentUnitSummaryPage'
+import StudentQuizMakerPage from '../modules/student/pages/StudentQuizMakerPage'
+import StudentBackCoverPage from '../modules/student/pages/StudentBackCoverPage'
+import StudentComicViewerPage from '../modules/student/pages/StudentComicViewerPage'
+import SharedComicViewerPage from '../modules/student/pages/SharedComicViewerPage'
+
 export default function AppRouter() {
   return (
     <Routes>
-      <Route path="/" element={<Layout />}>
-        <Route index element={<HomePage />} />
+      <Route path="/" element={<HomePage />} />
+      <Route element={<Layout />}>
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="login" element={<Login />} />
         <Route path="signup" element={<Signup />} />
@@ -59,7 +66,13 @@ export default function AppRouter() {
       <Route path="/student/topic" element={<StudentTopicMakerPage />} />
       <Route path="/student/script" element={<StudentScriptPage />} />
       <Route path="/student/front-cover" element={<StudentFrontCoverPage />} />
+      <Route path="/student/comic/full" element={<StudentComicFullViewPage />} />
       <Route path="/student/comic/cut/:cutNumber" element={<StudentComicCutPage />} />
+      <Route path="/student/unit-summary" element={<StudentUnitSummaryPage />} />
+      <Route path="/student/quiz/intro" element={<StudentQuizMakerPage />} />
+      <Route path="/student/back-cover" element={<StudentBackCoverPage />} />
+      <Route path="/student/comic/read" element={<StudentComicViewerPage />} />
+      <Route path="/book/:slug" element={<SharedComicViewerPage />} />
     </Routes>
   )
 }

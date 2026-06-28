@@ -1,13 +1,20 @@
-import { geminiClient } from '../../../shared/lib/gemini';
+import { geminiClient, GeminiError } from '../../../shared/lib/gemini';
+import { supabase } from '../../../shared/lib/supabase';
+import { logStage, startTimer, getErrorMessageByCode } from '../../../shared/lib/geminiLogger';
 import type { GeneratedComicScript } from './studentScriptService';
 import type { ComicProjectData } from '../components/editor/utils/comicStorage';
+import { findCachedComicBackground, saveComicBackgroundToCache } from './comicBackgroundCacheService';
+import type { ComicBackgroundCacheParams } from './comicBackgroundCacheService';
 
 export interface ComicGenerationState {
   status: 'idle' | 'generating' | 'success' | 'error';
   errorMessage?: string;
+  errorCode?: string;      // GEMINI_503 / GEMINI_429 / GEMINI_AUTH / TIMEOUT / POLL_TIMEOUT 등
   progress: number;
   message?: string;
-  fullImageUrl?: string;
+  cutImages?: string[];
+  startedAt?: number;
+  elapsedMs?: number;
 }
 
 export interface StorySceneBible {
@@ -23,151 +30,239 @@ export interface StorySceneBible {
   forbiddenLocations: string[];
 }
 
-const loadReferenceImage = async (url: string, _role: string, id: number) => {
-  try {
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-    const blob = await response.blob();
-    const arrayBuffer = await blob.arrayBuffer();
-    const base64 = btoa(
-      new Uint8Array(arrayBuffer)
-        .reduce((data, byte) => data + String.fromCharCode(byte), '')
-    );
-    
-    return {
-      referenceType: 'SUBJECT',
-      referenceId: id,
-      referenceImage: {
-        bytesBase64Encoded: base64
-      }
-    };
-  } catch (error) {
-    console.error(`Failed to load reference image: ${url}`, error);
-    return null;
+export const getLearningRoleForCut = (cutNumber: number): string => {
+  switch (cutNumber) {
+    case 1: return "퀘스트 시작 / 문제 상황 제시";
+    case 2: return "기초 개념 및 위치 탐색";
+    case 3: return "핵심 개념(지형, 분포 등)의 본격적인 이해";
+    case 4: return "개념이 실제 생활이나 환경에 미치는 영향 파악";
+    case 5: return "오해 바로잡기, 비교 또는 문제 해결의 단서 획득";
+    case 6: return "개념 정리 및 학습 마무리";
+    default: return "장면 전환";
   }
 };
 
-const generateSceneBible = async (projectData: ComicProjectData): Promise<StorySceneBible> => {
-  const prompt = `You are a professional comic director setting the overarching scene bible for an educational comic.
-Analyze the following story and script to create a cohesive scene bible. Do NOT generate new dialogues or events.
+// ─────────────────────────────────────────────────────────────────────────────
+// Fallback 값 생성 (Gemini 호출 실패 시 로컬에서 즉시 생성)
+// ─────────────────────────────────────────────────────────────────────────────
+
+function makeFallbackSceneBible(projectData: ComicProjectData): StorySceneBible {
+  return {
+    topicTitle: projectData.topicTitle,
+    subject: projectData.subject,
+    learningConcept: projectData.coreConcepts[0] || '',
+    primaryLocation: '밝고 안전한 교육적 장소',
+    secondaryLocations: [],
+    timeOfDay: '낮',
+    requiredObjects: [],
+    centralEvent: projectData.selectedStoryDescription,
+    visualMood: '밝고 긍정적인 분위기',
+    forbiddenLocations: [],
+  };
+}
+
+function makeFallbackVisualPrompt(cut: any, projectData: ComicProjectData): string {
+  const sceneDesc = cut.sceneDescription || (cut as any).scene || '';
+  return `Educational background scene for elementary school students. Subject: ${projectData.subject}. Topic: ${projectData.topicTitle}. Scene: ${sceneDesc}. Bright, colorful, no people, no characters, no text, background only.`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// [핵심 최적화] sceneBible + extractVisualPrompt → 단일 Gemini 호출로 통합
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface SceneBibleAndVisualPrompt {
+  sceneBible: StorySceneBible;
+  visualPrompt: string;
+}
+
+const generateSceneBibleAndVisualPrompt = async (
+  projectData: ComicProjectData,
+  cut: any,
+  cutNumber: number
+): Promise<SceneBibleAndVisualPrompt> => {
+  const elapsed = startTimer();
+
+  logStage({ cutNumber, stage: 'combinedPromptGen', status: 'start', modelName: 'gemini-text' });
+
+  const fullScriptContext = projectData.script?.cuts?.map(c => `Cut ${c.cutNumber}: ${c.sceneDescription || (c as any).scene || ''}`).join('\n') || 'None';
+
+  const prompt = `You are a professional comic director for an educational comic.
+Analyze the story and generate both a scene bible AND a visual prompt for one panel.
 
 Subject: ${projectData.subject}
 Grade: ${projectData.grade}
 Topic Title: ${projectData.topicTitle}
 Story Setting: ${projectData.selectedStoryDescription}
 Core Concepts: ${projectData.coreConcepts.join(', ')}
+Full Story Flow:
+${fullScriptContext}
 
-Output ONLY valid JSON matching this interface:
+Current Cut Number: ${cutNumber}
+Current Cut Learning Role: ${getLearningRoleForCut(cutNumber)}
+Current Panel Scene: ${cut.sceneDescription || (cut as any).scene || 'None'}
+
+Output ONLY valid JSON with NO markdown:
 {
-  "topicTitle": "string",
-  "subject": "string",
-  "learningConcept": "string",
-  "primaryLocation": "string",
-  "secondaryLocations": ["string"],
-  "timeOfDay": "string",
-  "requiredObjects": ["string"],
-  "centralEvent": "string",
-  "visualMood": "string",
-  "forbiddenLocations": ["string"]
-}
+  "sceneBible": {
+    "topicTitle": "string",
+    "subject": "string",
+    "learningConcept": "string",
+    "primaryLocation": "string",
+    "secondaryLocations": ["string"],
+    "timeOfDay": "string",
+    "requiredObjects": ["string"],
+    "centralEvent": "string",
+    "visualMood": "string",
+    "forbiddenLocations": ["string"]
+  },
+  "visualPrompt": "A concise English background-only description for an image generation model. NO people, NO characters, NO text, NO speech bubbles. Focus on environment and objects only."
+}`;
 
-Ensure the location and visual mood match the educational topic perfectly.
-`;
-
-  const responseText = await geminiClient.generateText(prompt);
   try {
+    const responseText = await geminiClient.generateText(prompt);
     const jsonStr = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
-    return JSON.parse(jsonStr) as StorySceneBible;
-  } catch (err) {
-    console.error('Failed to parse StorySceneBible JSON', err);
-    throw new Error('장면 배경 정보 추출에 실패했습니다.');
+    const parsed = JSON.parse(jsonStr) as SceneBibleAndVisualPrompt;
+
+    logStage({
+      cutNumber, stage: 'combinedPromptGen', status: 'success',
+      elapsedMs: elapsed(), note: 'sceneBible+visualPrompt 통합 생성 성공'
+    });
+
+    return parsed;
+  } catch (err: any) {
+    const elapsedMs = elapsed();
+    const errorCode = err instanceof GeminiError ? err.errorCode : 'PARSE_ERROR';
+    logStage({
+      cutNumber, stage: 'combinedPromptGen', status: 'fallback',
+      elapsedMs, errorCode,
+      note: 'fallback값 사용'
+    });
+
+    // Gemini 실패해도 fallback으로 이미지 생성까지 진행
+    return {
+      sceneBible: makeFallbackSceneBible(projectData),
+      visualPrompt: makeFallbackVisualPrompt(cut, projectData),
+    };
   }
 };
 
-const extractVisualPrompt = async (cut: any, bible: StorySceneBible): Promise<string> => {
-  const prompt = `Extract purely visual instructions for one comic panel. 
-DO NOT include any actual dialogue text in the prompt. We only need the actions, expressions, and objects needed for the picture.
+// ─────────────────────────────────────────────────────────────────────────────
+// translateUserDescriptionToBackground (재생성 시 사용)
+// ─────────────────────────────────────────────────────────────────────────────
 
-Background Bible:
+export const translateUserDescriptionToBackground = async (
+  originalPrompt: string,
+  userDescription: string,
+  bible: StorySceneBible
+): Promise<string> => {
+  const prompt = `You are a background description translator for an educational comic.
+Translate the user's edit request into a "background and objects ONLY" description in Korean.
+
+Scene Context:
 Location: ${bible.primaryLocation}
 Mood: ${bible.visualMood}
 Time: ${bible.timeOfDay}
 
-Panel Data:
-Scene Description: ${cut.sceneDescription || cut.scene || 'None'}
-Original Dialogues (For context only, do NOT draw text): ${cut.dialogues?.map((d: any) => `${d.character || d.speaker}: ${d.text}`).join(' / ') || 'None'}
+Original Background Prompt:
+${originalPrompt}
 
-Create a concise, descriptive visual prompt in English for an image generation model. 
-Describe the character's facial expressions, poses, and interactions with objects.
-DO NOT put any text or speech bubbles in the description.
-Just return the prompt text.
-`;
+User's Edit Request:
+${userDescription}
+
+CRITICAL RULES:
+1. Remove all mentions of people, characters, animals acting as characters.
+2. Remove all dialogue, speech bubbles, and text.
+3. Focus entirely on the environment, scenery, atmosphere, and objects.
+4. Keep it concise, descriptive, and in Korean.
+
+Translate:`;
   return await geminiClient.generateText(prompt);
 };
 
-const stitchImagesToGrid = async (imagesBase64: string[]): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const canvas = document.createElement('canvas');
-    // A4 size
-    const A4_WIDTH = 1400;
-    const A4_HEIGHT = 1980;
-    
-    // Panel grid: 2 cols x 3 rows
-    const PADDING = 20;
-    const BORDER_WIDTH = 4;
-    const PANEL_WIDTH = Math.floor((A4_WIDTH - PADDING * 3) / 2);
-    const PANEL_HEIGHT = Math.floor((A4_HEIGHT - PADDING * 4) / 3);
+// ─────────────────────────────────────────────────────────────────────────────
+// buildSingleCutBackgroundPrompt
+// ─────────────────────────────────────────────────────────────────────────────
 
-    canvas.width = A4_WIDTH;
-    canvas.height = A4_HEIGHT;
-    
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return reject(new Error('Canvas context not available'));
+export interface SingleCutPromptParams {
+  subject: string;
+  topicTitle: string;
+  storyTitle: string;
+  fullStoryFlow: string;
+  cutNo: number;
+  currentPanelScene: string;
+  visualPrompt: string;
+  primaryLocation: string;
+  visualMood: string;
+  timeOfDay: string;
+  originalBackgroundPrompt?: string;
+  editedUserDescription?: string;
+  previousCutBackgroundPrompt?: string;
+  nextCutBackgroundPrompt?: string;
+  seriesStylePrompt?: string;
+  styleKey?: string;
+  learningRole?: string;
+  educationalConcept?: string;
+}
 
-    // Draw white background
-    ctx.fillStyle = '#FFFFFF';
-    ctx.fillRect(0, 0, A4_WIDTH, A4_HEIGHT);
+const buildSingleCutBackgroundPrompt = (params: SingleCutPromptParams): string => {
+  const isFirstCut = params.cutNo === 1;
+  const cutSpecificInstruction = isFirstCut 
+    ? `- This is Cut 1. It creates the opening scene.
+- It provides the "visual style baseline" (color, clarity, tone) for the entire comic.
+- Do NOT assume that subsequent cuts must repeat this exact background.`
+    : `- Maintain the same illustration style, color harmony, clarity, and educational tone as cut 1.
+- CRITICAL: "Maintain style" DOES NOT mean "repeat the background".
+- You MUST change the location, layout, background composition, and visual objects based on this cut's specific script and learning concept.
+- If cut 1 was a forest, mountain path, or entrance, DO NOT repeat those in this cut unless the script explicitly says they are still there. Repeating the same scene composition as cut 1 is a FAILURE.`;
 
-    let loadedCount = 0;
-    const imgElements = imagesBase64.map((base64, index) => {
-      const img = new Image();
-      img.onload = () => {
-        loadedCount++;
-        if (loadedCount === 6) {
-          // All images loaded, draw them
-          imagesBase64.forEach((_, i) => {
-             const col = i % 2;
-             const row = Math.floor(i / 2);
-             const x = PADDING + col * (PANEL_WIDTH + PADDING);
-             const y = PADDING + row * (PANEL_HEIGHT + PADDING);
-             
-             // Draw the image
-             ctx.drawImage(imgElements[i], x, y, PANEL_WIDTH, PANEL_HEIGHT);
-             
-             // Draw border
-             ctx.strokeStyle = '#000000';
-             ctx.lineWidth = BORDER_WIDTH;
-             ctx.strokeRect(x, y, PANEL_WIDTH, PANEL_HEIGHT);
-          });
-          resolve(canvas.toDataURL('image/jpeg', 0.9));
-        }
-      };
-      img.onerror = () => reject(new Error(`Failed to load image for panel ${index + 1}`));
-      img.src = base64;
-      return img;
-    });
-  });
+  return `A high quality, bright, and colorful educational scene background for elementary school students.
+FINAL IMAGE MUST BE A "BACKGROUND ONLY" IMAGE READY FOR CHARACTER AND SPEECH BUBBLE OVERLAYS.
+
+- Full Story Flow:
+${params.fullStoryFlow}
+
+- Current Cut Learning Role:
+  Cut ${params.cutNo}: ${params.learningRole || 'None'}
+
+- Current Panel Scene:
+  ${params.currentPanelScene}
+
+- Educational Background Knowledge:
+  ${params.educationalConcept || 'None'}
+
+- Cut Specific Instruction:
+  ${cutSpecificInstruction}
+  User Edit Request: ${params.editedUserDescription || 'None'}
+
+- Visual Difference From Cut 1:
+  - Do not repeat the same background composition from cut 1.
+  - Keep only the visual style consistent, not the location or scene content.
+  - Each cut must have a distinct educational background based on the current script.
+  - The background MUST include visual cues that help explain the learning concept.
+  - If the current cut explains a different concept, change the environment, objects, map-like cues, terrain features, or visual metaphors accordingly.
+
+- Background Only Prompt:
+  ${params.visualPrompt}
+
+- Hard Negative Rules (CRITICAL):
+  no people, no characters, no human figures, no animals as characters, no text, no words, no letters, no speech bubbles, no comic panels, no comic page layout, no posters, no worksheets, no framed images, background only, full bleed
+
+한국어 추가 지침: 전체 1~6컷의 대본 흐름을 먼저 파악하고 현재 컷의 역할과 교과 개념에 맞는 배경만 생성하세요. 오직 하나의 배경 장면만 그려 주세요. "스타일 유지"는 색감, 선명도, 교육용 일러스트 톤의 유지를 의미하며, 배경 내용이나 장소의 반복을 절대 의미하지 않습니다. 2~6컷에서 1컷과 같은 장소/구도/오브젝트를 무의미하게 반복하면 실패입니다. 배경에는 학습 개념을 돕는 시각 단서가 포함되어야 합니다. 사람, 캐릭터, 글자, 말풍선, 만화 패널은 절대 그리지 마세요. 캐릭터와 말풍선을 올릴 수 있는 '배경 전용 이미지'여야 합니다.`;
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// generateFullComic
+// ─────────────────────────────────────────────────────────────────────────────
 
 export const generateFullComic = async (
   projectData: ComicProjectData,
-  script: GeneratedComicScript,
+  _script: GeneratedComicScript,
   onProgress: (state: ComicGenerationState) => void
-): Promise<string> => {
+): Promise<string[]> => {
   let currentState: ComicGenerationState = {
     status: 'generating',
     progress: 0,
-    message: '레퍼런스 이미지 불러오는 중...'
+    message: '이야기 배경 분석 중...'
   };
 
   const updateState = (update: Partial<ComicGenerationState>) => {
@@ -176,35 +271,9 @@ export const generateFullComic = async (
   };
 
   try {
-    const referenceImagesPool: any[] = [];
-    let refIdCount = 1;
-    
-    // Load V2 Character Reference Images
-    const lineup = await loadReferenceImage('/images/toonschool/characters/v2/character-lineup/toonschool-v2-character-lineup.png', 'V2 전체 캐릭터 라인업', refIdCount++);
-    if (lineup) referenceImagesPool.push(lineup);
-    
-    const refSheet = await loadReferenceImage('/images/toonschool/characters/v2/character-reference-sheet/toonschool-v2-character-reference-sheet.png', 'V2 캐릭터 레퍼런스 시트', refIdCount++);
-    if (refSheet) referenceImagesPool.push(refSheet);
-
-    const loadCharImage = async (url: string, role: string) => {
-        const img = await loadReferenceImage(url, role, refIdCount++);
-        if (img) referenceImagesPool.push(img);
-    };
-
-    await Promise.all([
-        loadCharImage('/images/toonschool/characters/v2/hana-master/hana-v2-fullbody.png', '하나 선생님 전신'),
-        loadCharImage('/images/toonschool/characters/v2/doyoon-master/doyoon-v2-fullbody.png', '도윤 전신'),
-        loadCharImage('/images/toonschool/characters/v2/seoa-master/seoa-v2-fullbody.png', '서아 전신')
-    ]);
-
-    updateState({ progress: 10, message: '이야기 배경 분석 중...' });
-    
-    // 1. Generate Scene Bible
-    const sceneBible = await generateSceneBible(projectData);
-
-    // 2. Extract visual prompts and generate images panel by panel
     const generatedImages: string[] = [];
-    const cuts = projectData.script.cuts; // Use saved script in projectData, not generated script which could be new
+    const originalPrompts: string[] = [];
+    const cuts = projectData.script.cuts;
 
     if (!cuts || cuts.length !== 6) {
       throw new Error('정확히 6컷의 대본 데이터가 필요합니다.');
@@ -212,47 +281,574 @@ export const generateFullComic = async (
 
     for (let i = 0; i < cuts.length; i++) {
       const cutNumber = i + 1;
-      updateState({ 
-        progress: 10 + Math.floor((i / 6) * 70), 
-        message: `${cutNumber}번째 컷 시각 장면 데이터 만드는 중...` 
+      updateState({
+        progress: 10 + Math.floor((i / 6) * 70),
+        message: `${cutNumber}번째 컷 시각 장면 데이터 만드는 중...`
       });
 
-      const visualPrompt = await extractVisualPrompt(cuts[i], sceneBible);
+      const { loadComicCutData } = await import('../components/editor/utils/comicStorage');
+      const cutData = loadComicCutData(projectData.projectId, cutNumber);
 
-      updateState({ 
-        progress: 10 + Math.floor(((i + 0.5) / 6) * 70), 
-        message: `${cutNumber}번째 컷 스케치 중...` 
+      // [통합 호출] sceneBible + visualPrompt 단일 Gemini 호출
+      let visualPrompt = '';
+      let sceneBible: StorySceneBible;
+
+      if (cutData?.customBackgroundPrompt) {
+        visualPrompt = cutData.customBackgroundPrompt;
+        sceneBible = makeFallbackSceneBible(projectData);
+      } else {
+        const combined = await generateSceneBibleAndVisualPrompt(projectData, cuts[i], cutNumber);
+        sceneBible = combined.sceneBible;
+        visualPrompt = combined.visualPrompt;
+      }
+      originalPrompts.push(visualPrompt);
+
+      const cacheParams: ComicBackgroundCacheParams = {
+        grade: projectData.grade,
+        subject: projectData.subject,
+        semester: projectData.semester,
+        unitId: projectData.mainUnit,
+        subunitId: projectData.subUnit,
+        topicTitle: projectData.topicTitle,
+        cutNo: cutNumber,
+        backgroundPrompt: visualPrompt
+      };
+
+      const cacheResult = await findCachedComicBackground(cacheParams);
+
+      if (cacheResult.hit) {
+        generatedImages.push(cacheResult.publicUrl);
+        continue;
+      }
+
+      updateState({
+        progress: 10 + Math.floor(((i + 0.5) / 6) * 70),
+        message: `${cutNumber}번째 컷 스케치 중...`
       });
 
-      const fullPrompt = `A high quality, bright, and colorful educational comic panel for elementary school students.
-DO NOT generate speech bubbles, captions, or any text (no Korean, no English). We will add text overlay later.
-Maintain consistent character appearances referencing the provided images (Hana, Doyoon, Seoa).
-Only draw one single panel. No split screen, no collage.
+      const prevCutData = cutNumber > 1 ? loadComicCutData(projectData.projectId, cutNumber - 1) : null;
+      const nextCutData = cutNumber < 6 ? loadComicCutData(projectData.projectId, cutNumber + 1) : null;
 
-Scene Bible Context:
-Location: ${sceneBible.primaryLocation}
-Mood: ${sceneBible.visualMood}
-Time: ${sceneBible.timeOfDay}
+      const fullScriptContext = cuts.map((c: any, idx: number) => `Cut ${idx + 1}: ${c.sceneDescription || c.scene || ''}`).join('\n');
 
-Panel Visual Action:
-${visualPrompt}
-`;
-      // Generate individual panel image (1:1 ratio)
-      const panelImageBase64 = await geminiClient.generateImage(fullPrompt, '1:1', referenceImagesPool);
-      generatedImages.push(panelImageBase64);
+      const fullPrompt = buildSingleCutBackgroundPrompt({
+        subject: projectData.subject,
+        topicTitle: projectData.topicTitle,
+        storyTitle: projectData.selectedStoryDescription,
+        fullStoryFlow: fullScriptContext,
+        cutNo: cutNumber,
+        currentPanelScene: cuts[i].sceneDescription || (cuts[i] as any).scene || 'None',
+        visualPrompt: visualPrompt,
+        primaryLocation: sceneBible.primaryLocation,
+        visualMood: sceneBible.visualMood,
+        timeOfDay: sceneBible.timeOfDay,
+        originalBackgroundPrompt: visualPrompt,
+        editedUserDescription: cutData?.customBackgroundPrompt || '',
+        previousCutBackgroundPrompt: prevCutData?.originalBackgroundPrompt,
+        nextCutBackgroundPrompt: nextCutData?.originalBackgroundPrompt,
+        seriesStylePrompt: 'toonschool-v2',
+        styleKey: cacheParams.styleKey,
+        learningRole: getLearningRoleForCut(cutNumber),
+        educationalConcept: sceneBible.learningConcept
+      });
+
+      console.log(`[ToonSchool Background] GENERATE_FULL_COMIC CUT=${cutNumber} PROMPT:\n${fullPrompt}`);
+
+      updateState({ progress: 10 + Math.floor(((i + 0.6) / 6) * 70), message: `${cutNumber}번째 컷 서버 대기열 등록 중...` });
+
+      logStage({ cutNumber, stage: 'enqueueJob', status: 'start' });
+      const { data: jobData, error: jobError } = await supabase
+        .from('generation_jobs')
+        .insert({
+          project_id: projectData.projectId,
+          cut_number: cutNumber,
+          prompt_data: { prompt: fullPrompt },
+          status: 'queued'
+        })
+        .select()
+        .single();
+
+      if (jobError || !jobData) {
+        logStage({ cutNumber, stage: 'enqueueJob', status: 'error', errorCode: 'ENQUEUE_FAILED' });
+        throw Object.assign(new Error(`대기열 등록 실패: ${jobError?.message || '알 수 없는 오류'}`), { errorCode: 'ENQUEUE_FAILED' });
+      }
+      logStage({ cutNumber, stage: 'enqueueJob', status: 'success', note: `jobId=${jobData.id}` });
+
+      let panelImageBase64 = '';
+      const jobId = jobData.id;
+      const maxWaitTime = 120000; // 2분
+      const pollStart = Date.now();
+      let isCompleted = false;
+
+      logStage({ cutNumber, stage: 'pollImageJob', status: 'start', note: `jobId=${jobId}` });
+
+      while (Date.now() - pollStart < maxWaitTime) {
+        const { data: pollData, error: pollError } = await supabase
+          .from('generation_jobs')
+          .select('*')
+          .eq('id', jobId)
+          .single();
+
+        if (pollError) {
+          console.error('Job poll error:', pollError);
+          await new Promise(r => setTimeout(r, 2000));
+          continue;
+        }
+
+        const elapsedMs = Date.now() - pollStart;
+        const currentStatus = pollData.status;
+
+        if (elapsedMs % 15000 < 3000) {
+           console.log(`[Job Monitor] job_id=${jobId} | cut=${cutNumber} | status=${currentStatus} | created_at=${pollData.created_at} | started_at=${pollData.started_at || 'null'} | elapsed_ms=${elapsedMs}`);
+        }
+
+        if (currentStatus === 'queued') {
+          if (elapsedMs > 60000) {
+            console.warn(`[Job Monitor] Worker 미실행 의심. 60초 이상 queued 상태입니다. job_id=${jobId}`);
+            updateState({ progress: 10 + Math.floor(((i + 0.6) / 6) * 70), message: '작업자가 아직 작업을 시작하지 않았습니다. 관리자 확인이 필요합니다.' });
+          } else {
+            updateState({ progress: 10 + Math.floor(((i + 0.6) / 6) * 70), message: `${cutNumber}번째 컷 순서를 기다리고 있어요...` });
+          }
+        } else if (currentStatus === 'processing') {
+          if (elapsedMs > 120000) {
+            updateState({ progress: 10 + Math.floor(((i + 0.7) / 6) * 70), message: '이미지 생성 중 시간이 오래 걸리고 있습니다...' });
+          } else {
+            updateState({ progress: 10 + Math.floor(((i + 0.7) / 6) * 70), message: `${cutNumber}번째 컷 그리는 중...` });
+          }
+        } else if (currentStatus === 'completed') {
+          panelImageBase64 = pollData.result_url;
+          isCompleted = true;
+          logStage({ cutNumber, stage: 'pollImageJob', status: 'success', elapsedMs });
+          break;
+        } else if (currentStatus === 'failed') {
+          const isWorkerError = pollData.error_message?.includes('만료') || pollData.error_message?.includes('Worker');
+          const errorCode = isWorkerError ? 'WORKER_ERROR' : 'PROVIDER_ERROR';
+          console.error(`[Job Monitor] failed | error_code=${errorCode} | error_message=${pollData.error_message}`);
+          logStage({ cutNumber, stage: 'pollImageJob', status: 'error', errorCode, note: pollData.error_message });
+          throw Object.assign(new Error(pollData.error_message || '서버 이미지 생성 실패'), { errorCode });
+        }
+
+        await new Promise(r => setTimeout(r, 3000));
+      }
+
+      if (!isCompleted) {
+        const finalStatus = (await supabase.from('generation_jobs').select('status').eq('id', jobId).single()).data?.status || 'unknown';
+        logStage({ cutNumber, stage: 'pollImageJob', status: 'error', errorCode: 'POLL_TIMEOUT', elapsedMs: Date.now() - pollStart, note: `last_status=${finalStatus}` });
+        
+        let msg = '이미지 생성 작업이 지연되고 있습니다. 이 컷만 다시 시도해 주세요.';
+        if (finalStatus === 'queued') msg = 'Worker 미실행 또는 작업 미처리 가능성이 있습니다. (상태: queued)';
+        else if (finalStatus === 'processing') msg = '이미지 생성 API 지연 가능성이 있습니다. (상태: processing)';
+        console.error(`[Job Monitor] POLL_TIMEOUT | status=${finalStatus} | msg=${msg}`);
+
+        throw Object.assign(new Error(msg), { errorCode: 'POLL_TIMEOUT' });
+      }
+
+      updateState({
+        progress: 10 + Math.floor(((i + 0.8) / 6) * 70),
+        message: `${cutNumber}번째 컷 최적화 중...`
+      });
+
+      const { compressImageDataUrl } = await import('../../../shared/lib/imageUtils');
+      const compressedImage = await compressImageDataUrl(panelImageBase64, 800, 0.8);
+      generatedImages.push(compressedImage);
+
+      saveComicBackgroundToCache(cacheResult.cacheKey, compressedImage, cacheParams).catch(err => {
+        console.error('Failed to save background to cache', err);
+      });
     }
 
-    updateState({ progress: 85, message: '생성된 6장의 그림을 조립하는 중...' });
+    updateState({ progress: 95, message: '생성된 6장의 그림을 저장하는 중...' });
 
-    // 3. Stitch images together using Canvas
-    const stitchedImageBase64 = await stitchImagesToGrid(generatedImages);
+    const { loadComicCutData, saveComicCutData } = await import('../components/editor/utils/comicStorage');
+    for (let i = 0; i < cuts.length; i++) {
+      const cutNumber = i + 1;
+      let cutData = loadComicCutData(projectData.projectId, cutNumber);
+      if (!cutData) {
+        cutData = { cutNumber, elements: [], updatedAt: new Date().toISOString() };
+      }
+      cutData.backgroundImageUrl = generatedImages[i];
+      cutData.originalBackgroundPrompt = originalPrompts[i];
+      cutData.updatedAt = new Date().toISOString();
+      saveComicCutData(projectData.projectId, cutNumber, cutData);
+    }
 
-    updateState({ status: 'success', progress: 100, message: '만화 완성!', fullImageUrl: stitchedImageBase64 });
-    return stitchedImageBase64;
+    updateState({ status: 'success', progress: 100, message: '만화 배경 생성 완료!', cutImages: generatedImages });
+    return generatedImages;
 
   } catch (error: any) {
     console.error('Error generating full comic:', error);
-    updateState({ status: 'error', progress: 0, message: '오류가 발생했습니다.', errorMessage: error.message });
+    const errorCode = error.errorCode || (error instanceof GeminiError ? error.errorCode : undefined);
+    const displayMessage = errorCode ? getErrorMessageByCode(errorCode) : '생성 중 오류가 발생했습니다.';
+
+    updateState({
+      status: 'error',
+      progress: 0,
+      message: displayMessage,
+      errorMessage: displayMessage,
+      errorCode,
+    });
     throw error;
   }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// generateSingleComicCut (timeout wrapper)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const generateSingleComicCut = async (
+  projectData: ComicProjectData,
+  cutNumber: number,
+  onProgress: (state: ComicGenerationState) => void
+): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    let isTimeout = false;
+    // 텍스트 생성 ~30s + 이미지 생성 ~240s + 여유 = 300초 (5분)
+    // 단, 무한 로딩 방지: 반드시 이 시간 후 실패 상태로 전환됨
+    const TIMEOUT_MS = 300000;
+
+    const timeoutId = setTimeout(() => {
+      isTimeout = true;
+      logStage({ cutNumber, stage: 'pollImageJob', status: 'error', errorCode: 'TIMEOUT', elapsedMs: TIMEOUT_MS });
+      const msg = getErrorMessageByCode('TIMEOUT');
+      onProgress({
+        status: 'error',
+        progress: 0,
+        message: msg,
+        errorMessage: msg,
+        errorCode: 'TIMEOUT',
+      });
+      reject(Object.assign(new Error(msg), { errorCode: 'TIMEOUT' }));
+    }, TIMEOUT_MS);
+
+    const wrappedOnProgress = (state: ComicGenerationState) => {
+      if (!isTimeout) onProgress(state);
+    };
+
+    doGenerateSingleComicCut(projectData, cutNumber, wrappedOnProgress)
+      .then(res => {
+        if (!isTimeout) {
+          clearTimeout(timeoutId);
+          resolve(res);
+        }
+      })
+      .catch(err => {
+        if (!isTimeout) {
+          clearTimeout(timeoutId);
+          reject(err);
+        }
+      });
+  });
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// doGenerateSingleComicCut (실제 구현)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const doGenerateSingleComicCut = async (
+  projectData: ComicProjectData,
+  cutNumber: number,
+  onProgress: (state: ComicGenerationState) => void
+): Promise<string> => {
+  let currentState: ComicGenerationState = {
+    status: 'generating',
+    progress: 0,
+    message: '이야기 배경 분석 중...',
+    startedAt: Date.now()
+  };
+
+  const updateState = (update: Partial<ComicGenerationState>) => {
+    currentState = { ...currentState, ...update };
+    onProgress(currentState);
+  };
+
+  try {
+    const { loadComicCutData, saveComicCutData } = await import('../components/editor/utils/comicStorage');
+    let cutData = loadComicCutData(projectData.projectId, cutNumber);
+
+    const cutIndex = cutNumber - 1;
+    const cut = projectData.script.cuts[cutIndex];
+    if (!cut) throw Object.assign(new Error('대본 데이터를 찾을 수 없습니다.'), { errorCode: 'NO_SCRIPT' });
+
+    updateState({ progress: 20, message: '이야기 배경 분석 중...' });
+
+    // ── [핵심] Gemini 호출 횟수 최소화 ──────────────────────────────────────
+    // 기존: sceneBible 호출 + extractVisualPrompt 호출 = 최소 2회
+    // 변경: combinedPromptGen 단일 호출 = 1회 (실패 시 로컬 fallback)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    let visualPrompt = '';
+    let editedUserDescription = '';
+    let isRegeneration = false;
+    let originalBackgroundPrompt = cutData?.originalBackgroundPrompt;
+    let sceneBible: StorySceneBible;
+
+    if (cutData?.customBackgroundPrompt && cutData.customBackgroundPrompt.trim() !== '') {
+      isRegeneration = true;
+      editedUserDescription = cutData.customBackgroundPrompt;
+
+      if (!originalBackgroundPrompt) {
+        // 원본 프롬프트가 없으면 새로 생성 (1회 호출)
+        const combined = await generateSceneBibleAndVisualPrompt(projectData, cut, cutNumber);
+        sceneBible = combined.sceneBible;
+        originalBackgroundPrompt = combined.visualPrompt;
+      } else {
+        sceneBible = makeFallbackSceneBible(projectData);
+      }
+
+      updateState({ progress: 35, message: '배경 설명 변환 중...' });
+
+      // 사용자 요청 번역 (재생성 시에만)
+      try {
+        visualPrompt = await translateUserDescriptionToBackground(
+          originalBackgroundPrompt!,
+          editedUserDescription,
+          sceneBible
+        );
+      } catch (err: any) {
+        console.warn('[ComicService] translateUserDescriptionToBackground 실패, fallback 사용', err);
+        visualPrompt = `초등학생 학습 만화 배경 이미지. 사람, 캐릭터, 말풍선, 글자 없이 장면 배경만 표현. 추가 요구사항: ${editedUserDescription}`;
+      }
+    } else {
+      // [통합 호출] sceneBible + visualPrompt 단일 Gemini 호출
+      const combined = await generateSceneBibleAndVisualPrompt(projectData, cut, cutNumber);
+      sceneBible = combined.sceneBible;
+      visualPrompt = combined.visualPrompt;
+      originalBackgroundPrompt = visualPrompt;
+    }
+
+    updateState({ progress: 50, message: '시각 장면 데이터 완료, 이미지 준비 중...' });
+
+    const prevCutData = cutNumber > 1 ? loadComicCutData(projectData.projectId, cutNumber - 1) : null;
+    const nextCutData = cutNumber < 6 ? loadComicCutData(projectData.projectId, cutNumber + 1) : null;
+    const previousCutBackgroundPrompt = prevCutData?.originalBackgroundPrompt;
+    const nextCutBackgroundPrompt = nextCutData?.originalBackgroundPrompt;
+
+    const promptVersion = isRegeneration ? 'single-cut-background-v4-context-locked' : 'toonschool-v2-single-background-v2';
+
+    const cacheParams: ComicBackgroundCacheParams = {
+      grade: projectData.grade,
+      subject: projectData.subject,
+      semester: projectData.semester,
+      unitId: projectData.mainUnit,
+      subunitId: projectData.subUnit,
+      topicTitle: projectData.topicTitle,
+      cutNo: cutNumber,
+      backgroundPrompt: isRegeneration ? visualPrompt : originalBackgroundPrompt,
+      styleKey: promptVersion
+    };
+
+    const cacheResult = await findCachedComicBackground(cacheParams);
+
+    if (cacheResult.hit) {
+      console.log(`[ToonSchool Background Cache] HIT cut=${cutNumber}`);
+      if (!cutData) {
+        cutData = { cutNumber, elements: [], updatedAt: new Date().toISOString() };
+      }
+      cutData.backgroundImageUrl = cacheResult.publicUrl;
+      cutData.originalBackgroundPrompt = originalBackgroundPrompt;
+      cutData.updatedAt = new Date().toISOString();
+      saveComicCutData(projectData.projectId, cutNumber, cutData);
+      updateState({ status: 'success', progress: 100, message: '완료!' });
+      return cacheResult.publicUrl;
+    }
+
+    console.log(`[ToonSchool Background Cache] MISS cut=${cutNumber}`);
+
+    // ── buildSingleCutPrompt ─────────────────────────────────────────────────
+    logStage({ cutNumber, stage: 'buildSingleCutPrompt', status: 'start' });
+    const fullScriptContext = projectData.script.cuts.map((c: any, idx: number) => `Cut ${idx + 1}: ${c.sceneDescription || c.scene || ''}`).join('\n');
+
+    const fullPrompt = buildSingleCutBackgroundPrompt({
+      subject: projectData.subject,
+      topicTitle: projectData.topicTitle,
+      storyTitle: projectData.selectedStoryDescription,
+      fullStoryFlow: fullScriptContext,
+      cutNo: cutNumber,
+      currentPanelScene: cut.sceneDescription || (cut as any).scene || 'None',
+      visualPrompt: visualPrompt,
+      primaryLocation: sceneBible.primaryLocation,
+      visualMood: sceneBible.visualMood,
+      timeOfDay: sceneBible.timeOfDay,
+      originalBackgroundPrompt: originalBackgroundPrompt,
+      editedUserDescription: editedUserDescription,
+      previousCutBackgroundPrompt: previousCutBackgroundPrompt,
+      nextCutBackgroundPrompt: nextCutBackgroundPrompt,
+      seriesStylePrompt: 'toonschool-v2',
+      styleKey: cacheParams.styleKey,
+      learningRole: getLearningRoleForCut(cutNumber),
+      educationalConcept: sceneBible.learningConcept
+    });
+    console.log(`[ToonSchool Background] SINGLE_CUT_PROMPT:\n${fullPrompt}`);
+    logStage({ cutNumber, stage: 'buildSingleCutPrompt', status: 'success' });
+
+    // ── enqueueJob ────────────────────────────────────────────────────────────
+    updateState({ progress: 60, message: '서버 대기열에 등록 중...' });
+    logStage({ cutNumber, stage: 'enqueueJob', status: 'start' });
+
+    const { data: jobData, error: jobError } = await supabase
+      .from('generation_jobs')
+      .insert({
+        project_id: projectData.projectId,
+        cut_number: cutNumber,
+        prompt_data: { prompt: fullPrompt },
+        status: 'queued'
+      })
+      .select()
+      .single();
+
+    if (jobError || !jobData) {
+      logStage({ cutNumber, stage: 'enqueueJob', status: 'error', errorCode: 'ENQUEUE_FAILED' });
+      throw Object.assign(new Error(`대기열 등록 실패: ${jobError?.message || '알 수 없는 오류'}`), { errorCode: 'ENQUEUE_FAILED' });
+    }
+    logStage({ cutNumber, stage: 'enqueueJob', status: 'success', note: `jobId=${jobData.id}` });
+
+    // ── pollImageJob ──────────────────────────────────────────────────────────
+    let panelImageBase64 = '';
+    const jobId = jobData.id;
+    // 이미지 생성 polling: 180초 (텍스트 ~30s 소요 후 남은 시간 최대 확보)
+    // 무한 로딩 방지: 이 시간 초과 시 POLL_TIMEOUT 에러로 전환 (300초 = 5분)
+    const maxWaitTime = 300000;
+    const pollStart = Date.now();
+    let isCompleted = false;
+    let finalElapsedMs = 0;
+
+    logStage({ cutNumber, stage: 'pollImageJob', status: 'start', note: `jobId=${jobId}` });
+    updateState({ progress: 70, message: '서버 대기열에 등록되었어요. 순서를 기다리는 중...' });
+
+    while (Date.now() - pollStart < maxWaitTime) {
+      const { data: pollData, error: pollError } = await supabase
+        .from('generation_jobs')
+        .select('*')
+        .eq('id', jobId)
+        .single();
+
+      if (pollError) {
+        console.error('Job poll error:', pollError);
+        await new Promise(r => setTimeout(r, 2000));
+        continue;
+      }
+
+      const elapsedMs = Date.now() - pollStart;
+      const currentStatus = pollData.status;
+
+      if (elapsedMs % 15000 < 3000) {
+         console.log(`[Job Monitor] job_id=${jobId} | cut=${cutNumber} | status=${currentStatus} | created_at=${pollData.created_at} | started_at=${pollData.started_at || 'null'} | elapsed_ms=${elapsedMs}`);
+      }
+
+      if (currentStatus === 'queued') {
+        if (elapsedMs > 60000) {
+          console.warn(`[Job Monitor] Worker 미실행 의심. 60초 이상 queued 상태입니다. job_id=${jobId}`);
+          updateState({ progress: 72, message: '작업자가 아직 작업을 시작하지 않았습니다. 관리자 확인이 필요합니다.' });
+        } else {
+          updateState({ progress: 72, message: '생성 순서를 기다리고 있어요...' });
+        }
+      } else if (currentStatus === 'processing') {
+        if (elapsedMs > 120000) {
+          updateState({ progress: 85, message: '이미지 생성 중 시간이 오래 걸리고 있습니다...' });
+        } else {
+          updateState({ progress: 85, message: '그림을 그리는 중이에요...' });
+        }
+      } else if (currentStatus === 'completed') {
+        updateState({ progress: 95, message: '생성 완료!' });
+        panelImageBase64 = pollData.result_url;
+        isCompleted = true;
+        finalElapsedMs = pollData.elapsed_ms || elapsedMs;
+        logStage({ cutNumber, stage: 'pollImageJob', status: 'success', elapsedMs: finalElapsedMs });
+        break;
+      } else if (currentStatus === 'failed') {
+        const isWorkerError = pollData.error_message?.includes('만료') || pollData.error_message?.includes('Worker');
+        const errorCode = isWorkerError ? 'WORKER_ERROR' : 'PROVIDER_ERROR';
+        console.error(`[Job Monitor] failed | error_code=${errorCode} | error_message=${pollData.error_message}`);
+        logStage({ cutNumber, stage: 'pollImageJob', status: 'error', errorCode, note: pollData.error_message });
+        throw Object.assign(new Error(pollData.error_message || '서버 이미지 생성 실패'), { errorCode });
+      }
+
+      await new Promise(r => setTimeout(r, 3000));
+    }
+
+    if (!isCompleted) {
+      const finalStatus = (await supabase.from('generation_jobs').select('status').eq('id', jobId).single()).data?.status || 'unknown';
+      logStage({ cutNumber, stage: 'pollImageJob', status: 'error', errorCode: 'POLL_TIMEOUT', elapsedMs: Date.now() - pollStart, note: `last_status=${finalStatus}` });
+      
+      let msg = '이미지 생성 작업이 지연되고 있습니다. 이 컷만 다시 시도해 주세요.';
+      if (finalStatus === 'queued') msg = 'Worker 미실행 또는 작업 미처리 가능성이 있습니다. (상태: queued)';
+      else if (finalStatus === 'processing') msg = '이미지 생성 API 지연 가능성이 있습니다. (상태: processing)';
+      console.error(`[Job Monitor] POLL_TIMEOUT | status=${finalStatus} | msg=${msg}`);
+
+      throw Object.assign(new Error(msg), { errorCode: 'POLL_TIMEOUT' });
+    }
+
+    const compressedImage = panelImageBase64;
+
+    const forbiddenWordsCheck = ['comic page', 'panels', 'speech bubbles', '말풍선', '만화칸', '사람', '캐릭터', 'people', 'character', 'text'];
+    const hasForbiddenWords = forbiddenWordsCheck.some(w => visualPrompt.toLowerCase().includes(w));
+    if (hasForbiddenWords) {
+      console.warn(`[ToonSchool Background] 재생성 프롬프트에 금지어가 포함되어 있습니다. (cut=${cutNumber})`);
+    }
+
+    const metadata: any = {
+      generationMode: isRegeneration ? 'single-cut-regenerate' : 'single-cut-background',
+      hasForbiddenWords,
+      promptVersion
+    };
+    if (isRegeneration) {
+      metadata.originalBackgroundPrompt = originalBackgroundPrompt;
+      metadata.editedUserDescription = editedUserDescription;
+      metadata.backgroundOnlyInterpretation = visualPrompt;
+    }
+
+    saveComicBackgroundToCache(cacheResult.cacheKey, compressedImage, cacheParams, metadata).then(() => {
+      console.log(`[ToonSchool Background Cache] SAVED cut=${cutNumber}`);
+    }).catch(err => {
+      console.error('Failed to save background to cache', err);
+    });
+
+    // ── saveCutResult ─────────────────────────────────────────────────────────
+    logStage({ cutNumber, stage: 'saveCutResult', status: 'start' });
+    updateState({ progress: 98, message: '그림을 저장하는 중...' });
+
+    if (!cutData) {
+      cutData = { cutNumber, elements: [], updatedAt: new Date().toISOString() };
+    }
+    cutData.backgroundImageUrl = compressedImage;
+    cutData.originalBackgroundPrompt = originalBackgroundPrompt;
+    cutData.updatedAt = new Date().toISOString();
+    saveComicCutData(projectData.projectId, cutNumber, cutData);
+    logStage({ cutNumber, stage: 'saveCutResult', status: 'success' });
+
+    updateState({ status: 'success', progress: 100, message: '완료!', elapsedMs: finalElapsedMs });
+    return compressedImage;
+
+  } catch (error: any) {
+    console.error(`Error generating comic cut ${cutNumber}:`, error);
+
+    const errorCode = error.errorCode || (error instanceof GeminiError ? error.errorCode : 'UNKNOWN');
+    const displayMessage = getErrorMessageByCode(errorCode);
+
+    updateState({
+      status: 'error',
+      progress: 0,
+      message: displayMessage,
+      errorMessage: displayMessage,
+      errorCode,
+    });
+    throw error;
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// checkCutGenerationStatus
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const checkCutGenerationStatus = async (projectId: string, cutNumber: number) => {
+  const { data, error } = await supabase
+    .from('generation_jobs')
+    .select('*')
+    .eq('project_id', projectId)
+    .eq('cut_number', cutNumber)
+    .order('created_at', { ascending: false })
+    .limit(1);
+
+  if (error || !data || data.length === 0) return null;
+  return data[0];
 };

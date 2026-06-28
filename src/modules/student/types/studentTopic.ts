@@ -32,6 +32,16 @@ export interface KeywordItem {
   reason?: string;
 }
 
+export interface CurriculumContext {
+  unitSummary?: string;
+  unitGoal?: string;
+  subunitSummary?: string;
+  learningGoal?: string;
+  keyQuestions?: string;
+  contentScope?: string;
+  achievementStandards?: string;
+}
+
 export interface TopicGenerationRequest {
   gradeName: string;
   subjectName: string;
@@ -43,6 +53,8 @@ export interface TopicGenerationRequest {
   previousTitles?: string[];
   previousIncidents?: string[];
   previousTypes?: string[];
+  count?: number;
+  curriculumContext?: CurriculumContext;
 }
 
 export type TopicGenerationState = 'idle' | 'loading' | 'success' | 'error';

@@ -1,18 +1,17 @@
-import { Sparkles, LayoutGrid, Users, Settings, CheckSquare, Undo2, Redo2 } from 'lucide-react';
+import { Sparkles, LayoutGrid, Lightbulb, MessageCircle, Undo2, Redo2 } from 'lucide-react';
 import type { ScriptToolType } from './StudentScriptEditor';
 
 interface ScriptToolbarProps {
   activeTool: ScriptToolType;
-  onChangeTool: (tool: ScriptToolType) => void;
+  onSelectTool: (tool: ScriptToolType) => void;
 }
 
-export default function ScriptToolbar({ activeTool, onChangeTool }: ScriptToolbarProps) {
+export default function ScriptToolbar({ activeTool, onSelectTool }: ScriptToolbarProps) {
   const tools = [
     { id: 'ai', icon: Sparkles, label: 'AI 생성' },
     { id: 'cut', icon: LayoutGrid, label: '컷 편집' },
-    { id: 'character', icon: Users, label: '등장인물' },
-    { id: 'setting', icon: Settings, label: '이야기 설정' },
-    { id: 'review', icon: CheckSquare, label: '검토' }
+    { id: 'concept', icon: Lightbulb, label: '핵심 개념' },
+    { id: 'coverDialogue', icon: MessageCircle, label: '표지 대화' }
   ] as const;
 
   return (
@@ -23,7 +22,7 @@ export default function ScriptToolbar({ activeTool, onChangeTool }: ScriptToolba
           return (
             <button
               key={tool.id}
-              onClick={() => onChangeTool(tool.id)}
+              onClick={() => onSelectTool(tool.id)}
               className={`flex flex-col items-center justify-center py-3 px-1 rounded-xl transition-all group relative ${
                 isActive 
                   ? 'bg-[#ff2778] text-[#ffffff]' 

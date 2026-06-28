@@ -12,10 +12,16 @@ export default function AiMagicButton({ genState, disabled, onClick }: AiMagicBu
     <button
       onClick={onClick}
       disabled={disabled}
-      className="btn-primary-action flex items-center justify-center w-full py-6 md:py-8 text-2xl font-jua shadow-md"
+      className="btn-primary-action !bg-[#6366F1] hover:!bg-[#4F46E5] !text-white flex items-center justify-center w-full max-w-[320px] min-w-[260px] mx-auto py-3 md:py-4 text-xl font-jua shadow-md transition-all disabled:opacity-70 disabled:cursor-not-allowed"
     >
-      <Wand2 className={`w-8 h-8 mr-3 stroke-[3] ${genState === 'loading' ? 'animate-spin' : 'animate-bounce-gentle'}`} />
-      <span>{genState === 'idle' ? 'AI 추천 마법 부리기 ✨' : '새로운 주제 다시 받기 🔄'}</span>
+      <Wand2 className={`w-6 h-6 mr-3 stroke-[3] ${genState === 'loading' ? 'animate-spin' : 'animate-bounce-gentle'}`} />
+      <span>
+        {genState === 'loading' 
+          ? '추천 주제를 만들고 있어요...' 
+          : genState === 'idle' 
+            ? '이야기 추천 ✨' 
+            : '새로운 이야기로 다시 받기 🔄'}
+      </span>
     </button>
   )
 }

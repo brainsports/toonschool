@@ -19,3 +19,11 @@ export const COMMON_COVER_TEMPLATES: CoverTemplate[] = [
 ];
 
 export const DEFAULT_COVER_TEMPLATE_ID = 'common-01';
+
+export const SUBJECT_COVER_MAPPING: Record<string, string> = {
+  '국어': '/images/toonschool/covers/templates/korean/korean-cover-master.webp',
+  '영어': '/images/toonschool/covers/templates/english/english-cover-base.webp',
+  '수학': '/images/toonschool/covers/templates/math/math-cover-master.webp',
+  '사회': '/images/toonschool/covers/templates/social/social-cover-base.webp',
+  '과학': '/images/toonschool/covers/templates/science/science-cover-base.webp',
+};

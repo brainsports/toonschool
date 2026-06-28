@@ -28,31 +28,41 @@ export const getStudentGrades = async (): Promise<StudentGradeOption[]> => {
   }
 }
 
-export const getSubjectsByGrade = async (gradeValue: number): Promise<StudentSubjectOption[]> => {
+export const getSubjectsByGradeAndSemester = async (gradeValue: number, semesterValue: number): Promise<StudentSubjectOption[]> => {
   try {
-    // 1. 해당 학년이 있는 subject_id 고유값 조회
+    // 1. 해당 학년의 모든 단원 조회 (영어는 학기 구분이 없을 수 있으므로 학년으로만 우선 조회)
     const { data: units, error: unitError } = await supabase
       .from('curriculum_units')
-      .select('subject_id')
+      .select('subject_id, semester')
       .eq('grade', gradeValue)
       
     if (unitError) throw unitError
     
-    const subjectIds = Array.from(new Set(units.map(item => item.subject_id)))
+    // 해당 학기에 속한 단원이 있는 과목 ID 추출
+    const semesterSubjectIds = new Set(
+      units.filter(u => u.semester === semesterValue).map(u => u.subject_id)
+    );
     
-    if (subjectIds.length === 0) return []
+    const allSubjectIds = Array.from(new Set(units.map(item => item.subject_id)))
+    
+    if (allSubjectIds.length === 0) return []
 
     // 2. subject_id로 과목 상세 조회
     const { data: subjects, error: subjectError } = await supabase
       .from('subjects')
       .select('id, name, code')
-      .in('id', subjectIds)
+      .in('id', allSubjectIds)
       .eq('is_active', true)
       .order('sort_order', { ascending: true })
 
     if (subjectError) throw subjectError
 
-    return subjects.map(s => ({
+    // 3. 영어(ENG)는 학기에 무관하게 항상 포함, 나머지는 선택한 학기의 단원이 있는 과목만 포함
+    const filteredSubjects = subjects.filter(s => 
+      s.code === 'ENG' || semesterSubjectIds.has(s.id)
+    );
+
+    return filteredSubjects.map(s => ({
       id: s.id,
       name: s.name,
       code: s.code
@@ -63,17 +73,25 @@ export const getSubjectsByGrade = async (gradeValue: number): Promise<StudentSub
   }
 }
 
-export const getMajorUnitsByGradeAndSubject = async (
+export const getMajorUnitsByGradeSemesterAndSubject = async (
   gradeValue: number,
-  subjectId: string
+  semesterValue: number,
+  subjectId: string,
+  subjectCode?: string
 ): Promise<StudentMajorUnitOption[]> => {
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from('curriculum_units')
       .select('id, unit_number, unit_name')
       .eq('grade', gradeValue)
-      .eq('subject_id', subjectId)
-      .order('unit_number', { ascending: true })
+      .eq('subject_id', subjectId);
+      
+    // 영어(ENG)는 학기 구분 없이 모두 가져오고, 나머지는 선택한 학기 데이터만 가져오도록 필터링
+    if (subjectCode !== 'ENG') {
+      query = query.eq('semester', semesterValue);
+    }
+
+    const { data, error } = await query.order('unit_number', { ascending: true })
 
     if (error) throw error
 

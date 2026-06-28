@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import StudentCreationLayout from '../components/layout/StudentCreationLayout'
 import StudentScriptEditor from '../components/script/StudentScriptEditor'
 import type { StudentUnitSelection } from '../types/studentCurriculum'
 import type { TopicRecommendation } from '../types/studentTopic'
+import type { CoverKeyConcept, CoverDialogue } from '../services/studentScriptService'
+import { projectStorage } from '../utils/projectStorage'
 
 export default function StudentScriptPage() {
   const navigate = useNavigate()
@@ -14,10 +15,23 @@ export default function StudentScriptPage() {
     topic: TopicRecommendation
     extraRequest?: string
     selectedKeywords?: string[]
+    projectId?: string
   } | null>(null)
+
+  const [projectId] = useState<string>(location.state?.projectId || '')
 
   useEffect(() => {
     let data = location.state as any
+    
+    if (!data || !data.selection) {
+      if (projectId) {
+        const savedData = projectStorage.loadTopic<any>(projectId)
+        if (savedData) {
+          data = savedData
+        }
+      }
+    }
+
     if (!data) {
       const stored = localStorage.getItem('studentSelectedTopic')
       if (stored) {
@@ -38,23 +52,20 @@ export default function StudentScriptPage() {
 
   if (!selectionData) return null
 
-  const handleNext = () => {
-    navigate('/student/front-cover', { state: selectionData });
+  const handleNext = (keyConcepts?: CoverKeyConcept[], coverDialogue?: CoverDialogue) => {
+    navigate('/student/front-cover', { state: { ...selectionData, keyConcepts, coverDialogue, projectId } });
   };
 
   const handlePrev = () => {
-    navigate('/student/topic', { state: selectionData });
+    navigate('/student/topic', { state: { ...selectionData, projectId } });
   };
 
   return (
-    <StudentCreationLayout currentStep="script" bgVariant="space" maxWidth="full">
-      <div className="w-full flex-1 flex flex-col min-h-0 animate-fade-in">
-        <StudentScriptEditor 
-          selectionData={selectionData}
-          onPrev={handlePrev}
-          onNext={handleNext}
-        />
-      </div>
-    </StudentCreationLayout>
+    <StudentScriptEditor 
+      selectionData={selectionData}
+      projectId={projectId}
+      onPrev={handlePrev}
+      onNext={handleNext}
+    />
   )
 }

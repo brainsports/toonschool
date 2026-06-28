@@ -4,17 +4,20 @@ import type { EditorState, CanvasElement, EditorToolType, EditorProps } from './
 import { useEditorHistory } from './utils/editorHistory';
 import EditorToolbar from './EditorToolbar';
 import CanvasStage from './CanvasStage';
-import { ArrowLeft, ArrowRight, Save, Download, ZoomIn, ZoomOut, Maximize, Sparkles } from 'lucide-react';
+import { ArrowRight, Sparkles } from 'lucide-react';
 
 import TextPanel from './panels/TextPanel';
 import CharacterPanel from './panels/CharacterPanel';
 import LayerPanel from './panels/LayerPanel';
 import BackgroundPanel from './panels/BackgroundPanel';
+import StudentWorkspaceLayout from '../layout/StudentWorkspaceLayout';
+import StudentToolPanel from '../layout/StudentToolPanel';
+import StudentZoomControl from '../layout/StudentZoomControl';
 
 export default function StudentCanvasEditor({ 
-  initialState, onSave, readOnly = false, canvasWidth = 1400, canvasHeight = 1980,
-  onPrev, onNext, prevText = "이전으로", nextText = "다음 단계로", mode = 'default', subject,
-  onCompleteCover, isCoverCompleted
+  initialState, readOnly = false, canvasWidth = 1400, canvasHeight = 1980,
+  onPrev, onNext, nextText = "다음 단계로", mode = 'default', subject,
+  onCompleteCover, isCoverCompleted, topicTitle
 }: EditorProps) {
   const defaultState: EditorState = {
     version: '1.1',
@@ -168,234 +171,138 @@ export default function StudentCanvasEditor({
     }
   }, [selectedElementId, currentState.elements]);
 
-  return (
-    <div className="flex-1 flex w-full bg-transparent overflow-hidden relative min-h-0">
-      
-      {/* Left Tools Area */}
-      {!readOnly && (
-        <div className="flex h-full shrink-0 relative z-30 bg-slate-900 shadow-2xl border-r border-white/10">
-          
-          {/* Main Vertical Toolbar */}
-          <div className="w-[64px] h-full shrink-0 z-40">
-            <EditorToolbar 
-              activeTool={activeTool}
-              onChangeTool={setActiveTool}
-              onUndo={undo}
-              onRedo={redo}
-              canUndo={canUndo}
-              canRedo={canRedo}
-              showBackgroundTool={mode === 'front-cover'}
-            />
-          </div>
+  const title = mode === 'front-cover' ? '표지 만들기' : mode === 'comic-cut' ? '만화 제작하기' : '편집하기';
 
-          {/* Tool Panels */}
-          {activeTool !== 'select' && (
-            <div className="w-[280px] lg:w-[240px] xl:w-[280px] h-full transition-all shrink-0 bg-slate-800 border-l border-white/10 z-30">
-              {activeTool === 'text' && (
-                <TextPanel 
-                  onAddElement={handleAddElement} 
-                  selectedElement={selectedElementId ? currentState.elements.find(e => e.id === selectedElementId) || null : null}
-                  onUpdateElement={handleUpdateElement}
-                />
-              )}
-              {activeTool === 'character' && (
-                <CharacterPanel onAddElement={handleAddElement} subject={subject} />
-              )}
-              {activeTool === 'layer' && (
-                <LayerPanel 
-                  elements={currentState.elements}
-                  selectedElementId={selectedElementId}
-                  onSelectElement={setSelectedElementId}
-                  onToggleVisibility={handleToggleVisibility}
-                  onReorderElement={handleReorderElement}
-                />
-              )}
-              {activeTool === 'background' && (
-                <BackgroundPanel 
-                  selectedCoverId={currentState.coverTemplateId}
-                  onSelectCover={(id) => pushState({ ...currentState, coverTemplateId: id })}
-                />
-              )}
-              {['bubble', 'graphic', 'shape'].includes(activeTool) && (
-                <div className="w-full h-full p-4 flex flex-col items-center justify-center space-y-4">
-                  <span className="text-4xl">🛠️</span>
-                  <span className="text-slate-300 font-bold">도구 준비 중입니다</span>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+  const actionButtons = (
+    <>
+      {mode === 'front-cover' && onCompleteCover && (
+        <button 
+          onClick={() => {
+            const newState = onCompleteCover(currentState);
+            if (newState) pushState(newState);
+          }}
+          disabled={isCoverCompleted}
+          className={`btn-student btn-student-md btn-student-secondary ${isCoverCompleted ? 'opacity-50 cursor-not-allowed' : ''}`}
+        >
+          <Sparkles className="w-5 h-5" />
+          <span>{isCoverCompleted ? '표지 완성됨' : '표지 만들기'}</span>
+        </button>
       )}
 
+      {onNext && (
+        <button
+          onClick={() => onNext(currentState)}
+          className="btn-student btn-student-primary btn-student-md"
+        >
+          <span>{nextText}</span>
+          <ArrowRight className="w-5 h-5" />
+        </button>
+      )}
+    </>
+  );
+
+  return (
+    <StudentWorkspaceLayout
+      currentStep={mode === 'front-cover' ? 'frontCover' : 'comic'}
+      title={title}
+      subtitle={topicTitle}
+      showBackButton={true}
+      onBack={onPrev}
+      actionButtons={actionButtons}
+      bgVariant="pastel"
+    >
+      <StudentToolPanel width="var(--student-layout-tool-panel-width,320px)" className="flex-row !w-auto">
+        {!readOnly && (
+          <div className="flex h-full shrink-0 relative z-10 bg-[#f8f9fc] shadow-lg border-r border-[#d9deea]">
+            
+            {/* Main Vertical Toolbar */}
+            <div className="w-[64px] h-full shrink-0 z-20 bg-white shadow-lg border-r border-[#d9deea]">
+              <EditorToolbar 
+                activeTool={activeTool}
+                onChangeTool={setActiveTool}
+                onUndo={undo}
+                onRedo={redo}
+                canUndo={canUndo}
+                canRedo={canRedo}
+                showBackgroundTool={mode === 'front-cover'}
+              />
+            </div>
+
+            {/* Tool Panels */}
+            {activeTool !== 'select' && (
+              <div className="w-[280px] lg:w-[240px] xl:w-[280px] h-full transition-all shrink-0 bg-[#ffffff] flex flex-col z-10">
+                {/* No spacer needed anymore as header is now relative */}
+                
+                <div className="flex-1 w-full relative overflow-y-auto">
+                  {activeTool === 'text' && (
+                    <TextPanel 
+                      onAddElement={handleAddElement} 
+                      selectedElement={selectedElementId ? currentState.elements.find(e => e.id === selectedElementId) || null : null}
+                      onUpdateElement={handleUpdateElement}
+                    />
+                  )}
+                  {activeTool === 'character' && (
+                    <CharacterPanel onAddElement={handleAddElement} subject={subject} />
+                  )}
+                  {activeTool === 'layer' && (
+                    <LayerPanel 
+                      elements={currentState.elements}
+                      selectedElementId={selectedElementId}
+                      onSelectElement={setSelectedElementId}
+                      onToggleVisibility={handleToggleVisibility}
+                      onReorderElement={handleReorderElement}
+                    />
+                  )}
+                  {activeTool === 'background' && (
+                    <BackgroundPanel 
+                      selectedCoverId={currentState.coverTemplateId}
+                      onSelectCover={(id) => pushState({ ...currentState, coverTemplateId: id })}
+                    />
+                  )}
+                  {['bubble', 'graphic', 'shape'].includes(activeTool) && (
+                    <div className="w-full h-full p-4 flex flex-col items-center justify-center space-y-4">
+                      <span className="text-4xl">🛠️</span>
+                      <span className="text-slate-400 font-bold">도구 준비 중입니다</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </StudentToolPanel>
+
       {/* Center Main Area */}
-      <div className="flex-1 flex flex-col min-w-0 bg-transparent h-full relative">
+      <div className="flex-1 flex flex-col min-w-0 bg-transparent h-full relative" ref={containerRef}>
         
-        {/* Top Header / Taskbar */}
-        <div className="flex justify-between items-center px-8 py-4 shrink-0 relative z-20">
-          
-          {/* Left: Prev Button */}
-          <div className="flex justify-start">
-            {onPrev && (
-              <button
-                onClick={onPrev}
-                className="flex items-center gap-2 px-5 py-2.5 bg-slate-800/80 hover:bg-slate-700 text-white font-jua text-base rounded-full border border-white/10 transition-all shadow-sm"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                {prevText}
-              </button>
-            )}
-          </div>
-
-          {/* Right: Actions & Next */}
-          <div className="flex items-center justify-end gap-3">
-             {mode === 'front-cover' && onCompleteCover && (
-               <button 
-                 onClick={() => {
-                   const newState = onCompleteCover(currentState);
-                   if (newState) pushState(newState);
-                 }}
-                 disabled={isCoverCompleted}
-                 className={`flex items-center gap-1.5 px-5 py-2.5 font-bold rounded-xl shadow-lg transition-all text-sm border ${
-                   isCoverCompleted 
-                     ? 'bg-slate-700/50 text-slate-400 border-slate-600 cursor-not-allowed'
-                     : 'bg-[#ff2778] hover:bg-[#e91e68] text-white border-[#d7185d]'
-                 }`}
-               >
-                 <Sparkles className="w-4 h-4" />
-                 {isCoverCompleted ? '표지 완성됨' : '표지 완성하기'}
-               </button>
-             )}
-             <button 
-               onClick={() => onSave?.(currentState)} 
-               className="flex items-center gap-1.5 px-5 py-2.5 bg-purple-600/90 hover:bg-purple-500 text-white font-bold rounded-xl shadow-lg transition-all text-sm border border-purple-400/50"
-             >
-               <Save className="w-4 h-4" />
-               진행사항 저장
-             </button>
-             <button 
-               onClick={async () => {
-                  if (document.activeElement instanceof HTMLElement) {
-                    document.activeElement.blur();
-                  }
-                  await new Promise(resolve => setTimeout(resolve, 50));
-                  await document.fonts.ready;
-                  
-                  if(!stageRef.current) return;
-                  const tr = stageRef.current.findOne('Transformer');
-                  if(tr) tr.hide();
-                  
-                  const prevSelected = selectedElementId;
-                  setSelectedElementId(null);
-                  
-                  await new Promise(resolve => setTimeout(resolve, 50));
-
-                  // 원본 크기로 캔버스 영역만 정확히 내보내기 위해 계산
-                  const layer = stageRef.current.children[0];
-                  const layerScale = layer.scaleX();
-                  const layerX = layer.x();
-                  const layerY = layer.y();
-
-                  const uri = stageRef.current.toDataURL({ 
-                    x: layerX,
-                    y: layerY,
-                    width: currentState.canvasWidth * layerScale,
-                    height: currentState.canvasHeight * layerScale,
-                    pixelRatio: 1 / layerScale 
-                  });
-                  
-                  if(tr) tr.show();
-                  setSelectedElementId(prevSelected);
-
-                  const link = document.createElement('a');
-                  link.download = 'toonschool_export.png';
-                  link.href = uri;
-                  document.body.appendChild(link);
-                  link.click();
-                  document.body.removeChild(link);
-               }} 
-               className="flex items-center gap-1.5 px-5 py-2.5 bg-slate-700/90 hover:bg-slate-600 text-white font-bold rounded-xl shadow-lg transition-all text-sm border border-slate-500/50"
-             >
-               <Download className="w-4 h-4" />
-               PNG 내보내기
-             </button>
-            {onNext && (
-              <button
-                onClick={onNext}
-                className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-400 hover:to-indigo-400 text-white font-jua text-base rounded-full shadow-lg shadow-purple-500/30 transition-all ml-2"
-              >
-                {nextText}
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-        </div>
-
         {/* Canvas Area Container */}
-        <div className="flex-1 w-full relative min-h-0 min-w-0 overflow-auto overscroll-contain" ref={containerRef}>
+        <div className="flex-1 w-full relative p-4 lg:p-8 min-h-0 min-w-0 overflow-auto overscroll-contain student-scrollbar">
           {containerSize.width > 0 && (
-            <CanvasStage 
-              state={currentState}
-              selectedElementId={selectedElementId}
-              onSelectElement={setSelectedElementId}
-              onChangeElement={handleUpdateElement}
-              stageRef={stageRef}
-              containerWidth={containerSize.width}
-              containerHeight={containerSize.height}
-              zoomPercent={zoomPercent}
-            />
+            <div className="w-full h-full flex justify-center items-center min-w-min min-h-min">
+              <CanvasStage 
+                state={currentState}
+                selectedElementId={selectedElementId}
+                onSelectElement={setSelectedElementId}
+                onChangeElement={handleUpdateElement}
+                stageRef={stageRef}
+                containerWidth={containerSize.width}
+                containerHeight={containerSize.height}
+                zoomPercent={zoomPercent}
+              />
+            </div>
           )}
         </div>
         
         {/* Zoom Controls */}
-        <div className="absolute bottom-6 right-6 z-50 flex items-center gap-2 md:gap-3 bg-slate-800/95 backdrop-blur-sm border border-slate-700/50 px-3 py-2 md:px-4 md:py-2.5 rounded-full shadow-2xl text-slate-200">
-          <button 
-            onClick={() => setZoomPercent(Math.max(25, currentZoom - 10))}
-            disabled={currentZoom <= 25}
-            className="hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors p-1"
-            aria-label="캔버스 축소" title="축소"
-          >
-            <ZoomOut className="w-4 h-4" />
-          </button>
-          
-          <span className="text-xs md:text-sm font-bold w-[4ch] text-center font-mono">
-            {currentZoom}%
-          </span>
-          
-          <input 
-            type="range"
-            min="25" max="300" step="5"
-            value={currentZoom}
-            onChange={(e) => setZoomPercent(parseInt(e.target.value))}
-            className="w-16 md:w-24 accent-purple-500 cursor-pointer"
-            aria-label="캔버스 확대 비율"
-            aria-valuemin={25}
-            aria-valuemax={300}
-            aria-valuenow={currentZoom}
-          />
-          
-          <button 
-            onClick={() => setZoomPercent(Math.min(300, currentZoom + 10))}
-            disabled={currentZoom >= 300}
-            className="hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors p-1"
-            aria-label="캔버스 확대" title="확대"
-          >
-            <ZoomIn className="w-4 h-4" />
-          </button>
-          
-          <div className="w-px h-4 md:h-5 bg-slate-600 mx-0.5 md:mx-1" />
-          
-          <button 
-            onClick={() => setZoomPercent(null)}
-            className={`hover:text-white transition-colors flex items-center gap-1.5 text-xs font-bold p-1 ${zoomPercent === null ? 'text-purple-400' : 'text-slate-300'}`}
-            aria-label="캔버스를 화면에 맞추기" title="화면 맞춤"
-          >
-            <Maximize className="w-3.5 h-3.5 md:w-4 md:h-4" />
-            <span className="hidden md:inline">맞춤</span>
-          </button>
-        </div>
-
+        <StudentZoomControl
+          scale={(currentZoom) / 100}
+          onZoomIn={() => setZoomPercent(Math.min(300, currentZoom + 10))}
+          onZoomOut={() => setZoomPercent(Math.max(25, currentZoom - 10))}
+          onFitToScreen={() => setZoomPercent(null)}
+          minScale={0.25}
+          maxScale={3.0}
+        />
       </div>
-
-    </div>
+    </StudentWorkspaceLayout>
   );
 }

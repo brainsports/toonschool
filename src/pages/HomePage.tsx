@@ -1,307 +1,360 @@
-import { Link } from 'react-router-dom'
-import { Sparkles, BookOpen, FileQuestion, LineChart, Share2, School, Users, User, ArrowRight, Play, Check, Eye } from 'lucide-react'
+import { Link } from 'react-router-dom';
 
 export default function HomePage() {
-  const features = [
-    {
-      title: 'AI 만화 제작',
-      desc: '간단한 대사나 콘티 설명만으로 캐릭터와 웹툰 컷 레이아웃을 생성해 주는 스마트 드로잉 툴킷',
-      icon: Sparkles,
-      gradient: 'from-purple-500 to-pink-500',
-    },
-    {
-      title: '요점 정리',
-      desc: '장황한 교재 텍스트를 핵심 요약형 콘티 문구와 툰 시나리오로 변환해 주는 학습 보조 모듈',
-      icon: BookOpen,
-      gradient: 'from-blue-500 to-cyan-500',
-    },
-    {
-      title: '퀴즈 생성',
-      desc: '제작된 만화 스토리라인에 맞춰 객관식/주관식 문제를 생성하는 AI 인터랙티브 퀴즈 빌더',
-      icon: FileQuestion,
-      gradient: 'from-emerald-500 to-teal-500',
-    },
-    {
-      title: '학습 진도 관리',
-      desc: '학교 및 학원 클래스별 학생 수강 진척도와 만화 과제 제출 여부를 직관적으로 시각화',
-      icon: School,
-      gradient: 'from-amber-500 to-orange-500',
-    },
-    {
-      title: '학생 성장 분석',
-      desc: '학생이 제작한 결과물의 키워드 분석을 통해 창의성 점수 및 취약 학습 영역 피드백 리포트',
-      icon: LineChart,
-      gradient: 'from-indigo-500 to-violet-500',
-    },
-    {
-      title: '공유 링크 배포',
-      desc: '완성된 교육용 웹툰을 간편하게 SNS, 외부 웹페이지, 모바일 기기로 볼 수 있는 원클릭 웹 링크 배포',
-      icon: Share2,
-      gradient: 'from-rose-500 to-red-500',
-    }
-  ]
-
-  const targets = [
-    {
-      title: '기관용 안내 (Schools & Academies)',
-      desc: '소속 학교 또는 학원의 클래스를 열고 학생 명단을 일괄 등록할 수 있습니다. 강사 임명, 맞춤형 커리큘럼 배포, 단체 요금 혜택 및 기관 전용 종합 분석 대시보드가 제공됩니다.',
-      icon: School,
-      color: 'text-amber-400 bg-amber-950/40 border-amber-900/50',
-      badge: '기관 전용'
-    },
-    {
-      title: '학생용 안내 (Students)',
-      desc: '선생님이 부여한 재미있는 만화 시나리오 퀘스트를 깨며 스스로 학습합니다. 나만의 캐릭터 디자인을 통해 창의력을 기르고, 친구들과 합작 웹툰을 연재할 수도 있습니다.',
-      icon: Users,
-      color: 'text-emerald-400 bg-emerald-950/40 border-emerald-900/50',
-      badge: '학습 지원'
-    },
-    {
-      title: '무료회원 안내 (Free Users)',
-      desc: '가입과 동시에 매월 3회의 AI 웹툰 및 만화 컷 생성권이 무상 지급됩니다. 툰스쿨 고유의 기초 레이아웃 도구를 마음껏 체감해 보시고 유니크한 학습툰을 기획해 보세요.',
-      icon: User,
-      color: 'text-purple-400 bg-purple-950/40 border-purple-900/50',
-      badge: '즉시 가입 가능'
-    }
-  ]
-
-  const plans = [
-    {
-      name: 'Free Plan',
-      price: '0',
-      features: ['월 3회 AI 툰 자동 생성', '기본 컷 분할 레이아웃 에디터', '개인용 웹 공유 링크 발행', '커뮤니티 샘플 라이브러리 조회'],
-      cta: '무료 회원가입',
-      path: '/signup',
-      popular: false
-    },
-    {
-      name: 'Premium Plan',
-      price: '19,000',
-      features: ['무제한 AI 이미지 및 컷 생성', '프리미엄 캐릭터 에셋 라이브러리', 'AI 스토리-툰 시나리오 추천 모듈', '맞춤형 오답 퀴즈 연동 무제한', '우선 순위 빠른 속도 서버 제공'],
-      cta: '지금 시작하기',
-      path: '/signup',
-      popular: true
-    },
-    {
-      name: 'Institution Plan',
-      price: '별도 문의',
-      features: ['소속 기관 관리자 대시보드 제공', '클래스 무제한 개설 및 학생 일괄 관리', '통합 학업 평가 리포트 내보내기', '자체 교육 과정 LMS 데이터 서버 연동', '전담 기술 서포트 매니저 배정'],
-      cta: '센터 도입 상담 문의',
-      path: '/login',
-      popular: false
-    }
-  ]
-
-  return (
-    <div className="space-y-20 pb-12">
-      {/* 1. Hero Section */}
-      <section className="text-center space-y-6 pt-10 relative overflow-hidden">
-        <div className="absolute top-[-30%] left-[20%] w-[60%] h-[60%] bg-purple-600/10 rounded-full blur-[160px] pointer-events-none" />
-
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-950/60 border border-purple-800 text-purple-300 text-xs font-semibold animate-pulse">
-          <Sparkles className="h-3.5 w-3.5" />
-          <span>에듀테크의 새로운 미래</span>
-        </div>
-
-        <h1 className="text-4xl sm:text-6xl font-black tracking-tight leading-tight max-w-4xl mx-auto">
-          만화를 만들며 스스로 공부하는<br />
-          <span className="bg-clip-text text-transparent bg-gradient-to-r from-purple-400 via-pink-400 to-orange-400">
-            AI 학습툰 플랫폼, 툰스쿨
-          </span>
-        </h1>
-
-        <p className="text-slate-400 text-base md:text-lg max-w-2xl mx-auto leading-relaxed">
-          지루한 텍스트 기반의 학습 자료를 단 몇 초 만에 인공지능 스토리텔링 웹툰과 퀴즈로 설계합니다.
-          학습 몰입도를 높이고 학생들의 창의성 지표를 체계적으로 분석하는 맞춤형 공간을 경험해 보세요.
+    return (
+        <div className="text-on-surface smooth-scroll font-body-md overflow-x-hidden bg-surface-dim">
+            
+{/* Header */}
+<header className="fixed top-0 left-0 w-full z-50 bg-white/90 backdrop-blur-md shadow-sm border-b border-outline-variant">
+<div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+<div className="flex items-center gap-2">
+<div className="w-8 h-8 bg-primary text-white flex items-center justify-center font-bold rounded">TS</div>
+<span className="font-title-md font-bold text-xl text-on-surface">ToonSchool</span>
+</div>
+<nav className="hidden xl:flex items-center space-x-6">
+<Link className="text-on-surface-variant font-medium hover:text-primary transition-colors" to="/">홈</Link>
+<Link className="text-on-surface-variant font-medium hover:text-primary transition-colors" to="/about">툰스쿨이란</Link>
+<Link className="text-on-surface-variant font-medium hover:text-primary transition-colors" to="/student/select-unit">툰스쿨 에디터</Link>
+<Link className="text-on-surface-variant font-medium hover:text-primary transition-colors" to="/classroom">수업 활용</Link>
+<Link className="text-on-surface-variant font-medium hover:text-primary transition-colors" to="/flipped-learning">거꾸로 학습법</Link>
+<Link className="text-on-surface-variant font-medium hover:text-primary transition-colors" to="/share">공유 링크</Link>
+<Link className="text-on-surface-variant font-medium hover:text-primary transition-colors" to="/pricing">요금제</Link>
+</nav>
+<div className="hidden md:flex items-center space-x-4">
+<Link className="text-on-surface-variant font-medium hover:text-primary transition-colors" to="/login">로그인/회원가입</Link>
+<Link className="bg-primary text-white px-6 py-2 rounded-lg font-bold hover:bg-primary-container transition-colors shadow-sm" to="/student/select-unit">무료로 시작하기</Link>
+</div>
+<button aria-label="Menu" className="xl:hidden text-on-surface-variant p-2">
+<span className="material-symbols-outlined text-2xl">menu</span>
+</button>
+</div>
+</header>
+<main className="pt-24 pb-16">
+{/* Hero Section */}
+<section className="max-w-7xl mx-auto px-6 py-16 md:py-24 flex flex-col lg:flex-row items-center gap-12 justify-center">
+<div className="w-full lg:w-1/2 text-center lg:text-left space-y-8">
+<h1 className="text-4xl md:text-5xl font-extrabold leading-tight text-on-surface">
+                    공부하지 말고,<br/>
+<span className="text-primary">공부를 만들자.</span>
+</h1>
+<p className="text-lg text-on-surface-variant max-w-xl mx-auto lg:mx-0">
+                    툰스쿨은 초등 교과 단원을 학생이 직접 학습만화로 만드는 AI 수업 플랫폼입니다.<br />단원 선택부터 대본, 6컷 만화, 단원 정리, OX 문제까지 한 번에 완성합니다.
+                </p>
+<div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
+<Link className="w-full sm:w-auto bg-primary text-white px-8 py-4 rounded-lg font-bold text-lg hover:bg-primary-container transition-colors shadow-md text-center" to="/student/select-unit">무료로 시작하기</Link>
+<Link className="w-full sm:w-auto bg-white text-primary border-2 border-primary px-8 py-4 rounded-lg font-bold text-lg hover:bg-gray-50 transition-colors text-center" to="/student/select-unit">툰스쿨 에디터 보기</Link>
+</div>
+</div>
+<div className="w-full lg:w-1/2 flex justify-center">
+{/* Tablet Frame Mockup */}
+<img alt="ToonSchool Interface" className="w-full h-auto aspect-[16/9] object-cover rounded-[20px] shadow-lg" src="/images/main/main-img-1.png"/>
+</div>
+</section>
+{/* Flow Bar */}
+<section className="bg-white border-y border-outline-variant py-8 overflow-x-auto hide-scroll-mobile">
+<div className="max-w-7xl mx-auto px-6">
+<div className="flex items-center justify-between min-w-[800px] text-center">
+<div className="flex flex-col items-center gap-2 flex-1">
+<div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold">1</div>
+<span className="font-bold text-sm">단원 선택</span>
+</div>
+<div className="w-8 h-px bg-gray-300"></div>
+<div className="flex flex-col items-center gap-2 flex-1">
+<div className="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold">2</div>
+<span className="font-bold text-sm">내가 만든 학습만화</span>
+</div>
+<div className="w-8 h-px bg-gray-300"></div>
+<div className="flex flex-col items-center gap-2 flex-1">
+<div className="w-12 h-12 rounded-full bg-green-100 text-green-600 flex items-center justify-center font-bold">3</div>
+<span className="font-bold text-sm">완성한 작품을 공유해요</span>
+</div>
+<div className="w-8 h-px bg-gray-300"></div>
+<div className="flex flex-col items-center gap-2 flex-1">
+<div className="w-12 h-12 rounded-full bg-yellow-100 text-yellow-600 flex items-center justify-center font-bold">4</div>
+<span className="font-bold text-sm">OX 퀴즈</span>
+</div>
+<div className="w-8 h-px bg-gray-300"></div>
+<div className="flex flex-col items-center gap-2 flex-1">
+<div className="w-12 h-12 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center font-bold">5</div>
+<span className="font-bold text-sm">책표지 만들기</span>
+</div>
+<div className="w-8 h-px bg-gray-300"></div>
+<div className="flex flex-col items-center gap-2 flex-1">
+<div className="w-12 h-12 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center font-bold">6</div>
+<span className="font-bold text-sm">친구에게 자랑하기</span>
+</div>
+</div>
+</div>
+</section>
+{/* Main Content Sections (Zigzag) */}
+<div className="space-y-0">
+{/* Section 1: Cover */}
+<section className="py-24 bg-surface-dim">
+<div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center gap-16">
+<div className="w-full md:w-1/2 flex justify-center">
+<img alt="ToonSchool Book Covers" className="w-11/12 h-auto object-contain shadow-sm" src="/images/main/main-img-2.png"/>
+</div>
+<div className="w-full md:w-1/2 space-y-6">
+<span className="text-primary font-bold tracking-wider uppercase text-sm">STEP 1. COVER</span>
+<h2 className="text-3xl md:text-4xl font-bold">배움의 시작,<br/>나만의 표지 만들기</h2>
+<p className="text-lg text-gray-600">학습할 교과 단원을 선택하고 나만의 표지를 만듭니다. 내가 직접 만드는 교과서로 학습 동기를 부여하세요.</p>
+</div>
+</div>
+</section>
+{/* Section 2: 6-cut Toon */}
+<section className="py-24 bg-white"><div className="max-w-7xl mx-auto px-6">
+<div className="text-center mb-16 space-y-4">
+<span className="text-[#2563ff] font-bold tracking-wider uppercase text-sm">STEP 2. CARTOON</span>
+<h2 className="text-3xl md:text-4xl font-bold text-gray-900">AI와 함께 내가 만드는 학습 만화</h2>
+<p className="text-lg text-gray-600 max-w-2xl mx-auto">배경을 만들고 대사를 내 말투로 바꾸고 수업도구를 더해 나만의 만화를 완성합니다.</p>
+</div>
+<div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+{/* Card 1: 배경 생성 */}
+<div className="bg-white border border-gray-100 rounded-[20px] shadow-sm p-6 flex flex-col gap-6 hover:shadow-md transition-shadow">
+<div className="aspect-[1/1.4] overflow-hidden rounded-xl bg-white p-4 flex items-center justify-center">
+<img alt="배경 생성" className="w-full h-full object-contain" src="/images/main/main-img-3.png"/>
+</div>
+<div className="flex items-start gap-4">
+<div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+<span className="material-symbols-outlined text-primary">image</span>
+</div>
+<div>
+<h3 className="font-bold text-xl mb-2">배경 생성</h3>
+<p className="text-gray-600 text-sm leading-relaxed">학습 내용을 바탕으로 친근한 화면을 만들어요.</p>
+</div>
+</div>
+</div>
+{/* Card 2: 대사 작성 */}
+<div className="bg-white border border-gray-100 rounded-[20px] shadow-sm p-6 flex flex-col gap-6 hover:shadow-md transition-shadow">
+<div className="aspect-[1/1.4] overflow-hidden rounded-xl bg-white p-4 flex items-center justify-center">
+<img alt="대사 작성" className="w-full h-full object-contain" src="/images/main/main-img-4.png"/>
+</div>
+<div className="flex items-start gap-4">
+<div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+<span className="material-symbols-outlined text-primary">chat_bubble</span>
+</div>
+<div>
+<h3 className="font-bold text-xl mb-2">대사 작성</h3>
+<p className="text-gray-600 text-sm leading-relaxed">대본을 짧은 대사로 바꾸어 자연스럽게 채워요.</p>
+</div>
+</div>
+</div>
+{/* Card 3: 수업도구 */}
+<div className="bg-white border border-gray-100 rounded-[20px] shadow-sm p-6 flex flex-col gap-6 hover:shadow-md transition-shadow">
+<div className="aspect-[1/1.4] overflow-hidden rounded-xl bg-white p-4 flex items-center justify-center">
+<img alt="수업도구" className="w-full h-full object-contain" src="/images/main/main-img-5.png"/>
+</div>
+<div className="flex items-start gap-4">
+<div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+<span className="material-symbols-outlined text-primary">edit_note</span>
+</div>
+<div>
+<h3 className="font-bold text-xl mb-2">수업도구</h3>
+<p className="text-gray-600 text-sm leading-relaxed">캐릭터와 말풍선을 고치고, 내 만화를 더 멋지게 꾸며요.</p>
+</div>
+</div>
+</div>
+</div>
+</div></section>
+{/* Section 3: World Story */}
+<section className="py-24 bg-surface-dim">
+<div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center gap-16">
+<div className="w-full md:w-1/2 flex justify-center">
+<div className="bg-white rounded-lg shadow-lg w-full max-w-sm aspect-[1/1.4] p-4 border border-gray-100 flex flex-col relative overflow-hidden">
+<div className="slideshow-container">
+<img alt="인기 이야기" className="slide" src="/images/main/main-img-6.png"/>
+<img alt="최신 이야기" className="slide" src="/images/main/main-img-7.png"/>
+<img alt="생활 발견" className="slide" src="/images/main/main-img-8.png"/>
+</div>
+</div>
+</div>
+<div className="w-full md:w-1/2 space-y-6">
+<span className="text-green-500 font-bold tracking-wider uppercase text-sm">STEP 3. WORLD STORY</span>
+<h2 className="text-3xl md:text-4xl font-bold">세상 속 이야기로<br/>넓히는 배움</h2>
+<p className="text-lg text-gray-600">학습한 개념이 실제 세상에서 어떻게 쓰이는지 원리를 이해합니다. 워크시트 형태의 페이지로 생각을 체계화합니다.</p>
+</div>
+</div>
+</section>
+{/* Section 4: OX Quiz */}
+<section className="py-24 bg-white">
+<div className="max-w-7xl mx-auto px-6 flex flex-col-reverse md:flex-row items-center gap-16">
+<div className="w-full md:w-1/2 space-y-6">
+<span className="text-yellow-500 font-bold tracking-wider uppercase text-sm">STEP 4. OX QUIZ</span>
+<h2 className="text-3xl md:text-4xl font-bold">OX 퀴즈로 개념 확인하기</h2>
+<p className="text-lg text-gray-600">중요한 개념을 OX 문제로 만들어 봅니다. 문제를 직접 내면서 핵심 내용을 다시 한번 기억에 남깁니다.</p>
+</div>
+<div className="w-full md:w-1/2 flex justify-center">
+<div className="bg-yellow-50 rounded-2xl shadow-lg w-full max-w-md p-8 border border-yellow-100 text-center relative overflow-hidden">
+<h3 className="text-xl font-bold mb-8">Q. 태양계에서 가장 큰 행성은 목성이다.</h3>
+<div className="flex justify-center gap-6">
+<button className="w-24 h-24 rounded-full bg-white shadow-md border-4 border-blue-500 flex items-center justify-center text-blue-500 text-4xl font-bold hover:bg-blue-50 transition-colors">O</button>
+<button className="w-24 h-24 rounded-full bg-white shadow-md border-4 border-red-500 flex items-center justify-center text-red-500 text-4xl font-bold hover:bg-red-50 transition-colors">X</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+{/* Section 5: Back Cover */}
+<section className="py-24 bg-surface-dim">
+<div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center gap-16">
+<div className="w-full md:w-1/2 flex justify-center">
+<div className="bg-white rounded-lg shadow-lg w-full max-w-sm aspect-[1/1.4] border border-gray-100 flex flex-col justify-end overflow-hidden"><img alt="Back Cover Design" className="w-full h-full object-contain" src="/images/main/main-img-9.png"/></div>
+</div>
+<div className="w-full md:w-1/2 space-y-6">
+<span className="text-purple-500 font-bold tracking-wider uppercase text-sm">STEP 5. BACK COVER</span>
+<h2 className="text-3xl md:text-4xl font-bold">책의 마지막,<br/>뒤표지 꾸미기</h2>
+<p className="text-lg text-gray-600">책의 마지막을 장식합니다. 지은이 이름과 발행 학년을 적어 나만의 학습 만화책을 완성하는 뿌듯함을 느낍니다.</p>
+</div>
+</div>
+</section>
+{/* Section 6: Sharing */}
+<section className="py-24 bg-white overflow-hidden">
+<div className="max-w-7xl mx-auto px-6 flex flex-col lg:flex-row items-center gap-16">
+{/* Left Content */}
+<div className="w-full lg:w-1/2 space-y-8">
+<div className="space-y-4">
+<span className="text-gray-500 font-bold tracking-wider uppercase text-sm">STEP 6. SHARE</span>
+<h2 className="text-3xl md:text-4xl font-bold leading-tight">
+          완성한 작품을 전용뷰어로 보고<br/>친구에게 자랑해요
+        </h2>
+<p className="text-lg text-gray-600 leading-relaxed">
+          완성한 학습만화를 툰스쿨 전용뷰어로 넘겨 보고,<br/>링크 하나로 친구나 가족에게 쉽게 공유할 수 있어요.
         </p>
+</div>
+{/* Function Badges */}
+<div className="flex flex-wrap gap-3">
+<span className="px-4 py-2 bg-primary/10 text-primary rounded-full text-sm font-bold">전용뷰어 감상</span>
+<span className="px-4 py-2 bg-blue-100 text-blue-600 rounded-full text-sm font-bold">링크 공유</span>
+<span className="px-4 py-2 bg-purple-100 text-purple-600 rounded-full text-sm font-bold">PDF 다운로드</span>
+</div>
+</div>
+{/* Right Content (Visual Area) */}
+<div className="w-full lg:w-1/2 relative">
+{/* Tablet Mockup */}
+<div className="relative z-10 bg-gray-900 p-3 rounded-[2.5rem] shadow-2xl border-4 border-gray-800">
+<div className="bg-white rounded-[1.5rem] overflow-hidden aspect-[4/3] relative">
+{/* Viewer UI */}
+<div className="absolute top-0 left-0 w-full p-4 flex justify-between items-center bg-white/90 border-b border-gray-100 z-20">
+<span className="font-bold text-sm">나만의 우주 탐험</span>
+<div className="flex gap-2">
+<button className="p-1 rounded hover:bg-gray-100"><span className="material-symbols-outlined text-lg">zoom_in</span></button>
+<button className="p-1 rounded hover:bg-gray-100"><span className="material-symbols-outlined text-lg">download</span></button>
+</div>
+</div>
+{/* Comic Preview */}
+<div className="w-full h-full pt-12 pb-16 px-8 flex items-center justify-center bg-gray-50">
+<img alt="Comic Preview" className="h-full w-auto shadow-lg rounded-sm" src="/images/main/main-img-10.png"/>
+</div>
+{/* Viewer Controls */}
+<div className="absolute bottom-0 left-0 w-full p-4 flex justify-between items-center bg-white/90 border-t border-gray-100 z-20">
+<button className="flex items-center gap-1 text-primary font-bold text-xs">
+<span className="material-symbols-outlined text-sm">share</span> 친구에게 공유
+            </button>
+<div className="flex items-center gap-4">
+<button className="material-symbols-outlined text-gray-400">chevron_left</button>
+<span className="text-xs font-medium text-gray-600">1 / 12</span>
+<button className="material-symbols-outlined text-gray-400">chevron_right</button>
+</div>
+<button className="flex items-center gap-1 text-blue-600 font-bold text-xs">
+<span className="material-symbols-outlined text-sm">picture_as_pdf</span> PDF 저장            </button>
+</div>
+</div>
+</div>
+{/* Character: Doyun (Boy) */}
+<div className="absolute -left-12 -bottom-8 z-20 w-40 md:w-48">
+<div className="relative">
+<div className="absolute -top-12 left-0 bg-white p-3 rounded-2xl shadow-md border border-gray-100 text-xs font-bold whitespace-nowrap">
+            내 만화책을 친구에게 보낼 수 있어!
+            <div className="absolute -bottom-2 left-4 w-4 h-4 bg-white border-r border-b border-gray-100 rotate-45"></div>
+</div>
+<div className="w-full aspect-square overflow-hidden">
+<img alt="Doyun" className="w-full h-full object-contain scale-150 translate-y-4" src="/images/main/main-img-11.png"/>
+</div>
+</div>
+</div>
+{/* Character: Seoa (Girl) */}
+<div className="absolute -right-8 -top-8 z-20 w-32 md:w-40">
+<div className="relative">
+<div className="absolute -top-12 right-0 bg-white p-3 rounded-2xl shadow-md border border-gray-100 text-xs font-bold whitespace-nowrap">
+            링크를 누르면 바로 볼 수 있어!
+            <div className="absolute -bottom-2 right-4 w-4 h-4 bg-white border-r border-b border-gray-100 rotate-45"></div>
+</div>
+<div className="w-full aspect-square overflow-hidden">
+<img alt="Seoa" className="w-full h-full object-contain scale-125" src="/images/main/main-img-12.png"/>
+</div>
+</div>
+</div>
+{/* Decorative Background Elements */}
+<div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-primary/5 rounded-full -z-10 blur-3xl"></div>
+</div>
+</div>
+</section>
+</div>
+{/* FAQ */}
+<section className="py-24 bg-surface-dim"><div className="max-w-3xl mx-auto px-6">
+<div className="text-center mb-12">
+<h2 className="text-3xl font-bold">자주 묻는 질문</h2>
+</div>
+<div className="space-y-4">
+<details className="group bg-white border border-gray-200 rounded-xl overflow-hidden cursor-pointer open:bg-white transition-colors">
+<summary className="flex justify-between items-center font-bold p-6 text-gray-900 list-none">
+                            학생은 어떻게 가입하나요?
+                            <span className="material-symbols-outlined transition-transform group-open:rotate-180">expand_more</span>
+</summary>
+<div className="p-6 pt-0 text-gray-600 text-sm border-t border-gray-100 mt-2">
+                            학생들은 교사 계정으로 로그인한 뒤 클래스를 생성하고 학생 계정(아이디/비밀번호)을 일괄 생성하여 배포할 수 있습니다. 학생은 개인정보 입력 없이 발급받은 계정으로 바로 로그인할 수 있습니다.
+                        </div>
+</details>
+<details className="group bg-white border border-gray-200 rounded-xl overflow-hidden cursor-pointer open:bg-white transition-colors">
+<summary className="flex justify-between items-center font-bold p-6 text-gray-900 list-none">
+                            태블릿에서도 사용할 수 있나요?
+                            <span className="material-symbols-outlined transition-transform group-open:rotate-180">expand_more</span>
+</summary>
+<div className="p-6 pt-0 text-gray-600 text-sm border-t border-gray-100 mt-2">
+                            네! 툰스쿨은 PC, 크롬북, 아이패드, 갤럭시탭 등 다양한 기기에서 웹 브라우저로 원활하게 사용할 수 있도록 최적화되어 있습니다.
+                        </div>
+</details>
+<details className="group bg-white border border-gray-200 rounded-xl overflow-hidden cursor-pointer open:bg-white transition-colors">
+<summary className="flex justify-between items-center font-bold p-6 text-gray-900 list-none">
+                            만든 만화는 어떻게 공유하나요?
+                            <span className="material-symbols-outlined transition-transform group-open:rotate-180">expand_more</span>
+</summary>
+<div className="p-6 pt-0 text-gray-600 text-sm border-t border-gray-100 mt-2">
+                            제작이 완료된 만화는 고유 링크(URL)가 생성되어 친구들이나 부모님에게 공유할 수 있으며, PDF 파일로 다운로드하여 인쇄물로도 활용 가능합니다.
+                        </div>
+</details>
+<details className="group bg-white border border-gray-200 rounded-xl overflow-hidden cursor-pointer open:bg-white transition-colors">
+<summary className="flex justify-between items-center font-bold p-6 text-gray-900 list-none">
+                            어떤 교과 과정이 포함되어 있나요?
+                            <span className="material-symbols-outlined transition-transform group-open:rotate-180">expand_more</span>
+</summary>
+<div className="p-6 pt-0 text-gray-600 text-sm border-t border-gray-100 mt-2">
+                            현재 초등학교 전 학년, 전 과목의 성취기준을 기반으로 한 단원 정보가 기본 제공되며, 학생들이 직접 필요한 단원이나 주제를 추가하여 수업을 구성할 수도 있습니다.
+                        </div>
+</details>
+</div>
+</div></section>
+</main>
+{/* Footer */}
+<footer className="w-full px-6 py-12 flex flex-col items-center text-center space-y-6 bg-surface-dim border-t border-outline-variant">
+<div className="flex items-center gap-2 mb-2 opacity-50 grayscale hover:grayscale-0 hover:opacity-100 transition-all">
+<div className="w-6 h-6 bg-gray-400 text-white flex items-center justify-center font-bold rounded text-xs">TS</div>
+<span className="font-title-md font-bold text-gray-500">ToonSchool</span>
+</div>
+<p className="text-gray-500 font-medium text-sm">공부하지 말고, 공부를 만들자.</p>
+<div className="flex flex-wrap justify-center gap-4 text-sm text-gray-500">
+<Link className="hover:text-primary transition-colors" to="/">홈</Link>
+<Link className="hover:text-primary transition-colors" to="/about">툰스쿨이란</Link>
+<Link className="hover:text-primary transition-colors" to="/student/select-unit">툰스쿨 에디터</Link>
+<Link className="hover:text-primary transition-colors" to="/classroom">수업 활용</Link>
+<Link className="hover:text-primary transition-colors" to="/flipped-learning">거꾸로 학습법</Link>
+<Link className="hover:text-primary transition-colors" to="/share">공유 링크</Link>
+<Link className="hover:text-primary transition-colors" to="/pricing">요금제</Link>
+<Link className="hover:text-primary transition-colors" to="/contact">고객센터</Link>
+</div>
+<p className="text-sm text-gray-400 mt-4">© 2024 ToonSchool. All rights reserved.</p>
+</footer>
 
-        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4">
-          <Link 
-            to="/signup" 
-            className="flex items-center gap-2 px-7 py-3.5 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold text-sm shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 transition-all hover:scale-105 active:scale-95"
-          >
-            <span>시작하기</span>
-            <ArrowRight className="h-4 w-4" />
-          </Link>
-          <Link 
-            to="/login" 
-            className="flex items-center gap-2 px-7 py-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-200 text-sm font-semibold transition-all hover:scale-105"
-          >
-            <Play className="h-3.5 w-3.5 fill-current text-purple-400" />
-            <span>데모 체험하기</span>
-          </Link>
         </div>
-      </section>
-
-      {/* 2. Key Features Section */}
-      <section className="space-y-8">
-        <div className="text-center space-y-2">
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-100">툰스쿨의 주요 기능</h2>
-          <p className="text-slate-500 text-xs md:text-sm">풍부한 인공지능 툴킷과 학습 도구를 기반으로 웹툰 창작 교육을 주도합니다.</p>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {features.map((feat) => {
-            const Icon = feat.icon
-            return (
-              <div 
-                key={feat.title} 
-                className="p-6 rounded-2xl bg-slate-900/60 border border-slate-850 hover:bg-slate-900/90 transition-all hover:translate-y-[-2px] group"
-              >
-                <div className={`h-11 w-11 rounded-xl bg-gradient-to-tr ${feat.gradient} flex items-center justify-center text-white mb-5 shadow-lg group-hover:scale-105 transition-transform`}>
-                  <Icon className="h-5 w-5" />
-                </div>
-                <h3 className="font-bold text-slate-200 group-hover:text-white transition-colors">{feat.title}</h3>
-                <p className="text-slate-500 text-xs mt-2 leading-relaxed">{feat.desc}</p>
-              </div>
-            )
-          })}
-        </div>
-      </section>
-
-      {/* 3. Target Audience Guide */}
-      <section className="space-y-8">
-        <div className="text-center space-y-2">
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-100">대상별 맞춤형 이용 가이드</h2>
-          <p className="text-slate-500 text-xs md:text-sm">학교, 학생 및 일반 창작자 모두에게 최적화된 솔루션을 탑재했습니다.</p>
-        </div>
-
-        <div className="space-y-4">
-          {targets.map((tgt) => {
-            const Icon = tgt.icon
-            return (
-              <div 
-                key={tgt.title} 
-                className="p-6 rounded-2xl bg-slate-900 border border-slate-850 hover:border-slate-800 transition-all flex flex-col md:flex-row items-start gap-5 relative overflow-hidden"
-              >
-                <div className="absolute top-0 right-0 px-4 py-1.5 rounded-bl-xl bg-slate-950/80 border-l border-b border-slate-850 text-slate-500 text-[10px] font-bold">
-                  {tgt.badge}
-                </div>
-                <div className={`h-12 w-12 rounded-xl flex items-center justify-center shrink-0 border ${tgt.color}`}>
-                  <Icon className="h-6 w-6" />
-                </div>
-                <div className="space-y-1.5">
-                  <h3 className="font-bold text-slate-200 text-sm">{tgt.title}</h3>
-                  <p className="text-slate-450 text-xs leading-relaxed max-w-4xl">{tgt.desc}</p>
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      </section>
-
-      {/* 4. Pricing Section */}
-      <section className="space-y-8">
-        <div className="text-center space-y-2">
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-100">합리적인 플랜 안내</h2>
-          <p className="text-slate-500 text-xs md:text-sm">사용 목적에 최적화된 저렴하고 강력한 요금 체계를 선택해 보세요.</p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
-          {plans.map((plan) => (
-            <div 
-              key={plan.name}
-              className={`p-6 rounded-3xl flex flex-col justify-between relative ${
-                plan.popular 
-                  ? 'bg-slate-900 border-2 border-purple-500 shadow-xl shadow-purple-500/5' 
-                  : 'bg-slate-900/60 border border-slate-850'
-              }`}
-            >
-              {plan.popular && (
-                <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-purple-600 text-white text-[10px] font-extrabold tracking-wider uppercase">
-                  가장 인기 있는 플랜
-                </span>
-              )}
-              
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <h3 className="font-bold text-slate-200 text-lg">{plan.name}</h3>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-3xl font-black text-slate-100">{plan.price}</span>
-                    <span className="text-xs text-slate-500">{plan.price !== '별도 문의' ? '원 / 월' : ''}</span>
-                  </div>
-                </div>
-
-                <ul className="space-y-3 text-xs text-slate-400">
-                  {plan.features.map((f, i) => (
-                    <li key={i} className="flex items-center gap-2">
-                      <Check className="h-4 w-4 text-purple-400 shrink-0" />
-                      <span>{f}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <Link 
-                to={plan.path}
-                className={`w-full py-3 rounded-xl font-bold text-xs text-center transition-all mt-8 block ${
-                  plan.popular 
-                    ? 'bg-purple-600 hover:bg-purple-500 text-white shadow-md' 
-                    : 'bg-slate-950 border border-slate-850 hover:border-slate-700 text-slate-300'
-                }`}
-              >
-                {plan.cta}
-              </Link>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* 5. Webtoon Preview Mockup */}
-      <section className="p-8 rounded-3xl bg-slate-900 border border-slate-800 space-y-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div className="space-y-1">
-            <h3 className="font-bold text-slate-200 flex items-center gap-2">
-              <Eye className="h-4.5 w-4.5 text-purple-400" />
-              <span>학습용 AI 툰 샘플 캔버스 미리보기</span>
-            </h3>
-            <p className="text-xs text-slate-500">학생 에디터에서 생성되는 웹툰 카드 시제품을 뷰어 형식으로 감상하세요.</p>
-          </div>
-          <Link 
-            to="/signup" 
-            className="flex items-center gap-1.5 text-xs text-purple-400 hover:text-purple-300 font-bold"
-          >
-            <span>직접 툰 편집기 실행해보기</span>
-            <ArrowRight className="h-3 w-3" />
-          </Link>
-        </div>
-
-        {/* Mock Webtoon layout visual */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-          <div className="p-4 rounded-2xl bg-slate-950 border border-slate-850 space-y-3">
-            <div className="h-40 rounded-xl bg-purple-950/20 border border-purple-900/30 flex items-center justify-center relative overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-tr from-purple-500/10 to-transparent" />
-              <span className="text-[10px] font-mono text-purple-400 font-bold uppercase px-2 py-1 rounded bg-purple-950/40 border border-purple-900/50">컷 1: 캐릭터 로드</span>
-            </div>
-            <div>
-              <p className="text-xs text-slate-350 font-semibold leading-relaxed">"자, 이번 시간엔 인공지능이 어떻게 동작하는지 설명해 줄게!"</p>
-              <span className="text-[9px] text-slate-500 block mt-1">말풍선 대사 활성화됨</span>
-            </div>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-slate-950 border border-slate-850 space-y-3">
-            <div className="h-40 rounded-xl bg-pink-950/20 border border-pink-900/30 flex items-center justify-center relative overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-tr from-pink-500/10 to-transparent" />
-              <span className="text-[10px] font-mono text-pink-400 font-bold uppercase px-2 py-1 rounded bg-pink-950/40 border border-pink-900/50">컷 2: 데이터 매핑</span>
-            </div>
-            <div>
-              <p className="text-xs text-slate-350 font-semibold leading-relaxed">"먼저 컴퓨터에 수많은 사진 데이터를 학습시키는 단계란다!"</p>
-              <span className="text-[9px] text-slate-500 block mt-1">AI 요점 정리 반영됨</span>
-            </div>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-slate-950 border border-slate-850 space-y-3">
-            <div className="h-40 rounded-xl bg-blue-950/20 border border-blue-900/30 flex items-center justify-center relative overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-tr from-blue-500/10 to-transparent" />
-              <span className="text-[10px] font-mono text-blue-400 font-bold uppercase px-2 py-1 rounded bg-blue-950/40 border border-blue-900/50">컷 3: 퀴즈 출제</span>
-            </div>
-            <div>
-              <p className="text-xs text-slate-350 font-semibold leading-relaxed">"학습이 끝난 AI는 새로운 사진을 보고 정답을 유추할 수 있지!"</p>
-              <span className="text-[9px] text-slate-500 block mt-1">인터랙티브 퀴즈 링크 대기</span>
-            </div>
-          </div>
-        </div>
-      </section>
-    </div>
-  )
+    );
 }

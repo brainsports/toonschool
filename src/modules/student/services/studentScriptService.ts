@@ -1,5 +1,6 @@
 import { supabase } from '../../../shared/lib/supabase'
 import { geminiClient } from '../../../shared/lib/gemini'
+import { TEXT_GENERATION_MODEL, TEXT_FALLBACK_MODEL } from '../../../config/models'
 
 export interface ScriptDialogue {
   speaker: string;
@@ -15,10 +16,28 @@ export interface ScriptCut {
   learningPoint: string;
 }
 
+export interface CoverKeyConcept {
+  id: string;
+  title: string;
+  description: string;
+}
+
+export interface CoverDialogue {
+  hana: string;
+  doyoon: string;
+  seoa: string;
+}
+
 export interface GeneratedComicScript {
   title: string;
   learningTopicId: string;
   learningGoal: string;
+  keyConcepts?: CoverKeyConcept[];
+  coverDialogue?: CoverDialogue;
+  generationStatus?: {
+    script: 'idle' | 'loading' | 'success' | 'error';
+    coverContent: 'idle' | 'loading' | 'success' | 'error';
+  };
   cuts: ScriptCut[];
 }
 
@@ -37,6 +56,7 @@ export interface ScriptGenerationRequest {
   problem: string;
   resolutionDirection: string;
   learningConnection: string;
+  onStatusUpdate?: (msg: string) => void;
 }
 
 export const generateScript = async (
@@ -128,73 +148,182 @@ export const generateScript = async (
 }
 `;
 
-  const maxRetries = 1;
-  let attempt = 0;
+  const modelsToTry = [TEXT_GENERATION_MODEL, TEXT_FALLBACK_MODEL];
+  
+  for (let i = 0; i < modelsToTry.length; i++) {
+    const model = modelsToTry[i];
+    if (!model) continue;
+    
+    let attempt = 0;
+    const maxRetries = 1;
 
-  while (attempt <= maxRetries) {
-    try {
-      const responseText = await geminiClient.generateText(prompt);
-      const cleanedText = responseText.replace(/```json/gi, '').replace(/```/g, '').trim();
-      
-      if (cleanedText.includes('API Key가 설정되지 않았습니다') || cleanedText.includes('오류가 발생했습니다')) {
-        throw new Error(cleanedText);
-      }
-
-      const parsedData = JSON.parse(cleanedText) as GeneratedComicScript;
-      parsedData.learningTopicId = request.learningTopicId; // API 응답에 누락될 수 있으므로 직접 세팅
-
-      if (!parsedData.cuts || parsedData.cuts.length !== 6) {
-        throw new Error('6컷이 아닙니다.');
-      }
-
-
-      let hanaCount = 0;
-
-      parsedData.cuts.forEach((cut, index) => {
-        if (cut.cutNumber !== index + 1) throw new Error('컷 번호가 올바르지 않습니다.');
-        if (!cut.scene) throw new Error('장면 설명이 없습니다.');
-        if (!cut.characters || cut.characters.length === 0) throw new Error('등장인물이 없습니다.');
-        if (!cut.dialogues || cut.dialogues.length === 0) throw new Error('대사가 없습니다.');
+    while (attempt <= maxRetries) {
+      try {
+        const responseText = await geminiClient.generateTextWithModel(prompt, model);
+        const cleanedText = responseText.replace(/```json/gi, '').replace(/```/g, '').trim();
         
-        cut.characters = cut.characters.map(char => {
-          if (char.toLowerCase() === 'hana' || char.includes('하나')) return '하나 선생님';
-          if (char.toLowerCase() === 'doyoon' || char.includes('도윤')) return '도윤';
-          if (char.toLowerCase() === 'seoa' || char.includes('서아')) return '서아';
-          return char;
-        });
+        if (cleanedText.includes('API Key가 설정되지 않았습니다') || cleanedText.includes('오류가 발생했습니다')) {
+          throw new Error(cleanedText);
+        }
 
-        cut.dialogues.forEach(dialogue => {
-          if (dialogue.speaker.toLowerCase() === 'hana' || dialogue.speaker.includes('하나')) dialogue.speaker = '하나 선생님';
-          if (dialogue.speaker.toLowerCase() === 'doyoon' || dialogue.speaker.includes('도윤')) dialogue.speaker = '도윤';
-          if (dialogue.speaker.toLowerCase() === 'seoa' || dialogue.speaker.includes('서아')) dialogue.speaker = '서아';
+        const parsedData = JSON.parse(cleanedText) as GeneratedComicScript;
+        parsedData.learningTopicId = request.learningTopicId;
+
+        if (!parsedData.cuts || parsedData.cuts.length !== 6) {
+          throw new Error('6컷이 아닙니다.');
+        }
+
+        let hanaCount = 0;
+
+        parsedData.cuts.forEach((cut, index) => {
+          if (cut.cutNumber !== index + 1) throw new Error('컷 번호가 올바르지 않습니다.');
+          if (!cut.scene) throw new Error('장면 설명이 없습니다.');
+          if (!cut.characters || cut.characters.length === 0) throw new Error('등장인물이 없습니다.');
+          if (!cut.dialogues || cut.dialogues.length === 0) throw new Error('대사가 없습니다.');
           
-          if (Array.from(dialogue.text).length > 20) {
-            dialogue.text = Array.from(dialogue.text).slice(0, 20).join('');
+          cut.characters = cut.characters.map(char => {
+            if (char.toLowerCase() === 'hana' || char.includes('하나')) return '하나 선생님';
+            if (char.toLowerCase() === 'doyoon' || char.includes('도윤')) return '도윤';
+            if (char.toLowerCase() === 'seoa' || char.includes('서아')) return '서아';
+            return char;
+          });
+
+          cut.dialogues.forEach(dialogue => {
+            if (dialogue.speaker.toLowerCase() === 'hana' || dialogue.speaker.includes('하나')) dialogue.speaker = '하나 선생님';
+            if (dialogue.speaker.toLowerCase() === 'doyoon' || dialogue.speaker.includes('도윤')) dialogue.speaker = '도윤';
+            if (dialogue.speaker.toLowerCase() === 'seoa' || dialogue.speaker.includes('서아')) dialogue.speaker = '서아';
+            
+            if (Array.from(dialogue.text).length > 20) {
+              dialogue.text = Array.from(dialogue.text).slice(0, 20).join('');
+            }
+          });
+
+          if (cut.characters.includes('하나 선생님')) {
+            hanaCount++;
           }
         });
 
-        if (cut.characters.includes('하나 선생님')) {
-          hanaCount++;
+        if (hanaCount < 2) {
+          throw new Error('하나 선생님이 최소 2개 컷에 등장해야 합니다.');
         }
-      });
 
-      if (hanaCount < 2) {
-        throw new Error('하나 선생님이 최소 2개 컷에 등장해야 합니다.');
+        return parsedData;
+
+      } catch (error: any) {
+        attempt++;
+        const status = error.httpStatus;
+        
+        console.warn(`대본 생성 실패 (모델: ${model}, 시도 ${attempt}/${maxRetries + 1}):`, error);
+
+        if (status === 404) {
+          break; // 즉시 다음 모델로
+        }
+
+        if (status === 503) {
+          if (attempt <= maxRetries) {
+            if (request.onStatusUpdate) {
+              request.onStatusUpdate('서버가 바쁩니다. 2초 후 다시 시도합니다...');
+            }
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            continue;
+          } else {
+            break;
+          }
+        }
+        
+        break; // 다른 오류도 다음 모델로
       }
-
-      return parsedData;
-
-    } catch (error) {
-      attempt++;
-      console.warn(`대본 생성 실패 (시도 ${attempt}/${maxRetries + 1}):`, error);
-      
-      if (attempt > maxRetries) {
-        throw new Error('AI 대본 생성에 실패했습니다. 다시 시도해주세요.');
-      }
+    }
+    
+    if (i < modelsToTry.length - 1 && request.onStatusUpdate) {
+      request.onStatusUpdate('AI 서버가 바빠 예비 모델로 다시 시도 중입니다...');
     }
   }
 
-  throw new Error('AI 대본 생성에 실패했습니다.');
+  if (request.onStatusUpdate) {
+    request.onStatusUpdate('잠시 후 다시 시도해 주세요. 기본 대본으로 대체합니다.');
+  }
+  console.warn('모든 모델이 실패하여 로컬 기본 대본으로 대체합니다.');
+  return getFallbackScript(request, learningObjective);
+};
+
+export const generateCoverContent = async (
+  script: GeneratedComicScript,
+  request: ScriptGenerationRequest
+): Promise<{ keyConcepts: CoverKeyConcept[], coverDialogue: CoverDialogue }> => {
+  const prompt = `중단원 학습 목표와 완성된 6컷 대본을 바탕으로 앞표지에 사용할 핵심 개념 3가지와 표지 대화 3개를 작성한다.
+
+[학습 정보]
+- 학년/과목: ${request.gradeName} ${request.subjectName}
+- 단원: ${request.majorUnitName} > ${request.middleUnitName}
+- 중단원 학습 목표: ${script.learningGoal}
+
+[대본 정보]
+- 주제: ${request.storyTitle}
+- 컷별 학습 요점:
+${script.cuts.map(c => `  ${c.cutNumber}컷: ${c.learningPoint}`).join('\n')}
+
+[핵심 개념 추출 규칙]
+핵심 개념은 이야기 줄거리가 아니라 교과에서 꼭 알아야 할 지식이어야 한다.
+핵심 개념은 정확히 3개다.
+1. 핵심 개념 또는 용어
+2. 원리 또는 방법
+3. 적용 또는 문제 해결
+
+각 핵심 개념 제목은 10자 이내다.
+각 설명은 30자 이내의 한 문장이다.
+
+[표지 대화 작성 규칙]
+표지 대화는 하나 선생님, 도윤, 서아에게 한 문장씩 작성한다.
+
+하나 선생님은 학습 주제에 관한 호기심 질문을 한다.
+도윤은 핵심 개념이나 원리를 설명한다.
+서아는 적용 방법이나 자신의 생각을 말한다.
+
+세 문장은 질문과 답으로 자연스럽게 이어져야 한다.
+각 문장은 28자 이내다.
+대본의 사건만 요약하지 않는다.
+막연한 감탄이나 홍보 문구를 작성하지 않는다.
+
+JSON 이외의 설명은 출력하지 않는다. 반드시 아래 JSON 구조만 반환한다:
+{
+  "keyConcepts": [
+    { "title": "개념 제목", "description": "설명" },
+    { "title": "원리 제목", "description": "설명" },
+    { "title": "적용 제목", "description": "설명" }
+  ],
+  "coverDialogue": {
+    "hana": "질문",
+    "doyoon": "개념이나 원리 답",
+    "seoa": "적용이나 생각 답"
+  }
+}
+`;
+
+  const responseText = await geminiClient.generateText(prompt);
+  const cleanedText = responseText.replace(/```json/gi, '').replace(/```/g, '').trim();
+  const parsedData = JSON.parse(cleanedText);
+
+  if (!parsedData.keyConcepts || parsedData.keyConcepts.length !== 3) {
+    throw new Error('핵심 개념 3개가 생성되지 않았습니다.');
+  }
+
+  if (!parsedData.coverDialogue || !parsedData.coverDialogue.hana || !parsedData.coverDialogue.doyoon || !parsedData.coverDialogue.seoa) {
+    throw new Error('표지 대화 3개가 생성되지 않았습니다.');
+  }
+
+  return {
+    keyConcepts: parsedData.keyConcepts.map((c: any, i: number) => ({
+      id: `concept-${i + 1}`,
+      title: Array.from(c.title).slice(0, 10).join(''),
+      description: Array.from(c.description).slice(0, 30).join('')
+    })),
+    coverDialogue: {
+      hana: Array.from(parsedData.coverDialogue.hana).slice(0, 28).join(''),
+      doyoon: Array.from(parsedData.coverDialogue.doyoon).slice(0, 28).join(''),
+      seoa: Array.from(parsedData.coverDialogue.seoa).slice(0, 28).join('')
+    }
+  };
 };
 
 export const getFallbackScript = (request: ScriptGenerationRequest, learningObjective: string): GeneratedComicScript => {
@@ -202,6 +331,20 @@ export const getFallbackScript = (request: ScriptGenerationRequest, learningObje
     title: request.storyTitle,
     learningTopicId: request.learningTopicId,
     learningGoal: learningObjective,
+    keyConcepts: [
+      { id: 'concept-1', title: '무엇인지', description: `${request.middleUnitName}의 뜻과 의미를 이해해요.` },
+      { id: 'concept-2', title: '어떤 원리인지', description: `개념에 숨어있는 핵심 원리를 알 수 있어요.` },
+      { id: 'concept-3', title: '어디에 적용하는지', description: `배운 원리를 실제 문제 해결에 활용해요.` }
+    ],
+    coverDialogue: {
+      hana: `${request.middleUnitName}은 무엇일까요?`,
+      doyoon: `핵심 원리를 적용하면 쉽게 이해할 수 있어요!`,
+      seoa: `우리 생활 속에서도 찾아볼 수 있어요!`
+    },
+    generationStatus: {
+      script: 'success',
+      coverContent: 'success'
+    },
     cuts: [
       {
         cutNumber: 1,
