@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 
 const worldStoryCards = [
-    { id: 0, title: '역사 이야기', desc: '옛날 이야기에서 배움을 찾아요!', image: '/images/main/main-img-6.png' },
-    { id: 1, title: '최신 이야기', desc: '오늘의 세상과 개념을 연결해요!', image: '/images/main/main-img-7.png' },
-    { id: 2, title: '생활 발견', desc: '내 주변에서 배움을 발견해요!', image: '/images/main/main-img-8.png' },
+    { id: 0, title: '역사 이야기', image: '/images/main/main-img-6.png' },
+    { id: 1, title: '최신 이야기', image: '/images/main/main-img-7.png' },
+    { id: 2, title: '생활 발견', image: '/images/main/main-img-8.png' },
 ];
 
 export default function HomePage() {
@@ -176,22 +176,18 @@ export default function HomePage() {
 <section className="py-24 bg-surface-dim">
 <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center gap-16">
 <div className="w-full md:w-1/2 flex justify-center">
-<div className="bg-white rounded-lg shadow-lg w-full max-w-sm aspect-[1/1.4] p-6 border border-gray-100 flex flex-col relative overflow-hidden group">
+<div className="bg-white rounded-lg shadow-lg w-full max-w-sm aspect-[1/1.4] border border-gray-100 relative overflow-hidden group">
     {worldStoryCards.map((card, index) => (
         <div 
             key={card.id}
-            className={`absolute inset-0 p-4 pb-12 flex flex-col items-center justify-center transition-all duration-700 ease-in-out ${
+            className={`absolute inset-0 p-6 pb-12 flex items-center justify-center transition-all duration-700 ease-in-out ${
                 index === currentSlide 
                     ? 'opacity-100 translate-y-0' 
                     : 'opacity-0 translate-y-8 pointer-events-none'
             }`}
         >
-            <div className="w-full flex-1 overflow-hidden rounded-lg mb-4 shadow-sm border border-gray-100">
-                <img alt={card.title} className="w-full h-full object-cover" src={card.image}/>
-            </div>
-            <div className="text-center w-full px-2">
-                <h3 className="font-bold text-xl text-gray-900 mb-1">{card.title}</h3>
-                <p className="text-gray-600 text-sm">{card.desc}</p>
+            <div className="w-full h-full overflow-visible">
+                <img alt={card.title} className="w-full h-full object-contain object-center" src={card.image}/>
             </div>
         </div>
     ))}
