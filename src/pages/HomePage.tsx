@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { Image, MessageSquare, PencilLine } from 'lucide-react';
 
 const worldStoryCards = [
     { id: 0, title: '역사 이야기', image: '/images/main/main-img-6.png' },
@@ -130,7 +131,7 @@ export default function HomePage() {
 </div>
 <div className="flex items-start gap-4">
 <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-<span className="material-symbols-outlined text-primary">image</span>
+<Image className="w-6 h-6 text-primary" />
 </div>
 <div>
 <h3 className="font-bold text-xl mb-2">배경 생성</h3>
@@ -145,7 +146,7 @@ export default function HomePage() {
 </div>
 <div className="flex items-start gap-4">
 <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-<span className="material-symbols-outlined text-primary">chat_bubble</span>
+<MessageSquare className="w-6 h-6 text-primary" />
 </div>
 <div>
 <h3 className="font-bold text-xl mb-2">대사 작성</h3>
@@ -160,7 +161,7 @@ export default function HomePage() {
 </div>
 <div className="flex items-start gap-4">
 <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-<span className="material-symbols-outlined text-primary">edit_note</span>
+<PencilLine className="w-6 h-6 text-primary" />
 </div>
 <div>
 <h3 className="font-bold text-xl mb-2">수업도구</h3>
@@ -329,50 +330,7 @@ export default function HomePage() {
 </div>
 </section>
 </div>
-{/* FAQ */}
-<section className="py-24 bg-surface-dim"><div className="max-w-3xl mx-auto px-6">
-<div className="text-center mb-12">
-<h2 className="text-3xl font-bold">자주 묻는 질문</h2>
-</div>
-<div className="space-y-4">
-<details className="group bg-white border border-gray-200 rounded-xl overflow-hidden cursor-pointer open:bg-white transition-colors">
-<summary className="flex justify-between items-center font-bold p-6 text-gray-900 list-none">
-                            학생은 어떻게 가입하나요?
-                            <span className="material-symbols-outlined transition-transform group-open:rotate-180">expand_more</span>
-</summary>
-<div className="p-6 pt-0 text-gray-600 text-sm border-t border-gray-100 mt-2">
-                            학생들은 교사 계정으로 로그인한 뒤 클래스를 생성하고 학생 계정(아이디/비밀번호)을 일괄 생성하여 배포할 수 있습니다. 학생은 개인정보 입력 없이 발급받은 계정으로 바로 로그인할 수 있습니다.
-                        </div>
-</details>
-<details className="group bg-white border border-gray-200 rounded-xl overflow-hidden cursor-pointer open:bg-white transition-colors">
-<summary className="flex justify-between items-center font-bold p-6 text-gray-900 list-none">
-                            태블릿에서도 사용할 수 있나요?
-                            <span className="material-symbols-outlined transition-transform group-open:rotate-180">expand_more</span>
-</summary>
-<div className="p-6 pt-0 text-gray-600 text-sm border-t border-gray-100 mt-2">
-                            네! 툰스쿨은 PC, 크롬북, 아이패드, 갤럭시탭 등 다양한 기기에서 웹 브라우저로 원활하게 사용할 수 있도록 최적화되어 있습니다.
-                        </div>
-</details>
-<details className="group bg-white border border-gray-200 rounded-xl overflow-hidden cursor-pointer open:bg-white transition-colors">
-<summary className="flex justify-between items-center font-bold p-6 text-gray-900 list-none">
-                            만든 만화는 어떻게 공유하나요?
-                            <span className="material-symbols-outlined transition-transform group-open:rotate-180">expand_more</span>
-</summary>
-<div className="p-6 pt-0 text-gray-600 text-sm border-t border-gray-100 mt-2">
-                            제작이 완료된 만화는 고유 링크(URL)가 생성되어 친구들이나 부모님에게 공유할 수 있으며, PDF 파일로 다운로드하여 인쇄물로도 활용 가능합니다.
-                        </div>
-</details>
-<details className="group bg-white border border-gray-200 rounded-xl overflow-hidden cursor-pointer open:bg-white transition-colors">
-<summary className="flex justify-between items-center font-bold p-6 text-gray-900 list-none">
-                            어떤 교과 과정이 포함되어 있나요?
-                            <span className="material-symbols-outlined transition-transform group-open:rotate-180">expand_more</span>
-</summary>
-<div className="p-6 pt-0 text-gray-600 text-sm border-t border-gray-100 mt-2">
-                            현재 초등학교 전 학년, 전 과목의 성취기준을 기반으로 한 단원 정보가 기본 제공되며, 학생들이 직접 필요한 단원이나 주제를 추가하여 수업을 구성할 수도 있습니다.
-                        </div>
-</details>
-</div>
-</div></section>
+
 </main>
 {/* Footer */}
 <footer className="w-full px-6 py-12 flex flex-col items-center text-center space-y-6 bg-surface-dim border-t border-outline-variant">
