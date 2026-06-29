@@ -56,8 +56,9 @@ export default function StudentScriptEditor({ selectionData, projectId, onPrev, 
     projectStorage.saveScript(projectId, newData);
   };
 
-  const isSaveDisabled = !scriptData || scriptData.cuts.some(cut => 
-    cut.dialogues.some(d => Array.from(d.text).length > 20)
+  const isSaveDisabled = !scriptData || !scriptData.cuts || scriptData.cuts.length === 0;
+  const hasLongDialogue = scriptData?.cuts.some(cut => 
+    cut.dialogues.some(d => Array.from(d.text || '').length > 20)
   );
 
   const requestPayload = {
@@ -391,10 +392,10 @@ export default function StudentScriptEditor({ selectionData, projectId, onPrev, 
           </div>
         </div>
         
-        {/* 에러 메시지: 20자 초과 시 */}
-        {isSaveDisabled && scriptData && (
-          <div className="absolute top-4 right-4 z-50 text-xs font-bold text-[#ff2778] bg-white px-3 py-1 rounded-full shadow-sm border border-[#ffccdc]">
-            20자를 초과한 대사가 있어 저장할 수 없습니다.
+        {/* 경고 메시지: 20자 초과 시 */}
+        {hasLongDialogue && scriptData && (
+          <div className="absolute top-4 right-4 z-50 text-xs font-bold text-[#d97706] bg-[#fffbeb] px-3 py-1 rounded-full shadow-sm border border-[#fef3c7]">
+            20자를 넘는 대사가 있어요. 말풍선에서 잘릴 수 있으니 나중에 줄여 주세요.
           </div>
         )}
 

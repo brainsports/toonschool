@@ -405,13 +405,13 @@ export const generateFullComic = async (
         if (currentStatus === 'queued') {
           if (elapsedMs > 60000) {
             console.warn(`[Job Monitor] Worker 미실행 의심. 60초 이상 queued 상태입니다. job_id=${jobId}`);
-            updateState({ progress: 10 + Math.floor(((i + 0.6) / 6) * 70), message: '작업자가 아직 작업을 시작하지 않았습니다. 관리자 확인이 필요합니다.' });
+            updateState({ progress: 10 + Math.floor(((i + 0.6) / 6) * 70), message: '잠시만 기다려 주세요...' });
           } else {
             updateState({ progress: 10 + Math.floor(((i + 0.6) / 6) * 70), message: `${cutNumber}번째 컷 순서를 기다리고 있어요...` });
           }
         } else if (currentStatus === 'processing') {
           if (elapsedMs > 120000) {
-            updateState({ progress: 10 + Math.floor(((i + 0.7) / 6) * 70), message: '이미지 생성 중 시간이 오래 걸리고 있습니다...' });
+            updateState({ progress: 10 + Math.floor(((i + 0.7) / 6) * 70), message: '그림을 만들고 있어요...' });
           } else {
             updateState({ progress: 10 + Math.floor(((i + 0.7) / 6) * 70), message: `${cutNumber}번째 컷 그리는 중...` });
           }
@@ -435,9 +435,9 @@ export const generateFullComic = async (
         const finalStatus = (await supabase.from('generation_jobs').select('status').eq('id', jobId).single()).data?.status || 'unknown';
         logStage({ cutNumber, stage: 'pollImageJob', status: 'error', errorCode: 'POLL_TIMEOUT', elapsedMs: Date.now() - pollStart, note: `last_status=${finalStatus}` });
         
-        let msg = '이미지 생성 작업이 지연되고 있습니다. 이 컷만 다시 시도해 주세요.';
-        if (finalStatus === 'queued') msg = 'Worker 미실행 또는 작업 미처리 가능성이 있습니다. (상태: queued)';
-        else if (finalStatus === 'processing') msg = '이미지 생성 API 지연 가능성이 있습니다. (상태: processing)';
+        let msg = '잠시 후 다시 시도해 주세요.';
+        if (finalStatus === 'queued') msg = '그림을 다시 만들어 볼게요.';
+        else if (finalStatus === 'processing') msg = '그림을 다시 만들어 볼게요.';
         console.error(`[Job Monitor] POLL_TIMEOUT | status=${finalStatus} | msg=${msg}`);
 
         throw Object.assign(new Error(msg), { errorCode: 'POLL_TIMEOUT' });
@@ -738,13 +738,13 @@ const doGenerateSingleComicCut = async (
       if (currentStatus === 'queued') {
         if (elapsedMs > 60000) {
           console.warn(`[Job Monitor] Worker 미실행 의심. 60초 이상 queued 상태입니다. job_id=${jobId}`);
-          updateState({ progress: 72, message: '작업자가 아직 작업을 시작하지 않았습니다. 관리자 확인이 필요합니다.' });
+          updateState({ progress: 72, message: '잠시만 기다려 주세요...' });
         } else {
           updateState({ progress: 72, message: '생성 순서를 기다리고 있어요...' });
         }
       } else if (currentStatus === 'processing') {
         if (elapsedMs > 120000) {
-          updateState({ progress: 85, message: '이미지 생성 중 시간이 오래 걸리고 있습니다...' });
+          updateState({ progress: 85, message: '그림을 만들고 있어요...' });
         } else {
           updateState({ progress: 85, message: '그림을 그리는 중이에요...' });
         }
@@ -770,9 +770,9 @@ const doGenerateSingleComicCut = async (
       const finalStatus = (await supabase.from('generation_jobs').select('status').eq('id', jobId).single()).data?.status || 'unknown';
       logStage({ cutNumber, stage: 'pollImageJob', status: 'error', errorCode: 'POLL_TIMEOUT', elapsedMs: Date.now() - pollStart, note: `last_status=${finalStatus}` });
       
-      let msg = '이미지 생성 작업이 지연되고 있습니다. 이 컷만 다시 시도해 주세요.';
-      if (finalStatus === 'queued') msg = 'Worker 미실행 또는 작업 미처리 가능성이 있습니다. (상태: queued)';
-      else if (finalStatus === 'processing') msg = '이미지 생성 API 지연 가능성이 있습니다. (상태: processing)';
+      let msg = '잠시 후 다시 시도해 주세요.';
+      if (finalStatus === 'queued') msg = '그림을 다시 만들어 볼게요.';
+      else if (finalStatus === 'processing') msg = '그림을 다시 만들어 볼게요.';
       console.error(`[Job Monitor] POLL_TIMEOUT | status=${finalStatus} | msg=${msg}`);
 
       throw Object.assign(new Error(msg), { errorCode: 'POLL_TIMEOUT' });

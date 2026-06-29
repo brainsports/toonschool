@@ -139,22 +139,20 @@ export default function ScriptCutEditor({ scriptData, onChange, selectedCut, onS
                       value={dialogue.text}
                       onChange={(e) => {
                         const newText = e.target.value;
-                        if (Array.from(newText).length <= 20) {
-                          handleDialogueChange(index, 'text', newText);
-                        }
+                        handleDialogueChange(index, 'text', newText);
                       }}
                       rows={2}
                       placeholder="대사를 입력하세요 (20자 이내)"
                       className={`w-full p-2.5 text-sm bg-[#f8f9fc] border rounded-xl outline-none transition-all resize-none ${
                         isOverLimit 
-                          ? 'border-[#ff2778] focus:border-[#ff2778] focus:ring-1 focus:ring-[#ff2778]' 
+                          ? 'border-[#f59e0b] focus:border-[#f59e0b] focus:ring-1 focus:ring-[#f59e0b]' 
                           : 'border-[#dfe2ea] focus:border-[#4d82f3] focus:ring-1 focus:ring-[#4d82f3]'
                       }`}
                     />
-                    <div className={`absolute bottom-2 right-2 text-[10px] font-bold px-1.5 py-0.5 rounded-md ${
-                      isOverLimit ? 'text-[#ff2778] bg-[#ffe6ef]' : 'text-[#8f95a6] bg-[#e5e7eb]'
+                    <div className={`absolute bottom-2 right-2 text-[10px] font-bold px-2 py-0.5 rounded-md ${
+                      isOverLimit ? 'text-[#d97706] bg-[#fef3c7]' : 'text-[#8f95a6] bg-[#e5e7eb]'
                     }`}>
-                      {charCount} / 20
+                      권장 20자 / 현재 {charCount}자
                     </div>
                   </div>
                 </div>

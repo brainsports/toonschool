@@ -34,10 +34,23 @@ import StudentBackCoverPage from '../modules/student/pages/StudentBackCoverPage'
 import StudentComicViewerPage from '../modules/student/pages/StudentComicViewerPage'
 import SharedComicViewerPage from '../modules/student/pages/SharedComicViewerPage'
 
+import AIContentPage from '../pages/AIContentPage'
+import FlippedLearningPage from '../pages/FlippedLearningPage'
+import LMSPage from '../pages/LMSPage'
+import PWAPage from '../pages/PWAPage'
+import PricingPage from '../pages/PricingPage'
+import FAQPage from '../pages/FAQPage'
+
 export default function AppRouter() {
   return (
     <Routes>
       <Route path="/" element={<HomePage />} />
+      <Route path="/ai-content" element={<AIContentPage />} />
+      <Route path="/flipped-learning" element={<FlippedLearningPage />} />
+      <Route path="/lms" element={<LMSPage />} />
+      <Route path="/pwa" element={<PWAPage />} />
+      <Route path="/pricing" element={<PricingPage />} />
+      <Route path="/faq" element={<FAQPage />} />
       <Route element={<Layout />}>
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="login" element={<Login />} />

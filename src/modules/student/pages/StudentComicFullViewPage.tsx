@@ -14,7 +14,7 @@ import { getErrorMessageByCode } from '../../../shared/lib/geminiLogger';
 
 const IS_DEBUG_MODE = false; // 관리자/디버그 모드용 플래그 (true시 시간 및 상세 메시지 표시)
 
-import { supabase } from '../../../shared/lib/supabase';
+
 import ComicCanvas from '../components/comic-editor/ComicCanvas';
 import CharacterToolPanel from '../components/comic-editor/CharacterToolPanel';
 import ComicScriptPanel from '../components/comic-editor/ComicScriptPanel';
@@ -193,41 +193,7 @@ export default function StudentComicFullViewPage() {
   const [genAllState, setGenAllState] = useState<{ isRunning: boolean, completedCount: number, startedAt: number | null, elapsedMs: number }>({
     isRunning: false, completedCount: 0, startedAt: null, elapsedMs: 0
   });
-  const [isWorkerStale, setIsWorkerStale] = useState<boolean>(false);
 
-  useEffect(() => {
-    const checkWorker = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('worker_heartbeats')
-          .select('last_seen')
-          .eq('id', 'main_worker')
-          .single();
-
-        if (error || !data) {
-          console.warn('[Worker Check] worker_heartbeats 조회가 실패했거나 데이터가 없습니다.', error);
-          setIsWorkerStale(true);
-          return;
-        }
-
-        const lastSeenMs = new Date(data.last_seen).getTime();
-        const nowMs = Date.now();
-        // 60초 초과 시 경고
-        if (nowMs - lastSeenMs > 60000) {
-          setIsWorkerStale(true);
-        } else {
-          setIsWorkerStale(false);
-        }
-      } catch (err) {
-        console.error('Worker heartbeat check error:', err);
-        setIsWorkerStale(true);
-      }
-    };
-
-    checkWorker();
-    const interval = setInterval(checkWorker, 30000);
-    return () => clearInterval(interval);
-  }, []);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -806,7 +772,6 @@ export default function StudentComicFullViewPage() {
     cutsData[num]?.elements.some(el => el.type === 'speechBubble')
   );
 
-  const hasActiveGenerations = Object.values(genStates).some(state => state.status === 'generating');
 
   const actionButtons = (
     <div className="flex flex-col items-end gap-1.5 pr-8">
@@ -895,12 +860,6 @@ export default function StudentComicFullViewPage() {
       centerContent={centerContent}
     >
       <div className="flex flex-col w-full h-full relative">
-        {hasActiveGenerations && !allBackgroundsGenerated && (isWorkerStale || Object.values(genStates).some(state => state.status === 'generating' && state.message?.includes('관리자 확인'))) && (
-          <div className="bg-red-100 text-red-800 text-sm font-bold text-center py-2 px-4 shadow-sm z-50 rounded-b-lg">
-            이미지 생성 작업자가 실행되지 않아 그림 만들기가 지연될 수 있어요. 관리자에게 확인이 필요합니다.
-          </div>
-        )}
-
 
         {/* 하단 패널 및 캔버스 영역 */}
         <div className="flex-1 flex overflow-hidden w-full relative">
