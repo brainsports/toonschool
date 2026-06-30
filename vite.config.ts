@@ -21,6 +21,7 @@ export default defineConfig(({ mode }) => {
           name: '툰스쿨',
           short_name: 'ToonSchool',
           start_url: '/',
+          scope: '/',
           display: 'standalone',
           background_color: '#ffffff',
           theme_color: '#ff2778',
@@ -29,6 +30,18 @@ export default defineConfig(({ mode }) => {
               src: '/favicon.svg',
               type: 'image/svg+xml',
               sizes: 'any'
+            },
+            {
+              src: '/icons/icon-192x192.png',
+              type: 'image/png',
+              sizes: '192x192',
+              purpose: 'any maskable'
+            },
+            {
+              src: '/icons/icon-512x512.png',
+              type: 'image/png',
+              sizes: '512x512',
+              purpose: 'any maskable'
             }
           ]
         }
