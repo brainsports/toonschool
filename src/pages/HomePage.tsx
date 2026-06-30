@@ -36,15 +36,12 @@ export default function HomePage() {
 <Link className="text-on-surface text-lg font-bold hover:text-primary transition-colors" to="/faq">궁금해요</Link>
 </nav>
 <div className="hidden md:flex items-center space-x-4">
-<button 
+<Link 
     className="bg-[#ff2778] text-white px-8 py-3 rounded-full font-bold text-lg hover:bg-pink-600 transition-colors shadow-sm" 
-    onClick={(e) => {
-        e.preventDefault();
-        alert('선생님 관리 기능은 준비 중입니다.');
-    }}
+    to="/login"
 >
     관리 LMS
-</button>
+</Link>
 <Link className="bg-[#ff2778] text-white px-8 py-3 rounded-full font-bold text-lg hover:bg-pink-600 transition-colors shadow-sm" to="/pricing">이용권 구매</Link>
 </div>
 <button aria-label="Menu" className="xl:hidden text-on-surface-variant p-2">
@@ -64,7 +61,7 @@ export default function HomePage() {
                     툰스쿨은 초등 교과 단원을 학생이 직접 학습만화로 만드는 AI 수업 플랫폼입니다.<br />단원 선택부터 대본, 6컷 만화, 단원 정리, OX 문제까지 한 번에 완성합니다.
                 </p>
 <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
-<Link className="w-full sm:w-auto bg-primary text-white px-8 py-4 rounded-lg font-bold text-lg hover:bg-primary-container transition-colors shadow-md text-center" to="/student/select-unit">무료로 시작하기</Link>
+<Link className="w-full sm:w-auto bg-primary text-white px-8 py-4 rounded-lg font-bold text-lg hover:bg-primary-container transition-colors shadow-md text-center" to="/login">무료로 시작하기</Link>
 <Link className="w-full sm:w-auto bg-white text-primary border-2 border-primary px-8 py-4 rounded-lg font-bold text-lg hover:bg-gray-50 transition-colors text-center" to="/student/select-unit">툰스쿨 에디터 보기</Link>
 </div>
 </div>

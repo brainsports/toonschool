@@ -19,15 +19,12 @@ export default function PWAPage() {
                         <Link className="text-on-surface text-lg font-bold hover:text-primary transition-colors" to="/faq">궁금해요</Link>
                     </nav>
                     <div className="hidden md:flex items-center space-x-4">
-                        <button 
+                        <Link 
                             className="bg-[#ff2778] text-white px-8 py-3 rounded-full font-bold text-lg hover:bg-pink-600 transition-colors shadow-sm" 
-                            onClick={(e) => {
-                                e.preventDefault();
-                                alert('선생님 관리 기능은 준비 중입니다.');
-                            }}
+                            to="/login"
                         >
                             관리 LMS
-                        </button>
+                        </Link>
                         <Link className="bg-[#ff2778] text-white px-8 py-3 rounded-full font-bold text-lg hover:bg-pink-600 transition-colors shadow-sm" to="/pricing">이용권 구매</Link>
                     </div>
                     <button aria-label="Menu" className="xl:hidden text-on-surface-variant p-2">

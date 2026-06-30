@@ -2,11 +2,12 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../shared/lib/supabase'
 import { useAuth } from '../shared/contexts/AuthContext'
-import { Mail, Lock, AlertCircle } from 'lucide-react'
+import { Eye, EyeOff } from 'lucide-react'
 
 export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const navigate = useNavigate()
@@ -28,7 +29,6 @@ export default function Login() {
       }
 
       if (data.user) {
-        // Fetch profile to redirect based on user role
         const profile = await fetchProfile(data.user.id)
         
         if (profile) {
@@ -48,7 +48,6 @@ export default function Login() {
               break
           }
         } else {
-          // If profile table doesn't have it yet, go to mypage as default fallback
           navigate('/mypage')
         }
       }
@@ -61,80 +60,130 @@ export default function Login() {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center py-10 min-h-[70vh] z-10 relative">
-      <div className="w-full max-w-md p-8 rounded-3xl bg-slate-900 border border-slate-800 space-y-6 shadow-2xl relative overflow-hidden">
-        {/* Background glow blobs */}
-        <div className="absolute top-0 right-0 w-[40%] h-[40%] bg-purple-900/10 rounded-full blur-[60px] pointer-events-none" />
-
-        {/* Title */}
-        <div className="text-center space-y-2">
-          <div className="inline-flex h-12 w-12 rounded-2xl bg-gradient-to-tr from-purple-600 to-pink-500 items-center justify-center shadow-lg shadow-purple-500/20 font-bold text-white text-xl mx-auto mb-2">
-            TS
-          </div>
-          <h2 className="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-100 to-slate-400">
-            툰스쿨 로그인
-          </h2>
-          <p className="text-xs text-slate-500">
-            계정 이메일과 비밀번호를 입력해 주세요.
-          </p>
-        </div>
-
-        {/* Error notification */}
-        {error && (
-          <div className="p-4 rounded-xl bg-rose-950/40 border border-rose-900/50 text-rose-400 text-xs flex items-center gap-2">
-            <AlertCircle className="h-4 w-4 shrink-0" />
-            <span>{error}</span>
-          </div>
-        )}
-
-        {/* Form */}
-        <form onSubmit={handleLogin} className="space-y-4">
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-slate-400">이메일</label>
-            <div className="relative">
-              <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="email@example.com"
-                className="w-full pl-11 pr-4 py-2.5 rounded-xl bg-slate-950 border border-slate-850 hover:border-slate-700 focus:border-purple-600 focus:ring-1 focus:ring-purple-600 text-sm placeholder-slate-600 transition-all text-white outline-none"
-              />
+    <div className="min-h-screen bg-[#f3f4f7] flex items-center justify-center overflow-hidden font-sans">
+      <div className="w-full max-w-[1376px] aspect-video max-h-screen flex flex-row relative">
+        
+        {/* Left Area (Text & Characters) */}
+        <div className="flex-1 flex flex-col justify-center px-10 md:px-16 relative">
+          
+          {/* Logo and App Name */}
+          <Link to="/" className="flex items-center gap-3 mb-10 w-fit z-30">
+            <div className="h-12 w-12 rounded-xl bg-gradient-to-tr from-purple-600 to-pink-500 flex items-center justify-center font-bold text-white text-xl shadow-md">
+              TS
             </div>
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-slate-400">비밀번호</label>
-            <div className="relative">
-              <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full pl-11 pr-4 py-2.5 rounded-xl bg-slate-950 border border-slate-850 hover:border-slate-700 focus:border-purple-600 focus:ring-1 focus:ring-purple-600 text-sm placeholder-slate-600 transition-all text-white outline-none"
-              />
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold text-sm shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 mt-2"
-          >
-            {isLoading ? '로그인 중...' : '로그인'}
-          </button>
-        </form>
-
-        {/* Footer actions */}
-        <div className="text-center pt-4 border-t border-slate-850 text-xs text-slate-500">
-          <span>아직 계정이 없으신가요? </span>
-          <Link to="/signup" className="text-purple-400 hover:text-purple-300 font-semibold underline decoration-purple-600/30 underline-offset-4">
-            회원가입하기
+            <span className="font-extrabold text-2xl tracking-wider text-slate-800">
+              툰스쿨
+            </span>
           </Link>
+
+          {/* Catchphrase */}
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-slate-900 leading-[1.3] tracking-tight mb-6 z-30">
+            공부하지 말고,<br />
+            <span className="text-[#ff2778]">공부를 만들자.</span>
+          </h1>
+          
+          {/* Subtitle */}
+          <p className="text-lg md:text-xl text-slate-600 font-medium z-30">
+            선생님과 학생이 함께 만드는 AI 학습만화 플랫폼
+          </p>
+
+          {/* Characters (absolute positioned at the bottom left) */}
+          <div className="absolute bottom-0 left-0 w-full h-full pointer-events-none flex items-end">
+            <div className="flex items-end pl-8 pb-0 opacity-90 relative">
+              <img 
+                src="/images/toonschool/characters/official/hana-teacher.png" 
+                alt="하나 선생님" 
+                className="w-[150px] md:w-[180px] object-contain drop-shadow-xl z-20" 
+              />
+              <img 
+                src="/images/toonschool/characters/official/doyoon-boy.png" 
+                alt="도윤" 
+                className="w-[130px] md:w-[160px] object-contain -ml-6 md:-ml-8 drop-shadow-lg z-10" 
+              />
+              <img 
+                src="/images/toonschool/characters/official/seoa-girl.png" 
+                alt="서아" 
+                className="w-[120px] md:w-[150px] object-contain -ml-6 md:-ml-8 drop-shadow-lg z-0" 
+              />
+            </div>
+          </div>
         </div>
+
+        {/* Right Area (Login Card) */}
+        <div className="w-full max-w-[500px] flex items-center justify-center pr-4 md:pr-16 z-30 my-auto">
+          <div className="w-full bg-white rounded-[32px] p-8 md:p-10 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] border border-slate-100">
+            
+            <h2 className="text-2xl font-bold text-center text-slate-800 mb-8">
+              툰스쿨 로그인
+            </h2>
+            
+            {error && (
+              <div className="mb-6 p-3 rounded-xl bg-rose-50 border border-rose-100 text-rose-500 text-sm flex items-center justify-center gap-2">
+                <span>{error}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleLogin} className="space-y-4">
+              {/* Email Input */}
+              <div>
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="아이디 또는 이메일"
+                  className="w-full px-5 py-4 rounded-xl bg-[#f8f9fa] border border-transparent focus:border-[#ff2778] focus:bg-white focus:ring-1 focus:ring-[#ff2778] text-slate-800 placeholder-slate-400 outline-none transition-all text-[15px]"
+                />
+              </div>
+
+              {/* Password Input */}
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="비밀번호"
+                  className="w-full pl-5 pr-12 py-4 rounded-xl bg-[#f8f9fa] border border-transparent focus:border-[#ff2778] focus:bg-white focus:ring-1 focus:ring-[#ff2778] text-slate-800 placeholder-slate-400 outline-none transition-all text-[15px]"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors p-1"
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
+
+              {/* Submit Button */}
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full py-4 mt-2 rounded-xl bg-[#ff2778] hover:bg-[#e01962] text-white font-bold text-lg shadow-lg shadow-[#ff2778]/30 transition-all active:scale-[0.98] disabled:opacity-50"
+              >
+                {isLoading ? '로그인 중...' : '로그인'}
+              </button>
+            </form>
+
+            {/* Links */}
+            <div className="flex items-center justify-center gap-4 mt-8 text-sm text-slate-500 font-medium">
+              <Link to="/signup" className="hover:text-slate-800 transition-colors">회원가입</Link>
+              <div className="w-px h-3 bg-slate-300"></div>
+              <button type="button" className="hover:text-slate-800 transition-colors">아이디 찾기</button>
+              <div className="w-px h-3 bg-slate-300"></div>
+              <button type="button" className="hover:text-slate-800 transition-colors">비밀번호 찾기</button>
+            </div>
+
+            {/* Bottom Register Prompt */}
+            <div className="mt-8 pt-6 border-t border-slate-100 flex items-center justify-between">
+              <span className="text-slate-500 font-medium text-[15px]">처음 오셨나요?</span>
+              <Link to="/signup" className="text-[#ff2778] font-bold hover:text-[#e01962] transition-colors text-[15px]">
+                회원가입하기 &gt;
+              </Link>
+            </div>
+          </div>
+        </div>
+        
       </div>
     </div>
   )

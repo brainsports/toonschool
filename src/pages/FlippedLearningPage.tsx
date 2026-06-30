@@ -19,7 +19,7 @@ export default function FlippedLearningPage() {
                         <Link className="text-on-surface text-lg font-bold hover:text-primary transition-colors" to="/faq">궁금해요</Link>
                     </nav>
                     <div className="hidden md:flex items-center space-x-4">
-                        <Link className="bg-[#ff2778] text-white px-8 py-3 rounded-full font-bold text-lg hover:bg-pink-600 transition-colors shadow-sm" to="/lms">관리 LMS</Link>
+                        <Link className="bg-[#ff2778] text-white px-8 py-3 rounded-full font-bold text-lg hover:bg-pink-600 transition-colors shadow-sm" to="/login">관리 LMS</Link>
                         <Link className="bg-[#ff2778] text-white px-8 py-3 rounded-full font-bold text-lg hover:bg-pink-600 transition-colors shadow-sm" to="/pricing">이용권 구매</Link>
                     </div>
                     <button aria-label="Menu" className="xl:hidden text-on-surface-variant p-2">
@@ -192,10 +192,10 @@ export default function FlippedLearningPage() {
                                     <p className="text-lg text-on-surface-variant">지금 바로 시작하고, 설명할 수 있는 배움을 경험해 보세요!</p>
                                 </div>
                             </div>
-                            <button className="bg-[#ff2778] text-white px-10 py-5 rounded-full font-bold hover:bg-opacity-90 transition-colors shadow-lg hover:-translate-y-1 transform flex items-center gap-2 text-lg whitespace-nowrap relative z-10">
+                            <Link className="bg-[#ff2778] text-white px-10 py-4 rounded-full font-bold text-lg hover:bg-pink-600 transition-colors shadow-lg shadow-pink-500/30 flex items-center gap-2" to="/login">
                                 무료로 시작하기
                                 <span className="material-symbols-outlined text-xl">arrow_forward_ios</span>
-                            </button>
+                            </Link>
                         </div>
                     </div>
                     {/* Decos */}

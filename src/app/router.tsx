@@ -51,9 +51,9 @@ export default function AppRouter() {
       <Route path="/pwa" element={<PWAPage />} />
       <Route path="/pricing" element={<PricingPage />} />
       <Route path="/faq" element={<FAQPage />} />
+      <Route path="/login" element={<Login />} />
       <Route element={<Layout />}>
         <Route path="dashboard" element={<Dashboard />} />
-        <Route path="login" element={<Login />} />
         <Route path="signup" element={<Signup />} />
         <Route path="mypage" element={<MyPage />} />
         <Route path="super-admin" element={<SuperAdminLayout />}>

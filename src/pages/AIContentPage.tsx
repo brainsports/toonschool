@@ -23,7 +23,7 @@ export default function AIContentPage() {
                         <Link className="text-on-surface text-lg font-bold hover:text-primary transition-colors" to="/faq">궁금해요</Link>
                     </nav>
                     <div className="hidden md:flex items-center space-x-4">
-                        <Link className="bg-[#ff2778] text-white px-8 py-3 rounded-full font-bold text-lg hover:bg-pink-600 transition-colors shadow-sm" to="/lms">관리 LMS</Link>
+                        <Link className="bg-[#ff2778] text-white px-8 py-3 rounded-full font-bold text-lg hover:bg-pink-600 transition-colors shadow-sm" to="/login">관리 LMS</Link>
                         <Link className="bg-[#ff2778] text-white px-8 py-3 rounded-full font-bold text-lg hover:bg-pink-600 transition-colors shadow-sm" to="/pricing">이용권 구매</Link>
                     </div>
                     <button aria-label="Menu" className="xl:hidden text-on-surface-variant p-2">
@@ -322,7 +322,7 @@ export default function AIContentPage() {
                                 <p className="text-gray-600 text-lg mt-1">지금 바로 시작하고, 창의적인 공부를 경험해 보세요!</p>
                             </div>
                         </div>
-                        <Link to="/student/select-unit" className="px-8 py-4 rounded-full bg-primary text-white font-bold text-lg hover:bg-pink-600 transition-all shadow-md flex items-center gap-2">
+                        <Link className="w-full sm:w-auto bg-[#ff2778] text-white px-10 py-5 rounded-2xl font-bold text-xl hover:bg-pink-600 transition-colors shadow-lg shadow-pink-500/30 flex items-center justify-center gap-2 group" to="/login">
                             무료로 시작하기 <span className="material-symbols-outlined">chevron_right</span>
                         </Link>
                         </div>
