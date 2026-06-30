@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../shared/lib/supabase'
 import { useAuth } from '../shared/contexts/AuthContext'
 import { Eye, EyeOff } from 'lucide-react'
+import heroImage from '../assets/hero.png'
 
 export default function Login() {
   const [email, setEmail] = useState('')
@@ -63,11 +64,11 @@ export default function Login() {
     <div className="min-h-screen bg-[#f3f4f7] flex items-center justify-center overflow-hidden font-sans">
       <div className="w-full max-w-[1376px] aspect-video max-h-screen flex flex-row relative">
         
-        {/* Left Area (Text & Characters) */}
-        <div className="flex-1 flex flex-col justify-center px-10 md:px-16 relative">
+        {/* Left Area (Text & Hero Image) */}
+        <div className="w-[58%] h-full flex flex-col pt-16 md:pt-20 px-10 md:px-16 relative z-10">
           
           {/* Logo and App Name */}
-          <Link to="/" className="flex items-center gap-3 mb-10 w-fit z-30">
+          <Link to="/" className="flex items-center gap-3 mb-10 w-fit z-30 shrink-0">
             <div className="h-12 w-12 rounded-xl bg-gradient-to-tr from-purple-600 to-pink-500 flex items-center justify-center font-bold text-white text-xl shadow-md">
               TS
             </div>
@@ -77,41 +78,29 @@ export default function Login() {
           </Link>
 
           {/* Catchphrase */}
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-slate-900 leading-[1.3] tracking-tight mb-6 z-30">
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-slate-900 leading-[1.3] tracking-tight mb-6 z-30 shrink-0">
             공부하지 말고,<br />
             <span className="text-[#ff2778]">공부를 만들자.</span>
           </h1>
           
           {/* Subtitle */}
-          <p className="text-lg md:text-xl text-slate-600 font-medium z-30">
+          <p className="text-lg md:text-xl text-slate-600 font-medium z-30 shrink-0 mb-8">
             선생님과 학생이 함께 만드는 AI 학습만화 플랫폼
           </p>
 
-          {/* Characters (absolute positioned at the bottom left) */}
-          <div className="absolute bottom-0 left-0 w-full h-full pointer-events-none flex items-end">
-            <div className="flex items-end pl-8 pb-0 opacity-90 relative">
-              <img 
-                src="/images/toonschool/characters/official/hana-teacher.png" 
-                alt="하나 선생님" 
-                className="w-[150px] md:w-[180px] object-contain drop-shadow-xl z-20" 
-              />
-              <img 
-                src="/images/toonschool/characters/official/doyoon-boy.png" 
-                alt="도윤" 
-                className="w-[130px] md:w-[160px] object-contain -ml-6 md:-ml-8 drop-shadow-lg z-10" 
-              />
-              <img 
-                src="/images/toonschool/characters/official/seoa-girl.png" 
-                alt="서아" 
-                className="w-[120px] md:w-[150px] object-contain -ml-6 md:-ml-8 drop-shadow-lg z-0" 
-              />
-            </div>
+          {/* Hero Image */}
+          <div className="flex-1 w-full flex items-end justify-start min-h-0 relative z-20 pb-4">
+            <img 
+              src={heroImage} 
+              alt="ToonSchool Hero" 
+              className="w-[85%] h-full object-contain object-left-bottom drop-shadow-2xl" 
+            />
           </div>
         </div>
 
         {/* Right Area (Login Card) */}
-        <div className="w-full max-w-[500px] flex items-center justify-center pr-4 md:pr-16 z-30 my-auto">
-          <div className="w-full bg-white rounded-[32px] p-8 md:p-10 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] border border-slate-100">
+        <div className="w-[42%] h-full flex items-center justify-center pr-4 md:pr-16 z-30">
+          <div className="w-full max-w-[480px] bg-white rounded-[32px] p-8 md:p-10 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] border border-slate-100">
             
             <h2 className="text-2xl font-bold text-center text-slate-800 mb-8">
               툰스쿨 로그인
