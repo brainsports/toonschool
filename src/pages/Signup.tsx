@@ -4,9 +4,13 @@ import { supabase } from '../shared/lib/supabase'
 import { Mail, Lock, UserPlus, AlertCircle, CheckCircle } from 'lucide-react'
 
 export default function Signup() {
+  const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [centerName, setCenterName] = useState('')
+  const [termsAgreed, setTermsAgreed] = useState(false)
+  const [privacyAgreed, setPrivacyAgreed] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<boolean>(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -15,6 +19,11 @@ export default function Signup() {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
+
+    if (!termsAgreed || !privacyAgreed) {
+      setError('필수 약관에 동의해 주세요.')
+      return
+    }
 
     if (password !== confirmPassword) {
       setError('비밀번호가 일치하지 않습니다.')
@@ -32,7 +41,12 @@ export default function Signup() {
       // 1. Sign up the user via Supabase Auth
       const { data, error: authError } = await supabase.auth.signUp({
         email,
-        password
+        password,
+        options: {
+          data: {
+            name: name,
+          }
+        }
       })
 
       if (authError) {
@@ -46,9 +60,12 @@ export default function Signup() {
           .insert({
             id: data.user.id,
             email: data.user.email,
+            name: name,
             role: 'free_user',       // Default role
             plan_type: 'free',       // Default plan
             monthly_quota: 3         // Default quota
+            // center_id is not saved here since centerName is just text.
+            // If they need to link via center_id, that would be a separate logic.
           })
 
         if (profileError) {
@@ -81,10 +98,10 @@ export default function Signup() {
             TS
           </div>
           <h2 className="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-100 to-slate-400">
-            툰스쿨 회원가입
+            툰스쿨 교사/관리자 회원가입
           </h2>
           <p className="text-xs text-slate-500">
-            무료 회원가입으로 나만의 만화를 만들기 시작하세요.
+            학생은 관리자 페이지에서 직접 추가해주세요.
           </p>
         </div>
 
@@ -110,7 +127,21 @@ export default function Signup() {
         {!success && (
           <form onSubmit={handleSignup} className="space-y-4">
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-slate-400">이메일 주소</label>
+              <label className="text-xs font-semibold text-slate-400">이름 (필수)</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="홍길동"
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-850 hover:border-slate-700 focus:border-purple-600 focus:ring-1 focus:ring-purple-600 text-sm placeholder-slate-600 transition-all text-white outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-slate-400">이메일 주소 (필수)</label>
               <div className="relative">
                 <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
                 <input
@@ -125,7 +156,7 @@ export default function Signup() {
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-slate-400">비밀번호</label>
+              <label className="text-xs font-semibold text-slate-400">비밀번호 (필수)</label>
               <div className="relative">
                 <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
                 <input
@@ -140,7 +171,7 @@ export default function Signup() {
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-slate-400">비밀번호 확인</label>
+              <label className="text-xs font-semibold text-slate-400">비밀번호 확인 (필수)</label>
               <div className="relative">
                 <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
                 <input
@@ -152,6 +183,40 @@ export default function Signup() {
                   className="w-full pl-11 pr-4 py-2.5 rounded-xl bg-slate-950 border border-slate-850 hover:border-slate-700 focus:border-purple-600 focus:ring-1 focus:ring-purple-600 text-sm placeholder-slate-600 transition-all text-white outline-none"
                 />
               </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-slate-400">기관명 또는 기관 코드 (선택)</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={centerName}
+                  onChange={(e) => setCenterName(e.target.value)}
+                  placeholder="학교명 또는 발급받은 코드"
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-850 hover:border-slate-700 focus:border-purple-600 focus:ring-1 focus:ring-purple-600 text-sm placeholder-slate-600 transition-all text-white outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2 mt-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={termsAgreed}
+                  onChange={(e) => setTermsAgreed(e.target.checked)}
+                  className="w-4 h-4 rounded border-slate-800 text-purple-600 focus:ring-purple-600 focus:ring-offset-slate-900 bg-slate-950"
+                />
+                <span className="text-xs text-slate-400">이용약관에 동의합니다. (필수)</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={privacyAgreed}
+                  onChange={(e) => setPrivacyAgreed(e.target.checked)}
+                  className="w-4 h-4 rounded border-slate-800 text-purple-600 focus:ring-purple-600 focus:ring-offset-slate-900 bg-slate-950"
+                />
+                <span className="text-xs text-slate-400">개인정보 수집 및 이용에 동의합니다. (필수)</span>
+              </label>
             </div>
 
             <button
