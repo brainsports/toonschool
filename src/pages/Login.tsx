@@ -89,7 +89,11 @@ export default function Login() {
 
           {/* Hero Image */}
           <div className="flex-1 w-full flex items-end justify-start min-h-0 relative z-20 pb-4">
-            {/* TODO: Stitch 히어로 이미지가 추가되면 여기에 배치합니다. */}
+            <img 
+              src="/images/toonschool/login-hero.png" 
+              alt="툰스쿨 로그인 히어로 이미지"
+              style={{ width: '85%', maxWidth: '680px', objectFit: 'contain', marginTop: '36px' }}
+            />
           </div>
         </div>
 
