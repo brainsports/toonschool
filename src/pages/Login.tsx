@@ -3,7 +3,6 @@ import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../shared/lib/supabase'
 import { useAuth } from '../shared/contexts/AuthContext'
 import { Eye, EyeOff } from 'lucide-react'
-import heroImage from '../assets/hero.png'
 
 export default function Login() {
   const [email, setEmail] = useState('')
@@ -90,11 +89,7 @@ export default function Login() {
 
           {/* Hero Image */}
           <div className="flex-1 w-full flex items-end justify-start min-h-0 relative z-20 pb-4">
-            <img 
-              src={heroImage} 
-              alt="ToonSchool Hero" 
-              className="w-[85%] h-full object-contain object-left-bottom drop-shadow-2xl" 
-            />
+            {/* TODO: Stitch 히어로 이미지가 추가되면 여기에 배치합니다. */}
           </div>
         </div>
 
