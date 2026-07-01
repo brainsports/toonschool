@@ -38,7 +38,7 @@ export default function HomePage() {
 <div className="hidden md:flex items-center space-x-4">
 <Link 
     className="bg-[#ff2778] text-white px-8 py-3 rounded-full font-bold text-lg hover:bg-pink-600 transition-colors shadow-sm" 
-    to="/login"
+    to="/admin/lms"
 >
     관리 LMS
 </Link>

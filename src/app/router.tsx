@@ -13,7 +13,7 @@ import UserManagementPage from '../modules/super-admin/pages/UserManagementPage'
 import PlanManagementPage from '../modules/super-admin/pages/PlanManagementPage'
 import CenterAdminLayout from '../modules/center-admin/components/CenterAdminLayout'
 import CenterAdminDashboard from '../modules/center-admin/pages/CenterAdminDashboard'
-import StudentManagementPage from '../modules/center-admin/pages/StudentManagementPage'
+import StudentManagementPageLegacy from '../modules/center-admin/pages/StudentManagementPage'
 import ProgressPage from '../modules/center-admin/pages/ProgressPage'
 import EvaluationPage from '../modules/center-admin/pages/EvaluationPage'
 import StudentDashboard from '../modules/student/pages/StudentDashboard'
@@ -41,6 +41,15 @@ import PWAPage from '../pages/PWAPage'
 import PricingPage from '../pages/PricingPage'
 import FAQPage from '../pages/FAQPage'
 
+// 관리 LMS
+import AdminLMSLayout from '../modules/admin-lms/components/AdminLMSLayout'
+import AdminLMSPage from '../modules/admin-lms/pages/AdminLMSPage'
+import ClassManagementPage from '../modules/admin-lms/pages/ClassManagementPage'
+import AdminStudentManagementPage from '../modules/admin-lms/pages/StudentManagementPage'
+import AssessmentPage from '../modules/admin-lms/pages/AssessmentPage'
+import TeacherManagementPage from '../modules/admin-lms/pages/TeacherManagementPage'
+import AdminProfilePage from '../modules/admin-lms/pages/AdminProfilePage'
+
 export default function AppRouter() {
   return (
     <Routes>
@@ -64,7 +73,7 @@ export default function AppRouter() {
         </Route>
         <Route path="center-admin" element={<CenterAdminLayout />}>
           <Route index element={<CenterAdminDashboard />} />
-          <Route path="students" element={<StudentManagementPage />} />
+          <Route path="students" element={<StudentManagementPageLegacy />} />
           <Route path="progress" element={<ProgressPage />} />
           <Route path="evaluation" element={<EvaluationPage />} />
         </Route>
@@ -86,6 +95,16 @@ export default function AppRouter() {
       <Route path="/student/back-cover" element={<StudentBackCoverPage />} />
       <Route path="/student/comic/read" element={<StudentComicViewerPage />} />
       <Route path="/book/:slug" element={<SharedComicViewerPage />} />
+
+      {/* 관리 LMS 라우트 */}
+      <Route path="/admin/lms" element={<AdminLMSLayout />}>
+        <Route index element={<AdminLMSPage />} />
+        <Route path="classes" element={<ClassManagementPage />} />
+        <Route path="students" element={<AdminStudentManagementPage />} />
+        <Route path="assessments" element={<AssessmentPage />} />
+        <Route path="teachers" element={<TeacherManagementPage />} />
+        <Route path="profile" element={<AdminProfilePage />} />
+      </Route>
     </Routes>
   )
 }
