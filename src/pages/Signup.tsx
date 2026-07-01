@@ -104,13 +104,13 @@ export default function Signup() {
           </Link>
 
           {/* Catchphrase */}
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-slate-900 leading-[1.3] tracking-tight mb-6 z-30 shrink-0">
+          <h1 className="text-[32px] md:text-[42px] lg:text-[48px] font-black text-slate-900 leading-[1.2] tracking-tight mb-5 z-30 shrink-0 break-keep">
             선생님 계정을 만들고,<br />
-            <span className="text-[#ff2778]">승인 후 학습만화를 시작해요.</span>
+            <span className="text-[#ff2778] whitespace-nowrap">승인 후 학습만화를 시작해요.</span>
           </h1>
           
           {/* Subtitle */}
-          <p className="text-lg md:text-xl text-slate-600 font-medium z-30 shrink-0 mb-8">
+          <p className="text-[17px] md:text-[19px] text-slate-600 font-medium z-30 shrink-0 mb-10">
             학생 계정은 선생님 페이지에서 쉽게 추가할 수 있어요.
           </p>
 
@@ -119,7 +119,7 @@ export default function Signup() {
             <img 
               src="/images/toonschool/login-hero.png" 
               alt="툰스쿨 로그인 히어로 이미지"
-              style={{ width: '85%', maxWidth: '680px', objectFit: 'contain', marginTop: '36px' }}
+              style={{ width: '85%', maxWidth: '640px', objectFit: 'contain', marginTop: '16px' }}
             />
           </div>
         </div>
