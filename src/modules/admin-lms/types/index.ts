@@ -26,6 +26,7 @@ export interface ClassRoom {
 export interface UnitSetting {
   classId: string
   grade: number
+  subject: string          // '전체' | '국어' | '수학' | '사회' | '과학' | '영어'
   semester: 1 | 2 | null  // null = 전체 허용
   fromUnit: number         // 시작 단원
   toUnit: number           // 끝 단원
@@ -35,6 +36,7 @@ export interface UnitSetting {
 // ── 단원 ──
 export interface CurriculumUnit {
   grade: number
+  subject: string
   semester: 1 | 2
   unitNumber: number
   unitName: string

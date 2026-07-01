@@ -1,5 +1,5 @@
 // ──────────────────────────────────────────────
-// 단원설정 모달 - 학년 제한 구조 필수
+// 단원설정 모달 - 학년/과목 제한 구조 필수
 // ──────────────────────────────────────────────
 import { useState } from 'react'
 import type { ClassRoom, UnitSetting, CurriculumUnit } from '../types'
@@ -11,31 +11,48 @@ interface Props {
   onClose: () => void
 }
 
-export default function UnitSettingModal({ classRoom, allUnits, onSave, onClose }: Props) {
-  // 해당 학년 단원만 필터링 (학년 제한)
-  const gradeUnits = allUnits.filter(u => u.grade === classRoom.grade)
-  const sem1Units = gradeUnits.filter(u => u.semester === 1)
-  const sem2Units = gradeUnits.filter(u => u.semester === 2)
+const SUBJECTS = ['전체', '국어', '수학', '사회', '과학', '영어']
 
+export default function UnitSettingModal({ classRoom, allUnits, onSave, onClose }: Props) {
   const current = classRoom.unitSetting
+
+  const [subject, setSubject] = useState<string>(current?.subject || '전체')
   const [semester, setSemester] = useState<1 | 2 | null>(current?.semester ?? null)
   const [fromUnit, setFromUnit] = useState(current?.fromUnit ?? 1)
-  const [toUnit, setToUnit] = useState(current?.toUnit ?? ((semester === 1 ? sem1Units.length : sem2Units.length) || 4))
+  const [toUnit, setToUnit] = useState(current?.toUnit ?? 4)
 
-  const displayUnits = semester === 1 ? sem1Units : semester === 2 ? sem2Units : gradeUnits
+  // 해당 학년, 과목 단원만 필터링
+  const gradeSubjectUnits = allUnits.filter(u => u.grade === classRoom.grade && u.subject === subject)
+  const sem1Units = gradeSubjectUnits.filter(u => u.semester === 1)
+  const sem2Units = gradeSubjectUnits.filter(u => u.semester === 2)
+
+  const displayUnits = semester === 1 ? sem1Units : semester === 2 ? sem2Units : gradeSubjectUnits
 
   const handleSave = () => {
-    const label = semester
-      ? `${classRoom.grade}학년 ${semester}학기 ${fromUnit}~${toUnit}단원`
-      : `${classRoom.grade}학년 전체`
+    let label = '전체 허용'
+    if (subject !== '전체') {
+      if (semester === null) {
+        label = `${subject} 전체 허용`
+      } else {
+        label = `${subject} ${semester}학기 ${fromUnit}~${toUnit}단원`
+      }
+    }
+    
     onSave({
       classId: classRoom.id,
       grade: classRoom.grade,
+      subject,
       semester,
       fromUnit,
       toUnit,
       label,
     })
+  }
+
+  const getSelectedRangeText = () => {
+    if (subject === '전체') return '전체 허용'
+    if (semester === null) return `${classRoom.grade}학년 / ${subject} / 전체 허용`
+    return `${classRoom.grade}학년 / ${subject} / ${semester}학기 / ${fromUnit}단원 ~ ${toUnit}단원`
   }
 
   return (
@@ -55,82 +72,125 @@ export default function UnitSettingModal({ classRoom, allUnits, onSave, onClose 
           </p>
         </div>
 
-        {/* 적용 학급 */}
-        <div style={{ background: '#fff0f6', borderRadius: 10, padding: '10px 16px', marginBottom: 20 }}>
-          <span style={{ fontSize: 12, color: '#ff2778', fontWeight: 600 }}>적용 학급: </span>
-          <span style={{ fontSize: 14, fontWeight: 700, color: '#333' }}>{classRoom.name}</span>
+        {/* 1. 적용 학급 & 2. 적용 학년 */}
+        <div style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
+          <div style={{ flex: 1, background: '#fff0f6', borderRadius: 10, padding: '12px 16px' }}>
+            <div style={{ fontSize: 12, color: '#ff2778', fontWeight: 600, marginBottom: 4 }}>적용 학급</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: '#333' }}>{classRoom.name}</div>
+          </div>
+          <div style={{ flex: 1, background: '#f8fafc', borderRadius: 10, padding: '12px 16px', border: '1px solid #e2e8f0' }}>
+            <div style={{ fontSize: 12, color: '#64748b', fontWeight: 600, marginBottom: 4 }}>적용 학년</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: '#333' }}>{classRoom.grade}학년</div>
+          </div>
         </div>
 
-        {/* 현재 설정 */}
-        {current && (
-          <div style={{ background: '#f0fdf4', borderRadius: 10, padding: '10px 16px', marginBottom: 20, border: '1px solid #bbf7d0' }}>
-            <span style={{ fontSize: 12, color: '#16a34a', fontWeight: 600 }}>현재 설정: </span>
-            <span style={{ fontSize: 13, color: '#333' }}>{current.label}</span>
-          </div>
-        )}
-
-        {/* 학기 선택 */}
+        {/* 3. 과목 선택 */}
         <div style={{ marginBottom: 20 }}>
           <label style={{ fontSize: 14, fontWeight: 700, color: '#333', display: 'block', marginBottom: 8 }}>
-            학기 선택
+            과목 선택
           </label>
-          <div style={{ display: 'flex', gap: 8 }}>
-            {([null, 1, 2] as (null | 1 | 2)[]).map(s => (
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {SUBJECTS.map(s => (
               <button
-                key={String(s)}
+                key={s}
                 onClick={() => {
-                  setSemester(s)
+                  setSubject(s)
+                  setSemester(null)
                   setFromUnit(1)
-                  setToUnit(s === 1 ? sem1Units.length : s === 2 ? sem2Units.length : gradeUnits.length)
+                  setToUnit(4)
                 }}
                 style={{
-                  flex: 1, padding: '10px 0', borderRadius: 10, border: '2px solid',
-                  borderColor: semester === s ? '#ff2778' : '#e5e7eb',
-                  background: semester === s ? '#fff0f6' : 'white',
-                  color: semester === s ? '#ff2778' : '#555',
-                  fontWeight: semester === s ? 700 : 500,
+                  flex: '1 1 calc(33.333% - 10px)',
+                  padding: '10px 0', borderRadius: 10, border: '2px solid',
+                  borderColor: subject === s ? '#ff2778' : '#e5e7eb',
+                  background: subject === s ? '#fff0f6' : 'white',
+                  color: subject === s ? '#ff2778' : '#555',
+                  fontWeight: subject === s ? 700 : 500,
                   fontSize: 14, cursor: 'pointer',
                 }}>
-                {s === null ? '전체' : `${s}학기`}
+                {s}
               </button>
             ))}
           </div>
         </div>
 
-        {/* 단원 범위 선택 */}
-        <div style={{ marginBottom: 24 }}>
-          <label style={{ fontSize: 14, fontWeight: 700, color: '#333', display: 'block', marginBottom: 8 }}>
-            단원 범위 ({classRoom.grade}학년{semester ? ` ${semester}학기` : ''})
-          </label>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <select
-              value={fromUnit}
-              onChange={e => setFromUnit(Number(e.target.value))}
-              style={{ flex: 1, padding: '10px 12px', borderRadius: 10, border: '1.5px solid #e5e7eb', fontSize: 14, cursor: 'pointer' }}>
-              {displayUnits.map(u => (
-                <option key={u.unitNumber} value={u.unitNumber}>
-                  {u.unitNumber}단원 - {u.unitName}
-                </option>
+        {/* 4. 학기 선택 */}
+        {subject !== '전체' && (
+          <div style={{ marginBottom: 20 }}>
+            <label style={{ fontSize: 14, fontWeight: 700, color: '#333', display: 'block', marginBottom: 8 }}>
+              학기 선택
+            </label>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {([null, 1, 2] as (null | 1 | 2)[]).map(s => (
+                <button
+                  key={String(s)}
+                  onClick={() => {
+                    setSemester(s)
+                    setFromUnit(1)
+                    const targetUnits = s === 1 ? sem1Units : s === 2 ? sem2Units : gradeSubjectUnits;
+                    setToUnit(targetUnits.length > 0 ? Math.max(...targetUnits.map(u => u.unitNumber)) : 4)
+                  }}
+                  style={{
+                    flex: 1, padding: '10px 0', borderRadius: 10, border: '2px solid',
+                    borderColor: semester === s ? '#ff2778' : '#e5e7eb',
+                    background: semester === s ? '#fff0f6' : 'white',
+                    color: semester === s ? '#ff2778' : '#555',
+                    fontWeight: semester === s ? 700 : 500,
+                    fontSize: 14, cursor: 'pointer',
+                  }}>
+                  {s === null ? '전체' : `${s}학기`}
+                </button>
               ))}
-            </select>
-            <span style={{ color: '#888', fontWeight: 700 }}>~</span>
-            <select
-              value={toUnit}
-              onChange={e => setToUnit(Number(e.target.value))}
-              style={{ flex: 1, padding: '10px 12px', borderRadius: 10, border: '1.5px solid #e5e7eb', fontSize: 14, cursor: 'pointer' }}>
-              {displayUnits.filter(u => u.unitNumber >= fromUnit).map(u => (
-                <option key={u.unitNumber} value={u.unitNumber}>
-                  {u.unitNumber}단원 - {u.unitName}
-                </option>
-              ))}
-            </select>
+            </div>
           </div>
-          <p style={{ fontSize: 12, color: '#aaa', marginTop: 6 }}>
-            선택 범위: {classRoom.grade}학년 {semester ? `${semester}학기 ` : ''}{fromUnit}~{toUnit}단원
+        )}
+
+        {/* 5. 단원 범위 선택 */}
+        {subject !== '전체' && semester !== null && (
+          <div style={{ marginBottom: 20 }}>
+            <label style={{ fontSize: 14, fontWeight: 700, color: '#333', display: 'block', marginBottom: 8 }}>
+              단원 범위
+            </label>
+            {displayUnits.length === 0 ? (
+              <div style={{ padding: '12px 16px', background: '#f8fafc', borderRadius: 10, color: '#94a3b8', fontSize: 13, border: '1px solid #e2e8f0' }}>
+                해당 과목/학기의 단원 데이터가 없습니다.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <select
+                  value={fromUnit}
+                  onChange={e => setFromUnit(Number(e.target.value))}
+                  style={{ flex: 1, padding: '10px 12px', borderRadius: 10, border: '1.5px solid #e5e7eb', fontSize: 14, cursor: 'pointer' }}>
+                  {displayUnits.map(u => (
+                    <option key={u.unitNumber} value={u.unitNumber}>
+                      {u.unitNumber}단원 - {u.unitName}
+                    </option>
+                  ))}
+                </select>
+                <span style={{ color: '#888', fontWeight: 700 }}>~</span>
+                <select
+                  value={toUnit}
+                  onChange={e => setToUnit(Number(e.target.value))}
+                  style={{ flex: 1, padding: '10px 12px', borderRadius: 10, border: '1.5px solid #e5e7eb', fontSize: 14, cursor: 'pointer' }}>
+                  {displayUnits.filter(u => u.unitNumber >= fromUnit).map(u => (
+                    <option key={u.unitNumber} value={u.unitNumber}>
+                      {u.unitNumber}단원 - {u.unitName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 선택 범위 표시 */}
+        <div style={{ marginBottom: 24 }}>
+          <p style={{ fontSize: 13, color: '#ff2778', fontWeight: 600, background: '#fff0f6', padding: '12px 14px', borderRadius: 8, margin: 0 }}>
+            선택 범위: {getSelectedRangeText()}
           </p>
         </div>
 
-        {/* 버튼 */}
+        {/* 6. 닫기 / 저장하기 버튼 */}
         <div style={{ display: 'flex', gap: 10 }}>
           <button onClick={onClose} style={{
             flex: 1, padding: '12px 0', borderRadius: 12, border: '1.5px solid #e5e7eb',
