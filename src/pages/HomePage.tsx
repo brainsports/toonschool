@@ -38,11 +38,16 @@ export default function HomePage() {
 <div className="hidden md:flex items-center space-x-4">
 <Link 
     className="bg-[#ff2778] text-white px-8 py-3 rounded-full font-bold text-lg hover:bg-pink-600 transition-colors shadow-sm" 
+    to="/login?redirect=/student/select-unit"
+>
+    툰스쿨
+</Link>
+<Link 
+    className="bg-[#ff2778] text-white px-8 py-3 rounded-full font-bold text-lg hover:bg-pink-600 transition-colors shadow-sm" 
     to="/login?redirect=/admin/lms/classes"
 >
     관리 LMS
 </Link>
-<Link className="bg-[#ff2778] text-white px-8 py-3 rounded-full font-bold text-lg hover:bg-pink-600 transition-colors shadow-sm" to="/pricing">이용권 구매</Link>
 </div>
 <button aria-label="Menu" className="xl:hidden text-on-surface-variant p-2">
 <span className="material-symbols-outlined text-3xl">menu</span>
