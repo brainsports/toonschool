@@ -8,6 +8,8 @@ import { ArrowRight, Settings2, LayoutTemplate, Share2 } from 'lucide-react'
 import { mockStudentProfile } from '../data/studentMockData'
 import { showToast } from '../utils/toast'
 import { projectStorage } from '../utils/projectStorage'
+import { useAuth } from '../../../shared/contexts/AuthContext'
+import { supabase } from '../../../shared/lib/supabase'
 
 const subjectBackCoverThemes: Record<string, { name: string, brand: string, background: string, patternColor: string }> = {
   korean: { name: '국어', brand: '#422C8C', background: '#F2ECFF', patternColor: 'rgba(244, 114, 182, 0.12)' },
@@ -44,6 +46,23 @@ export default function StudentBackCoverPage() {
   const navigate = useNavigate()
   const location = useLocation()
   
+  const { user, profile: authProfile } = useAuth()
+  const [studentData, setStudentData] = useState<any>(null)
+  const [isStudentDataLoaded, setIsStudentDataLoaded] = useState(false)
+
+  useEffect(() => {
+    if (user?.id && authProfile?.role === 'student') {
+      supabase.from('students').select('*').eq('id', user.id).single().then(({ data, error }) => {
+        if (!error && data) {
+          setStudentData(data)
+        }
+        setIsStudentDataLoaded(true)
+      })
+    } else {
+      setIsStudentDataLoaded(true)
+    }
+  }, [user?.id, authProfile?.role])
+
   // Zoom & Resize logic
   const containerRef = useRef<HTMLDivElement>(null)
   const [zoomPercent, setZoomPercent] = useState<number | null>(null)
@@ -60,16 +79,10 @@ export default function StudentBackCoverPage() {
   const [backCoverBgOpacity, setBackCoverBgOpacity] = useState<number>(1);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  const [previewInfo, setPreviewInfo] = useState({
-    authorName: '',
-    gradeClassInfo: '',
-    subjectName: '',
-    unitName: '',
-    topicName: '',
-    createdDate: ''
-  });
-
   useEffect(() => {
+    if (!isStudentDataLoaded) return;
+    if (isLoaded) return;
+
     const stateProjectId = location.state?.projectId;
     const currentProjectId = stateProjectId || localStorage.getItem('currentProjectId');
 
@@ -78,8 +91,10 @@ export default function StudentBackCoverPage() {
       return `${now.getFullYear()}.${String(now.getMonth() + 1).padStart(2, '0')}.${String(now.getDate()).padStart(2, '0')}`;
     })();
 
+    const defaultAuthorName = studentData?.name || authProfile?.name || mockStudentProfile.name;
+
     if (!currentProjectId) {
-      setAuthorName(mockStudentProfile.name);
+      setAuthorName(defaultAuthorName);
       setGradeClassInfo('-');
       setSubjectName('-');
       setUnitName('-');
@@ -101,8 +116,9 @@ export default function StudentBackCoverPage() {
     const currentSubjectName = selection?.subjectName || '-';
     const currentUnitName = selection?.middleUnitName || selection?.majorUnitName || selection?.unitTitle || selection?.lessonTitle || '-';
     const currentTopicTitle = topic?.title || topic?.topicTitle || '-';
-    const gradeVal = selection?.gradeName || selection?.grade || mockStudentProfile.grade;
-    const currentGradeClass = `${gradeVal}${mockStudentProfile.classNumber ? ` ${mockStudentProfile.classNumber}반` : ''}`;
+    
+    const defaultGrade = studentData?.grade ? (studentData.grade.includes('초') ? studentData.grade : `초${studentData.grade.replace(/[^0-9]/g, '')}`) : (selection?.gradeName || selection?.grade || mockStudentProfile.grade);
+    const currentGradeClass = studentData?.grade ? `${defaultGrade} 1반` : `${defaultGrade}${mockStudentProfile.classNumber ? ` ${mockStudentProfile.classNumber}` : ''}`;
 
     const savedBackCover = projectStorage.loadBackCover<any>(currentProjectId);
     
@@ -112,7 +128,7 @@ export default function StudentBackCoverPage() {
       && savedBackCover.topicTitle === currentTopicTitle;
 
     if (isMatchingProject) {
-      setAuthorName(savedBackCover.authorName || mockStudentProfile.name);
+      setAuthorName(savedBackCover.authorName || defaultAuthorName);
       setGradeClassInfo(savedBackCover.gradeClassInfo || currentGradeClass);
       setSubjectName(savedBackCover.subjectName || currentSubjectName);
       setUnitName(savedBackCover.unitName || currentUnitName);
@@ -121,7 +137,7 @@ export default function StudentBackCoverPage() {
       setBgColor(savedBackCover.bgColor || getThemeBySubject(savedBackCover.subjectName || currentSubjectName).background);
       setBackCoverBgOpacity(savedBackCover.bgOpacity ?? 1);
     } else {
-      setAuthorName(mockStudentProfile.name);
+      setAuthorName(defaultAuthorName);
       setGradeClassInfo(currentGradeClass);
       setSubjectName(currentSubjectName);
       setUnitName(currentUnitName);
@@ -132,19 +148,7 @@ export default function StudentBackCoverPage() {
     }
     
     setIsLoaded(true);
-  }, [location.state]);
-
-  useEffect(() => {
-    if (!isLoaded) return;
-    setPreviewInfo({
-      authorName,
-      gradeClassInfo,
-      subjectName,
-      unitName,
-      topicName,
-      createdDate
-    });
-  }, [authorName, gradeClassInfo, subjectName, unitName, topicName, createdDate, isLoaded]);
+  }, [location.state, isStudentDataLoaded, isLoaded, studentData, authProfile]);
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -205,10 +209,11 @@ export default function StudentBackCoverPage() {
     const currentSubjectName = selection?.subjectName || '-';
     const currentUnitName = selection?.middleUnitName || selection?.majorUnitName || selection?.unitTitle || selection?.lessonTitle || '-';
     const currentTopicTitle = topic?.title || topic?.topicTitle || '-';
-    const gradeVal = selection?.gradeName || selection?.grade || mockStudentProfile.grade;
-    const currentGradeClass = `${gradeVal}${mockStudentProfile.classNumber ? ` ${mockStudentProfile.classNumber}반` : ''}`;
+    const defaultGrade = studentData?.grade ? (studentData.grade.includes('초') ? studentData.grade : `초${studentData.grade.replace(/[^0-9]/g, '')}`) : (selection?.gradeName || selection?.grade || mockStudentProfile.grade);
+    const currentGradeClass = studentData?.grade ? `${defaultGrade} 1반` : `${defaultGrade}${mockStudentProfile.classNumber ? ` ${mockStudentProfile.classNumber}` : ''}`;
+    const defaultAuthorName = studentData?.name || authProfile?.name || mockStudentProfile.name;
 
-    setAuthorName(mockStudentProfile.name);
+    setAuthorName(defaultAuthorName);
     setGradeClassInfo(currentGradeClass);
     setSubjectName(currentSubjectName);
     setUnitName(currentUnitName);
@@ -477,12 +482,12 @@ export default function StudentBackCoverPage() {
                  }} 
                >
                   <SNSBackCoverPreview
-                     studentName={previewInfo.authorName}
-                     gradeClass={previewInfo.gradeClassInfo}
-                     completionDate={previewInfo.createdDate}
-                     subject={previewInfo.subjectName}
-                     unit={previewInfo.unitName}
-                     topic={previewInfo.topicName}
+                     studentName={authorName}
+                     gradeClass={gradeClassInfo}
+                     completionDate={createdDate}
+                     subject={subjectName}
+                     unit={unitName}
+                     topic={topicName}
                      backgroundColor={backCoverBackgroundWithOpacity}
                   />
                </div>
