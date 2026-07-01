@@ -26,7 +26,11 @@ export default function AdminLMSLayout() {
         const allowedRoles = ['teacher', 'center_admin', 'middle_admin', 'super_admin']
         if (!allowedRoles.includes(profile.role)) {
           alert('관리 LMS는 선생님 및 관리자 계정만 이용할 수 있습니다.')
-          navigate('/', { replace: true })
+          if (profile.role === 'student') {
+            navigate('/student', { replace: true })
+          } else {
+            navigate('/', { replace: true })
+          }
         }
       }
     }

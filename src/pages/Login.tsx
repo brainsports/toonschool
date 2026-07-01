@@ -41,9 +41,15 @@ export default function Login() {
               navigate(redirectUrl)
               return
             } else {
-              setError('관리 LMS는 선생님 및 관리자 계정만 이용할 수 있습니다.')
-              await supabase.auth.signOut()
-              return
+              if (profile.role === 'student') {
+                alert('관리 LMS는 선생님 및 관리자 계정만 이용할 수 있습니다.')
+                navigate('/student')
+                return
+              } else {
+                setError('관리 LMS는 선생님 및 관리자 계정만 이용할 수 있습니다.')
+                await supabase.auth.signOut()
+                return
+              }
             }
           }
 
