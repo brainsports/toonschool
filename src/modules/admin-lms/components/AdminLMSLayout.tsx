@@ -14,7 +14,7 @@ const MENU_ITEMS = [
 ]
 
 export default function AdminLMSLayout() {
-  const { profile, loading, user } = useAuth()
+  const { profile, loading, user, signOut } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -66,11 +66,24 @@ export default function AdminLMSLayout() {
                 <div style={{ fontSize: 11, color: '#ff2778', fontWeight: 600 }}>관리 LMS</div>
               </div>
             </Link>
-            <Link to="/" style={{
-              fontSize: 13, color: '#888', textDecoration: 'none', fontWeight: 500,
-              padding: '6px 14px', borderRadius: 20, border: '1px solid #eee',
-              transition: 'all 0.2s',
-            }}>← 홈으로</Link>
+            <button 
+              onClick={async () => {
+                try {
+                  await signOut()
+                  navigate('/login', { replace: true })
+                } catch (error) {
+                  console.error('로그아웃 오류:', error)
+                }
+              }}
+              style={{
+                fontSize: 13, color: '#888', textDecoration: 'none', fontWeight: 500,
+                padding: '6px 14px', borderRadius: 20, border: '1px solid #eee',
+                background: 'transparent', cursor: 'pointer',
+                transition: 'all 0.2s',
+              }}
+            >
+              로그아웃
+            </button>
           </div>
 
           {/* 1단 탭 메뉴 */}
