@@ -19,6 +19,9 @@ import {
   getMajorUnitsByGradeSemesterAndSubject, 
   getMiddleUnitsByMajorUnit 
 } from '../services/studentCurriculumService'
+import { useAuth } from '../../../shared/contexts/AuthContext'
+import { fetchClasses } from '../../admin-lms/services/classService'
+import type { UnitSetting } from '../../admin-lms/types'
 
 import UnitStep1Selection from '../components/unit/UnitStep1Selection'
 import UnitStep2Selection from '../components/unit/UnitStep2Selection'
@@ -30,11 +33,16 @@ export default function StudentUnitSelectPage() {
   const [step, setStep] = useState<1 | 2>(1) // 1단계: 학년/과목, 2단계: 대단원/중단원
   
   // Data State
+  const [classUnitSetting, setClassUnitSetting] = useState<UnitSetting | null>(null)
   const [grades, setGrades] = useState<StudentGradeOption[]>([])
-  const semesters: StudentSemesterOption[] = [
+  const allSemesters: StudentSemesterOption[] = [
     { id: 'sem-1', label: '1학기', value: 1 },
     { id: 'sem-2', label: '2학기', value: 2 }
   ]
+  const semesters = classUnitSetting?.semester 
+    ? allSemesters.filter(s => s.value === classUnitSetting.semester)
+    : allSemesters
+
   const [subjects, setSubjects] = useState<StudentSubjectOption[]>([])
   const [majorUnits, setMajorUnits] = useState<StudentMajorUnitOption[]>([])
   const [middleUnits, setMiddleUnits] = useState<StudentMiddleUnitOption[]>([])
@@ -58,16 +66,44 @@ export default function StudentUnitSelectPage() {
     '국어': '✏️', '영어': '🌍', '수학': '📐', '사회': '🗺️', '과학': '🔬'
   }
 
+  const { user } = useAuth()
+
+  // 0. 학급 단원 설정 조회
+  useEffect(() => {
+    const fetchClassSetting = async () => {
+      // student@test.com은 5학년 1반(cls-7) 소속으로 간주
+      let classId = null;
+      if (user?.email === 'student@test.com') {
+        classId = 'cls-7';
+      }
+      
+      if (!classId) return;
+
+      const classes = await fetchClasses();
+      const studentClass = classes.find(c => c.id === classId);
+      if (studentClass && studentClass.unitSetting) {
+        setClassUnitSetting(studentClass.unitSetting);
+      }
+    };
+    fetchClassSetting();
+  }, [user]);
+
   // 1. 초기 학년 목록 로드
   useEffect(() => {
     const fetchGrades = async () => {
       setLoadState('loading')
       const data = await getStudentGrades()
-      setGrades(data)
+      
+      let filteredData = data
+      if (classUnitSetting) {
+        filteredData = data.filter(g => g.value === classUnitSetting.grade)
+      }
+      
+      setGrades(filteredData)
       setLoadState('success')
     }
     fetchGrades()
-  }, [])
+  }, [classUnitSetting])
 
   // 2. 학년/학기 선택 시 과목 로드
   useEffect(() => {
@@ -78,11 +114,17 @@ export default function StudentUnitSelectPage() {
       }
       setSubjectLoadState('loading')
       const data = await getSubjectsByGradeAndSemester(selectedGrade.value, selectedSemester.value)
-      setSubjects(data)
+      
+      let filteredData = data
+      if (classUnitSetting && classUnitSetting.subject !== '전체') {
+        filteredData = data.filter(s => s.name === classUnitSetting.subject)
+      }
+      
+      setSubjects(filteredData)
       setSubjectLoadState('success')
     }
     fetchSubjects()
-  }, [selectedGrade, selectedSemester])
+  }, [selectedGrade, selectedSemester, classUnitSetting])
 
   // 3. 2단계 진입 및 과목 선택 완료 시 대단원 로드
   useEffect(() => {
@@ -95,11 +137,17 @@ export default function StudentUnitSelectPage() {
         selectedSubject.id,
         selectedSubject.code
       )
-      setMajorUnits(data)
+      
+      let filteredData = data
+      if (classUnitSetting && classUnitSetting.subject !== '전체') {
+        filteredData = data.filter(u => u.unitNumber >= classUnitSetting.fromUnit && u.unitNumber <= classUnitSetting.toUnit)
+      }
+      
+      setMajorUnits(filteredData)
       setLoadState('success')
     }
     fetchMajorUnits()
-  }, [selectedGrade, selectedSemester, selectedSubject, step])
+  }, [selectedGrade, selectedSemester, selectedSubject, step, classUnitSetting])
 
   // 4. 대단원 선택 시 중단원 로드
   useEffect(() => {
