@@ -115,7 +115,6 @@ export default function ScriptCutEditor({ scriptData, onChange, selectedCut, onS
           <div className="space-y-3">
             {currentCut.dialogues.map((dialogue, index) => {
               const charCount = Array.from(dialogue.text).length;
-              const isOverLimit = charCount > 20;
 
               return (
                 <div key={index} className="bg-white border border-[#dfe2ea] rounded-xl p-3 shadow-sm relative group">
@@ -142,17 +141,11 @@ export default function ScriptCutEditor({ scriptData, onChange, selectedCut, onS
                         handleDialogueChange(index, 'text', newText);
                       }}
                       rows={2}
-                      placeholder="대사를 입력하세요 (20자 이내)"
-                      className={`w-full p-2.5 text-sm bg-[#f8f9fc] border rounded-xl outline-none transition-all resize-none ${
-                        isOverLimit 
-                          ? 'border-[#f59e0b] focus:border-[#f59e0b] focus:ring-1 focus:ring-[#f59e0b]' 
-                          : 'border-[#dfe2ea] focus:border-[#4d82f3] focus:ring-1 focus:ring-[#4d82f3]'
-                      }`}
+                      placeholder="대사를 입력하세요"
+                      className="w-full p-2.5 text-sm bg-[#f8f9fc] border border-[#dfe2ea] rounded-xl outline-none transition-all resize-none focus:border-[#4d82f3] focus:ring-1 focus:ring-[#4d82f3]"
                     />
-                    <div className={`absolute bottom-2 right-2 text-[10px] font-bold px-2 py-0.5 rounded-md ${
-                      isOverLimit ? 'text-[#d97706] bg-[#fef3c7]' : 'text-[#8f95a6] bg-[#e5e7eb]'
-                    }`}>
-                      권장 20자 / 현재 {charCount}자
+                    <div className="absolute bottom-2 right-2 text-[10px] font-bold px-2 py-0.5 rounded-md text-[#8f95a6] bg-[#e5e7eb]">
+                      {charCount}자
                     </div>
                   </div>
                 </div>

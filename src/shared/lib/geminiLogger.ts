@@ -106,14 +106,14 @@ export function getErrorMessageByCode(errorCode: string): string {
     case 'GEMINI_404':
       return '그림을 다시 만들어 볼게요. 잠시 후 다시 시도해 주세요.';
     case 'TIMEOUT':
-      return '그림을 다시 만들어 볼게요. 이 컷만 다시 생성해 주세요.';
+      return '그림 생성에 실패했어요. 이 컷만 다시 생성해 주세요.';
     case 'POLL_TIMEOUT':
-      return '그림을 다시 만들어 볼게요. 이 컷만 다시 시도해 주세요.';
+      return '그림 생성에 실패했어요. 이 컷만 다시 생성해 주세요.';
     case 'WORKER_FAILED':
-      return '그림을 다시 만들어 볼게요. 다시 시도해 주세요.';
+      return '그림 생성에 실패했어요. 다시 시도해 주세요.';
     case 'ENQUEUE_FAILED':
       return '그림을 다시 만들어 볼게요. 잠시 후 다시 시도해 주세요.';
     default:
-      return '그림을 다시 만들어 볼게요. 다시 시도해 주세요.';
+      return '그림 생성에 실패했어요. 다시 시도해 주세요.';
   }
 }

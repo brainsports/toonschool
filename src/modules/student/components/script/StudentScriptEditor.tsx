@@ -57,9 +57,6 @@ export default function StudentScriptEditor({ selectionData, projectId, onPrev, 
   };
 
   const isSaveDisabled = !scriptData || !scriptData.cuts || scriptData.cuts.length === 0;
-  const hasLongDialogue = scriptData?.cuts.some(cut => 
-    cut.dialogues.some(d => Array.from(d.text || '').length > 20)
-  );
 
   const requestPayload = {
     gradeName: selectionData.selection.gradeName || '',
@@ -102,7 +99,14 @@ export default function StudentScriptEditor({ selectionData, projectId, onPrev, 
       setScriptData(currentScript);
       projectStorage.saveScript(projectId, currentScript);
     } catch (err: any) {
-      setErrorMsg(err.message || '6컷 대본을 만들지 못했습니다. 다시 시도해 주세요.');
+      // 학생에게는 기술적 오류 메시지 대신 친화적 메시지만 표시
+      const isApiKeyError = err?.errorCode === 'GEMINI_NO_KEY' || 
+        (err?.message && (err.message.includes('API Key') || err.message.includes('.env')));
+      if (isApiKeyError) {
+        setErrorMsg('AI 연결에 문제가 생겼어요. 잠시 후 다시 시도해 주세요.');
+      } else {
+        setErrorMsg(err.message || '6컷 대본을 만들지 못했습니다. 다시 시도해 주세요.');
+      }
       setIsGenerating(false);
       setGenPhase(0);
       return; // 1단계 실패 시 중단 (기존 데이터는 유지됨)
@@ -133,7 +137,9 @@ export default function StudentScriptEditor({ selectionData, projectId, onPrev, 
       };
       setScriptData(failedScript);
       projectStorage.saveScript(projectId, failedScript);
-      setErrorMsg(err.message || '대본은 완성됐지만 표지 내용을 만들지 못했습니다.');
+      setErrorMsg(err.message && !err.message.includes('API Key') && !err.message.includes('.env')
+        ? err.message
+        : 'AI 연결에 문제가 생겼어요. 잠시 후 다시 시도해 주세요.');
     } finally {
       setIsGenerating(false);
       setGenPhase(0);
@@ -162,7 +168,9 @@ export default function StudentScriptEditor({ selectionData, projectId, onPrev, 
         setActiveTool('cut');
       }, 1500);
     } catch (err: any) {
-      setErrorMsg(err.message || '대본은 완성됐지만 표지 내용을 만들지 못했습니다.');
+      setErrorMsg(err.message && !err.message.includes('API Key') && !err.message.includes('.env')
+        ? err.message
+        : 'AI 연결에 문제가 생겼어요. 잠시 후 다시 시도해 주세요.');
     } finally {
       setIsGenerating(false);
       setGenPhase(0);
@@ -392,12 +400,6 @@ export default function StudentScriptEditor({ selectionData, projectId, onPrev, 
           </div>
         </div>
         
-        {/* 경고 메시지: 20자 초과 시 */}
-        {hasLongDialogue && scriptData && (
-          <div className="absolute top-4 right-4 z-50 text-xs font-bold text-[#d97706] bg-[#fffbeb] px-3 py-1 rounded-full shadow-sm border border-[#fef3c7]">
-            20자를 넘는 대사가 있어요. 말풍선에서 잘릴 수 있으니 나중에 줄여 주세요.
-          </div>
-        )}
 
         {/* Zoom Controls */}
         <StudentZoomControl

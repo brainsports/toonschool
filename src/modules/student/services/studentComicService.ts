@@ -12,6 +12,11 @@ import {
   COMMON_NEGATIVE_RULES
 } from './comicBackgroundRuleService';
 
+export const IMAGE_GENERATION_POLL_TIMEOUT_MS = 180000;
+export const SINGLE_CUT_TIMEOUT_MS = 180000;
+export const FULL_COMIC_TIMEOUT_MS = 480000;
+
+
 export interface ComicGenerationState {
   status: 'idle' | 'generating' | 'success' | 'error';
   errorMessage?: string;
@@ -269,7 +274,7 @@ ${params.fullStoryFlow}
 === HARD NEGATIVE RULES ===
 ${COMMON_NEGATIVE_RULES}
 
-한국어 추가 지침: 전체 1~6컷의 대본 흐름을 먼저 파악하고 현재 컷의 역할과 교과 개념에 맞는 배경만 생성하세요. 오직 하나의 배경 장면만 그려 주세요. 사람, 캐릭터, 동물 캐릭터, 글자, 말풍선, 만화 패널은 절대 그리지 마세요. 대본상 장소가 이어지면 배경의 연속성을 허용하되 구도를 조금씩 다르게 연출하세요.`;
+한국어 추가 지침: 현재 컷 역할과 교과 개념에 맞는 1개의 배경 장면만 그리세요. 사람/캐릭터/글자/말풍선 금지. 장소가 이어지면 배경 연속성을 유지하되 구도를 다르게 하세요.`;
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -398,7 +403,7 @@ export const generateFullComic = async (
 
       let panelImageBase64 = '';
       const jobId = jobData.id;
-      const maxWaitTime = 120000; // 2분
+      const maxWaitTime = FULL_COMIC_TIMEOUT_MS;
       const pollStart = Date.now();
       let isCompleted = false;
 
@@ -425,14 +430,18 @@ export const generateFullComic = async (
         }
 
         if (currentStatus === 'queued') {
-          if (elapsedMs > 60000) {
+          if (elapsedMs > SINGLE_CUT_TIMEOUT_MS) {
+            throw Object.assign(new Error('생성 대기 시간이 초과되었습니다.'), { errorCode: 'POLL_TIMEOUT' });
+          } else if (elapsedMs > 60000) {
             console.warn(`[Job Monitor] Worker 미실행 의심. 60초 이상 queued 상태입니다. job_id=${jobId}`);
             updateState({ progress: 10 + Math.floor(((i + 0.6) / 6) * 70), message: '잠시만 기다려 주세요...' });
           } else {
             updateState({ progress: 10 + Math.floor(((i + 0.6) / 6) * 70), message: `${cutNumber}번째 컷 순서를 기다리고 있어요...` });
           }
         } else if (currentStatus === 'processing') {
-          if (elapsedMs > 120000) {
+          if (elapsedMs > SINGLE_CUT_TIMEOUT_MS) {
+            updateState({ progress: 10 + Math.floor(((i + 0.7) / 6) * 70), message: '조금 더 걸리고 있어요...' });
+          } else if (elapsedMs > 120000) {
             updateState({ progress: 10 + Math.floor(((i + 0.7) / 6) * 70), message: '그림을 만들고 있어요...' });
           } else {
             updateState({ progress: 10 + Math.floor(((i + 0.7) / 6) * 70), message: `${cutNumber}번째 컷 그리는 중...` });
@@ -526,7 +535,7 @@ export const generateSingleComicCut = async (
     let isTimeout = false;
     // 텍스트 생성 ~30s + 이미지 생성 ~240s + 여유 = 300초 (5분)
     // 단, 무한 로딩 방지: 반드시 이 시간 후 실패 상태로 전환됨
-    const TIMEOUT_MS = 300000;
+    const TIMEOUT_MS = FULL_COMIC_TIMEOUT_MS;
 
     const timeoutId = setTimeout(() => {
       isTimeout = true;
@@ -729,7 +738,7 @@ const doGenerateSingleComicCut = async (
     const jobId = jobData.id;
     // 이미지 생성 polling: 180초 (텍스트 ~30s 소요 후 남은 시간 최대 확보)
     // 무한 로딩 방지: 이 시간 초과 시 POLL_TIMEOUT 에러로 전환 (300초 = 5분)
-    const maxWaitTime = 300000;
+    const maxWaitTime = FULL_COMIC_TIMEOUT_MS;
     const pollStart = Date.now();
     let isCompleted = false;
     let finalElapsedMs = 0;
@@ -758,14 +767,18 @@ const doGenerateSingleComicCut = async (
       }
 
       if (currentStatus === 'queued') {
-        if (elapsedMs > 60000) {
+        if (elapsedMs > SINGLE_CUT_TIMEOUT_MS) {
+          throw Object.assign(new Error('생성 대기 시간이 초과되었습니다.'), { errorCode: 'POLL_TIMEOUT' });
+        } else if (elapsedMs > 60000) {
           console.warn(`[Job Monitor] Worker 미실행 의심. 60초 이상 queued 상태입니다. job_id=${jobId}`);
           updateState({ progress: 72, message: '잠시만 기다려 주세요...' });
         } else {
           updateState({ progress: 72, message: '생성 순서를 기다리고 있어요...' });
         }
       } else if (currentStatus === 'processing') {
-        if (elapsedMs > 120000) {
+        if (elapsedMs > SINGLE_CUT_TIMEOUT_MS) {
+          updateState({ progress: 85, message: '조금 더 걸리고 있어요...' });
+        } else if (elapsedMs > 120000) {
           updateState({ progress: 85, message: '그림을 만들고 있어요...' });
         } else {
           updateState({ progress: 85, message: '그림을 그리는 중이에요...' });

@@ -123,8 +123,7 @@ export const generateScript = async (
 
 [대사 및 장면 작성 규칙]
 - 한 컷당 대사는 2~3개로 제한합니다.
-- 대사 하나당 글자 수는 공백을 포함하여 **절대 20자를 넘지 않도록** 극도로 짧고 간결하게 작성하세요. 초등학생이 실제로 말하는 것처럼 쉬운 표현을 사용해야 합니다.
-- 설명이 길어지면 한 대사를 길게 쓰지 말고, 대사를 여러 개로 나누거나 다음 컷으로 넘기세요.
+- 대사는 초등학생이 실제로 말하는 것처럼 쉬운 표현을 사용해야 합니다. 너무 길어지면 대사를 여러 개로 나누거나 다음 컷으로 넘기세요.
 - 장면 설명(scene)은 그림 생성을 위한 구체적인 문장(인물, 장소, 행동, 표정 등)으로 최대 60자 이내로 작성하세요.
 - 학습 요점(learningPoint)은 교과 내용 검토를 위한 정보로 최대 40자 이내로 작성하세요.
 
@@ -192,10 +191,6 @@ export const generateScript = async (
             if (dialogue.speaker.toLowerCase() === 'hana' || dialogue.speaker.includes('하나')) dialogue.speaker = '하나 선생님';
             if (dialogue.speaker.toLowerCase() === 'doyoon' || dialogue.speaker.includes('도윤')) dialogue.speaker = '도윤';
             if (dialogue.speaker.toLowerCase() === 'seoa' || dialogue.speaker.includes('서아')) dialogue.speaker = '서아';
-            
-            if (Array.from(dialogue.text).length > 20) {
-              dialogue.text = Array.from(dialogue.text).slice(0, 20).join('');
-            }
           });
 
           if (cut.characters.includes('하나 선생님')) {

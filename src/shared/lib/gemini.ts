@@ -93,7 +93,7 @@ export const geminiClient = {
     if (!GEMINI_API_KEY || GEMINI_API_KEY === 'your_gemini_api_key_here') {
       console.warn('[Gemini] API key is not configured.')
       throw new GeminiError(
-        'API Key가 설정되지 않았습니다. .env 파일을 확인해 주세요.',
+        'AI 연결에 문제가 생겼어요. 잠시 후 다시 시도해 주세요.',
         'GEMINI_NO_KEY'
       );
     }

@@ -570,6 +570,11 @@ export default function StudentComicFullViewPage() {
   const handleGenerateCut = async (cutNumber: number, isManualRegenerate: boolean = false) => {
     if (!projectData) return;
 
+    if (genStates[cutNumber]?.status === 'generating') {
+      console.warn(`[ToonSchool] ${cutNumber}번 컷은 이미 생성 중입니다.`);
+      return;
+    }
+
     const currentCutData = cutsData[cutNumber];
     const isRegenerate = !!currentCutData?.backgroundImageUrl;
 
