@@ -5,9 +5,11 @@ import { supabase } from '../lib/supabase'
 export interface Profile {
   id: string
   email: string | null
+  name?: string | null
   role: 'super_admin' | 'center_admin' | 'student' | 'free_user'
   plan_type: string
   monthly_quota: number
+  center_id?: string | null
   created_at?: string
 }
 

@@ -1,10 +1,12 @@
 // 학생 UI 전체 페이지를 감싸는 공통 레이아웃 컴포넌트
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { LogOut, Home, Star, Trophy, Calendar } from 'lucide-react'
 import { mockStudentProfile } from '../../data/studentMockData'
 import StudentSpaceBackground from './StudentSpaceBackground'
 import '../../styles/student-ui.css'
+import { useAuth } from '../../../../shared/contexts/AuthContext'
+import { supabase } from '../../../../shared/lib/supabase'
 
 interface StudentPageShellProps {
   children: React.ReactNode
@@ -41,8 +43,28 @@ export default function StudentPageShell({
   className = '',
 }: StudentPageShellProps) {
   const navigate = useNavigate()
-  const profile = mockStudentProfile
+  const { user, profile: authProfile } = useAuth()
+  const [studentData, setStudentData] = useState<any>(null)
 
+  useEffect(() => {
+    if (user?.id && authProfile?.role === 'student') {
+      supabase.from('students').select('*').eq('id', user.id).single().then(({ data, error }) => {
+        if (!error && data) {
+          setStudentData(data)
+        }
+      })
+    }
+  }, [user?.id, authProfile?.role])
+
+  const currentProfile = user && authProfile?.role === 'student' ? {
+    ...mockStudentProfile,
+    name: studentData?.name || authProfile?.name || '학생',
+    grade: studentData?.grade ? (studentData.grade.includes('초') ? studentData.grade : `초${studentData.grade.replace(/[^0-9]/g, '')}`) : '초5',
+    classNumber: studentData?.grade ? `${studentData.grade} 1반` : '5학년 1반',
+  } : mockStudentProfile
+
+  const profile = currentProfile;
+  const isRealStudent = user && authProfile?.role === 'student';
   const isFull = maxWidth === 'full';
 
   return (
@@ -72,7 +94,9 @@ export default function StudentPageShell({
                     {profile.grade}
                   </span>
                 </div>
-                <p className="text-[#5f4059] text-[11px] font-bold mt-0.5">{profile.classNumber} {profile.studentNumber}번 대원</p>
+                <p className="text-[#5f4059] text-[11px] font-bold mt-0.5">
+                  {isRealStudent ? `${profile.classNumber} 소속 대원` : `${profile.classNumber} ${profile.studentNumber}번 대원`}
+                </p>
               </div>
             </div>
 
