@@ -1,0 +1,400 @@
+<!DOCTYPE html><html lang="ko" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>ToonSchool - 거꾸로 학습법</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&amp;family=Noto+Sans+KR:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-secondary-fixed": "#00164f",
+                      "on-tertiary-fixed-variant": "#005321",
+                      "surface-dim": "#f3f4f7",
+                      "on-secondary-fixed-variant": "#003baf",
+                      "outline": "#906e74",
+                      "tertiary-fixed": "#6bff8f",
+                      "secondary": "#004bda",
+                      "on-primary-fixed": "#3f0017",
+                      "on-primary": "#ffffff",
+                      "tertiary": "#006b2d",
+                      "surface-tint": "#bc0053",
+                      "on-tertiary-container": "#f7fff3",
+                      "on-surface-variant": "#5c3f45",
+                      "surface": "#fcf9f8",
+                      "quiz-accent": "#eab308",
+                      "inverse-surface": "#313030",
+                      "secondary-container": "#2864ff",
+                      "surface-bright": "#fcf9f8",
+                      "on-secondary": "#ffffff",
+                      "surface-variant": "#e5e2e1",
+                      "error": "#ba1a1a",
+                      "primary": "#b70050",
+                      "primary-brand": "#ff2778",
+                      "surface-container-high": "#eae7e7",
+                      "outline-variant": "#e4bdc3",
+                      "primary-fixed": "#ffd9df",
+                      "on-surface": "#1c1b1b",
+                      "on-primary-fixed-variant": "#90003e",
+                      "on-error-container": "#93000a",
+                      "surface-container-lowest": "#ffffff",
+                      "on-background": "#1c1b1b",
+                      "background": "#fcf9f8",
+                      "secondary-fixed-dim": "#b6c4ff",
+                      "primary-container": "#e50066",
+                      "surface-container-highest": "#e5e2e1",
+                      "tertiary-container": "#00873b",
+                      "tertiary-fixed-dim": "#4ae176",
+                      "secondary-fixed": "#dce1ff",
+                      "surface-container-low": "#f6f3f2",
+                      "surface-container": "#f0eded",
+                      "step-purple": "#9333ea",
+                      "on-secondary-container": "#f9f7ff",
+                      "inverse-on-surface": "#f3f0ef",
+                      "error-container": "#ffdad6",
+                      "on-primary-container": "#fffbff",
+                      "inverse-primary": "#ffb1c1",
+                      "on-tertiary": "#ffffff",
+                      "primary-fixed-dim": "#ffb1c1",
+                      "on-error": "#ffffff",
+                      "on-tertiary-fixed": "#002109",
+                      "pastel-pink": "#FFF5FA",
+                      "pastel-blue": "#F0FAFF",
+                      "pastel-mint": "#F0FFF8",
+                      "pastel-cream": "#FFF9ED",
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "margin-inline": "1.5rem",
+                      "container-max": "1280px",
+                      "section-padding-y": "6rem",
+                      "gutter-md": "1.5rem",
+                      "stack-gap-lg": "4rem",
+                      "stack-gap-md": "2rem"
+              },
+              "fontFamily": {
+                      "headline-lg-mobile": [
+                              "Plus Jakarta Sans", "Noto Sans KR"
+                      ],
+                      "headline-lg": [
+                              "Plus Jakarta Sans", "Noto Sans KR"
+                      ],
+                      "label-md": [
+                              "Plus Jakarta Sans", "Noto Sans KR"
+                      ],
+                      "title-md": [
+                              "Plus Jakarta Sans", "Noto Sans KR"
+                      ],
+                      "body-md": [
+                              "Noto Sans KR"
+                      ],
+                      "body-lg": [
+                              "Noto Sans KR"
+                      ],
+                      "display-lg": [
+                              "Plus Jakarta Sans", "Noto Sans KR"
+                      ]
+              },
+              "fontSize": {
+                      "headline-lg-mobile": [
+                              "1.875rem",
+                              {
+                                      "lineHeight": "1.3",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "headline-lg": [
+                              "2.25rem",
+                              {
+                                      "lineHeight": "1.3",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "label-md": [
+                              "0.875rem",
+                              {
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "title-md": [
+                              "1.25rem",
+                              {
+                                      "lineHeight": "1.5",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "body-md": [
+                              "1rem",
+                              {
+                                      "lineHeight": "1.5",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "body-lg": [
+                              "1.125rem",
+                              {
+                                      "lineHeight": "1.6",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "display-lg": [
+                              "3.5rem",
+                              {
+                                      "lineHeight": "1.2",
+                                      "fontWeight": "800"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+    </script>
+<style>
+        body { font-family: 'Noto Sans KR', sans-serif; }
+        .font-plus-jakarta { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .text-primary-brand { color: #ff2778; }
+        .bg-primary-brand { background-color: #ff2778; }
+        .border-primary-brand { border-color: #ff2778; }
+        
+        .hover-lift { transition: transform 0.2s ease-in-out; }
+        .hover-lift:hover { transform: translateY(-4px); }
+    </style>
+</head>
+<body class="bg-surface text-on-surface antialiased overflow-x-hidden">
+<!-- Header -->
+<header class="bg-white/90 backdrop-blur-md shadow-sm docked full-width top-0 sticky z-50 border-b border-surface-variant">
+<div class="flex justify-between items-center h-20 px-margin-inline max-w-container-max mx-auto">
+<div class="flex items-center gap-8">
+<a class="flex items-center gap-2" href="#">
+<img alt="Ts 툰스쿨 Logo" class="h-8" src="https://lh3.googleusercontent.com/aida/AP1WRLuKtdQVuIS1ueZBTBcP6OxXT-3HJWXJtgTub1wqouSGTGckpEJopZ4-PIQBO680agj0a93-puTF5UxTe4ge1BnLh95UBL7aX9BF9VMSABdDAkq0zgpDgvTCps1-z5mKhaRpFgY6-RZ9zLsfejqH3rkFHrvewgG1SKeEfxofO_I3u2fDbc49JqBA8PH4EaODcsDF41-CskKEr2BpsoRBIjoymgFRm3OqbXMDpvBQgexaNuG-y0Rdg-mKGDo">
+</a>
+<nav class="hidden md:flex gap-6 h-full items-center">
+<a class="text-on-surface-variant font-medium hover:text-primary-brand transition-colors text-body-md font-body-md py-6" href="#">툰스쿨</a>
+<a class="text-on-surface-variant font-medium hover:text-primary-brand transition-colors text-body-md font-body-md py-6" href="#">AI 학습콘텐츠</a>
+<a class="text-primary-brand font-bold border-b-4 border-primary-brand text-body-md font-body-md py-6" href="#">거꾸로 학습법</a>
+<a class="text-on-surface-variant font-medium hover:text-primary-brand transition-colors text-body-md font-body-md py-6" href="#">PC·태블릿 버전</a>
+<a class="text-on-surface-variant font-medium hover:text-primary-brand transition-colors text-body-md font-body-md py-6" href="#">궁금해요</a>
+</nav>
+</div>
+<div class="hidden md:flex items-center gap-3">
+<button class="px-5 py-2.5 rounded-full text-white bg-primary-brand hover:bg-opacity-90 transition-colors text-label-md font-bold shadow-sm">관리 LMS</button>
+<button class="bg-primary-brand text-white px-5 py-2.5 rounded-full font-bold hover:bg-opacity-90 transition-colors shadow-sm text-label-md">이용권 구매</button>
+</div>
+</div>
+</header>
+<!-- Hero Section -->
+<section class="py-12 md:py-24 bg-white relative overflow-hidden">
+<div class="max-w-container-max mx-auto px-margin-inline flex flex-col md:flex-row items-center gap-12 relative z-10">
+<div class="md:w-5/12 flex flex-col gap-6 z-20">
+<span class="text-primary-brand font-bold text-xl tracking-wide">거꾸로 학습법</span>
+<h1 class="text-display-lg font-display-lg text-on-surface leading-tight">
+                    공부를 듣지 말고,<br>
+<span class="text-primary-brand">만들게 하자</span></h1>
+<p class="text-body-lg font-body-lg text-on-surface-variant leading-relaxed">
+                    먼저 보고, 내 말로 설명하고,<br>
+                    함께 확인하면 배움이 내 것이 됩니다.
+                </p>
+<div class="flex gap-4 mt-6">
+<button class="bg-primary-brand text-white px-8 py-3.5 rounded-full font-bold hover:bg-opacity-90 transition-colors shadow-md hover-lift text-title-md">설명 챌린지</button>
+<button class="border-2 border-primary-brand text-primary-brand bg-white px-8 py-3.5 rounded-full font-bold hover:bg-surface transition-colors shadow-sm hover-lift text-title-md">한 컷 미리보기</button>
+</div>
+</div>
+<div class="md:w-7/12 relative min-h-[500px]">
+<!-- Mockup Image representing the Hero Illustration -->
+<img class="w-full h-auto object-contain absolute right-[-5%] top-1/2 -translate-y-1/2 scale-110" data-alt="Illustration of students and a teacher interacting with a large digital tablet showing a 5-step learning flow. Teacher Hana, Doyun, and Seoah are featured." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBNX0nJguwhw1T5-kFbs5SictKDBE5Pe6brV946z6DESztCnagexdm8I-h4Mt-rKUqhadPIhis0Pw3rhuajkztqxRxaNhV0LHDBIQSnof001w4bb46Qh4Hl_QU_9as49jVAUe7_HKMVwQJxN2Qbhb2BbctkUxF6IOH-kkP1h1c7UQeXkp9uehvfOfqF8dlmdnNOTRfDSlBL2YJgnNG557VA87OniA3uTg6t_0ZpTNMwIZNUIERLI12VVSJjXBRxHUT6Cdmc662SlhA">
+</div>
+</div>
+<!-- Decorative Elements -->
+<div class="absolute top-10 left-[10%] text-quiz-accent text-3xl">★</div>
+<div class="absolute top-20 right-[5%] text-primary-brand text-2xl">✦</div>
+<div class="absolute bottom-10 left-[50%] text-blue-400 text-3xl">✦</div>
+<div class="absolute top-32 left-[40%] text-primary-brand opacity-50 text-xl">♥</div>
+</section>
+<!-- First Section (Flow) -->
+
+<!-- Second Section (Main Tool) -->
+<section class="py-24 bg-pastel-blue relative overflow-hidden">
+<div class="max-w-container-max mx-auto px-margin-inline text-center relative z-10">
+<h2 class="text-headline-lg font-headline-lg text-on-surface mb-16">거꾸로 5단계 학습법</h2>
+<div class="relative w-full max-w-container-max mx-auto flex justify-between items-stretch gap-2">
+<!-- Step 1 -->
+<div class="bg-white p-4 rounded-3xl shadow-md flex flex-col items-center flex-1 border border-blue-100 min-w-0">
+<div class="bg-blue-100 text-blue-600 font-bold px-3 py-1.5 rounded-full mb-4 flex items-center gap-2 whitespace-nowrap text-sm">
+<span class="bg-blue-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-sm">1</span> 먼저 보기
+                    </div>
+<img class="w-24 h-24 object-contain mb-4" data-alt="Step 1" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBPNOIeIscbu4_Ki6hmVAhKM-0P7u-lqSslVEW99KBbcfljUiO29NKYeyYw1gWqe5HiUaipYM9YTaxTw-C-EOce3OcT0IC6-_t3XXAGAkIPXK215LAsDX5IHMUwQZze_DPpRWvMDcihG1CX7wFWlvpIuT6yrQgPbmSr2cqg787BqKfzdlUb2bceQq0MEMdJXv4WZ_TDGztC3u_ilo2stqWUV4voROF9UHAor8Bf2cRQJ5Zs6lLMlzPctOBgLzdi44mL9oDg4SaBLDwhHQ">
+<p class="text-sm font-medium text-on-surface-variant text-center">개념을 보고<br>핵심을 이해해요.</p>
+</div>
+<!-- Arrow -->
+<div class="text-blue-300 text-xl flex items-center self-center material-symbols-outlined shrink-0">arrow_forward</div>
+<!-- Step 2 -->
+<div class="bg-white p-4 rounded-3xl shadow-md flex flex-col items-center flex-1 border border-blue-100 min-w-0">
+<div class="bg-pink-100 text-primary-brand font-bold px-3 py-1.5 rounded-full mb-4 flex items-center gap-2 whitespace-nowrap text-sm">
+<span class="bg-primary-brand text-white w-6 h-6 rounded-full flex items-center justify-center text-sm">2</span> 설명하기
+                    </div>
+<img class="w-24 h-24 object-contain mb-4" data-alt="Step 2" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBnXseZ0dLfBwXi-Ff1J0-3IFlhxCckz5QCL8PD3FeXRarRRfPLAQJPfPptw8rvk9fXVviYT5dH53j9FPSzp65LEecee1HLt5GUdss90AK8R5lnxQAijb8Sf8_hJ4lT1RvfF4zY9EwbMl-J6VknpE2EJ40wDBipnTP32xhKXDoCMWJLmOw6lAL9rKbPiYhkHOKs4w4cpqh9jizeY95GrNr1Xs0MZ9cjFJJRBTujHuBlL5j5pJQbzJzqVFt4T2SxlAn5ornZnDeaL_eNBg">
+<p class="text-sm font-medium text-on-surface-variant text-center">내 말로 설명하며<br>생각을 꺼내요.</p>
+</div>
+<!-- Arrow -->
+<div class="text-blue-300 text-xl flex items-center self-center material-symbols-outlined shrink-0">arrow_forward</div>
+<!-- Step 3 -->
+<div class="bg-white p-4 rounded-3xl shadow-md flex flex-col items-center flex-1 border border-blue-100 min-w-0">
+<div class="bg-yellow-100 text-yellow-600 font-bold px-3 py-1.5 rounded-full mb-4 flex items-center gap-2 whitespace-nowrap text-sm">
+<span class="bg-yellow-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-sm">3</span> 함께 확인
+                    </div>
+<img class="w-24 h-24 object-contain mb-4" data-alt="Step 3" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA84WMPayKdLeXDyw1hP9W8aDW2UP2v2nVtnzdzV7MADtXDCUSxOTQFMcCpOK6ePdBc6JnGODPVxu1ldCSVtpEt2sWXMUvX23G-mWINH_B56tQkvHyylObRlUYnx_O48ipN9YWgA8V0-T7T9IsQLbcBqt0WqvO6flEwavQss2TK4_FN-dM3ZDNLfHzUU0N0EUNO_sqi2phM1ir0WhKl5NyasnMytMOFVAa9x4CO7_A_E_HGOgRHE6RB02bstixF4FpRISfREnn2JtoBig">
+<p class="text-sm font-medium text-on-surface-variant text-center">친구와 비교하며<br>이해를 넓혀요.</p>
+</div>
+<!-- Arrow -->
+<div class="text-blue-300 text-xl flex items-center self-center material-symbols-outlined shrink-0">arrow_forward</div>
+<!-- Step 4 -->
+<div class="bg-white p-4 rounded-3xl shadow-md flex flex-col items-center flex-1 border border-blue-100 min-w-0">
+<div class="bg-blue-100 text-blue-600 font-bold px-3 py-1.5 rounded-full mb-4 flex items-center gap-2 whitespace-nowrap text-sm">
+<span class="bg-blue-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-sm">4</span> 다시 정리
+                    </div>
+<img class="w-24 h-24 object-contain mb-4" data-alt="Step 4" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAVu4V2T6YjoXypCdYtO0HOSFRYH3O8O8VJRc5ajoZf1RAl60mngBiDm2Gp5Ymh9_ZMk2ygTNBRYW4Oarkpr4JE9gdhkjIn5_RTOOP7kXJc8lxgs73cL8EhEMvQvfakekKNPqME5YdlDTltT5YoniJ49V-1W-mr5In5cBkxDVNwyKMNa_JwYiwCKyUWe3XLPtQ9VTMIY95pp9-Agd0xE3jNjermWQfYmIuFWuHluQVkVVhUrsd9GrHGm45BCs6JeqVKrf-S8YRTv3VGyg">
+<p class="text-sm font-medium text-on-surface-variant text-center">다시 정리하며<br>배움을 단단히 해요.</p>
+</div>
+<!-- Arrow -->
+<div class="text-blue-300 text-xl flex items-center self-center material-symbols-outlined shrink-0">arrow_forward</div>
+<!-- Step 5 -->
+<div class="bg-white p-4 rounded-3xl shadow-md flex flex-col items-center flex-1 border border-blue-100 min-w-0">
+<div class="bg-purple-100 text-purple-600 font-bold px-3 py-1.5 rounded-full mb-4 flex items-center gap-2 whitespace-nowrap text-sm">
+<span class="bg-purple-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-sm">5</span> 체크 퀘스트
+                    </div>
+<img class="w-24 h-24 object-contain mb-4" data-alt="Step 5" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCZqtkZkTg4EMy3dUUVEMw-ew33o0r5t_3zJ5hq3uCH3ELyjdrb_QCsEOPFchBWgisUICsafq6_SMiTDQnT8kvktiwqBuI2UGQtvI_I6-H2QR1jgyEc-bpv1-QNHZVRCmc-aglnU6bljlxA4Hm10cOJqZFUW--X99lwk5KooXrlxjNmRQNCaXDgnLtCvd0a9gRpXhfIc7pxDtbFBrHVarrtQAgqNGCCYtx2c3g8lyjKVQdadljmc96FQgib59gSOBNGTEdVERgTBmkFJw">
+<p class="text-sm font-medium text-on-surface-variant text-center">퀴즈와 미션으로<br>스스로 확인해요.</p>
+</div>
+</div>
+</div>
+<!-- Decos -->
+<div class="absolute top-20 left-[10%] text-blue-400 text-4xl">★</div>
+<div class="absolute bottom-20 right-[10%] text-blue-400 text-3xl">★</div>
+</section>
+<!-- Third Section (Results) -->
+<section class="py-24 bg-pastel-mint relative overflow-hidden">
+<div class="max-w-container-max mx-auto px-margin-inline text-center">
+<h2 class="text-headline-lg font-headline-lg text-on-surface mb-16">툰스쿨에서는 이렇게 배워요</h2>
+<div class="grid grid-cols-1 md:grid-cols-4 gap-2"><!-- Card 1 -->
+<div class="bg-white p-6 rounded-3xl shadow-md border border-green-100 flex flex-col items-center w-full">
+<h3 class="text-green-600 font-bold text-xl mb-4">개념툰</h3>
+<img class="w-full h-auto rounded-xl mb-4" data-alt="Concept Toon" src="https://lh3.googleusercontent.com/aida-public/AB6AXuClWUt3FD-3JoGYZmhCi3_mvgEb60NQ-2dMpg-2U8jwvdilmFbzprPFNrGyLRycIVgWxpqthgtRaNPi_I9mWSIYirU0fcvj4F9gzWeZKIzSAtdvlC6hDzWH1WIAOQAOs-dLrQD3aD8fVyawX4CwH8kIO8or43u3ck1cSYe3Jh8eL3TIwIraPb1PhjUCPhfE5QSY0E-rgvPe2759JzikqIC2f1Z7xByFlwn-Fwoay15_ZOIsE7zam6SLokU0addxqXeTlVfKfFGQKdn6HQ">
+<p class="text-on-surface-variant font-medium">재미있는 만화로<br>개념을 쉽게 이해해요.</p>
+</div>
+<!-- Card 2 -->
+<div class="bg-white p-6 rounded-3xl shadow-md border border-green-100 flex flex-col items-center w-full">
+<h3 class="text-green-600 font-bold text-xl mb-4">말풍선 미션</h3>
+<img class="w-full h-auto rounded-xl mb-4" data-alt="Speech Bubble Mission" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDT__18IACXXpxTSzTozVvQp0hHraMo2k0bE_4NsPPnqvfWJ3BoprFbqNU_0zzeOtH6QIPbFRvfsbZ0eNqtccoR_yGgJ4gvwZyOQCtVlWn291xuZ6PiPXvqbHeNhNho5gIeJeQZUqHTCLIuvxQGbpQaV7BW5L3N-3wcSzEsBYB0NiyYhBZcg9y1CV2wzVkAXxWqsU9GKjULf_7gOEH43ChQb9bZAvjMzhmSOksH7dDnb9DlHMbFbgWtpFCQUfQi9_8mr3pL7ZFGp-aNKA">
+<p class="text-on-surface-variant font-medium">말풍선에 내 생각을 적고<br>자신 있게 말해요.</p>
+</div>
+<!-- Card 3 -->
+<div class="bg-white p-6 rounded-3xl shadow-md border border-green-100 flex flex-col items-center w-full">
+<h3 class="text-green-600 font-bold text-xl mb-4">생활속 이야기</h3>
+<img class="w-full h-auto rounded-xl mb-4" data-alt="Debate Card" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB0sMBgIgkTrYI_15A5zqFbDZjZ_vOQaogC161OrVuyXfihcEDwnQJz38kr_qsKRW2E4c_IDXeFk-A1VhEzBB348rDRqdGl2jJDKeXzDvwNanmRCvpOpQKf7__HtEMY6Ka2C4DTb9zipXkAOlDBHuQHZxUXC7ZdkPzp3ZY_UzVfwy9oYwl13wyalnO06nlTQcfaX3ZFMfdQyqxs4ObONy1bwbvSYzFrFP-rHLSh1b-jNAa7TpH9fgYoguwKR9-BX3UOY0-ARrOQFofsMQ">
+<p class="text-on-surface-variant font-medium">친구의 생각을 듣고<br>내 생각을 정리해요.</p>
+</div>
+<!-- Card 4 -->
+<div class="bg-white p-6 rounded-3xl shadow-md border border-green-100 flex flex-col items-center w-full">
+<h3 class="text-green-600 font-bold text-xl mb-4">OX 확인</h3>
+<img class="w-full h-auto rounded-xl mb-4" data-alt="OX Check" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBeUCCI_adOLlDihYqtDG9y1hx8XUq94FeGWMtXyKSBPDQKJ2YRJwNPxabFs9ZzRDTr75fJnVbRRQByuINgQONYGmGmYKR8vW7Blq5FpNCFEN0jDEJpgvA6J4Vr_BchWNovxHeU1xTkRyk1dyCnp1jBvKxOjb3Y8nt_mhOaBQ-3RT-t1jYcBUNSd907hq3BczTI4uxWS3Q8jQbLOOm1axbPA0ZetMN5ftBv0mRmD0HHCv0eRfo5Vhy1SFlTydqp3ZhQa62qS4P4nvBBSA">
+<p class="text-on-surface-variant font-medium">OX 퀴즈로<br>이해를 바로 확인해요.</p>
+</div></div>
+</div>
+<!-- Decos -->
+<div class="absolute top-10 right-[10%] text-green-300 text-5xl">★</div>
+</section>
+<!-- Additional Effects Section -->
+<section class="py-24 bg-pastel-cream relative overflow-hidden">
+<div class="max-w-container-max mx-auto px-margin-inline relative z-10 flex flex-col md:flex-row items-center justify-between gap-12">
+<div class="md:w-2/3 flex flex-col items-center md:items-start text-center md:text-left w-full">
+<h2 class="text-headline-lg font-headline-lg text-on-surface mb-12 self-center">아는지 모르는지 스스로 보입니다</h2>
+<div class="grid grid-cols-1 md:grid-cols-3 w-full gap-2"><!-- Card 1 -->
+<div class="bg-white p-6 rounded-3xl shadow-sm border border-yellow-100 flex flex-col items-center text-center w-full">
+<img class="w-32 h-32 object-contain mb-4" data-alt="Self-explanation" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDPG6lxBR9x090dQ-7kyXeKSOEAFFJarln6ahJOp5MYvog7pjDoV7Q_gFxt7TsB3zBHaDMRUZNHiTnL0YnnOEwkudf_lGi29X1RplfodFtg-sB4uqaUOqWGAcliVZsOGYlwNuoZ8fTk_d8r0VL-decpwv3BwUbNRVPIlZkT4_AIXNna3GuE1K3GCzPbk82EBe8ScEMBoCeABnuq8982vkNF_UZ40SOgqOxwLROaIWpfpZ0pnfeYL2MN60KdLmjKb0_mGCf3EqLyobz-gw">
+<h3 class="text-primary-brand font-bold text-lg mb-2">자기설명</h3>
+<p class="text-on-surface-variant font-medium text-sm">설명하며 스스로 이해도를<br>확인해요.</p>
+</div>
+<!-- Card 2 -->
+<div class="bg-white p-6 rounded-3xl shadow-sm border border-yellow-100 flex flex-col items-center text-center w-full">
+<img class="w-32 h-32 object-contain mb-4" data-alt="Metacognition" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAt4l1-qF16NgIu_JGUOgUedDvmyMT-313XflKinEBH53nHDzTVZJmP6NFZo38INxoQMeBQYey5c_9sj6CQBvxrsT3Mf2JmSYjhQeudkMc3FGq9tdOsxjRs2r6IY-eTp0oglcfOHnnm22MKQUgPcpBuWlWNCHOc3wtmbgJcMymCthkLRmOsjuIcykMPQxjl8bry9ehE9x65yE6Z30lKqS_J1R6hfbbATMDGZ7W2yj8-DTQ2DwAHYUA2R7DOCE1jg0TYwVvlFoGJvkyJJw">
+<h3 class="text-primary-brand font-bold text-lg mb-2">메타인지</h3>
+<p class="text-on-surface-variant font-medium text-sm">내가 아는 것과 모르는 것을<br>구분하는 힘이 커져요.</p>
+</div>
+<!-- Card 3 -->
+<div class="bg-white p-6 rounded-3xl shadow-sm border border-yellow-100 flex flex-col items-center text-center w-full">
+<img class="w-32 h-32 object-contain mb-4" data-alt="Memory Check" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAW4hNJmISlYF26gX8V3bT-AIVUiW8MS0W0GJKvdsyW6t4PqbpI7n0YYWywZbWqksDTgjqZhQBZDD9CrxzCr8ceBJI_lfCv1n1l97bl-NUY3w3eY0l_c62k7cGt-RRthIg8cWGpbctv8H9bSS1kc_6AfBNA5O6I_G7YYvxDt3VZMmoD6aeFjhPyiI6qmm7rFVO0vrZSrsZJX8RydO3iJccrV2ujxXIJHVknhDdEkC70ELjXvOIlD6YuvOwX7S14DEQWCTiU-dJ-z-vS8g">
+<h3 class="text-primary-brand font-bold text-lg mb-2">기억 확인</h3>
+<p class="text-on-surface-variant font-medium text-sm">퀴즈와 복습으로<br>기억이 오래 남아요.</p>
+</div></div>
+</div>
+<div class="md:w-1/3 flex justify-center relative">
+<img class="w-full max-w-sm object-contain" data-alt="Happy student character" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCUa9JmLpVrgCljHtXapg5IGxC2Skj_q9dOKKIo6y-kcw409Ae4Rd0P0ZzlCUFOLWTVqpjB4KXi8n0MLSIvXqZs9o2F8Gr6Eo1J0dlbGzWdduKLFQC9R_vIgSC5g46MeO2-3YzyrbY7K-oqtwTkISpyETTTrwUQhYqN0RpY4Vlc0tzNVkTkOwLdduuSUKp8MUI9iB4-BfFdg5zkrwWAqnzgRk8a4K7aSWBHAueurIxhImOyXQSR2pOyxhk-bH6pNchevACP81NYmNzpVw">
+</div>
+</div>
+</section>
+<!-- CTA Section -->
+<section class="py-24 bg-white relative">
+<div class="max-w-container-max mx-auto px-margin-inline relative z-10">
+<div class="bg-white rounded-[2rem] shadow-xl p-10 md:p-14 flex flex-col md:flex-row items-center justify-between gap-8 border border-surface-variant/50 relative overflow-hidden">
+<div class="flex items-center gap-8 relative z-10">
+<div class="w-20 h-20 bg-primary-brand/10 rounded-full flex items-center justify-center text-primary-brand font-bold text-3xl font-plus-jakarta shrink-0">Ts</div>
+<div>
+<h2 class="text-headline-lg font-headline-lg text-on-surface mb-3 leading-tight">AI와 함께 만드는 <span class="text-primary-brand">초등 거꾸로 학습</span></h2>
+<p class="text-body-lg font-body-lg text-on-surface-variant">지금 바로 시작하고, 설명할 수 있는 배움을 경험해 보세요!</p>
+</div>
+</div>
+<button class="bg-primary-brand text-white px-10 py-5 rounded-full font-bold hover:bg-opacity-90 transition-colors shadow-lg hover-lift flex items-center gap-2 text-title-md whitespace-nowrap relative z-10">
+                    무료로 시작하기
+                    <span class="material-symbols-outlined text-xl">arrow_forward_ios</span>
+</button>
+</div>
+</div>
+<!-- Decos -->
+<div class="absolute bottom-10 right-[15%] text-quiz-accent text-5xl z-0">★</div>
+</section>
+<!-- Footer -->
+<footer class="bg-surface-container-lowest py-12 border-t border-surface-variant">
+<div class="max-w-container-max mx-auto px-margin-inline flex flex-col gap-8">
+<div class="flex flex-col md:flex-row justify-between items-center gap-6">
+<div class="flex items-center gap-8 w-full md:w-auto border-b md:border-none pb-6 md:pb-0">
+<span class="font-title-md text-title-md text-primary-brand font-bold text-xl">Ts 툰스쿨</span>
+<div class="flex flex-wrap gap-x-6 gap-y-2">
+<a class="text-on-surface-variant hover:text-primary-brand transition-all duration-200 text-sm font-medium hover:underline" href="#">이용약관</a>
+<a class="text-on-surface-variant hover:text-primary-brand transition-all duration-200 text-sm font-bold hover:underline" href="#">개인정보처리방침</a>
+<a class="text-on-surface-variant hover:text-primary-brand transition-all duration-200 text-sm font-medium hover:underline" href="#">청소년 보호정책</a>
+<a class="text-on-surface-variant hover:text-primary-brand transition-all duration-200 text-sm font-medium hover:underline" href="#">고객센터</a>
+<a class="text-on-surface-variant hover:text-primary-brand transition-all duration-200 text-sm font-medium hover:underline" href="#">회사소개</a>
+</div>
+</div>
+<div class="flex gap-3">
+<!-- Social Icons Placeholders -->
+<div class="w-10 h-10 rounded-full bg-red-500 text-white flex items-center justify-center font-bold text-xs">YT</div>
+<div class="w-10 h-10 rounded-full bg-pink-500 text-white flex items-center justify-center font-bold text-xs">IG</div>
+<div class="w-10 h-10 rounded-full bg-green-500 text-white flex items-center justify-center font-bold text-xs">BL</div>
+<div class="w-10 h-10 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold text-xs">FB</div>
+</div>
+</div>
+<div class="text-sm text-on-surface-variant/70 leading-loose flex flex-col gap-1">
+<p class="">(주)툰스쿨 <span class="mx-2">|</span> 서울특별시 강남구 테헤란로 123, 5층 (역삼동) <span class="mx-2">|</span> 대표 : 김툰스쿨 <span class="mx-2">|</span> 사업자등록번호 : 123-45-67890</p>
+<p class="">고객센터 : 1544-1234 <span class="mx-2">|</span> 이메일 : help@toonschool.com <span class="mx-2">|</span> 운영시간 : 평일 09:00 ~ 18:00 (주말/공휴일 휴무)</p>
+<p class="mt-2">© ToonSchool Co., Ltd. All rights reserved.</p>
+</div>
+</div>
+</footer>
+
+
+
+
+
+
+</body></html>

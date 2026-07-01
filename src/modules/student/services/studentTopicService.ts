@@ -13,6 +13,10 @@ function filterAndCleanKeyword(word: string): string | null {
   let cleaned = word.trim();
   if (cleaned.length <= 1) return null;
 
+  // 특정 어간 변환 (초등학생이 이해하기 쉬운 명사로)
+  if (cleaned.endsWith('알아보')) cleaned = cleaned.replace(/알아보$/, '이해');
+  if (cleaned.endsWith('바탕으')) cleaned = cleaned.replace(/바탕으$/, '바탕');
+
   const bannedContains = ['설명할', '알다', '있다', '없다', '말하다', '비교하다', '할수', '대해', '대하여', '알수', '알아보기', '살펴보기', '배우기', '이해하기'];
   for (const ban of bannedContains) {
     if (cleaned.includes(ban)) return null;
@@ -20,26 +24,36 @@ function filterAndCleanKeyword(word: string): string | null {
   
   if (/[다요까죠](?:\s|$)/.test(cleaned)) return null;
 
-  const josaList = ['을', '를', '이', '가', '은', '는', '와', '과', '의', '에', '에서', '로', '으로', '부터', '까지', '과함께', '와함께'];
+  const suffixList = [
+    '하며', '하고', '하는', '되며', '되고', '하다', '하', 
+    '으로', '에서', '에게', '보다', '처럼', '위해', '대한',
+    '을', '를', '이', '가', '은', '는', '와', '과', '의', '에', '로', '부터', '까지', '과함께', '와함께'
+  ];
   
-  if (!cleaned.includes(' ')) {
-    for (const josa of josaList) {
-      if (cleaned.endsWith(josa) && cleaned.length - josa.length >= 2) {
-        cleaned = cleaned.slice(0, -josa.length);
-        break;
+  let stripped = false;
+  do {
+    stripped = false;
+    if (!cleaned.includes(' ')) {
+      for (const suffix of suffixList) {
+        if (cleaned.endsWith(suffix) && cleaned.length - suffix.length >= 2) {
+          cleaned = cleaned.slice(0, -suffix.length);
+          stripped = true;
+          break;
+        }
+      }
+    } else {
+      const parts = cleaned.split(' ');
+      const lastPart = parts[parts.length - 1];
+      for (const suffix of suffixList) {
+        if (lastPart.endsWith(suffix) && lastPart.length - suffix.length >= 2) {
+          parts[parts.length - 1] = lastPart.slice(0, -suffix.length);
+          cleaned = parts.join(' ');
+          stripped = true;
+          break;
+        }
       }
     }
-  } else {
-    const parts = cleaned.split(' ');
-    const lastPart = parts[parts.length - 1];
-    for (const josa of josaList) {
-      if (lastPart.endsWith(josa) && lastPart.length - josa.length >= 2) {
-        parts[parts.length - 1] = lastPart.slice(0, -josa.length);
-        cleaned = parts.join(' ');
-        break;
-      }
-    }
-  }
+  } while (stripped);
 
   const bannedExactWords = ['위치', '특징', '설명', '내용', '학습', '단원', '주제', '수업', '우리', '학생', '평가', '이해', '목표', '성취', '기준', '지도', '마을', '역사', '문화', '여행', '시장', '사람들', '변화', '탐험', '방법', '이유', '까닭', '모습', '의미', '종류', '과정'];
   
@@ -690,12 +704,13 @@ export const generateKeywords = async (
 중단원(학습 주제): ${middleUnitName}${contextText}${existingKeywordsText}
 
 [중요 조건]
-1. 가장 우선순위가 높은 것은 '중단원(학습 주제)'입니다. 중단원명에서 직접 뽑을 수 있는 핵심 개념을 최우선으로 생성하세요.
-2. 중단원명 다음으로는 대단원명과 관련된 개념을 고려하세요.
-3. 과목 전체에 해당하는 너무 넓고 일반적인 단어(예: 지도, 마을, 역사, 문화, 여행, 시장, 사람들, 변화 등)는 최대한 제외하세요.
-4. 초등학생이 이해할 수 있는 짧은 명사형 단어여야 합니다. 이야기 소재로 쓰기 좋아야 합니다.
-5. ${count}개 키워드는 서로 너무 비슷하면 안 됩니다.
-6. 결과는 JSON 형태로만 반환합니다. 마크다운 코드블록은 쓰지 않습니다.
+1. 키워드는 반드시 완전한 명사 또는 명사구로만 작성한다. 동사형, 형용사형, 부사형, 조사로 끝나는 표현, 잘린 어간은 절대 작성하지 않는다. 예: 배려하며, 대화하, 알아보, 대화하고, 바탕으 금지. 예: 배려, 대화, 경청, 존중, 대화 예절, 갈등 해결 허용.
+2. 가장 우선순위가 높은 것은 '중단원(학습 주제)'입니다. 중단원명에서 직접 뽑을 수 있는 핵심 개념을 최우선으로 생성하세요.
+3. 중단원명 다음으로는 대단원명과 관련된 개념을 고려하세요.
+4. 초등학생이 바로 이해할 수 있는 쉬운 명사로 만들고, 2~8글자 정도의 단어를 우선합니다.
+5. 과목 전체에 해당하는 너무 넓고 일반적인 단어(예: 지도, 마을, 역사, 문화, 여행, 시장, 사람들, 변화 등)는 최대한 제외하세요.
+6. ${count}개 키워드는 서로 너무 비슷하면 안 됩니다.
+7. 결과는 JSON 형태로만 반환합니다. 마크다운 코드블록은 쓰지 않습니다.
 
 반환 형식:
 {
