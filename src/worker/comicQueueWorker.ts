@@ -30,8 +30,7 @@ const SUPABASE_URL = process.env.VITE_SUPABASE_URL || '';
 const SUPABASE_KEY = process.env.VITE_SUPABASE_ANON_KEY || '';
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY || '';
 
-import { IMAGE_GENERATION_MODEL, FALLBACK_IMAGE_GENERATION_MODEL } from '../config/models';
-
+import { FALLBACK_IMAGE_GENERATION_MODEL } from '../config/models';
 if (!SUPABASE_URL || !SUPABASE_KEY || !GEMINI_API_KEY) {
   console.error('❌ 필수 환경변수가 없습니다. .env.local 파일을 확인해 주세요.');
   console.error(`  VITE_SUPABASE_URL: ${SUPABASE_URL ? '있음' : '없음'}`);
@@ -146,46 +145,37 @@ async function generateImageWithModel(prompt: string, model: string, jobId: stri
 
 async function generateImage(prompt: string, jobId: string, cutNumber: number, attempt = 0): Promise<string> {
   try {
-    return await generateImageWithModel(prompt, IMAGE_GENERATION_MODEL, jobId);
-  } catch (primaryError: any) {
-    const isPrimaryRetryable =
-      primaryError.message.includes('Status 503') ||
-      primaryError.message.includes('Status 500') ||
-      primaryError.message.includes('Status 502') ||
-      primaryError.message.includes('Status 504') ||
-      primaryError.message.includes('fetch');
+    return await generateImageWithModel(prompt, FALLBACK_IMAGE_GENERATION_MODEL, jobId);
+  } catch (error: any) {
+    const isRetryable =
+      error.message.includes('Status 503') ||
+      error.message.includes('Status 500') ||
+      error.message.includes('Status 502') ||
+      error.message.includes('Status 504') ||
+      error.message.includes('Status 429') ||
+      error.message.includes('fetch');
 
-    if (isPrimaryRetryable) {
+    if (isRetryable && attempt < 1) { // 1회 재시도 (Flash만 사용)
       wLog({
         stage: 'imageApiFailed', status: 'fallback', jobId, cutNumber,
-        note: `primary(${IMAGE_GENERATION_MODEL}) failed. trying fallback(${FALLBACK_IMAGE_GENERATION_MODEL})`
+        note: `primary(${FALLBACK_IMAGE_GENERATION_MODEL}) failed. trying fallback(${FALLBACK_IMAGE_GENERATION_MODEL})`
       });
 
-      try {
-        return await generateImageWithModel(prompt, FALLBACK_IMAGE_GENERATION_MODEL, jobId);
-      } catch (fallbackError: any) {
-        const isFallbackRetryable =
-          fallbackError.message.includes('Status 503') ||
-          fallbackError.message.includes('Status 429') ||
-          fallbackError.message.includes('fetch');
-
-        if (isFallbackRetryable && attempt < RETRY_DELAYS.length) {
-          const delay = RETRY_DELAYS[attempt];
-          wLog({
-            stage: 'imageApiFailed', status: 'retry', jobId, cutNumber,
-            attempt, note: `retry after ${delay}ms`
-          });
-          await new Promise(r => setTimeout(r, delay));
-          return generateImage(prompt, jobId, cutNumber, attempt + 1);
-        }
-
-        wLog({ stage: 'imageApiFailed', status: 'error', jobId, cutNumber, errorCode: 'ALL_MODELS_FAILED' });
-        throw fallbackError;
-      }
+      const delay = RETRY_DELAYS[attempt] || 10000;
+      wLog({
+        stage: 'imageApiFailed', status: 'retry', jobId, cutNumber,
+        attempt, note: `retry after ${delay}ms`
+      });
+      await new Promise(r => setTimeout(r, delay));
+      return generateImage(prompt, jobId, cutNumber, attempt + 1);
     }
 
-    // 재시도 불필요 에러 (401/403/404)
-    throw primaryError;
+    if (isRetryable) {
+      wLog({ stage: 'imageApiFailed', status: 'error', jobId, cutNumber, errorCode: 'ALL_MODELS_FAILED' });
+    }
+
+    // 재시도 불필요 에러 (401/403/404) 거나 횟수 초과
+    throw error;
   }
 }
 
@@ -365,7 +355,7 @@ async function cleanupStaleJobs() {
 
 async function main() {
   wLog({ stage: 'workerStarted', status: 'start', note: `maxConcurrent=${MAX_CONCURRENT_IMAGE_JOBS}` });
-  console.log(`[Worker] primaryImageModel=${IMAGE_GENERATION_MODEL}`);
+  console.log(`[Worker] primaryImageModel=${FALLBACK_IMAGE_GENERATION_MODEL}`);
   console.log(`[Worker] fallbackImageModel=${FALLBACK_IMAGE_GENERATION_MODEL}`);
   
   await cleanupStaleJobs();
