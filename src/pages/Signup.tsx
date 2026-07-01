@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../shared/lib/supabase'
-import { Mail, Lock, UserPlus, AlertCircle, CheckCircle } from 'lucide-react'
+import { Eye, EyeOff, UserPlus, CheckCircle } from 'lucide-react'
 
 export default function Signup() {
   const [name, setName] = useState('')
@@ -11,6 +11,9 @@ export default function Signup() {
   const [centerName, setCenterName] = useState('')
   const [termsAgreed, setTermsAgreed] = useState(false)
   const [privacyAgreed, setPrivacyAgreed] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<boolean>(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -64,13 +67,10 @@ export default function Signup() {
             role: 'free_user',       // Default role
             plan_type: 'free',       // Default plan
             monthly_quota: 3         // Default quota
-            // center_id is not saved here since centerName is just text.
-            // If they need to link via center_id, that would be a separate logic.
           })
 
         if (profileError) {
           console.error('Error writing user profile, continuing anyway:', profileError.message)
-          // We don't throw here to avoid failing signup if a DB trigger already handles it
         }
 
         setSuccess(true)
@@ -87,156 +87,191 @@ export default function Signup() {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center py-10 min-h-[70vh] z-10 relative">
-      <div className="w-full max-w-md p-8 rounded-3xl bg-slate-900 border border-slate-800 space-y-6 shadow-2xl relative overflow-hidden">
-        {/* Background glow blobs */}
-        <div className="absolute top-0 right-0 w-[40%] h-[40%] bg-pink-900/10 rounded-full blur-[60px] pointer-events-none" />
-
-        {/* Title */}
-        <div className="text-center space-y-2">
-          <div className="inline-flex h-12 w-12 rounded-2xl bg-gradient-to-tr from-purple-600 to-pink-500 items-center justify-center shadow-lg shadow-purple-500/20 font-bold text-white text-xl mx-auto mb-2">
-            TS
-          </div>
-          <h2 className="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-100 to-slate-400">
-            툰스쿨 교사/관리자 회원가입
-          </h2>
-          <p className="text-xs text-slate-500">
-            학생은 관리자 페이지에서 직접 추가해주세요.
-          </p>
-        </div>
-
-        {/* Status notification */}
-        {error && (
-          <div className="p-4 rounded-xl bg-rose-950/40 border border-rose-900/50 text-rose-400 text-xs flex items-center gap-2">
-            <AlertCircle className="h-4 w-4 shrink-0" />
-            <span>{error}</span>
-          </div>
-        )}
-
-        {success && (
-          <div className="p-4 rounded-xl bg-emerald-950/40 border border-emerald-900/50 text-emerald-450 text-xs flex flex-col gap-1">
-            <div className="flex items-center gap-2 font-bold">
-              <CheckCircle className="h-4 w-4 shrink-0" />
-              <span>회원가입 완료!</span>
+    <div className="min-h-screen bg-[#f3f4f7] flex items-center justify-center overflow-hidden font-sans">
+      <div className="w-full max-w-[1376px] aspect-video max-h-screen flex flex-row relative">
+        
+        {/* Left Area (Text & Hero Image) */}
+        <div className="w-[58%] h-full flex flex-col pt-16 md:pt-20 px-10 md:px-16 relative z-10">
+          
+          {/* Logo and App Name */}
+          <Link to="/" className="flex items-center gap-3 mb-10 w-fit z-30 shrink-0">
+            <div className="h-12 w-12 rounded-xl bg-gradient-to-tr from-purple-600 to-pink-500 flex items-center justify-center font-bold text-white text-xl shadow-md">
+              TS
             </div>
-            <p className="text-slate-400">3초 후 로그인 페이지로 자동 이동합니다...</p>
-          </div>
-        )}
-
-        {/* Form */}
-        {!success && (
-          <form onSubmit={handleSignup} className="space-y-4">
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-slate-400">이름 (필수)</label>
-              <div className="relative">
-                <input
-                  type="text"
-                  required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="홍길동"
-                  className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-850 hover:border-slate-700 focus:border-purple-600 focus:ring-1 focus:ring-purple-600 text-sm placeholder-slate-600 transition-all text-white outline-none"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-slate-400">이메일 주소 (필수)</label>
-              <div className="relative">
-                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="email@example.com"
-                  className="w-full pl-11 pr-4 py-2.5 rounded-xl bg-slate-950 border border-slate-850 hover:border-slate-700 focus:border-purple-600 focus:ring-1 focus:ring-purple-600 text-sm placeholder-slate-600 transition-all text-white outline-none"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-slate-400">비밀번호 (필수)</label>
-              <div className="relative">
-                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-                <input
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="최소 6자리 이상"
-                  className="w-full pl-11 pr-4 py-2.5 rounded-xl bg-slate-950 border border-slate-850 hover:border-slate-700 focus:border-purple-600 focus:ring-1 focus:ring-purple-600 text-sm placeholder-slate-600 transition-all text-white outline-none"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-slate-400">비밀번호 확인 (필수)</label>
-              <div className="relative">
-                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-                <input
-                  type="password"
-                  required
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="비밀번호 다시 입력"
-                  className="w-full pl-11 pr-4 py-2.5 rounded-xl bg-slate-950 border border-slate-850 hover:border-slate-700 focus:border-purple-600 focus:ring-1 focus:ring-purple-600 text-sm placeholder-slate-600 transition-all text-white outline-none"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-slate-400">기관명 또는 기관 코드 (선택)</label>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={centerName}
-                  onChange={(e) => setCenterName(e.target.value)}
-                  placeholder="학교명 또는 발급받은 코드"
-                  className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-850 hover:border-slate-700 focus:border-purple-600 focus:ring-1 focus:ring-purple-600 text-sm placeholder-slate-600 transition-all text-white outline-none"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2 mt-4">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={termsAgreed}
-                  onChange={(e) => setTermsAgreed(e.target.checked)}
-                  className="w-4 h-4 rounded border-slate-800 text-purple-600 focus:ring-purple-600 focus:ring-offset-slate-900 bg-slate-950"
-                />
-                <span className="text-xs text-slate-400">이용약관에 동의합니다. (필수)</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={privacyAgreed}
-                  onChange={(e) => setPrivacyAgreed(e.target.checked)}
-                  className="w-4 h-4 rounded border-slate-800 text-purple-600 focus:ring-purple-600 focus:ring-offset-slate-900 bg-slate-950"
-                />
-                <span className="text-xs text-slate-400">개인정보 수집 및 이용에 동의합니다. (필수)</span>
-              </label>
-            </div>
-
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold text-sm shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 mt-2 flex items-center justify-center gap-2"
-            >
-              <UserPlus className="h-4 w-4" />
-              <span>{isLoading ? '가입 진행 중...' : '회원가입'}</span>
-            </button>
-          </form>
-        )}
-
-        {/* Footer actions */}
-        <div className="text-center pt-4 border-t border-slate-850 text-xs text-slate-500">
-          <span>이미 계정이 있으신가요? </span>
-          <Link to="/login" className="text-purple-400 hover:text-purple-300 font-semibold underline decoration-purple-600/30 underline-offset-4">
-            로그인하기
+            <span className="font-extrabold text-2xl tracking-wider text-slate-800">
+              툰스쿨
+            </span>
           </Link>
+
+          {/* Catchphrase */}
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-slate-900 leading-[1.3] tracking-tight mb-6 z-30 shrink-0">
+            공부하지 말고,<br />
+            <span className="text-[#ff2778]">공부를 만들자.</span>
+          </h1>
+          
+          {/* Subtitle */}
+          <p className="text-lg md:text-xl text-slate-600 font-medium z-30 shrink-0 mb-8">
+            선생님과 학생이 함께 만드는 AI 학습만화 플랫폼
+          </p>
+
+          {/* Hero Image */}
+          <div className="flex-1 w-full flex items-end justify-start min-h-0 relative z-20 pb-4">
+            <img 
+              src="/images/toonschool/login-hero.png" 
+              alt="툰스쿨 로그인 히어로 이미지"
+              style={{ width: '85%', maxWidth: '680px', objectFit: 'contain', marginTop: '36px' }}
+            />
+          </div>
         </div>
+
+        {/* Right Area (Signup Card) */}
+        <div className="w-[42%] h-full flex flex-col items-center justify-center pr-4 md:pr-16 z-30 relative py-8">
+          <div className="w-full max-w-[480px] bg-white rounded-[32px] p-8 md:p-10 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] border border-slate-100 flex-shrink-0 relative z-10">
+            
+            <div className="flex flex-col items-center mb-6">
+              <span className="inline-block px-3 py-1 mb-3 rounded-full bg-slate-100 text-slate-600 text-xs font-bold tracking-wide">
+                가입 후 프리유저로 시작해요
+              </span>
+              <h2 className="text-2xl font-bold text-center text-slate-800 mb-2">
+                툰스쿨 회원가입
+              </h2>
+              <p className="text-sm text-center text-slate-500 font-medium px-4">
+                회원가입 후 슈퍼관리자 승인으로 선생님 또는 중간관리자 활동이 가능합니다.
+              </p>
+            </div>
+            
+            {error && (
+              <div className="mb-6 p-3 rounded-xl bg-rose-50 border border-rose-100 text-rose-500 text-sm flex items-center justify-center gap-2">
+                <span>{error}</span>
+              </div>
+            )}
+
+            {success ? (
+              <div className="p-6 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-600 text-center flex flex-col items-center gap-3">
+                <CheckCircle className="h-10 w-10 shrink-0" />
+                <div className="font-bold text-lg">회원가입 완료!</div>
+                <p className="text-sm text-emerald-600/80">3초 후 로그인 페이지로 자동 이동합니다...</p>
+              </div>
+            ) : (
+              <form onSubmit={handleSignup} className="space-y-4">
+                
+                <div>
+                  <input
+                    type="text"
+                    required
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="이름"
+                    className="w-full px-5 py-3.5 rounded-xl bg-[#f8f9fa] border border-transparent focus:border-[#ff2778] focus:bg-white focus:ring-1 focus:ring-[#ff2778] text-slate-800 placeholder-slate-400 outline-none transition-all text-[15px]"
+                  />
+                </div>
+
+                <div>
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="이메일 주소"
+                    className="w-full px-5 py-3.5 rounded-xl bg-[#f8f9fa] border border-transparent focus:border-[#ff2778] focus:bg-white focus:ring-1 focus:ring-[#ff2778] text-slate-800 placeholder-slate-400 outline-none transition-all text-[15px]"
+                  />
+                </div>
+
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="비밀번호 (최소 6자리 이상)"
+                    className="w-full pl-5 pr-12 py-3.5 rounded-xl bg-[#f8f9fa] border border-transparent focus:border-[#ff2778] focus:bg-white focus:ring-1 focus:ring-[#ff2778] text-slate-800 placeholder-slate-400 outline-none transition-all text-[15px]"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors p-1"
+                  >
+                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
+                </div>
+
+                <div className="relative">
+                  <input
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    required
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="비밀번호 확인"
+                    className="w-full pl-5 pr-12 py-3.5 rounded-xl bg-[#f8f9fa] border border-transparent focus:border-[#ff2778] focus:bg-white focus:ring-1 focus:ring-[#ff2778] text-slate-800 placeholder-slate-400 outline-none transition-all text-[15px]"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors p-1"
+                  >
+                    {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
+                </div>
+
+                <div>
+                  <input
+                    type="text"
+                    value={centerName}
+                    onChange={(e) => setCenterName(e.target.value)}
+                    placeholder="기관명 또는 기관 코드 (선택)"
+                    className="w-full px-5 py-3.5 rounded-xl bg-[#f8f9fa] border border-transparent focus:border-[#ff2778] focus:bg-white focus:ring-1 focus:ring-[#ff2778] text-slate-800 placeholder-slate-400 outline-none transition-all text-[15px]"
+                  />
+                </div>
+
+                <div className="space-y-2 mt-4 pb-2">
+                  <label className="flex items-center gap-3 cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      checked={termsAgreed}
+                      onChange={(e) => setTermsAgreed(e.target.checked)}
+                      className="w-5 h-5 rounded-md border-slate-300 text-[#ff2778] focus:ring-[#ff2778] bg-white checked:bg-[#ff2778] accent-[#ff2778] cursor-pointer"
+                    />
+                    <span className="text-[14px] text-slate-600 group-hover:text-slate-800 font-medium transition-colors">이용약관에 동의합니다. (필수)</span>
+                  </label>
+                  <label className="flex items-center gap-3 cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      checked={privacyAgreed}
+                      onChange={(e) => setPrivacyAgreed(e.target.checked)}
+                      className="w-5 h-5 rounded-md border-slate-300 text-[#ff2778] focus:ring-[#ff2778] bg-white checked:bg-[#ff2778] accent-[#ff2778] cursor-pointer"
+                    />
+                    <span className="text-[14px] text-slate-600 group-hover:text-slate-800 font-medium transition-colors">개인정보 수집 및 이용에 동의합니다. (필수)</span>
+                  </label>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full py-4 mt-4 rounded-xl bg-[#ff2778] hover:bg-[#e01962] text-white font-bold text-lg shadow-lg shadow-[#ff2778]/30 transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  <UserPlus className="h-5 w-5" />
+                  <span>{isLoading ? '가입 진행 중...' : '프리유저로 회원가입'}</span>
+                </button>
+              </form>
+            )}
+
+            <div className="flex items-center justify-center gap-4 mt-8 text-sm text-slate-500 font-medium">
+              <span>이미 계정이 있나요?</span>
+              <div className="w-px h-3 bg-slate-300"></div>
+              <Link to="/login" className="text-[#ff2778] font-bold hover:text-[#e01962] transition-colors">
+                로그인
+              </Link>
+            </div>
+            
+          </div>
+          
+          <div className="mt-6 w-full max-w-[480px] text-center z-10">
+            <p className="text-sm text-slate-500 font-medium bg-white/50 backdrop-blur-sm py-2 px-4 rounded-full inline-block border border-white/60 shadow-sm">
+              ℹ️ 학생 계정은 선생님이 만든 아이디로 로그인합니다.
+            </p>
+          </div>
+        </div>
+        
       </div>
     </div>
   )
