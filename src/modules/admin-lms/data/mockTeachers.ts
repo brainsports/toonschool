@@ -5,7 +5,7 @@ import type { Teacher, OrgInfo } from '../types'
 
 export const MOCK_ORG_INFO: OrgInfo = {
   id: 'org-1',
-  name: '복된해피스쿨지역아동센터',
+  name: '행복지역아동센터',
   linkCode: 'Happy26',
   curriculum: 'KR',
 }
