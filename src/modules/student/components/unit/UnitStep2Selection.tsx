@@ -23,6 +23,7 @@ interface UnitStep2SelectionProps {
   subjectLoadState: CurriculumLoadState
   gradeEmojis: Record<string, string>
   subjectEmojis: Record<string, string>
+  classUnitSetting: any
   onSubjectSelect: (s: StudentSubjectOption) => void
   onMajorUnitSelect: (id: string) => void
   onMiddleUnitSelect: (id: string) => void
@@ -41,6 +42,7 @@ export default function UnitStep2Selection({
   subjectLoadState,
   gradeEmojis,
   subjectEmojis,
+  classUnitSetting,
   onSubjectSelect,
   onMajorUnitSelect,
   onMiddleUnitSelect
@@ -75,15 +77,19 @@ export default function UnitStep2Selection({
             <div className="flex flex-wrap justify-center gap-4 md:gap-6 lg:gap-8">
               {subjects.map((s) => {
                 const isSelected = selectedSubject?.id === s.id
+                const isAllowed = !classUnitSetting || classUnitSetting.subjects.includes('전체') || classUnitSetting.subjects.includes(s.name)
                 return (
                   <button
                     key={s.id}
-                    onClick={() => onSubjectSelect(s)}
-                    className={`btn-select-item flex-col w-[100px] h-[110px] md:w-[120px] md:h-[130px] py-2 px-2 gap-2
-                      ${isSelected ? 'btn-select-item-active scale-105 shadow-md' : ''}`}
+                    onClick={() => isAllowed && onSubjectSelect(s)}
+                    disabled={!isAllowed}
+                    title={!isAllowed ? "선생님이 아직 열어두지 않은 과목이에요" : ""}
+                    className={`btn-select-item flex-col w-[100px] h-[110px] md:w-[120px] md:h-[130px] py-2 px-2 gap-2 transition-all
+                      ${isSelected ? 'btn-select-item-active scale-105 shadow-md' : ''}
+                      ${!isAllowed ? 'opacity-50 grayscale border-gray-300 cursor-not-allowed bg-gray-50' : ''}`}
                   >
                     <span className="text-4xl md:text-5xl select-none mb-1">{subjectEmojis[s.name] || '📚'}</span>
-                    <span className={`font-jua text-base md:text-xl ${isSelected ? 'text-white' : 'text-[#3f4350]'}`}>{s.name}</span>
+                    <span className={`font-jua text-base md:text-xl ${isSelected ? 'text-white' : !isAllowed ? 'text-gray-400' : 'text-[#3f4350]'}`}>{s.name}</span>
                   </button>
                 )
               })}
@@ -110,11 +116,14 @@ export default function UnitStep2Selection({
                 className="input-game-soft w-full font-bold"
               >
                 <option value="">대단원을 선택해주세요</option>
-                {majorUnits.map((mu) => (
-                  <option key={mu.id} value={mu.id}>
-                    {mu.unitNumber}단원. {mu.unitName}
-                  </option>
-                ))}
+                {majorUnits.map((mu) => {
+                  const isAllowed = !classUnitSetting || classUnitSetting.subjects.includes('전체') || (mu.unitNumber >= classUnitSetting.fromUnit && mu.unitNumber <= classUnitSetting.toUnit)
+                  return (
+                    <option key={mu.id} value={mu.id} disabled={!isAllowed} className={!isAllowed ? 'text-gray-400' : ''}>
+                      {mu.unitNumber}단원. {mu.unitName} {!isAllowed ? '(선생님이 아직 열어두지 않은 단원이에요)' : ''}
+                    </option>
+                  )
+                })}
               </select>
             )}
           </div>

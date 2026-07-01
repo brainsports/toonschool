@@ -10,6 +10,7 @@ interface UnitStep1SelectionProps {
   selectedSemester: StudentSemesterOption | null
   loadState: CurriculumLoadState
   gradeEmojis: Record<string, string>
+  classUnitSetting: any // UnitSetting type from parent
   onGradeSelect: (g: StudentGradeOption) => void
   onSemesterSelect: (s: StudentSemesterOption) => void
 }
@@ -21,6 +22,7 @@ export default function UnitStep1Selection({
   selectedSemester,
   loadState,
   gradeEmojis,
+  classUnitSetting,
   onGradeSelect,
   onSemesterSelect
 }: UnitStep1SelectionProps) {
@@ -45,15 +47,19 @@ export default function UnitStep1Selection({
           <div className="flex justify-center gap-8 md:gap-16">
             {grades.map((g) => {
               const isSelected = selectedGrade?.id === g.id
+              const isAllowed = !classUnitSetting || classUnitSetting.grade === g.value
               return (
                 <button
                   key={g.id}
-                  onClick={() => onGradeSelect(g)}
-                  className={`btn-select-item flex-col w-[138px] h-[138px] md:w-[150px] md:h-[150px] py-3 px-2 gap-2
-                    ${isSelected ? 'btn-select-item-active scale-105 shadow-md' : ''}`}
+                  onClick={() => isAllowed && onGradeSelect(g)}
+                  disabled={!isAllowed}
+                  title={!isAllowed ? "선생님이 아직 열어두지 않은 학년이에요" : ""}
+                  className={`btn-select-item flex-col w-[138px] h-[138px] md:w-[150px] md:h-[150px] py-3 px-2 gap-2 transition-all
+                    ${isSelected ? 'btn-select-item-active scale-105 shadow-md' : ''}
+                    ${!isAllowed ? 'opacity-50 grayscale border-gray-300 cursor-not-allowed bg-gray-50' : ''}`}
                 >
                   <span className="text-5xl md:text-6xl select-none mb-2">{gradeEmojis[g.label] || '🎒'}</span>
-                  <span className={`font-jua text-lg md:text-2xl ${isSelected ? 'text-white' : 'text-[#3f4350]'}`}>{g.label}</span>
+                  <span className={`font-jua text-lg md:text-2xl ${isSelected ? 'text-white' : !isAllowed ? 'text-gray-400' : 'text-[#3f4350]'}`}>{g.label}</span>
                 </button>
               )
             })}
@@ -73,12 +79,16 @@ export default function UnitStep1Selection({
         <div className="flex flex-wrap justify-center gap-6 md:gap-10">
           {semesters.map((s) => {
             const isSelected = selectedSemester?.id === s.id
+            const isAllowed = !classUnitSetting || classUnitSetting.semester === s.value
             return (
               <button
                 key={s.id}
-                onClick={() => onSemesterSelect(s)}
-                className={`btn-select-item flex-col w-[126px] h-[135px] md:w-[140px] md:h-[150px] py-3 px-2 gap-2
-                  ${isSelected ? 'btn-select-item-active scale-105 shadow-md' : ''}`}
+                onClick={() => isAllowed && onSemesterSelect(s)}
+                disabled={!isAllowed}
+                title={!isAllowed ? "선생님이 아직 열어두지 않은 학기예요" : ""}
+                className={`btn-select-item flex-col w-[126px] h-[135px] md:w-[140px] md:h-[150px] py-3 px-2 gap-2 transition-all
+                  ${isSelected ? 'btn-select-item-active scale-105 shadow-md' : ''}
+                  ${!isAllowed ? 'opacity-50 grayscale border-gray-300 cursor-not-allowed bg-gray-50' : ''}`}
               >
                 {s.value === 1 ? (
                   <Flower2
@@ -90,7 +100,7 @@ export default function UnitStep1Selection({
                 ) : (
                   <span className="text-5xl md:text-6xl select-none mb-2">🍁</span>
                 )}
-                <span className={`font-jua text-lg md:text-2xl ${isSelected ? 'text-white' : 'text-[#3f4350]'}`}>{s.label}</span>
+                <span className={`font-jua text-lg md:text-2xl ${isSelected ? 'text-white' : !isAllowed ? 'text-gray-400' : 'text-[#3f4350]'}`}>{s.label}</span>
               </button>
             )
           })}

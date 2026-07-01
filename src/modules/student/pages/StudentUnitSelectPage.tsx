@@ -39,9 +39,7 @@ export default function StudentUnitSelectPage() {
     { id: 'sem-1', label: '1학기', value: 1 },
     { id: 'sem-2', label: '2학기', value: 2 }
   ]
-  const semesters = classUnitSetting?.semester 
-    ? allSemesters.filter(s => s.value === classUnitSetting.semester)
-    : allSemesters
+  const semesters = allSemesters
 
   const [subjects, setSubjects] = useState<StudentSubjectOption[]>([])
   const [majorUnits, setMajorUnits] = useState<StudentMajorUnitOption[]>([])
@@ -93,17 +91,11 @@ export default function StudentUnitSelectPage() {
     const fetchGrades = async () => {
       setLoadState('loading')
       const data = await getStudentGrades()
-      
-      let filteredData = data
-      if (classUnitSetting) {
-        filteredData = data.filter(g => g.value === classUnitSetting.grade)
-      }
-      
-      setGrades(filteredData)
+      setGrades(data)
       setLoadState('success')
     }
     fetchGrades()
-  }, [classUnitSetting])
+  }, [])
 
   // 2. 학년/학기 선택 시 과목 로드
   useEffect(() => {
@@ -115,16 +107,11 @@ export default function StudentUnitSelectPage() {
       setSubjectLoadState('loading')
       const data = await getSubjectsByGradeAndSemester(selectedGrade.value, selectedSemester.value)
       
-      let filteredData = data
-      if (classUnitSetting && !classUnitSetting.subjects.includes('전체')) {
-        filteredData = data.filter(s => classUnitSetting.subjects.includes(s.name))
-      }
-      
-      setSubjects(filteredData)
+      setSubjects(data)
       setSubjectLoadState('success')
     }
     fetchSubjects()
-  }, [selectedGrade, selectedSemester, classUnitSetting])
+  }, [selectedGrade, selectedSemester])
 
   // 3. 2단계 진입 및 과목 선택 완료 시 대단원 로드
   useEffect(() => {
@@ -138,16 +125,41 @@ export default function StudentUnitSelectPage() {
         selectedSubject.code
       )
       
-      let filteredData = data
-      if (classUnitSetting && !classUnitSetting.subjects.includes('전체')) {
-        filteredData = data.filter(u => u.unitNumber >= classUnitSetting.fromUnit && u.unitNumber <= classUnitSetting.toUnit)
-      }
-      
-      setMajorUnits(filteredData)
+      setMajorUnits(data)
       setLoadState('success')
     }
     fetchMajorUnits()
-  }, [selectedGrade, selectedSemester, selectedSubject, step, classUnitSetting])
+  }, [selectedGrade, selectedSemester, selectedSubject, step])
+
+  // 3.5. 자동 선택 로직
+  useEffect(() => {
+    if (grades.length > 0 && classUnitSetting && !selectedGrade) {
+      const defaultGrade = grades.find(g => g.value === classUnitSetting.grade)
+      if (defaultGrade) setSelectedGrade(defaultGrade)
+    }
+  }, [grades, classUnitSetting, selectedGrade])
+
+  useEffect(() => {
+    if (classUnitSetting && !selectedSemester) {
+      const defaultSemester = allSemesters.find(s => s.value === classUnitSetting.semester)
+      if (defaultSemester) setSelectedSemester(defaultSemester)
+    }
+  }, [classUnitSetting, selectedSemester])
+
+  useEffect(() => {
+    if (subjects.length > 0 && classUnitSetting && !selectedSubject) {
+      let defaultSubject = null;
+      if (classUnitSetting.subjects.includes('전체')) {
+        defaultSubject = subjects[0]
+      } else {
+        const firstAllowed = classUnitSetting.subjects[0]
+        if (firstAllowed) {
+          defaultSubject = subjects.find(s => s.name === firstAllowed)
+        }
+      }
+      if (defaultSubject) setSelectedSubject(defaultSubject)
+    }
+  }, [subjects, classUnitSetting, selectedSubject])
 
   // 4. 대단원 선택 시 중단원 로드
   useEffect(() => {
@@ -296,6 +308,7 @@ export default function StudentUnitSelectPage() {
               selectedSemester={selectedSemester}
               loadState={loadState}
               gradeEmojis={gradeEmojis}
+              classUnitSetting={classUnitSetting}
               onGradeSelect={handleGradeSelect}
               onSemesterSelect={handleSemesterSelect}
             />
@@ -313,6 +326,7 @@ export default function StudentUnitSelectPage() {
               subjectLoadState={subjectLoadState}
               gradeEmojis={gradeEmojis}
               subjectEmojis={subjectEmojis}
+              classUnitSetting={classUnitSetting}
               onSubjectSelect={handleSubjectSelect}
               onMajorUnitSelect={handleMajorUnitSelect}
               onMiddleUnitSelect={handleMiddleUnitSelect}
