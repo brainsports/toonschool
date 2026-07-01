@@ -16,43 +16,82 @@ const SUBJECTS = ['전체', '국어', '수학', '사회', '과학', '영어']
 export default function UnitSettingModal({ classRoom, allUnits, onSave, onClose }: Props) {
   const current = classRoom.unitSetting
 
-  const [subject, setSubject] = useState<string>(current?.subject || '전체')
+  const [subjects, setSubjects] = useState<string[]>(current?.subjects || ['전체'])
   const [semester, setSemester] = useState<1 | 2 | null>(current?.semester ?? null)
   const [fromUnit, setFromUnit] = useState(current?.fromUnit ?? 1)
   const [toUnit, setToUnit] = useState(current?.toUnit ?? 4)
 
-  // 해당 학년, 과목 단원만 필터링
-  const gradeSubjectUnits = allUnits.filter(u => u.grade === classRoom.grade && u.subject === subject)
+  const singleSubject = subjects.length === 1 && subjects[0] !== '전체' ? subjects[0] : null
+  const gradeSubjectUnits = singleSubject ? allUnits.filter(u => u.grade === classRoom.grade && u.subject === singleSubject) : []
   const sem1Units = gradeSubjectUnits.filter(u => u.semester === 1)
   const sem2Units = gradeSubjectUnits.filter(u => u.semester === 2)
 
   const displayUnits = semester === 1 ? sem1Units : semester === 2 ? sem2Units : gradeSubjectUnits
 
+  const handleSubjectToggle = (s: string) => {
+    if (s === '전체') {
+      setSubjects(['전체'])
+      setSemester(null)
+      setFromUnit(1)
+      setToUnit(99)
+      return
+    }
+    
+    let next = subjects.filter(x => x !== '전체')
+    if (next.includes(s)) {
+      next = next.filter(x => x !== s)
+    } else {
+      next.push(s)
+    }
+    if (next.length === 0) next = ['전체']
+    
+    setSubjects(next)
+    
+    if (next.length > 1) {
+      setFromUnit(1)
+      setToUnit(99)
+    } else {
+      setFromUnit(1)
+      setToUnit(4)
+    }
+  }
+
   const handleSave = () => {
     let label = '전체 허용'
-    if (subject !== '전체') {
+    const hasAll = subjects.includes('전체')
+    const subjStr = hasAll ? '전체' : subjects.join('·')
+
+    if (!hasAll) {
       if (semester === null) {
-        label = `${subject} 전체 허용`
+        label = `${subjStr} 전체 허용`
       } else {
-        label = `${subject} ${semester}학기 ${fromUnit}~${toUnit}단원`
+        if (subjects.length > 1) {
+          label = `${subjStr} ${semester}학기 전체`
+        } else {
+          label = `${subjStr} ${semester}학기 ${fromUnit}~${toUnit}단원`
+        }
       }
     }
     
     onSave({
       classId: classRoom.id,
       grade: classRoom.grade,
-      subject,
+      subjects: hasAll ? ['전체'] : subjects,
       semester,
-      fromUnit,
-      toUnit,
+      fromUnit: subjects.length > 1 ? 1 : fromUnit,
+      toUnit: subjects.length > 1 ? 99 : toUnit,
       label,
     })
   }
 
   const getSelectedRangeText = () => {
-    if (subject === '전체') return '전체 허용'
-    if (semester === null) return `${classRoom.grade}학년 / ${subject} / 전체 허용`
-    return `${classRoom.grade}학년 / ${subject} / ${semester}학기 / ${fromUnit}단원 ~ ${toUnit}단원`
+    const hasAll = subjects.includes('전체')
+    const subjStr = hasAll ? '전체' : subjects.join('·')
+
+    if (hasAll) return '전체 허용'
+    if (semester === null) return `${classRoom.grade}학년 / ${subjStr} / 전체 허용`
+    if (subjects.length > 1) return `${classRoom.grade}학년 / ${subjStr} / ${semester}학기 / 전체 단원`
+    return `${classRoom.grade}학년 / ${subjStr} / ${semester}학기 / ${fromUnit}단원 ~ ${toUnit}단원`
   }
 
   return (
@@ -87,25 +126,20 @@ export default function UnitSettingModal({ classRoom, allUnits, onSave, onClose 
         {/* 3. 과목 선택 */}
         <div style={{ marginBottom: 20 }}>
           <label style={{ fontSize: 14, fontWeight: 700, color: '#333', display: 'block', marginBottom: 8 }}>
-            과목 선택
+            과목 선택 (다중 선택 가능)
           </label>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {SUBJECTS.map(s => (
               <button
                 key={s}
-                onClick={() => {
-                  setSubject(s)
-                  setSemester(null)
-                  setFromUnit(1)
-                  setToUnit(4)
-                }}
+                onClick={() => handleSubjectToggle(s)}
                 style={{
                   flex: '1 1 calc(33.333% - 10px)',
                   padding: '10px 0', borderRadius: 10, border: '2px solid',
-                  borderColor: subject === s ? '#ff2778' : '#e5e7eb',
-                  background: subject === s ? '#fff0f6' : 'white',
-                  color: subject === s ? '#ff2778' : '#555',
-                  fontWeight: subject === s ? 700 : 500,
+                  borderColor: subjects.includes(s) ? '#ff2778' : '#e5e7eb',
+                  background: subjects.includes(s) ? '#fff0f6' : 'white',
+                  color: subjects.includes(s) ? '#ff2778' : '#555',
+                  fontWeight: subjects.includes(s) ? 700 : 500,
                   fontSize: 14, cursor: 'pointer',
                 }}>
                 {s}
@@ -115,7 +149,7 @@ export default function UnitSettingModal({ classRoom, allUnits, onSave, onClose 
         </div>
 
         {/* 4. 학기 선택 */}
-        {subject !== '전체' && (
+        {!subjects.includes('전체') && (
           <div style={{ marginBottom: 20 }}>
             <label style={{ fontSize: 14, fontWeight: 700, color: '#333', display: 'block', marginBottom: 8 }}>
               학기 선택
@@ -127,8 +161,12 @@ export default function UnitSettingModal({ classRoom, allUnits, onSave, onClose 
                   onClick={() => {
                     setSemester(s)
                     setFromUnit(1)
-                    const targetUnits = s === 1 ? sem1Units : s === 2 ? sem2Units : gradeSubjectUnits;
-                    setToUnit(targetUnits.length > 0 ? Math.max(...targetUnits.map(u => u.unitNumber)) : 4)
+                    if (singleSubject) {
+                      const targetUnits = s === 1 ? sem1Units : s === 2 ? sem2Units : gradeSubjectUnits;
+                      setToUnit(targetUnits.length > 0 ? Math.max(...targetUnits.map(u => u.unitNumber)) : 4)
+                    } else {
+                      setToUnit(99)
+                    }
                   }}
                   style={{
                     flex: 1, padding: '10px 0', borderRadius: 10, border: '2px solid',
@@ -146,7 +184,7 @@ export default function UnitSettingModal({ classRoom, allUnits, onSave, onClose 
         )}
 
         {/* 5. 단원 범위 선택 */}
-        {subject !== '전체' && semester !== null && (
+        {singleSubject && semester !== null && (
           <div style={{ marginBottom: 20 }}>
             <label style={{ fontSize: 14, fontWeight: 700, color: '#333', display: 'block', marginBottom: 8 }}>
               단원 범위

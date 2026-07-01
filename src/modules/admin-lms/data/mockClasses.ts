@@ -12,13 +12,13 @@ export const MOCK_LICENSE: LicenseInfo = {
 }
 
 export const MOCK_CLASSES: ClassRoom[] = [
-  { id: 'cls-1', grade: 1, name: '1학년 1반', studentCount: 6, teacherName: '김지영', unitSetting: { classId: 'cls-1', grade: 1, subject: '전체', semester: null, fromUnit: 1, toUnit: 8, label: '전체 허용' } },
+  { id: 'cls-1', grade: 1, name: '1학년 1반', studentCount: 6, teacherName: '김지영', unitSetting: { classId: 'cls-1', grade: 1, subjects: ['전체'], semester: null, fromUnit: 1, toUnit: 8, label: '전체 허용' } },
   { id: 'cls-2', grade: 1, name: '1학년 2반', studentCount: 5, teacherName: '박현수' },
-  { id: 'cls-3', grade: 2, name: '2학년 1반', studentCount: 7, teacherName: '이서연', unitSetting: { classId: 'cls-3', grade: 2, subject: '국어', semester: 1, fromUnit: 1, toUnit: 4, label: '국어 1학기 1~4단원' } },
+  { id: 'cls-3', grade: 2, name: '2학년 1반', studentCount: 7, teacherName: '이서연', unitSetting: { classId: 'cls-3', grade: 2, subjects: ['국어'], semester: 1, fromUnit: 1, toUnit: 4, label: '국어 1학기 1~4단원' } },
   { id: 'cls-4', grade: 2, name: '2학년 2반', studentCount: 6, teacherName: '최민정' },
-  { id: 'cls-5', grade: 3, name: '3학년 1반', studentCount: 8, teacherName: '김지영', unitSetting: { classId: 'cls-5', grade: 3, subject: '국어', semester: 2, fromUnit: 1, toUnit: 5, label: '국어 2학기 1~5단원' } },
+  { id: 'cls-5', grade: 3, name: '3학년 1반', studentCount: 8, teacherName: '김지영', unitSetting: { classId: 'cls-5', grade: 3, subjects: ['국어'], semester: 2, fromUnit: 1, toUnit: 5, label: '국어 2학기 1~5단원' } },
   { id: 'cls-6', grade: 4, name: '4학년 1반', studentCount: 5, teacherName: '박현수' },
-  { id: 'cls-7', grade: 5, name: '5학년 1반', studentCount: 6, teacherName: '이서연', unitSetting: { classId: 'cls-7', grade: 5, subject: '수학', semester: null, fromUnit: 1, toUnit: 6, label: '수학 전체 허용' } },
+  { id: 'cls-7', grade: 5, name: '5학년 1반', studentCount: 6, teacherName: '이서연', unitSetting: { classId: 'cls-7', grade: 5, subjects: ['국어', '영어', '수학', '사회', '과학'], semester: 1, fromUnit: 1, toUnit: 99, label: '국어·영어·수학·사회·과학 1학기 전체' } },
   { id: 'cls-8', grade: 6, name: '6학년 1반', studentCount: 5, teacherName: '최민정' },
 ]
 

@@ -26,7 +26,7 @@ export interface ClassRoom {
 export interface UnitSetting {
   classId: string
   grade: number
-  subject: string          // '전체' | '국어' | '수학' | '사회' | '과학' | '영어'
+  subjects: string[]       // '전체' 또는 '국어', '수학' 등 복수 선택 가능
   semester: 1 | 2 | null  // null = 전체 허용
   fromUnit: number         // 시작 단원
   toUnit: number           // 끝 단원

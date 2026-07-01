@@ -116,8 +116,8 @@ export default function StudentUnitSelectPage() {
       const data = await getSubjectsByGradeAndSemester(selectedGrade.value, selectedSemester.value)
       
       let filteredData = data
-      if (classUnitSetting && classUnitSetting.subject !== '전체') {
-        filteredData = data.filter(s => s.name === classUnitSetting.subject)
+      if (classUnitSetting && !classUnitSetting.subjects.includes('전체')) {
+        filteredData = data.filter(s => classUnitSetting.subjects.includes(s.name))
       }
       
       setSubjects(filteredData)
@@ -139,7 +139,7 @@ export default function StudentUnitSelectPage() {
       )
       
       let filteredData = data
-      if (classUnitSetting && classUnitSetting.subject !== '전체') {
+      if (classUnitSetting && !classUnitSetting.subjects.includes('전체')) {
         filteredData = data.filter(u => u.unitNumber >= classUnitSetting.fromUnit && u.unitNumber <= classUnitSetting.toUnit)
       }
       
