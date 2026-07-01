@@ -5,6 +5,12 @@ import type { GeneratedComicScript } from './studentScriptService';
 import type { ComicProjectData } from '../components/editor/utils/comicStorage';
 import { findCachedComicBackground, saveComicBackgroundToCache } from './comicBackgroundCacheService';
 import type { ComicBackgroundCacheParams } from './comicBackgroundCacheService';
+import {
+  getSubjectBackgroundRule,
+  getCutSceneGuide,
+  COMMON_ART_STYLE_HEADER,
+  COMMON_NEGATIVE_RULES
+} from './comicBackgroundRuleService';
 
 export interface ComicGenerationState {
   status: 'idle' | 'generating' | 'success' | 'error';
@@ -61,9 +67,12 @@ function makeFallbackSceneBible(projectData: ComicProjectData): StorySceneBible 
   };
 }
 
-function makeFallbackVisualPrompt(cut: any, projectData: ComicProjectData): string {
+function makeFallbackVisualPrompt(cut: any, projectData: ComicProjectData, cutNumber: number): string {
   const sceneDesc = cut.sceneDescription || (cut as any).scene || '';
-  return `Educational background scene for elementary school students. Subject: ${projectData.subject}. Topic: ${projectData.topicTitle}. Scene: ${sceneDesc}. Bright, colorful, no people, no characters, no text, background only.`;
+  const rule = getSubjectBackgroundRule(projectData.subject, projectData.topicTitle);
+  const cutGuide = getCutSceneGuide(rule, cutNumber);
+  
+  return `${COMMON_ART_STYLE_HEADER}\nSubject: ${projectData.subject}. Topic: ${projectData.topicTitle}.\nScene: ${sceneDesc}.\nCut Guide: ${cutGuide}`;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -86,6 +95,9 @@ const generateSceneBibleAndVisualPrompt = async (
 
   const fullScriptContext = projectData.script?.cuts?.map(c => `Cut ${c.cutNumber}: ${c.sceneDescription || (c as any).scene || ''}`).join('\n') || 'None';
 
+  const subjectRule = getSubjectBackgroundRule(projectData.subject, projectData.topicTitle);
+  const cutGuide = getCutSceneGuide(subjectRule, cutNumber);
+
   const prompt = `You are a professional comic director for an educational comic.
 Analyze the story and generate both a scene bible AND a visual prompt for one panel.
 
@@ -101,6 +113,13 @@ Current Cut Number: ${cutNumber}
 Current Cut Learning Role: ${getLearningRoleForCut(cutNumber)}
 Current Panel Scene: ${cut.sceneDescription || (cut as any).scene || 'None'}
 
+=== SUBJECT-SPECIFIC STYLE GUIDE ===
+Art Style: ${subjectRule.artStyle}
+Color Palette: ${subjectRule.colorPalette}
+Cut ${cutNumber} Scene Guide: ${cutGuide}
+Allowed Visual Symbols: ${subjectRule.visualSymbols}
+Additional Forbidden: ${subjectRule.forbiddenElements}
+
 Output ONLY valid JSON with NO markdown:
 {
   "sceneBible": {
@@ -115,7 +134,7 @@ Output ONLY valid JSON with NO markdown:
     "visualMood": "string",
     "forbiddenLocations": ["string"]
   },
-  "visualPrompt": "A concise English background-only description for an image generation model. NO people, NO characters, NO text, NO speech bubbles. Focus on environment and objects only."
+  "visualPrompt": "A concise English background-only description for an image generation model. Include visual symbols from the style guide if applicable. NO people, characters, or text."
 }`;
 
   try {
@@ -141,7 +160,7 @@ Output ONLY valid JSON with NO markdown:
     // Gemini 실패해도 fallback으로 이미지 생성까지 진행
     return {
       sceneBible: makeFallbackSceneBible(projectData),
-      visualPrompt: makeFallbackVisualPrompt(cut, projectData),
+      visualPrompt: makeFallbackVisualPrompt(cut, projectData, cutNumber),
     };
   }
 };
@@ -209,15 +228,25 @@ const buildSingleCutBackgroundPrompt = (params: SingleCutPromptParams): string =
   const cutSpecificInstruction = isFirstCut 
     ? `- This is Cut 1. It creates the opening scene.
 - It provides the "visual style baseline" (color, clarity, tone) for the entire comic.
-- Do NOT assume that subsequent cuts must repeat this exact background.`
+- Set the primary environment according to the Cut 1 Scene Guide.`
     : `- Maintain the same illustration style, color harmony, clarity, and educational tone as cut 1.
-- CRITICAL: "Maintain style" DOES NOT mean "repeat the background".
-- You MUST change the location, layout, background composition, and visual objects based on this cut's specific script and learning concept.
-- If cut 1 was a forest, mountain path, or entrance, DO NOT repeat those in this cut unless the script explicitly says they are still there. Repeating the same scene composition as cut 1 is a FAILURE.`;
+- Allow location continuity if the script dictates that the scene occurs in the same place. Do NOT unconditionally change the location for every cut.
+- Change the framing, angle, or focus to highlight this cut's specific concept, even if the location is the same.`;
 
-  return `A high quality, bright, and colorful educational scene background for elementary school students.
-FINAL IMAGE MUST BE A "BACKGROUND ONLY" IMAGE READY FOR CHARACTER AND SPEECH BUBBLE OVERLAYS.
+  const subjectRule = getSubjectBackgroundRule(params.subject, params.topicTitle);
+  const cutGuide = getCutSceneGuide(subjectRule, params.cutNo);
 
+  return `${COMMON_ART_STYLE_HEADER}
+
+=== SUBJECT-SPECIFIC STYLE GUIDE ===
+Subject: ${params.subject}
+Art Style: ${subjectRule.artStyle}
+Color Palette: ${subjectRule.colorPalette}
+Cut ${params.cutNo} Scene Guide: ${cutGuide}
+Allowed Visual Symbols: ${subjectRule.visualSymbols}
+Additional Forbidden: ${subjectRule.forbiddenElements}
+
+=== STORY CONTEXT ===
 - Full Story Flow:
 ${params.fullStoryFlow}
 
@@ -234,20 +263,13 @@ ${params.fullStoryFlow}
   ${cutSpecificInstruction}
   User Edit Request: ${params.editedUserDescription || 'None'}
 
-- Visual Difference From Cut 1:
-  - Do not repeat the same background composition from cut 1.
-  - Keep only the visual style consistent, not the location or scene content.
-  - Each cut must have a distinct educational background based on the current script.
-  - The background MUST include visual cues that help explain the learning concept.
-  - If the current cut explains a different concept, change the environment, objects, map-like cues, terrain features, or visual metaphors accordingly.
-
 - Background Only Prompt:
   ${params.visualPrompt}
 
-- Hard Negative Rules (CRITICAL):
-  no people, no characters, no human figures, no animals as characters, no text, no words, no letters, no speech bubbles, no comic panels, no comic page layout, no posters, no worksheets, no framed images, background only, full bleed
+=== HARD NEGATIVE RULES ===
+${COMMON_NEGATIVE_RULES}
 
-한국어 추가 지침: 전체 1~6컷의 대본 흐름을 먼저 파악하고 현재 컷의 역할과 교과 개념에 맞는 배경만 생성하세요. 오직 하나의 배경 장면만 그려 주세요. "스타일 유지"는 색감, 선명도, 교육용 일러스트 톤의 유지를 의미하며, 배경 내용이나 장소의 반복을 절대 의미하지 않습니다. 2~6컷에서 1컷과 같은 장소/구도/오브젝트를 무의미하게 반복하면 실패입니다. 배경에는 학습 개념을 돕는 시각 단서가 포함되어야 합니다. 사람, 캐릭터, 글자, 말풍선, 만화 패널은 절대 그리지 마세요. 캐릭터와 말풍선을 올릴 수 있는 '배경 전용 이미지'여야 합니다.`;
+한국어 추가 지침: 전체 1~6컷의 대본 흐름을 먼저 파악하고 현재 컷의 역할과 교과 개념에 맞는 배경만 생성하세요. 오직 하나의 배경 장면만 그려 주세요. 사람, 캐릭터, 동물 캐릭터, 글자, 말풍선, 만화 패널은 절대 그리지 마세요. 대본상 장소가 이어지면 배경의 연속성을 허용하되 구도를 조금씩 다르게 연출하세요.`;
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
