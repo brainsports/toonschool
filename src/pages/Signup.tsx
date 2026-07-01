@@ -105,13 +105,13 @@ export default function Signup() {
 
           {/* Catchphrase */}
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-slate-900 leading-[1.3] tracking-tight mb-6 z-30 shrink-0">
-            공부하지 말고,<br />
-            <span className="text-[#ff2778]">공부를 만들자.</span>
+            선생님 계정을 만들고,<br />
+            <span className="text-[#ff2778]">승인 후 학습만화를 시작해요.</span>
           </h1>
           
           {/* Subtitle */}
           <p className="text-lg md:text-xl text-slate-600 font-medium z-30 shrink-0 mb-8">
-            선생님과 학생이 함께 만드는 AI 학습만화 플랫폼
+            학생 계정은 선생님 페이지에서 쉽게 추가할 수 있어요.
           </p>
 
           {/* Hero Image */}

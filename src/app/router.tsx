@@ -52,9 +52,9 @@ export default function AppRouter() {
       <Route path="/pricing" element={<PricingPage />} />
       <Route path="/faq" element={<FAQPage />} />
       <Route path="/login" element={<Login />} />
+      <Route path="/signup" element={<Signup />} />
       <Route element={<Layout />}>
         <Route path="dashboard" element={<Dashboard />} />
-        <Route path="signup" element={<Signup />} />
         <Route path="mypage" element={<MyPage />} />
         <Route path="super-admin" element={<SuperAdminLayout />}>
           <Route index element={<SuperAdminDashboard />} />
