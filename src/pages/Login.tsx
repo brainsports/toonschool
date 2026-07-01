@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../shared/lib/supabase'
 import { useAuth } from '../shared/contexts/AuthContext'
 import { Eye, EyeOff } from 'lucide-react'
@@ -11,6 +11,7 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { fetchProfile } = useAuth()
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -32,6 +33,25 @@ export default function Login() {
         const profile = await fetchProfile(data.user.id)
         
         if (profile) {
+          const redirectUrl = searchParams.get('redirect')
+          
+          if (redirectUrl && redirectUrl.startsWith('/admin/lms')) {
+            const allowedRoles = ['teacher', 'center_admin', 'middle_admin', 'super_admin']
+            if (allowedRoles.includes(profile.role)) {
+              navigate(redirectUrl)
+              return
+            } else {
+              setError('관리 LMS는 선생님 및 관리자 계정만 이용할 수 있습니다.')
+              await supabase.auth.signOut()
+              return
+            }
+          }
+
+          if (redirectUrl) {
+            navigate(redirectUrl)
+            return
+          }
+
           switch (profile.role) {
             case 'super_admin':
               navigate('/super-admin')

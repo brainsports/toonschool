@@ -1,7 +1,9 @@
 // ──────────────────────────────────────────────
 // 관리 LMS 전체 레이아웃 - 1단 상단 탭 메뉴
 // ──────────────────────────────────────────────
-import { NavLink, Outlet, Link } from 'react-router-dom'
+import { useEffect } from 'react'
+import { NavLink, Outlet, Link, useNavigate, useLocation } from 'react-router-dom'
+import { useAuth } from '../../../shared/contexts/AuthContext'
 
 const MENU_ITEMS = [
   { label: '학급관리', path: '/admin/lms/classes' },
@@ -12,6 +14,33 @@ const MENU_ITEMS = [
 ]
 
 export default function AdminLMSLayout() {
+  const { profile, loading, user } = useAuth()
+  const navigate = useNavigate()
+  const location = useLocation()
+
+  useEffect(() => {
+    if (!loading) {
+      if (!user || !profile) {
+        navigate(`/login?redirect=${encodeURIComponent(location.pathname)}`, { replace: true })
+      } else {
+        const allowedRoles = ['teacher', 'center_admin', 'middle_admin', 'super_admin']
+        if (!allowedRoles.includes(profile.role)) {
+          alert('관리 LMS는 선생님 및 관리자 계정만 이용할 수 있습니다.')
+          navigate('/', { replace: true })
+        }
+      }
+    }
+  }, [loading, user, profile, navigate, location.pathname])
+
+  if (loading || !user || !profile) {
+    return null
+  }
+
+  const allowedRoles = ['teacher', 'center_admin', 'middle_admin', 'super_admin']
+  if (!allowedRoles.includes(profile.role)) {
+    return null
+  }
+
   return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #f0f4ff 0%, #fdf0f8 50%, #f0fdf4 100%)' }}>
       {/* 상단 헤더 */}
