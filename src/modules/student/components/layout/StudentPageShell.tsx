@@ -103,7 +103,7 @@ export default function StudentPageShell({
             {/* 중앙: 툰스쿨 마크 & 숏컷 */}
             <div className="hidden md:flex items-center gap-2 bg-white/40 px-5 py-2 rounded-2xl border border-white/30 shadow-sm">
               <button 
-                onClick={() => navigate('/student/my')}
+                onClick={() => navigate('/')}
                 className="flex items-center gap-1 text-[#2d1f35] font-jua text-sm hover:scale-105 transition-transform"
               >
                 <Home className="w-4 h-4" />
@@ -111,7 +111,7 @@ export default function StudentPageShell({
               </button>
               <div className="w-px h-4 bg-white/50 mx-2" />
               <button 
-                onClick={() => navigate('/student/my')}
+                onClick={() => navigate('/student/mypage')}
                 className="text-[#2d1f35] font-jua text-sm hover:scale-105 transition-transform"
               >
                 🌌 내작품
