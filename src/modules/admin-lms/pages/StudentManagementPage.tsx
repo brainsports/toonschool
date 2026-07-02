@@ -2,6 +2,7 @@
 // 학생관리 페이지
 // ──────────────────────────────────────────────
 import { useState, useEffect } from 'react'
+import { supabase } from '../../../shared/lib/supabase'
 import { useAuth } from '../../../shared/contexts/AuthContext'
 import type { Student, ClassRoom, LicenseInfo } from '../types'
 import { deleteStudents, createStudent, moveStudentsToClass, fetchStudentsByCenterAndGrade } from '../services/studentService'
@@ -13,12 +14,13 @@ import ConfirmModal from '../components/ConfirmModal'
 const GRADES = [1, 2, 3, 4, 5, 6]
 
 export default function StudentManagementPage() {
-  const { profile } = useAuth()
+  const { profile, user } = useAuth()
   const [license, setLicense] = useState<LicenseInfo | null>(null)
   const [allClasses, setAllClasses] = useState<ClassRoom[]>([])
   const [students, setStudents] = useState<Student[]>([])
   const [selectedGrade, setSelectedGrade] = useState(5)
   const [selectedClassId, setSelectedClassId] = useState('')
+  const [actualCenterId, setActualCenterId] = useState<string | null>(null)
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set())
   const [showCreate, setShowCreate] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState(false)
@@ -50,15 +52,34 @@ export default function StudentManagementPage() {
   }, [selectedGrade])
 
   useEffect(() => {
-    if (!profile?.center_id) return
-    fetchStudentsByCenterAndGrade(profile.center_id, selectedGrade).then(data => {
+    async function resolveCenterId() {
+      if (profile?.center_id) {
+        console.log('[StudentManagementPage] profile.center_id is present:', profile.center_id)
+        setActualCenterId(profile.center_id)
+      } else if (user?.email) {
+        console.log('[StudentManagementPage] profile.center_id is missing. Fetching by email:', user.email)
+        const { data, error } = await supabase.from('profiles').select('center_id').eq('email', user.email).single()
+        if (data?.center_id) {
+          console.log('[StudentManagementPage] Fetched center_id by email:', data.center_id)
+          setActualCenterId(data.center_id)
+        } else {
+          console.log('[StudentManagementPage] Failed to fetch center_id by email:', error)
+        }
+      }
+    }
+    resolveCenterId()
+  }, [profile, user])
+
+  useEffect(() => {
+    if (!actualCenterId) return
+    fetchStudentsByCenterAndGrade(actualCenterId, selectedGrade).then(data => {
       if (selectedClassId) {
         setStudents(data.filter(s => s.classId === selectedClassId))
       } else {
         setStudents(data)
       }
     })
-  }, [selectedGrade, selectedClassId, profile?.center_id])
+  }, [selectedGrade, selectedClassId, actualCenterId])
 
   const gradeClasses = allClasses.filter(c => c.grade === selectedGrade)
 

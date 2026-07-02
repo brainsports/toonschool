@@ -15,6 +15,7 @@ export async function fetchStudentsByGrade(grade: number): Promise<Student[]> {
 }
 
 export async function fetchStudentsByCenterAndGrade(centerId: string, grade: number): Promise<Student[]> {
+  console.log('[fetchStudentsByCenterAndGrade] input -> centerId:', centerId, 'grade:', grade)
   try {
     const { data, error } = await supabase
       .from('students')
@@ -22,6 +23,8 @@ export async function fetchStudentsByCenterAndGrade(centerId: string, grade: num
       .eq('center_id', centerId)
       .eq('grade', `${grade}학년`)
       .eq('status', 'active')
+
+    console.log('[fetchStudentsByCenterAndGrade] Supabase query result -> data:', data, 'error:', error)
 
     if (error) throw error
 
