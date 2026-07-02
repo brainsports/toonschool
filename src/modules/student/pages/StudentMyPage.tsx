@@ -5,7 +5,6 @@ import {
   Bell, MessageSquare, ChevronRight,
   CheckCircle2, Play
 } from 'lucide-react'
-import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts'
 import StudentPageShell from '../components/layout/StudentPageShell'
 import WorkCard from '../components/mypage/WorkCard'
 import type { MyWork } from '../components/mypage/WorkCard'
@@ -178,15 +177,14 @@ export default function StudentMyPage() {
   }, [user, profile]);
 
   const recommendedLearning = getTodayRecommendedLearning()
-  // Chart data
-  const growthData = [
-    { name: '5주 전', score: 20 },
-    { name: '4주 전', score: 45 },
-    { name: '3주 전', score: 60 },
-    { name: '2주 전', score: 75 },
-    { name: '지난 주', score: 85 },
-    { name: '이번 주', score: 100 },
-  ]
+  // Evaluation areas data
+  const growthAreas = [
+    { label: '단원 이해력', score: 19, maxScore: 20, color: 'bg-pink-500', bg: 'bg-pink-50' },
+    { label: '요약·정리력', score: 18, maxScore: 20, color: 'bg-purple-500', bg: 'bg-purple-50' },
+    { label: '이야기 표현력', score: 17, maxScore: 20, color: 'bg-blue-500', bg: 'bg-blue-50' },
+    { label: '문제해결·퀴즈 활용력', score: 19, maxScore: 20, color: 'bg-emerald-500', bg: 'bg-emerald-50' },
+    { label: '성장·공유 태도', score: 20, maxScore: 20, color: 'bg-yellow-400', bg: 'bg-yellow-50' },
+  ];
 
   return (
     <StudentPageShell bgVariant="pastel" maxWidth="2xl">
@@ -255,22 +253,24 @@ export default function StudentMyPage() {
 
               {/* Chart Column */}
               <div className="bg-white rounded-[1.5rem] p-6 border border-slate-100 shadow-sm flex flex-col justify-between min-h-[160px]">
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center justify-between mb-2">
                   <h3 className="font-bold text-slate-800">성장 기록</h3>
-                  <button className="text-xs font-medium text-slate-500 hover:bg-slate-50 px-2 py-1 rounded-md flex items-center gap-1">
-                    최근 6주 <ChevronRight className="w-3 h-3" />
-                  </button>
                 </div>
-                <div className="h-28 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={growthData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} />
-                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} />
-                      <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                      <Line type="monotone" dataKey="score" stroke="#10b981" strokeWidth={3} dot={{ r: 4, fill: '#10b981', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} />
-                    </LineChart>
-                  </ResponsiveContainer>
+                <div className="w-full flex flex-col gap-3 mt-1">
+                  {growthAreas.map((area, idx) => (
+                    <div key={idx} className="flex flex-col gap-1.5">
+                      <div className="flex items-center justify-between text-xs font-bold">
+                        <span className="text-slate-700">{area.label}</span>
+                        <span className="text-slate-700">{area.score}<span className="text-slate-400 font-medium"> / {area.maxScore}</span></span>
+                      </div>
+                      <div className={`w-full h-2.5 rounded-full ${area.bg}`}>
+                        <div 
+                          className={`h-full rounded-full ${area.color}`} 
+                          style={{ width: `${(area.score / area.maxScore) * 100}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
