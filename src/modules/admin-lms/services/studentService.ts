@@ -4,6 +4,7 @@
 // ──────────────────────────────────────────────
 import type { Student } from '../types'
 import { MOCK_STUDENTS } from '../data/mockStudents'
+import { supabase } from '../../../shared/lib/supabase'
 
 export async function fetchStudentsByClass(classId: string): Promise<Student[]> {
   return Promise.resolve(MOCK_STUDENTS.filter(s => s.classId === classId))
@@ -11,6 +12,34 @@ export async function fetchStudentsByClass(classId: string): Promise<Student[]> 
 
 export async function fetchStudentsByGrade(grade: number): Promise<Student[]> {
   return Promise.resolve(MOCK_STUDENTS.filter(s => s.grade === grade))
+}
+
+export async function fetchStudentsByCenterAndGrade(centerId: string, grade: number): Promise<Student[]> {
+  try {
+    const { data, error } = await supabase
+      .from('students')
+      .select('*')
+      .eq('center_id', centerId)
+      .eq('grade', `${grade}학년`)
+      .eq('status', 'active')
+
+    if (error) throw error
+
+    return (data || []).map(item => ({
+      id: item.id,
+      name: item.name,
+      loginId: item.login_id,
+      password: item.password || '******',
+      classId: item.class_id || '',
+      className: item.class_name || '',
+      grade: parseInt(item.grade) || grade,
+      number: item.number || 0,
+      createdAt: item.created_at || new Date().toISOString(),
+    }))
+  } catch (err) {
+    console.error('Failed to fetch students by center and grade:', err)
+    return []
+  }
 }
 
 export async function createStudent(data: Omit<Student, 'id' | 'createdAt'>): Promise<Student> {

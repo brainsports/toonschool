@@ -2,8 +2,9 @@
 // 학생관리 페이지
 // ──────────────────────────────────────────────
 import { useState, useEffect } from 'react'
+import { useAuth } from '../../../shared/contexts/AuthContext'
 import type { Student, ClassRoom, LicenseInfo } from '../types'
-import { fetchStudentsByClass, deleteStudents, createStudent, moveStudentsToClass } from '../services/studentService'
+import { deleteStudents, createStudent, moveStudentsToClass, fetchStudentsByCenterAndGrade } from '../services/studentService'
 import { fetchClasses, fetchLicenseInfo } from '../services/classService'
 import LicenseCard from '../components/LicenseCard'
 import CreateStudentModal from '../components/CreateStudentModal'
@@ -12,6 +13,7 @@ import ConfirmModal from '../components/ConfirmModal'
 const GRADES = [1, 2, 3, 4, 5, 6]
 
 export default function StudentManagementPage() {
+  const { profile } = useAuth()
   const [license, setLicense] = useState<LicenseInfo | null>(null)
   const [allClasses, setAllClasses] = useState<ClassRoom[]>([])
   const [students, setStudents] = useState<Student[]>([])
@@ -34,21 +36,20 @@ export default function StudentManagementPage() {
   }, [])
 
   useEffect(() => {
-    const gradeClasses = allClasses.filter(c => c.grade === selectedGrade)
-    if (gradeClasses.length > 0) {
-      const firstId = gradeClasses[0].id
-      setSelectedClassId(firstId)
-    } else {
-      setSelectedClassId('')
-      setStudents([])
-    }
-  }, [selectedGrade, allClasses])
+    // 학년 탭 변경 시 선택 학급 초기화 ('전체' 보기)
+    setSelectedClassId('')
+  }, [selectedGrade])
 
   useEffect(() => {
-    if (selectedClassId) {
-      fetchStudentsByClass(selectedClassId).then(setStudents)
-    }
-  }, [selectedClassId])
+    if (!profile?.center_id) return
+    fetchStudentsByCenterAndGrade(profile.center_id, selectedGrade).then(data => {
+      if (selectedClassId) {
+        setStudents(data.filter(s => s.classId === selectedClassId))
+      } else {
+        setStudents(data)
+      }
+    })
+  }, [selectedGrade, selectedClassId, profile?.center_id])
 
   const gradeClasses = allClasses.filter(c => c.grade === selectedGrade)
 
@@ -66,7 +67,7 @@ export default function StudentManagementPage() {
 
   const handleCreate = async (data: Parameters<typeof createStudent>[0]) => {
     const newStudent = await createStudent(data)
-    if (newStudent.classId === selectedClassId) {
+    if (!selectedClassId || newStudent.classId === selectedClassId) {
       setStudents(prev => [...prev, newStudent])
     }
     showToast(`${newStudent.name} 학생이 생성되었습니다.`)
@@ -127,6 +128,7 @@ export default function StudentManagementPage() {
           padding: '8px 16px', borderRadius: 10, border: '1.5px solid #e5e7eb',
           fontSize: 14, cursor: 'pointer', background: 'white',
         }}>
+          <option value="">전체</option>
           {gradeClasses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
         <span style={{ fontSize: 13, color: '#aaa' }}>총 {students.length}명</span>
