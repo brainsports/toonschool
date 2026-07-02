@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import Layout from '../shared/components/Layout'
 import Dashboard from '../pages/Dashboard'
 import HomePage from '../pages/HomePage'
@@ -33,7 +33,7 @@ import StudentQuizMakerPage from '../modules/student/pages/StudentQuizMakerPage'
 import StudentBackCoverPage from '../modules/student/pages/StudentBackCoverPage'
 import StudentComicViewerPage from '../modules/student/pages/StudentComicViewerPage'
 import SharedComicViewerPage from '../modules/student/pages/SharedComicViewerPage'
-import StudentTempMyPage from '../modules/student/pages/StudentTempMyPage'
+import StudentMyPage from '../modules/student/pages/StudentMyPage'
 
 import AIContentPage from '../pages/AIContentPage'
 import FlippedLearningPage from '../pages/FlippedLearningPage'
@@ -95,7 +95,8 @@ export default function AppRouter() {
       <Route path="/student/quiz/intro" element={<StudentQuizMakerPage />} />
       <Route path="/student/back-cover" element={<StudentBackCoverPage />} />
       <Route path="/student/comic/read" element={<StudentComicViewerPage />} />
-      <Route path="/student/mypage" element={<StudentTempMyPage />} />
+      <Route path="/student/mypage" element={<StudentMyPage />} />
+      <Route path="/student/my" element={<Navigate to="/student/mypage" replace />} />
       <Route path="/book/:slug" element={<SharedComicViewerPage />} />
 
       {/* 관리 LMS 라우트 */}

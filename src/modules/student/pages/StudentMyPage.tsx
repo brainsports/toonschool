@@ -1,35 +1,15 @@
-import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { 
-  Home, BookOpen, Star, Trophy, Calendar, 
-  Settings, Bell, MessageSquare, BarChart, ChevronRight,
+  BookOpen, Star, Trophy, Calendar, 
+  Bell, MessageSquare, ChevronRight,
   CheckCircle2, Play
 } from 'lucide-react'
-import { mockStudentProfile } from '../data/studentMockData'
-import { useAuth } from '../../../shared/contexts/AuthContext'
-import { supabase } from '../../../shared/lib/supabase'
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts'
+import StudentPageShell from '../components/layout/StudentPageShell'
 
 export default function StudentMyPage() {
   const navigate = useNavigate()
-  const { user, profile: authProfile } = useAuth()
-  const [studentData, setStudentData] = useState<any>(null)
 
-  useEffect(() => {
-    if (user?.id && authProfile?.role === 'student') {
-      supabase.from('students').select('*').eq('id', user.id).single().then(({ data, error }: { data: any, error: any }) => {
-        if (!error && data) {
-          setStudentData(data)
-        }
-      })
-    }
-  }, [user?.id, authProfile?.role])
-
-  const profile = user && authProfile?.role === 'student' ? {
-    ...mockStudentProfile,
-    name: studentData?.name || authProfile?.name || '김토운',
-    grade: studentData?.grade ? (studentData.grade.includes('초') ? studentData.grade : `초${studentData.grade.replace(/[^0-9]/g, '')}`) : '4학년',
-  } : { ...mockStudentProfile, name: '김토운', grade: '4학년' }
 
   // Chart data
   const growthData = [
@@ -42,96 +22,8 @@ export default function StudentMyPage() {
   ]
 
   return (
-    <div className="flex min-h-screen bg-[#F8F9FA] font-sans text-slate-800">
-      
-      {/* 1. 왼쪽 사이드바 */}
-      <aside className="w-[240px] bg-white border-r border-slate-100 flex flex-col justify-between shrink-0 h-screen sticky top-0 overflow-y-auto hidden md:flex">
-        <div>
-          {/* Logo */}
-          <div className="px-6 py-8 flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-pink-500 flex items-center justify-center rotate-3">
-              <Star className="w-5 h-5 text-white fill-white" />
-            </div>
-            <span className="text-xl font-bold text-pink-600 tracking-tight">ToonSchool</span>
-          </div>
-
-          {/* Navigation */}
-          <nav className="px-4 space-y-2 text-[15px] font-medium text-slate-600">
-            <button className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl bg-pink-500 text-white shadow-md shadow-pink-200 transition-all">
-              <Home className="w-5 h-5" />
-              <span>홈</span>
-            </button>
-            <button onClick={() => navigate('/student/today')} className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-slate-50 transition-all">
-              <BookOpen className="w-5 h-5 text-slate-400" />
-              <span>오늘의 학습</span>
-            </button>
-            <button onClick={() => navigate('/student/mypage')} className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-slate-50 transition-all">
-              <Trophy className="w-5 h-5 text-slate-400" />
-              <span>내 작품</span>
-            </button>
-            <button className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-slate-50 transition-all">
-              <BarChart className="w-5 h-5 text-slate-400" />
-              <span>성장 기록</span>
-            </button>
-            <button onClick={() => navigate('/student/attendance')} className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-slate-50 transition-all">
-              <Calendar className="w-5 h-5 text-slate-400" />
-              <span>출석 기록</span>
-            </button>
-            <button className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-slate-50 transition-all">
-              <MessageSquare className="w-5 h-5 text-slate-400" />
-              <span>선생님 말씀</span>
-            </button>
-            <button className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-slate-50 transition-all">
-              <Bell className="w-5 h-5 text-slate-400" />
-              <span>알림함</span>
-            </button>
-            <button className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-slate-50 transition-all">
-              <Settings className="w-5 h-5 text-slate-400" />
-              <span>설정</span>
-            </button>
-          </nav>
-        </div>
-
-        {/* Character Illustration */}
-        <div className="px-4 pb-8 pt-4">
-          <div className="bg-pink-50 rounded-2xl p-4 flex flex-col items-center relative overflow-hidden">
-            <div className="absolute top-4 bg-white px-3 py-1.5 rounded-2xl rounded-bl-none text-xs font-bold text-slate-700 shadow-sm whitespace-nowrap z-10 border border-slate-100">
-              오늘도<br/>멋진 하루!
-            </div>
-            <img 
-              src="/images/toonschool/characters/official/doyoon-boy.png" 
-              alt="Character" 
-              className="w-32 h-auto object-contain mt-8 transform hover:scale-105 transition-transform"
-            />
-          </div>
-        </div>
-      </aside>
-
-      {/* 2. 메인 컨텐츠 영역 */}
-      <main className="flex-1 flex flex-col min-w-0">
-        {/* Header */}
-        <header className="h-20 bg-white/80 backdrop-blur-sm border-b border-slate-100 flex items-center justify-between px-8 sticky top-0 z-20 shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-pink-50 text-pink-500 rounded-xl">
-              <Home className="w-5 h-5" />
-            </div>
-            <h1 className="text-xl font-bold text-slate-800">학생 마이페이지</h1>
-          </div>
-          <div className="flex items-center gap-4 cursor-pointer hover:bg-slate-50 px-3 py-1.5 rounded-full transition-colors" onClick={() => navigate('/student/my')}>
-            <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center text-xl overflow-hidden border-2 border-white shadow-sm">
-              👦🏻
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-slate-800">{profile.name}</span>
-              <span className="text-xs font-bold text-pink-500 bg-pink-50 px-2 py-0.5 rounded-full">
-                {profile.grade}
-              </span>
-            </div>
-          </div>
-        </header>
-
-        {/* Body */}
-        <div className="p-8 max-w-[1400px] mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-6 overflow-y-auto">
+    <StudentPageShell bgVariant="pastel" maxWidth="2xl">
+      <div className="py-6 px-4 md:px-8 max-w-[1400px] mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-6 overflow-y-auto">
           
           {/* Left Column (8/12) */}
           <div className="lg:col-span-8 flex flex-col gap-6">
@@ -427,8 +319,6 @@ export default function StudentMyPage() {
           </div>
 
         </div>
-      </main>
-
-    </div>
+    </StudentPageShell>
   )
 }
