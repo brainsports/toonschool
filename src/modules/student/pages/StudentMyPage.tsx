@@ -129,16 +129,21 @@ const getTodayRecommendedLearning = (): RecommendedLearning => {
 
 export default function StudentMyPage() {
   const navigate = useNavigate()
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const [isAllWorksModalOpen, setIsAllWorksModalOpen] = useState(false);
   const [myWorks, setMyWorks] = useState<MyWork[]>([]);
   const [isLoadingWorks, setIsLoadingWorks] = useState(true);
 
   useEffect(() => {
     async function loadWorks() {
-      if (user?.id) {
+      if (user?.id && profile?.id) {
         setIsLoadingWorks(true);
-        const works = await getStudentWorksByStudentId(user.id);
+        const works = await getStudentWorksByStudentId(profile.id, user.id);
+        setMyWorks(works);
+        setIsLoadingWorks(false);
+      } else if (user?.id) {
+        setIsLoadingWorks(true);
+        const works = await getStudentWorksByStudentId(user.id, user.id);
         setMyWorks(works);
         setIsLoadingWorks(false);
       } else {
@@ -146,7 +151,7 @@ export default function StudentMyPage() {
       }
     }
     loadWorks();
-  }, [user]);
+  }, [user, profile]);
 
   const recommendedLearning = getTodayRecommendedLearning()
   // Chart data

@@ -1,13 +1,13 @@
 import { supabase } from '../../../shared/lib/supabase';
 import type { MyWork } from '../components/mypage/WorkCard';
 
-export async function getStudentWorksByStudentId(userId: string): Promise<MyWork[]> {
+export async function getStudentWorksByStudentId(profileId: string, authUserId: string): Promise<MyWork[]> {
   try {
-    // Attempt query by user_id
+    // Attempt query by student_id or user_id
     const { data, error } = await supabase
       .from('toon_projects')
       .select('*')
-      .eq('user_id', userId)
+      .or(`student_id.eq.${profileId},user_id.eq.${authUserId}`)
       .order('updated_at', { ascending: false, nullsFirst: false })
       .order('created_at', { ascending: false });
 
