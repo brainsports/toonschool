@@ -35,21 +35,24 @@ export default function Login() {
         if (profile) {
           const redirectUrl = searchParams.get('redirect')
           
+          // 1. 학생 계정인 경우 무조건 마이페이지로 이동 (redirect 파라미터 무시)
+          if (profile.role === 'student') {
+            if (redirectUrl && redirectUrl.startsWith('/admin/lms')) {
+              alert('관리 LMS는 선생님 및 관리자 계정만 이용할 수 있습니다.')
+            }
+            navigate('/student/mypage')
+            return
+          }
+
           if (redirectUrl && redirectUrl.startsWith('/admin/lms')) {
             const allowedRoles = ['teacher', 'center_admin', 'middle_admin', 'super_admin']
             if (allowedRoles.includes(profile.role)) {
               navigate(redirectUrl)
               return
             } else {
-              if (profile.role === 'student') {
-                alert('관리 LMS는 선생님 및 관리자 계정만 이용할 수 있습니다.')
-                navigate('/student')
-                return
-              } else {
-                setError('관리 LMS는 선생님 및 관리자 계정만 이용할 수 있습니다.')
-                await supabase.auth.signOut()
-                return
-              }
+              setError('관리 LMS는 선생님 및 관리자 계정만 이용할 수 있습니다.')
+              await supabase.auth.signOut()
+              return
             }
           }
 
@@ -64,9 +67,6 @@ export default function Login() {
               break
             case 'center_admin':
               navigate('/center-admin')
-              break
-            case 'student':
-              navigate('/student')
               break
             case 'free_user':
             default:
