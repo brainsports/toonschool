@@ -141,16 +141,20 @@ export default function StudentMyPage() {
   const [allMessages, setAllMessages] = useState<TeacherMessage[]>([]);
 
   // Mock data for attendance
-  const weeklyAttendance = [
-    { day: '일', date: 18, attended: false },
-    { day: '월', date: 19, attended: true },
-    { day: '화', date: 20, attended: true },
-    { day: '수', date: 21, attended: true },
-    { day: '목', date: 22, attended: true },
-    { day: '금', date: 23, attended: true },
-    { day: '토', date: 24, attended: false },
-  ];
-  const weeklyAttendanceDays = weeklyAttendance.filter(d => d.attended).length;
+  const daysOfWeek = ['일', '월', '화', '수', '목', '금', '토'];
+  // 2026년 7월 1일은 수요일(인덱스 3), 총 31일.
+  const monthlyAttendance = Array.from({ length: 35 }, (_, i) => {
+    const date = i - 2; // i=3일 때 date=1
+    if (date > 0 && date <= 31) {
+      return { 
+        date, 
+        attended: [1, 2, 3].includes(date),
+        isToday: date === 3
+      };
+    }
+    return null;
+  });
+  const attendedDaysCount = 3;
 
   useEffect(() => {
     async function loadWorks() {
@@ -262,7 +266,7 @@ export default function StudentMyPage() {
                     <Calendar className="w-5 h-5" />
                   </div>
                   <span className="text-xs font-bold text-slate-500">출석</span>
-                  <span className="text-2xl font-black text-sky-500">{weeklyAttendanceDays}일</span>
+                  <span className="text-2xl font-black text-sky-500">{attendedDaysCount}일</span>
                 </div>
                 <div className="bg-white rounded-[1.5rem] p-5 flex flex-col items-center justify-center gap-2 border border-slate-100 shadow-sm text-center">
                   <div className="w-10 h-10 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mb-1">
@@ -360,32 +364,48 @@ export default function StudentMyPage() {
                   </div>
                   <h3 className="font-bold text-slate-800">출석 기록</h3>
                 </div>
-                <button className="text-xs font-medium text-slate-500 hover:bg-slate-50 px-2 py-1 rounded-md flex items-center gap-1">
-                  <ChevronRight className="w-3 h-3 rotate-180" /> 이번 주 <ChevronRight className="w-3 h-3" />
-                </button>
+                <div className="text-sm font-bold text-slate-700">
+                  2026년 7월
+                </div>
               </div>
 
-              {/* Weekly Calendar */}
-              <div className="grid grid-cols-7 gap-1 mt-2">
-                {weeklyAttendance.map((item, idx) => (
-                  <div key={item.day} className="flex flex-col items-center gap-2">
-                    <span className={`text-xs font-bold ${idx === 0 || idx === 6 ? 'text-pink-400' : 'text-slate-400'}`}>{item.day}</span>
-                    <div className="text-sm font-medium text-slate-600">{item.date}</div>
-                    {item.attended ? (
-                      <div className="w-6 h-6 bg-pink-500 rounded-full flex items-center justify-center text-white shadow-sm mt-1">
-                        <CheckCircle2 className="w-4 h-4" />
-                      </div>
-                    ) : (
-                      <div className="w-6 h-6 mt-1"></div>
-                    )}
-                  </div>
-                ))}
+              {/* Monthly Calendar */}
+              <div className="mt-2">
+                {/* 요일 헤더 */}
+                <div className="grid grid-cols-7 gap-1 mb-2">
+                  {daysOfWeek.map((day, idx) => (
+                    <div key={day} className={`text-center text-xs font-bold ${idx === 0 || idx === 6 ? 'text-pink-400' : 'text-slate-400'}`}>
+                      {day}
+                    </div>
+                  ))}
+                </div>
+                {/* 날짜 그리드 */}
+                <div className="grid grid-cols-7 gap-1">
+                  {monthlyAttendance.map((item, idx) => (
+                    <div key={idx} className="flex flex-col items-center justify-center h-10">
+                      {item ? (
+                        <div className={`relative flex flex-col items-center justify-center w-8 h-8 rounded-full ${item.isToday ? 'bg-pink-100' : ''}`}>
+                          <span className={`text-xs font-medium ${item.isToday ? 'text-pink-600 font-bold' : 'text-slate-600'} ${item.attended ? 'mb-2' : ''}`}>
+                            {item.date}
+                          </span>
+                          {item.attended && (
+                            <div className="absolute bottom-0 text-[12px] leading-none">
+                              😊
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="w-8 h-8"></div>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
 
               <div className="flex items-center justify-between mt-2 pt-4 border-t border-slate-50">
-                <span className="text-xs font-medium text-slate-500">이번 주 출석</span>
+                <span className="text-xs font-medium text-slate-500">이번 달 출석</span>
                 <div className="flex items-center gap-2">
-                  <span className="text-2xl font-black text-pink-600">{weeklyAttendanceDays}일</span>
+                  <span className="text-2xl font-black text-pink-600">{attendedDaysCount}일</span>
                   <span className="text-xl">😊</span>
                 </div>
               </div>
