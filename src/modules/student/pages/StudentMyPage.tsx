@@ -307,7 +307,7 @@ export default function StudentMyPage() {
 
               <div className="flex gap-4 mt-2">
                 <div className="w-12 h-12 bg-pink-50 rounded-full overflow-hidden shrink-0 relative">
-                  <img src="/images/toonschool/characters/official/hana-teacher.png" alt="Teacher" className="absolute top-0 left-1/2 -translate-x-1/2 w-[180%] max-w-[180%] h-auto pt-1 object-top" />
+                  <img src="/images/toonschool/characters/v2/hana-master/hana-v2-front.png" alt="Teacher" className="w-full h-full object-cover object-top" />
                 </div>
                 <div className="flex flex-col gap-1.5 pt-1">
                   <div className="flex items-center gap-1 text-sm font-bold text-slate-800">
