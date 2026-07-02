@@ -116,12 +116,12 @@ export async function getStudentWorks({
       const existingProject = projectsData.find((p: any) => p.id === shared.project_id);
       
       let subject = shared.subject;
-      if (!subject && existingProject) {
-        subject = existingProject.content?.subject || existingProject.content?.curriculum?.subject;
+      if (!subject && existingProject?.content) {
+        subject = existingProject.content.subject || existingProject.content.curriculum?.subject || existingProject.content.curriculum?.subjectName;
       }
       if (!subject) {
-        const textToSearch = `${shared.title || ''} ${shared.summary || ''} ${existingProject?.title || ''} ${existingProject?.summary || ''} ${existingProject?.content?.title || ''}`;
-        if (textToSearch.includes('사회') || textToSearch.includes('강줄기') || textToSearch.includes('급식')) subject = '사회';
+        const textToSearch = `${shared.title || ''} ${shared.summary || ''} ${existingProject?.title || ''} ${existingProject?.summary || ''} ${existingProject?.content?.title || ''} ${existingProject?.content?.topicTitle || ''} ${existingProject?.content?.selectedTopic?.title || ''}`;
+        if (textToSearch.includes('사회') || textToSearch.includes('강줄기') || textToSearch.includes('급식') || textToSearch.includes('우리나라') || textToSearch.includes('국토') || textToSearch.includes('산지') || textToSearch.includes('지도')) subject = '사회';
         else if (textToSearch.includes('과학')) subject = '과학';
         else if (textToSearch.includes('수학')) subject = '수학';
         else if (textToSearch.includes('영어')) subject = '영어';
@@ -130,10 +130,14 @@ export async function getStudentWorks({
         else subject = '기타';
       }
 
-      let title = existingProject?.title || existingProject?.content?.topicTitle || existingProject?.content?.title || shared.title;
-      if (title === '툰스쿨 만화' || !title) {
-        title = '제목 없는 작품';
-      }
+      const possibleTitles = [
+        existingProject?.title,
+        existingProject?.content?.topicTitle,
+        existingProject?.content?.selectedTopic?.title,
+        existingProject?.content?.title,
+        shared.title
+      ];
+      let title = possibleTitles.find(t => t && typeof t === 'string' && t.trim() !== '' && t !== '툰스쿨 만화' && t !== '제목 없는 작품') || '제목 없는 작품';
 
       worksMap.set(workId, {
         id: workId,

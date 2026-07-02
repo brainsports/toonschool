@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MoreVertical, Edit2, Eye, Share2 } from 'lucide-react';
+import { Share2 } from 'lucide-react';
 
 export interface MyWork {
   id: string;
@@ -40,37 +40,17 @@ const getSubjectColorClasses = (subject: string) => {
 export default function WorkCard({ work }: { work: MyWork }) {
   const navigate = useNavigate();
   const [error, setError] = useState(false);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
 
   const defaultThumbnail = getSubjectDefaultThumbnail(work.subject);
   const displaySrc = defaultThumbnail; // 모든 마이페이지 작품 카드는 과목별 기본 썸네일 사용
   const colors = getSubjectColorClasses(work.subject);
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setIsMenuOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
-
-  const handleEdit = () => {
-    navigate(work.editorPath || '/student/select-unit');
-    setIsMenuOpen(false);
-  };
-
-  const handlePreview = () => {
-    if (work.status === 'completed' || work.status === 'shared') {
-      navigate(work.previewPath || '/student/comic/read');
+  const handleClick = () => {
+    if (work.status === 'shared') {
+      navigate(work.previewPath);
     } else {
-      alert("프리뷰 준비 중입니다.");
+      navigate(work.editorPath || '/student/select-unit');
     }
-    setIsMenuOpen(false);
   };
 
   const handleShare = () => {
@@ -78,14 +58,16 @@ export default function WorkCard({ work }: { work: MyWork }) {
     navigator.clipboard.writeText(url).then(() => {
       alert("공유링크를 복사했어요.");
     }).catch(() => {
-      alert("복사에 실패했어요. 다시 시도해 주세요.");
+      alert("공유링크 복사에 실패했어요. 다시 시도해 주세요.");
     });
-    setIsMenuOpen(false);
   };
 
   return (
     <div className="flex flex-col gap-2 relative">
-      <div className={`aspect-[4/3] rounded-xl overflow-hidden bg-slate-100 border border-slate-200 cursor-pointer ${colors.border} transition-colors relative group`}>
+      <div 
+        className={`aspect-[4/3] rounded-xl overflow-hidden bg-slate-100 border border-slate-200 cursor-pointer ${colors.border} transition-colors relative group`}
+        onClick={handleClick}
+      >
         <img 
           src={displaySrc} 
           alt={work.title} 
@@ -97,10 +79,9 @@ export default function WorkCard({ work }: { work: MyWork }) {
               (e.target as HTMLImageElement).src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
             }
           }}
-          onClick={handleEdit}
         />
         
-        <div className="absolute bottom-2 right-2 z-10 flex items-center gap-1.5" ref={menuRef}>
+        <div className="absolute bottom-2 right-2 z-10 flex items-center gap-1.5">
           <button
              onClick={(e) => {
                e.stopPropagation();
@@ -111,38 +92,6 @@ export default function WorkCard({ work }: { work: MyWork }) {
           >
             <Share2 className="w-4 h-4 text-slate-700 group-hover/share:text-indigo-600" />
           </button>
-          <button 
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsMenuOpen(!isMenuOpen);
-            }}
-            className="p-1.5 bg-white/90 hover:bg-white rounded-lg shadow-sm backdrop-blur-sm transition-colors"
-          >
-            <MoreVertical className="w-4 h-4 text-slate-700" />
-          </button>
-
-          {isMenuOpen && (
-            <div className="absolute right-0 bottom-full mb-2 w-36 bg-white rounded-xl shadow-lg border border-slate-100 py-1.5 text-sm font-medium z-20">
-              <button 
-                onClick={(e) => { e.stopPropagation(); handleEdit(); }}
-                className="w-full px-3 py-2 text-left flex items-center gap-2 hover:bg-slate-50 text-slate-700 transition-colors"
-              >
-                <Edit2 className="w-4 h-4" /> 수정하기
-              </button>
-              <button 
-                onClick={(e) => { e.stopPropagation(); handlePreview(); }}
-                className="w-full px-3 py-2 text-left flex items-center gap-2 hover:bg-slate-50 text-slate-700 transition-colors"
-              >
-                <Eye className="w-4 h-4" /> 프리뷰 보기
-              </button>
-              <button 
-                onClick={(e) => { e.stopPropagation(); handleShare(); }}
-                className="w-full px-3 py-2 text-left flex items-center gap-2 hover:bg-slate-50 text-slate-700 transition-colors"
-              >
-                <Share2 className="w-4 h-4" /> 공유링크 복사
-              </button>
-            </div>
-          )}
         </div>
       </div>
       
