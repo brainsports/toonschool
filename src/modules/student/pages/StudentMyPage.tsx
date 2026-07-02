@@ -12,7 +12,7 @@ import type { MyWork } from '../components/mypage/WorkCard'
 import AllWorksModal from '../components/mypage/AllWorksModal'
 
 import { useAuth } from '../../../shared/contexts/AuthContext'
-import { getStudentWorksByStudentId } from '../services/studentWorkService'
+import { getStudentWorks } from '../services/studentWorkService'
 
 
 
@@ -133,20 +133,31 @@ export default function StudentMyPage() {
   const [isAllWorksModalOpen, setIsAllWorksModalOpen] = useState(false);
   const [myWorks, setMyWorks] = useState<MyWork[]>([]);
   const [isLoadingWorks, setIsLoadingWorks] = useState(true);
+  const [worksError, setWorksError] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadWorks() {
-      if (user?.id && profile?.id) {
-        setIsLoadingWorks(true);
-        const works = await getStudentWorksByStudentId(profile.id, user.id);
-        setMyWorks(works);
+      // auth user가 없으면 조회 불가
+      if (!user?.id) {
         setIsLoadingWorks(false);
-      } else if (user?.id) {
-        setIsLoadingWorks(true);
-        const works = await getStudentWorksByStudentId(user.id, user.id);
+        return;
+      }
+
+      setIsLoadingWorks(true);
+      setWorksError(null);
+
+      try {
+        // profiles.id = students.id = auth.user.id (동일 UUID 구조)
+        // profile이 로딩됐으면 profile.id, 아직 없으면 user.id를 student_id로 사용
+        const profileId = profile?.id ?? user.id;
+        const authUserId = user.id;
+
+        const works = await getStudentWorks({ profileId, authUserId });
         setMyWorks(works);
-        setIsLoadingWorks(false);
-      } else {
+      } catch (err) {
+        console.error('[StudentMyPage] 작품 조회 실패:', err);
+        setWorksError('작품을 불러오지 못했어요. 잠시 후 다시 시도해주세요.');
+      } finally {
         setIsLoadingWorks(false);
       }
     }
@@ -273,6 +284,10 @@ export default function StudentMyPage() {
               {isLoadingWorks ? (
                 <div className="flex justify-center items-center h-40">
                   <span className="text-slate-400 font-medium text-sm">작품을 불러오는 중입니다...</span>
+                </div>
+              ) : worksError ? (
+                <div className="flex flex-col items-center justify-center py-8 text-center bg-red-50 rounded-xl border border-red-100 border-dashed">
+                  <p className="text-red-500 font-medium text-sm">{worksError}</p>
                 </div>
               ) : myWorks.length > 0 ? (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
