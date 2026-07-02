@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../../../shared/contexts/AuthContext'
 import type { Student, ClassRoom, LicenseInfo } from '../types'
 import { deleteStudents, createStudent, moveStudentsToClass, fetchStudentsByCenterAndGrade } from '../services/studentService'
-import { fetchClasses, fetchLicenseInfo } from '../services/classService'
+import { fetchLicenseInfo } from '../services/classService'
 import LicenseCard from '../components/LicenseCard'
 import CreateStudentModal from '../components/CreateStudentModal'
 import ConfirmModal from '../components/ConfirmModal'
@@ -28,12 +28,21 @@ export default function StudentManagementPage() {
 
   useEffect(() => {
     fetchLicenseInfo().then(setLicense)
-    fetchClasses().then(list => {
-      setAllClasses(list)
-      const grade5classes = list.filter(c => c.grade === 5)
-      if (grade5classes.length > 0) setSelectedClassId(grade5classes[0].id)
-    })
   }, [])
+
+  useEffect(() => {
+    if (profile) {
+      const syntheticClasses = GRADES.map(g => ({
+        id: `class-${g}`,
+        name: `${g}학년 전체`,
+        grade: g,
+        studentCount: 0,
+        teacherName: profile.name || '선생님',
+      }))
+      setAllClasses(syntheticClasses)
+      setSelectedClassId('')
+    }
+  }, [profile])
 
   useEffect(() => {
     // 학년 탭 변경 시 선택 학급 초기화 ('전체' 보기)

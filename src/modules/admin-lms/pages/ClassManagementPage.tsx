@@ -2,8 +2,10 @@
 // 학급관리 페이지
 // ──────────────────────────────────────────────
 import { useState, useEffect } from 'react'
+import { useAuth } from '../../../shared/contexts/AuthContext'
 import type { ClassRoom, LicenseInfo, UnitSetting } from '../types'
-import { fetchClasses, fetchLicenseInfo, updateUnitSetting, deleteClasses } from '../services/classService'
+import { fetchLicenseInfo, updateUnitSetting, deleteClasses } from '../services/classService'
+import { fetchStudentsByCenterAndGrade } from '../services/studentService'
 import { CURRICULUM_UNITS } from '../data/mockClasses'
 import LicenseCard from '../components/LicenseCard'
 import UnitSettingModal from '../components/UnitSettingModal'
@@ -13,8 +15,9 @@ import TeacherMessageModal from '../components/TeacherMessageModal'
 const GRADES = [1, 2, 3, 4, 5, 6]
 
 export default function ClassManagementPage() {
+  const { profile } = useAuth()
   const [license, setLicense] = useState<LicenseInfo | null>(null)
-  const [classes, setClasses] = useState<ClassRoom[]>([])
+  const [gradeClasses, setGradeClasses] = useState<ClassRoom[]>([])
   const [selectedGrade, setSelectedGrade] = useState(1)
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set())
   const [unitModalClass, setUnitModalClass] = useState<ClassRoom | null>(null)
@@ -24,10 +27,20 @@ export default function ClassManagementPage() {
 
   useEffect(() => {
     fetchLicenseInfo().then(setLicense)
-    fetchClasses().then(setClasses)
   }, [])
 
-  const gradeClasses = classes.filter(c => c.grade === selectedGrade)
+  useEffect(() => {
+    if (!profile?.center_id) return
+    fetchStudentsByCenterAndGrade(profile.center_id, selectedGrade).then(students => {
+      setGradeClasses([{
+        id: `class-${selectedGrade}`,
+        name: `${selectedGrade}학년 전체`,
+        grade: selectedGrade,
+        studentCount: students.length,
+        teacherName: profile.name || '선생님',
+      }])
+    })
+  }, [profile?.center_id, profile?.name, selectedGrade])
 
   const showToast = (msg: string) => {
     setToast(msg)
@@ -52,14 +65,14 @@ export default function ClassManagementPage() {
 
   const handleSaveUnit = async (setting: UnitSetting) => {
     await updateUnitSetting(setting.classId, setting)
-    setClasses(prev => prev.map(c => c.id === setting.classId ? { ...c, unitSetting: setting } : c))
+    setGradeClasses(prev => prev.map(c => c.id === setting.classId ? { ...c, unitSetting: setting } : c))
     setUnitModalClass(null)
     showToast('단원 설정이 저장되었습니다.')
   }
 
   const handleDelete = async () => {
     await deleteClasses([...checkedIds])
-    setClasses(prev => prev.filter(c => !checkedIds.has(c.id)))
+    setGradeClasses(prev => prev.filter(c => !checkedIds.has(c.id)))
     setCheckedIds(new Set())
     showToast('선택한 학급이 삭제되었습니다.')
   }
