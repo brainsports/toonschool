@@ -55,7 +55,7 @@ export default function StudentMyPage() {
               <img 
                 src="/images/toonschool/login-hero.png" 
                 alt="Study Hero" 
-                className="absolute right-0 bottom-0 h-[120%] object-contain object-right-bottom transform translate-x-4 opacity-90"
+                className="absolute right-0 bottom-0 h-[90%] md:h-[95%] object-contain object-right-bottom transform translate-x-4 opacity-90"
               />
             </div>
 
@@ -126,7 +126,7 @@ export default function StudentMyPage() {
                 {/* 1 */}
                 <div className="flex flex-col gap-2">
                   <div className="aspect-[4/3] rounded-xl overflow-hidden bg-slate-100 border border-slate-200 cursor-pointer hover:border-pink-300 transition-colors relative group">
-                    <img src="/images/toonschool/covers/hero-thumbnail1.png" alt="용기 있는 한 걸음" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                    <img src="/images/toonschool/covers/korean/korean-cover-default.png" alt="용기 있는 한 걸음" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] font-bold text-white bg-pink-500 px-1.5 py-0.5 rounded">국어</span>
@@ -143,7 +143,7 @@ export default function StudentMyPage() {
                 {/* 2 */}
                 <div className="flex flex-col gap-2">
                   <div className="aspect-[4/3] rounded-xl overflow-hidden bg-slate-100 border border-slate-200 cursor-pointer hover:border-sky-300 transition-colors relative group">
-                    <img src="/images/toonschool/covers/hero-thumbnail2.png" alt="바다 속 친구들" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                    <img src="/images/toonschool/covers/science/science-cover-default.png" alt="바다 속 친구들" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] font-bold text-white bg-sky-500 px-1.5 py-0.5 rounded">과학</span>
@@ -160,7 +160,7 @@ export default function StudentMyPage() {
                 {/* 3 */}
                 <div className="flex flex-col gap-2">
                   <div className="aspect-[4/3] rounded-xl overflow-hidden bg-slate-100 border border-slate-200 cursor-pointer hover:border-amber-300 transition-colors relative group">
-                    <img src="/images/toonschool/covers/hero-thumbnail3.png" alt="우리 동네 탐험기" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                    <img src="/images/toonschool/covers/social/social-cover-default.png" alt="우리 동네 탐험기" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] font-bold text-white bg-amber-500 px-1.5 py-0.5 rounded">사회</span>
@@ -177,11 +177,11 @@ export default function StudentMyPage() {
                 {/* 4 */}
                 <div className="flex flex-col gap-2">
                   <div className="aspect-[4/3] rounded-xl overflow-hidden bg-slate-100 border border-slate-200 cursor-pointer hover:border-emerald-300 transition-colors relative group">
-                    <img src="/images/toonschool/covers/hero-thumbnail4.png" alt="우주 여행" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                    <img src="/images/toonschool/covers/english/english-cover-default.png" alt="재미있는 알파벳" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-bold text-white bg-emerald-500 px-1.5 py-0.5 rounded">미술</span>
-                    <span className="text-xs font-bold text-slate-700 truncate">우주 여행</span>
+                    <span className="text-[10px] font-bold text-white bg-emerald-500 px-1.5 py-0.5 rounded">영어</span>
+                    <span className="text-xs font-bold text-slate-700 truncate">재미있는 알파벳</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="h-1.5 flex-1 bg-slate-100 rounded-full overflow-hidden">
@@ -253,7 +253,9 @@ export default function StudentMyPage() {
               </div>
 
               <div className="flex gap-4 mt-2">
-                <img src="/images/toonschool/characters/official/hana-teacher.png" alt="Teacher" className="w-12 h-12 bg-pink-50 rounded-full object-cover shrink-0" />
+                <div className="w-12 h-12 bg-pink-50 rounded-full overflow-hidden shrink-0 relative">
+                  <img src="/images/toonschool/characters/official/hana-teacher.png" alt="Teacher" className="absolute top-0 left-1/2 -translate-x-1/2 w-[180%] max-w-[180%] h-auto pt-1 object-top" />
+                </div>
                 <div className="flex flex-col gap-1.5 pt-1">
                   <div className="flex items-center gap-1 text-sm font-bold text-slate-800">
                     <span>정말 잘했어요! 👏🏻</span>
