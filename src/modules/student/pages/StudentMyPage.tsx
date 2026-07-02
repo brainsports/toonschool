@@ -135,6 +135,18 @@ export default function StudentMyPage() {
   const [isLoadingWorks, setIsLoadingWorks] = useState(true);
   const [worksError, setWorksError] = useState<string | null>(null);
 
+  // Mock data for attendance
+  const weeklyAttendance = [
+    { day: '일', date: 18, attended: false },
+    { day: '월', date: 19, attended: true },
+    { day: '화', date: 20, attended: true },
+    { day: '수', date: 21, attended: true },
+    { day: '목', date: 22, attended: true },
+    { day: '금', date: 23, attended: true },
+    { day: '토', date: 24, attended: false },
+  ];
+  const weeklyAttendanceDays = weeklyAttendance.filter(d => d.attended).length;
+
   useEffect(() => {
     async function loadWorks() {
       // auth user가 없으면 조회 불가
@@ -229,8 +241,8 @@ export default function StudentMyPage() {
                   <div className="w-10 h-10 bg-sky-50 text-sky-500 rounded-full flex items-center justify-center mb-1">
                     <Calendar className="w-5 h-5" />
                   </div>
-                  <span className="text-xs font-bold text-slate-500">출석률</span>
-                  <span className="text-2xl font-black text-sky-500">92%</span>
+                  <span className="text-xs font-bold text-slate-500">출석</span>
+                  <span className="text-2xl font-black text-sky-500">{weeklyAttendanceDays}일</span>
                 </div>
                 <div className="bg-white rounded-[1.5rem] p-5 flex flex-col items-center justify-center gap-2 border border-slate-100 shadow-sm text-center">
                   <div className="w-10 h-10 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mb-1">
@@ -333,11 +345,11 @@ export default function StudentMyPage() {
 
               {/* Weekly Calendar */}
               <div className="grid grid-cols-7 gap-1 mt-2">
-                {['월', '화', '수', '목', '금', '토', '일'].map((day, idx) => (
-                  <div key={day} className="flex flex-col items-center gap-2">
-                    <span className={`text-xs font-bold ${idx >= 5 ? 'text-pink-400' : 'text-slate-400'}`}>{day}</span>
-                    <div className="text-sm font-medium text-slate-600">{19 + idx}</div>
-                    {idx < 5 ? (
+                {weeklyAttendance.map((item, idx) => (
+                  <div key={item.day} className="flex flex-col items-center gap-2">
+                    <span className={`text-xs font-bold ${idx === 0 || idx === 6 ? 'text-pink-400' : 'text-slate-400'}`}>{item.day}</span>
+                    <div className="text-sm font-medium text-slate-600">{item.date}</div>
+                    {item.attended ? (
                       <div className="w-6 h-6 bg-pink-500 rounded-full flex items-center justify-center text-white shadow-sm mt-1">
                         <CheckCircle2 className="w-4 h-4" />
                       </div>
@@ -349,9 +361,9 @@ export default function StudentMyPage() {
               </div>
 
               <div className="flex items-center justify-between mt-2 pt-4 border-t border-slate-50">
-                <span className="text-xs font-medium text-slate-500">이번 주 출석률</span>
+                <span className="text-xs font-medium text-slate-500">이번 주 출석</span>
                 <div className="flex items-center gap-2">
-                  <span className="text-2xl font-black text-pink-600">92%</span>
+                  <span className="text-2xl font-black text-pink-600">{weeklyAttendanceDays}일</span>
                   <span className="text-xl">😊</span>
                 </div>
               </div>
