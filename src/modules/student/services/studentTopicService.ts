@@ -1,4 +1,4 @@
-import { TEXT_GENERATION_MODEL, TEXT_FALLBACK_MODEL } from '../../../config/models'
+import { TEXT_GENERATION_MODEL } from '../../../config/models'
 import { geminiClient } from '../../../shared/lib/gemini'
 import { supabase } from '../../../shared/lib/supabase'
 import type { TopicRecommendation, TopicGenerationRequest, KeywordItem, CurriculumContext } from '../types/studentTopic'
@@ -585,7 +585,7 @@ export const generateTopicRecommendations = async (
       if (!model) throw new Error('No model provided');
       return await Promise.race([
         geminiClient.generateTextWithModel(prompt, model),
-        new Promise<string>((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), 7000))
+        new Promise<string>((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), 5000))
       ]);
     };
 
@@ -594,17 +594,8 @@ export const generateTopicRecommendations = async (
       try {
         responseText = await tryModel(TEXT_GENERATION_MODEL);
       } catch (err: any) {
-        console.warn(`[AI 추천 생성] ${TEXT_GENERATION_MODEL} 실패:`, err.message);
-        if (TEXT_FALLBACK_MODEL) {
-          try {
-            responseText = await tryModel(TEXT_FALLBACK_MODEL);
-          } catch (err2: any) {
-            console.warn(`[AI 추천 생성] ${TEXT_FALLBACK_MODEL} 실패:`, err2.message);
-            throw err2;
-          }
-        } else {
-          throw err;
-        }
+        console.warn(`[AI 추천 생성] ${TEXT_GENERATION_MODEL} 실패 → fallback 사용:`, err.message);
+        throw err;
       }
       
       const cleanedText = responseText.replace(/\`\`\`json/gi, '').replace(/\`\`\`/g, '').trim()
@@ -786,10 +777,10 @@ export const generateKeywords = async (
   const tryModel = async (model: string): Promise<KeywordItem[]> => {
     if (!model) throw new Error('No model provided');
     
-    // 7초 타임아웃
+    // 5초 타임아웃
     const responseText = await Promise.race([
       geminiClient.generateTextWithModel(prompt, model),
-      new Promise<string>((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), 7000))
+      new Promise<string>((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), 5000))
     ]);
 
     const cleanedText = responseText.replace(/\`\`\`json/gi, '').replace(/\`\`\`/g, '').trim()
@@ -816,15 +807,7 @@ export const generateKeywords = async (
     try {
       return await tryModel(TEXT_GENERATION_MODEL);
     } catch (err: any) {
-      console.warn(`[키워드 생성] ${TEXT_GENERATION_MODEL} 실패:`, err.message);
-      if (TEXT_FALLBACK_MODEL) {
-        try {
-          return await tryModel(TEXT_FALLBACK_MODEL);
-        } catch (err2: any) {
-          console.warn(`[키워드 생성] ${TEXT_FALLBACK_MODEL} 실패:`, err2.message);
-          throw err2;
-        }
-      }
+      console.warn(`[키워드 생성] ${TEXT_GENERATION_MODEL} 실패 → fallback 사용:`, err.message);
       throw err;
     }
   } catch (error) {
