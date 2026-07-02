@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { 
   BookOpen, Star, Trophy, Calendar, 
@@ -11,52 +11,10 @@ import WorkCard from '../components/mypage/WorkCard'
 import type { MyWork } from '../components/mypage/WorkCard'
 import AllWorksModal from '../components/mypage/AllWorksModal'
 
-const mockMyWorks: MyWork[] = [
-  {
-    id: 'work-001',
-    subject: '국어',
-    title: '용기 있는 한 걸음',
-    progress: 80,
-    status: 'in-progress',
-    thumbnailUrl: '',
-    editorPath: '/student/select-unit',
-    previewPath: '/student/comic/read',
-    shareUrl: '',
-  },
-  {
-    id: 'work-002',
-    subject: '과학',
-    title: '바다 속 친구들',
-    progress: 65,
-    status: 'in-progress',
-    thumbnailUrl: '',
-    editorPath: '/student/select-unit',
-    previewPath: '/student/comic/read',
-    shareUrl: '',
-  },
-  {
-    id: 'work-003',
-    subject: '사회',
-    title: '우리 동네 탐험기',
-    progress: 100,
-    status: 'completed',
-    thumbnailUrl: '',
-    editorPath: '/student/select-unit',
-    previewPath: '/student/comic/read',
-    shareUrl: '',
-  },
-  {
-    id: 'work-004',
-    subject: '영어',
-    title: '재미있는 알파벳',
-    progress: 100,
-    status: 'shared',
-    thumbnailUrl: '',
-    editorPath: '/student/select-unit',
-    previewPath: '/student/comic/read',
-    shareUrl: '',
-  },
-];
+import { useAuth } from '../../../shared/contexts/AuthContext'
+import { getStudentWorksByStudentId } from '../services/studentWorkService'
+
+
 
 type RecommendationSource = 'teacher-assigned' | 'in-progress' | 'rotation' | 'default';
 
@@ -171,7 +129,24 @@ const getTodayRecommendedLearning = (): RecommendedLearning => {
 
 export default function StudentMyPage() {
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [isAllWorksModalOpen, setIsAllWorksModalOpen] = useState(false);
+  const [myWorks, setMyWorks] = useState<MyWork[]>([]);
+  const [isLoadingWorks, setIsLoadingWorks] = useState(true);
+
+  useEffect(() => {
+    async function loadWorks() {
+      if (user?.id) {
+        setIsLoadingWorks(true);
+        const works = await getStudentWorksByStudentId(user.id);
+        setMyWorks(works);
+        setIsLoadingWorks(false);
+      } else {
+        setIsLoadingWorks(false);
+      }
+    }
+    loadWorks();
+  }, [user]);
 
   const recommendedLearning = getTodayRecommendedLearning()
   // Chart data
@@ -271,7 +246,7 @@ export default function StudentMyPage() {
               </div>
             </div>
 
-            {/* My Works (4 Cards) */}
+            {/* My Works */}
             <div className="bg-white rounded-[1.5rem] p-6 border border-slate-100 shadow-sm flex flex-col gap-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -280,19 +255,41 @@ export default function StudentMyPage() {
                   </div>
                   <h3 className="font-bold text-slate-800">내 작품</h3>
                 </div>
-                <button 
-                  onClick={() => setIsAllWorksModalOpen(true)}
-                  className="text-xs font-bold text-pink-500 hover:bg-pink-50 px-3 py-1.5 rounded-full flex items-center gap-1 transition-colors"
-                >
-                  만드는 중 <ChevronRight className="w-3 h-3" />
-                </button>
+                {myWorks.length > 0 && (
+                  <button 
+                    onClick={() => setIsAllWorksModalOpen(true)}
+                    className="text-xs font-bold text-pink-500 hover:bg-pink-50 px-3 py-1.5 rounded-full flex items-center gap-1 transition-colors"
+                  >
+                    만드는 중 <ChevronRight className="w-3 h-3" />
+                  </button>
+                )}
               </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {mockMyWorks.slice(0, 4).map(work => (
-                  <WorkCard key={work.id} work={work} />
-                ))}
-              </div>
+              {isLoadingWorks ? (
+                <div className="flex justify-center items-center h-40">
+                  <span className="text-slate-400 font-medium text-sm">작품을 불러오는 중입니다...</span>
+                </div>
+              ) : myWorks.length > 0 ? (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {myWorks.slice(0, 4).map(work => (
+                    <WorkCard key={work.id} work={work} />
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-8 text-center bg-slate-50 rounded-xl border border-slate-100 border-dashed">
+                  <div className="w-12 h-12 bg-pink-50 text-pink-500 rounded-full flex items-center justify-center mb-3">
+                    <BookOpen className="w-6 h-6" />
+                  </div>
+                  <p className="text-slate-600 font-medium mb-4 text-sm">아직 만든 작품이 없어요.<br/>툰스쿨 에디터에서 첫 작품을 만들어 보세요.</p>
+                  <button 
+                    onClick={() => navigate('/student/select-unit')}
+                    className="bg-pink-500 hover:bg-pink-600 text-white font-bold py-2 px-5 rounded-full shadow-sm transition-all text-sm flex items-center gap-1"
+                  >
+                    <Play className="w-4 h-4 fill-current" />
+                    툰스쿨 에디터
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
@@ -426,7 +423,7 @@ export default function StudentMyPage() {
         <AllWorksModal 
           isOpen={isAllWorksModalOpen} 
           onClose={() => setIsAllWorksModalOpen(false)} 
-          works={mockMyWorks} 
+          works={myWorks} 
         />
     </StudentPageShell>
   )
