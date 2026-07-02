@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { ClassRoom } from '../types';
-import { createTeacherMessage, getTeacherMessagesForClass, type TeacherMessage } from '../../student/services/teacherMessageService';
+import { createTeacherMessage, getTeacherMessagesForClass, deleteTeacherMessage, type TeacherMessage } from '../../student/services/teacherMessageService';
 import { useAuth } from '../../../shared/contexts/AuthContext';
 
 interface Props {
@@ -27,15 +27,27 @@ export default function TeacherMessageModal({ classRoom, onClose, onSaved }: Pro
   const [messages, setMessages] = useState<TeacherMessage[]>([]);
   const [isLoadingMessages, setIsLoadingMessages] = useState(true);
 
+  const loadMessages = async () => {
+    setIsLoadingMessages(true);
+    const msgs = await getTeacherMessagesForClass(classRoom.id);
+    setMessages(msgs);
+    setIsLoadingMessages(false);
+  };
+
   useEffect(() => {
-    async function loadMessages() {
-      setIsLoadingMessages(true);
-      const msgs = await getTeacherMessagesForClass(classRoom.id);
-      setMessages(msgs);
-      setIsLoadingMessages(false);
-    }
     loadMessages();
   }, [classRoom.id]);
+
+  const handleDelete = async (messageId: string) => {
+    if (window.confirm('이 선생님 말씀을 삭제할까요?')) {
+      const success = await deleteTeacherMessage(messageId);
+      if (success) {
+        await loadMessages();
+      } else {
+        alert('삭제에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+      }
+    }
+  };
 
   const handleSave = async () => {
     if (!content.trim()) {
@@ -136,9 +148,21 @@ export default function TeacherMessageModal({ classRoom, onClose, onSaved }: Pro
                 <div key={msg.id} style={{ padding: 12, borderRadius: 8, background: '#f8fafc', border: '1px solid #e2e8f0' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                     <span style={{ fontSize: 13, fontWeight: 600, color: '#475569' }}>{msg.message_date}</span>
-                    <span style={{ fontSize: 12, color: msg.is_published ? '#10b981' : '#ef4444', fontWeight: 600 }}>
-                      {msg.is_published ? '공개' : '비공개'}
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 12, color: msg.is_published ? '#10b981' : '#ef4444', fontWeight: 600 }}>
+                        {msg.is_published ? '공개' : '비공개'}
+                      </span>
+                      <button
+                        onClick={() => handleDelete(msg.id)}
+                        style={{
+                          background: 'none', border: '1px solid #ffccd5', color: '#ef4444',
+                          borderRadius: 4, padding: '2px 8px', fontSize: 11, cursor: 'pointer',
+                          fontWeight: 500
+                        }}
+                      >
+                        삭제
+                      </button>
+                    </div>
                   </div>
                   <p style={{ fontSize: 14, color: '#334155', margin: 0, lineHeight: 1.4, wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>
                     {msg.content}

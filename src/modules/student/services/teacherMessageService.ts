@@ -104,3 +104,24 @@ export async function createTeacherMessage(payload: Partial<TeacherMessage>): Pr
     throw err;
   }
 }
+
+/**
+ * 관리자/선생님 기능: 기존 선생님 말씀을 삭제합니다.
+ */
+export async function deleteTeacherMessage(messageId: string): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('teacher_messages')
+      .delete()
+      .eq('id', messageId);
+
+    if (error) {
+      console.error('[teacherMessageService] deleteTeacherMessage error:', error);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error('[teacherMessageService] deleteTeacherMessage exception:', err);
+    return false;
+  }
+}
