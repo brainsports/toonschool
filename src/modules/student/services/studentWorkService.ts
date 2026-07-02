@@ -18,47 +18,72 @@ import type { MyWork } from '../components/mypage/WorkCard';
 export async function getStudentWorks({
   profileId,
   authUserId,
+  profileName,
   limit = 50,
 }: {
   profileId?: string | null;
   authUserId?: string | null;
+  profileName?: string | null;
   limit?: number;
 }): Promise<MyWork[]> {
   // 조회 조건이 하나도 없으면 빈 배열 반환
-  if (!profileId && !authUserId) {
+  if (!profileId && !authUserId && !profileName) {
     return [];
   }
 
   try {
-    // OR 조건 구성: 유효한 id만 포함
     const conditions: string[] = [];
     if (profileId) conditions.push(`student_id.eq.${profileId}`);
     if (authUserId) conditions.push(`user_id.eq.${authUserId}`);
+    const orCondition = conditions.length > 0 ? conditions.join(',') : null;
 
-    const orCondition = conditions.join(',');
+    const queries = [];
 
-    const { data, error } = await supabase
-      .from('toon_projects')
-      .select(
-        'id, user_id, student_id, title, summary, status, thumbnail_url, content, created_at, updated_at'
-      )
-      .or(orCondition)
-      .order('updated_at', { ascending: false, nullsFirst: false })
-      .order('created_at', { ascending: false })
-      .limit(limit);
-
-    if (error) {
-      console.error('[studentWorkService] 작품 조회 실패:', error);
-      return [];
+    // Query 1: toon_projects
+    if (orCondition) {
+      queries.push(
+        supabase
+          .from('toon_projects')
+          .select('id, user_id, student_id, title, summary, status, thumbnail_url, content, created_at, updated_at')
+          .or(orCondition)
+          .order('updated_at', { ascending: false, nullsFirst: false })
+          .limit(limit)
+      );
+    } else {
+      queries.push(Promise.resolve({ data: [], error: null }));
     }
 
-    if (!data || data.length === 0) return [];
+    // Query 2: shared_comic_books
+    if (profileName) {
+      queries.push(
+        supabase
+          .from('shared_comic_books')
+          .select('id, project_id, title, slug, thumbnail_url, created_at, grade')
+          .eq('student_name', profileName)
+          .limit(limit)
+      );
+    } else {
+      queries.push(Promise.resolve({ data: [], error: null }));
+    }
 
-    return data.map((project: any): MyWork => {
+    const [projectsResult, sharedResult] = await Promise.all(queries);
+
+    if (projectsResult.error) {
+      console.error('[studentWorkService] toon_projects 조회 실패:', projectsResult.error);
+    }
+    if (sharedResult.error) {
+      console.error('[studentWorkService] shared_comic_books 조회 실패:', sharedResult.error);
+    }
+
+    const projectsData = projectsResult.data || [];
+    const sharedData = sharedResult.data || [];
+
+    const worksMap = new Map<string, MyWork>();
+
+    // Map toon_projects
+    projectsData.forEach((project: any) => {
       const content = project.content || {};
-      // subject: content 내부 또는 기본값
       const subject: string = content.subject || '국어';
-      // progress: content 내부 값 또는 status 기반 추산
       const progress: number =
         content.progress !== undefined
           ? content.progress
@@ -66,7 +91,7 @@ export async function getStudentWorks({
           ? 100
           : 50;
 
-      return {
+      worksMap.set(project.id, {
         id: project.id,
         subject,
         title: project.title || '제목 없는 작품',
@@ -81,8 +106,29 @@ export async function getStudentWorks({
         editorPath: `/student/select-unit?projectId=${project.id}`,
         previewPath: `/student/comic/read?projectId=${project.id}`,
         shareUrl: `${window.location.origin}/student/comic/read?projectId=${project.id}`,
-      };
+      });
     });
+
+    // Map shared_comic_books and override/add
+    sharedData.forEach((shared: any) => {
+      // project_id가 있으면 기존 toon_projects와 중복 제거 (shared를 우선하거나 기존 것을 유지)
+      // 여기서는 shared_comic_books를 "shared" 상태로 유지
+      const workId = shared.project_id || shared.id;
+      
+      worksMap.set(workId, {
+        id: workId,
+        subject: '국어', // 공유작은 과목이 명시되지 않은 경우가 많으므로 기본값
+        title: shared.title || '공유된 작품',
+        progress: 100,
+        status: 'shared',
+        thumbnailUrl: shared.thumbnail_url || '',
+        editorPath: `/book/${shared.slug}`,
+        previewPath: `/book/${shared.slug}`,
+        shareUrl: `${window.location.origin}/book/${shared.slug}`,
+      });
+    });
+
+    return Array.from(worksMap.values());
   } catch (err) {
     console.error('[studentWorkService] 예외 발생:', err);
     return [];

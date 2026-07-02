@@ -151,8 +151,9 @@ export default function StudentMyPage() {
         // profile이 로딩됐으면 profile.id, 아직 없으면 user.id를 student_id로 사용
         const profileId = profile?.id ?? user.id;
         const authUserId = user.id;
+        const profileName = profile?.name;
 
-        const works = await getStudentWorks({ profileId, authUserId });
+        const works = await getStudentWorks({ profileId, authUserId, profileName });
         setMyWorks(works);
       } catch (err) {
         console.error('[StudentMyPage] 작품 조회 실패:', err);
@@ -189,7 +190,7 @@ export default function StudentMyPage() {
                   <h2 className="text-2xl font-black text-pink-600">오늘의 추천 학습</h2>
                   <span className="text-2xl">☀️</span>
                 </div>
-                
+
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <span className="px-3 py-1 bg-pink-500 text-white text-sm font-bold rounded-full">{recommendedLearning.subject}</span>
