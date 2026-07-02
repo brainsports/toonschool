@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { ClassRoom } from '../types';
-import { createTeacherMessage } from '../../student/services/teacherMessageService';
+import { createTeacherMessage, getTeacherMessagesForClass, type TeacherMessage } from '../../student/services/teacherMessageService';
 import { useAuth } from '../../../shared/contexts/AuthContext';
 
 interface Props {
@@ -16,6 +16,18 @@ export default function TeacherMessageModal({ classRoom, onClose, onSaved }: Pro
   const [isPublished, setIsPublished] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [messages, setMessages] = useState<TeacherMessage[]>([]);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(true);
+
+  useEffect(() => {
+    async function loadMessages() {
+      setIsLoadingMessages(true);
+      const msgs = await getTeacherMessagesForClass(classRoom.id);
+      setMessages(msgs);
+      setIsLoadingMessages(false);
+    }
+    loadMessages();
+  }, [classRoom.id]);
 
   const handleSave = async () => {
     if (!content.trim()) {
@@ -101,6 +113,32 @@ export default function TeacherMessageModal({ classRoom, onClose, onSaved }: Pro
               공개 (체크 시 학생들에게 노출됩니다)
             </label>
           </div>
+        </div>
+
+        {/* 기존 메시지 목록 */}
+        <div style={{ padding: '0 30px 24px' }}>
+          <h4 style={{ fontSize: 16, fontWeight: 700, color: '#333', marginBottom: 12 }}>최근 보낸 말씀</h4>
+          {isLoadingMessages ? (
+            <p style={{ fontSize: 14, color: '#999' }}>불러오는 중...</p>
+          ) : messages.length === 0 ? (
+            <p style={{ fontSize: 14, color: '#999' }}>아직 보낸 말씀이 없습니다.</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxHeight: 150, overflowY: 'auto', paddingRight: 8 }}>
+              {messages.slice(0, 5).map(msg => (
+                <div key={msg.id} style={{ padding: 12, borderRadius: 8, background: '#f8fafc', border: '1px solid #e2e8f0' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: '#475569' }}>{msg.message_date}</span>
+                    <span style={{ fontSize: 12, color: msg.is_published ? '#10b981' : '#ef4444', fontWeight: 600 }}>
+                      {msg.is_published ? '공개' : '비공개'}
+                    </span>
+                  </div>
+                  <p style={{ fontSize: 14, color: '#334155', margin: 0, lineHeight: 1.4, wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>
+                    {msg.content}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div style={{

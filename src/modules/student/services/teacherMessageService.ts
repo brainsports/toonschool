@@ -18,13 +18,13 @@ export interface TeacherMessage {
  * TODO: 향후 classes 테이블과 students.class_id가 생기면 이 임시 매핑 로직을 제거하고 실제 class_id를 사용하도록 수정.
  */
 export function resolveStudentClassKey(profile: any, studentProfile?: any): string {
-  // 현재는 임시로 무조건 'cls-1'을 반환하여 mock 데이터와 연동 (또는 필요한 로직 추가 가능)
-  // 예: 김민준 -> cls-2 등 조건부 분기 가능
+  // 현재는 임시로 무조건 'class-5'을 반환하여 학급관리 페이지(5학년 전체)와 연동합니다.
+  // 향후 classes 테이블과 students.class_id가 생기면 실제 데이터를 연동하도록 수정하세요.
   if (profile?.name === '김학생' || studentProfile?.name === '김학생') {
-    return 'cls-1';
+    return 'class-5';
   }
   // 기본 fallback
-  return 'cls-1';
+  return 'class-5';
 }
 
 /**
