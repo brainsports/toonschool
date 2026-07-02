@@ -185,6 +185,7 @@ export default function StudentMyPage() {
     { label: '문제해결·퀴즈 활용력', score: 19, maxScore: 20, color: 'bg-emerald-500', bg: 'bg-emerald-50' },
     { label: '성장·공유 태도', score: 20, maxScore: 20, color: 'bg-yellow-400', bg: 'bg-yellow-50' },
   ];
+  const growthScoreTotal = growthAreas.reduce((sum, area) => sum + area.score, 0);
 
   return (
     <StudentPageShell bgVariant="pastel" maxWidth="2xl">
@@ -246,8 +247,8 @@ export default function StudentMyPage() {
                   <div className="w-10 h-10 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mb-1">
                     <CheckCircle2 className="w-5 h-5" />
                   </div>
-                  <span className="text-xs font-bold text-slate-500">OX 정답률</span>
-                  <span className="text-2xl font-black text-emerald-500">85%</span>
+                  <span className="text-xs font-bold text-slate-500">성장 점수</span>
+                  <span className="text-2xl font-black text-emerald-500">{growthScoreTotal}점</span>
                 </div>
               </div>
 
