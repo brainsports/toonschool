@@ -175,26 +175,38 @@ export default function AssessmentPage() {
         </div>
       </div>
 
-      {/* 5대 평가영역 카드 */}
+      {/* 우리 반 성장 기록 카드 (기존: 5대 평가영역 학급 평균) */}
       <div style={{ background: 'white', borderRadius: 16, padding: '24px', marginBottom: 24, boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
-        <h3 style={{ fontSize: 16, fontWeight: 800, color: '#1a1a2e', margin: '0 0 16px' }}>5대 평가영역 학급 평균</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
+        <div style={{ marginBottom: 20 }}>
+          <h3 style={{ fontSize: 18, fontWeight: 800, color: '#1a1a2e', margin: '0 0 6px' }}>우리 반 성장 기록</h3>
+          <p style={{ margin: 0, fontSize: 13, color: '#888' }}>5대 성장 영역을 기준으로 우리 반의 학습 흐름을 확인해요.</p>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 16 }}>
           {areaKeys.map(key => (
             <div key={key} style={{
-              background: `${AREA_COLORS[key]}12`,
-              border: `1.5px solid ${AREA_COLORS[key]}40`,
-              borderRadius: 12, padding: '14px 16px', textAlign: 'center',
+              background: `${AREA_COLORS[key]}08`,
+              border: `1.5px solid ${AREA_COLORS[key]}20`,
+              borderRadius: 16, padding: '16px 20px',
+              display: 'flex', flexDirection: 'column',
             }}>
-              <div style={{ fontSize: 11, color: '#888', fontWeight: 600, marginBottom: 6 }}>{AREA_LABELS[key]}</div>
-              <div style={{ fontSize: 28, fontWeight: 900, color: AREA_COLORS[key], lineHeight: 1 }}>
-                {areaAvg(key)}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <span style={{ fontSize: 13, color: '#555', fontWeight: 700 }}>{AREA_LABELS[key]}</span>
+                <span style={{ fontSize: 11, color: AREA_COLORS[key], fontWeight: 700, background: `${AREA_COLORS[key]}15`, padding: '3px 8px', borderRadius: 99 }}>
+                  성장 중 🌱
+                </span>
               </div>
-              <div style={{ fontSize: 11, color: '#bbb', marginTop: 2 }}>/ 20점</div>
-              <div style={{ marginTop: 8, height: 6, background: '#f3f4f6', borderRadius: 99 }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 16 }}>
+                <span style={{ fontSize: 32, fontWeight: 900, color: AREA_COLORS[key], lineHeight: 1 }}>
+                  {areaAvg(key)}
+                </span>
+                <span style={{ fontSize: 12, color: '#aaa', fontWeight: 600 }}>/ 20점</span>
+              </div>
+              <div style={{ marginTop: 'auto', height: 8, background: '#f0f0f0', borderRadius: 99, overflow: 'hidden' }}>
                 <div style={{
                   height: '100%', borderRadius: 99,
                   width: `${(areaAvg(key) / 20) * 100}%`,
                   background: AREA_COLORS[key],
+                  transition: 'width 0.6s ease-out'
                 }} />
               </div>
             </div>
