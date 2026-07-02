@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { 
   BookOpen, Star, Trophy, Calendar, 
   Bell, MessageSquare, ChevronRight,
-  CheckCircle2, Play
+  CheckCircle2, Play, Heart
 } from 'lucide-react'
 import StudentPageShell from '../components/layout/StudentPageShell'
 import WorkCard from '../components/mypage/WorkCard'
@@ -212,6 +212,8 @@ export default function StudentMyPage() {
   ];
   const growthScoreTotal = growthAreas.reduce((sum, area) => sum + area.score, 0);
 
+  const completedWorksCount = myWorks.filter(work => work.status === 'completed' || work.status === 'shared').length;
+
   return (
     <StudentPageShell bgVariant="pastel" maxWidth="2xl">
       <div className="py-6 px-4 md:px-8 max-w-[1400px] mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-6 overflow-y-auto">
@@ -259,7 +261,11 @@ export default function StudentMyPage() {
                     <Trophy className="w-5 h-5" />
                   </div>
                   <span className="text-xs font-bold text-slate-500">완성 작품</span>
-                  <span className="text-2xl font-black text-slate-700">8</span>
+                  {completedWorksCount > 0 ? (
+                    <span className="text-2xl font-black text-slate-700">{completedWorksCount}</span>
+                  ) : (
+                    <Heart className="w-7 h-7 text-pink-400 fill-pink-400" />
+                  )}
                 </div>
                 <div className="bg-white rounded-[1.5rem] p-5 flex flex-col items-center justify-center gap-2 border border-slate-100 shadow-sm text-center">
                   <div className="w-10 h-10 bg-sky-50 text-sky-500 rounded-full flex items-center justify-center mb-1">
