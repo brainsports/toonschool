@@ -7,42 +7,56 @@ import {
 } from 'lucide-react'
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts'
 import StudentPageShell from '../components/layout/StudentPageShell'
+import WorkCard from '../components/mypage/WorkCard'
+import type { MyWork } from '../components/mypage/WorkCard'
+import AllWorksModal from '../components/mypage/AllWorksModal'
 
-const getSubjectDefaultThumbnail = (subject: string) => {
-  switch (subject) {
-    case '국어': return '/images/toonschool/thumbnails/subjects/korean-default.png';
-    case '수학': return '/images/toonschool/thumbnails/subjects/math-default.png';
-    case '과학': return '/images/toonschool/thumbnails/subjects/science-default.png';
-    case '사회': return '/images/toonschool/thumbnails/subjects/social-default.png';
-    case '영어': return '/images/toonschool/thumbnails/subjects/english-default.png';
-    case '미술': return '/images/toonschool/thumbnails/subjects/art-default.png';
-    default: return '/images/toonschool/thumbnails/subjects/korean-default.png';
-  }
-};
-
-const WorkThumbnail = ({ src, alt, subject, borderClass }: { src?: string, alt: string, subject: string, fallbackBgClass?: string, borderClass: string }) => {
-  const [error, setError] = useState(false);
-  const defaultThumbnail = getSubjectDefaultThumbnail(subject);
-  const displaySrc = (!src || error) ? defaultThumbnail : src;
-
-  return (
-    <div className={`aspect-[4/3] rounded-xl overflow-hidden bg-slate-100 border border-slate-200 cursor-pointer ${borderClass} transition-colors relative group`}>
-      <img 
-        src={displaySrc} 
-        alt={alt} 
-        className="w-full h-full object-cover group-hover:scale-105 transition-transform" 
-        onError={(e) => {
-          if (!error) {
-            setError(true);
-          } else {
-            // Prevent infinite loop if the default image also fails
-            (e.target as HTMLImageElement).src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-          }
-        }}
-      />
-    </div>
-  )
-}
+const mockMyWorks: MyWork[] = [
+  {
+    id: 'work-001',
+    subject: '국어',
+    title: '용기 있는 한 걸음',
+    progress: 80,
+    status: 'in-progress',
+    thumbnailUrl: '',
+    editorPath: '/student/select-unit',
+    previewPath: '/student/comic/read',
+    shareUrl: '',
+  },
+  {
+    id: 'work-002',
+    subject: '과학',
+    title: '바다 속 친구들',
+    progress: 65,
+    status: 'in-progress',
+    thumbnailUrl: '',
+    editorPath: '/student/select-unit',
+    previewPath: '/student/comic/read',
+    shareUrl: '',
+  },
+  {
+    id: 'work-003',
+    subject: '사회',
+    title: '우리 동네 탐험기',
+    progress: 100,
+    status: 'completed',
+    thumbnailUrl: '',
+    editorPath: '/student/select-unit',
+    previewPath: '/student/comic/read',
+    shareUrl: '',
+  },
+  {
+    id: 'work-004',
+    subject: '영어',
+    title: '재미있는 알파벳',
+    progress: 100,
+    status: 'shared',
+    thumbnailUrl: '',
+    editorPath: '/student/select-unit',
+    previewPath: '/student/comic/read',
+    shareUrl: '',
+  },
+];
 
 type RecommendationSource = 'teacher-assigned' | 'in-progress' | 'rotation' | 'default';
 
@@ -157,6 +171,7 @@ const getTodayRecommendedLearning = (): RecommendedLearning => {
 
 export default function StudentMyPage() {
   const navigate = useNavigate()
+  const [isAllWorksModalOpen, setIsAllWorksModalOpen] = useState(false);
 
   const recommendedLearning = getTodayRecommendedLearning()
   // Chart data
@@ -265,96 +280,18 @@ export default function StudentMyPage() {
                   </div>
                   <h3 className="font-bold text-slate-800">내 작품</h3>
                 </div>
-                <button className="text-xs font-bold text-pink-500 hover:bg-pink-50 px-3 py-1.5 rounded-full flex items-center gap-1 transition-colors">
+                <button 
+                  onClick={() => setIsAllWorksModalOpen(true)}
+                  className="text-xs font-bold text-pink-500 hover:bg-pink-50 px-3 py-1.5 rounded-full flex items-center gap-1 transition-colors"
+                >
                   만드는 중 <ChevronRight className="w-3 h-3" />
                 </button>
               </div>
 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {/* 1 */}
-                <div className="flex flex-col gap-2">
-                  <WorkThumbnail 
-                    src=""
-                    alt="용기 있는 한 걸음"
-                    subject="국어"
-                    fallbackBgClass="bg-pink-400"
-                    borderClass="hover:border-pink-300"
-                  />
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-bold text-white bg-pink-500 px-1.5 py-0.5 rounded">국어</span>
-                    <span className="text-xs font-bold text-slate-700 truncate">용기 있는 한 걸음</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="h-1.5 flex-1 bg-slate-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-pink-500 w-[80%] rounded-full"></div>
-                    </div>
-                    <span className="text-[10px] font-bold text-slate-400">80%</span>
-                  </div>
-                </div>
-
-                {/* 2 */}
-                <div className="flex flex-col gap-2">
-                  <WorkThumbnail 
-                    src=""
-                    alt="바다 속 친구들"
-                    subject="과학"
-                    fallbackBgClass="bg-sky-400"
-                    borderClass="hover:border-sky-300"
-                  />
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-bold text-white bg-sky-500 px-1.5 py-0.5 rounded">과학</span>
-                    <span className="text-xs font-bold text-slate-700 truncate">바다 속 친구들</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="h-1.5 flex-1 bg-slate-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-sky-500 w-[65%] rounded-full"></div>
-                    </div>
-                    <span className="text-[10px] font-bold text-slate-400">65%</span>
-                  </div>
-                </div>
-
-                {/* 3 */}
-                <div className="flex flex-col gap-2">
-                  <WorkThumbnail 
-                    src=""
-                    alt="우리 동네 탐험기"
-                    subject="사회"
-                    fallbackBgClass="bg-amber-400"
-                    borderClass="hover:border-amber-300"
-                  />
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-bold text-white bg-amber-500 px-1.5 py-0.5 rounded">사회</span>
-                    <span className="text-xs font-bold text-slate-700 truncate">우리 동네 탐험기</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="h-1.5 flex-1 bg-slate-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-amber-500 w-[40%] rounded-full"></div>
-                    </div>
-                    <span className="text-[10px] font-bold text-slate-400">40%</span>
-                  </div>
-                </div>
-
-                {/* 4 */}
-                <div className="flex flex-col gap-2">
-                  <WorkThumbnail 
-                    src=""
-                    alt="재미있는 알파벳"
-                    subject="영어"
-                    fallbackBgClass="bg-emerald-400"
-                    borderClass="hover:border-emerald-300"
-                  />
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-bold text-white bg-emerald-500 px-1.5 py-0.5 rounded">영어</span>
-                    <span className="text-xs font-bold text-slate-700 truncate">재미있는 알파벳</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="h-1.5 flex-1 bg-slate-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-emerald-500 w-[30%] rounded-full"></div>
-                    </div>
-                    <span className="text-[10px] font-bold text-slate-400">30%</span>
-                  </div>
-                </div>
-
+                {mockMyWorks.slice(0, 4).map(work => (
+                  <WorkCard key={work.id} work={work} />
+                ))}
               </div>
             </div>
           </div>
@@ -485,6 +422,12 @@ export default function StudentMyPage() {
           </div>
 
         </div>
+
+        <AllWorksModal 
+          isOpen={isAllWorksModalOpen} 
+          onClose={() => setIsAllWorksModalOpen(false)} 
+          works={mockMyWorks} 
+        />
     </StudentPageShell>
   )
 }
