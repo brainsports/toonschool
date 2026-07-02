@@ -58,7 +58,7 @@ export async function getStudentWorks({
       queries.push(
         supabase
           .from('shared_comic_books')
-          .select('id, project_id, title, slug, thumbnail_url, created_at, grade')
+          .select('*')
           .eq('student_name', profileName)
           .limit(limit)
       );
@@ -111,20 +111,40 @@ export async function getStudentWorks({
 
     // Map shared_comic_books and override/add
     sharedData.forEach((shared: any) => {
-      // project_id가 있으면 기존 toon_projects와 중복 제거 (shared를 우선하거나 기존 것을 유지)
-      // 여기서는 shared_comic_books를 "shared" 상태로 유지
       const workId = shared.project_id || shared.id;
       
+      const existingProject = projectsData.find((p: any) => p.id === shared.project_id);
+      
+      let subject = shared.subject;
+      if (!subject && existingProject) {
+        subject = existingProject.content?.subject || existingProject.content?.curriculum?.subject;
+      }
+      if (!subject) {
+        const textToSearch = `${shared.title || ''} ${shared.summary || ''} ${existingProject?.title || ''} ${existingProject?.summary || ''} ${existingProject?.content?.title || ''}`;
+        if (textToSearch.includes('사회') || textToSearch.includes('강줄기') || textToSearch.includes('급식')) subject = '사회';
+        else if (textToSearch.includes('과학')) subject = '과학';
+        else if (textToSearch.includes('수학')) subject = '수학';
+        else if (textToSearch.includes('영어')) subject = '영어';
+        else if (textToSearch.includes('미술')) subject = '미술';
+        else if (textToSearch.includes('국어')) subject = '국어';
+        else subject = '기타';
+      }
+
+      let title = existingProject?.title || existingProject?.content?.topicTitle || existingProject?.content?.title || shared.title;
+      if (title === '툰스쿨 만화' || !title) {
+        title = '제목 없는 작품';
+      }
+
       worksMap.set(workId, {
         id: workId,
-        subject: '국어', // 공유작은 과목이 명시되지 않은 경우가 많으므로 기본값
-        title: shared.title || '공유된 작품',
+        subject,
+        title,
         progress: 100,
         status: 'shared',
-        thumbnailUrl: shared.thumbnail_url || '',
+        thumbnailUrl: '', // 마이페이지에서는 과목별 기본 썸네일을 사용하도록 빈 값 처리
         editorPath: `/book/${shared.slug}`,
         previewPath: `/book/${shared.slug}`,
-        shareUrl: `${window.location.origin}/book/${shared.slug}`,
+        shareUrl: `https://toonschool.kr/book/${shared.slug}`,
       });
     });
 

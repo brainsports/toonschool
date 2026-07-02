@@ -44,7 +44,7 @@ export default function WorkCard({ work }: { work: MyWork }) {
   const menuRef = useRef<HTMLDivElement>(null);
 
   const defaultThumbnail = getSubjectDefaultThumbnail(work.subject);
-  const displaySrc = (!work.thumbnailUrl || error) ? defaultThumbnail : work.thumbnailUrl;
+  const displaySrc = defaultThumbnail; // 모든 마이페이지 작품 카드는 과목별 기본 썸네일 사용
   const colors = getSubjectColorClasses(work.subject);
 
   useEffect(() => {
@@ -100,7 +100,17 @@ export default function WorkCard({ work }: { work: MyWork }) {
           onClick={handleEdit}
         />
         
-        <div className="absolute bottom-2 right-2 z-10" ref={menuRef}>
+        <div className="absolute bottom-2 right-2 z-10 flex items-center gap-1.5" ref={menuRef}>
+          <button
+             onClick={(e) => {
+               e.stopPropagation();
+               handleShare();
+             }}
+             className="p-1.5 bg-white/90 hover:bg-white rounded-lg shadow-sm backdrop-blur-sm transition-colors group/share"
+             title="공유링크 복사"
+          >
+            <Share2 className="w-4 h-4 text-slate-700 group-hover/share:text-indigo-600" />
+          </button>
           <button 
             onClick={(e) => {
               e.stopPropagation();
