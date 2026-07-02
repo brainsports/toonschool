@@ -11,7 +11,8 @@ import { Volume2, VolumeX, ArrowLeft, ArrowRight, BookOpen, MoreVertical, ZoomIn
 import { COMMON_COVER_TEMPLATES, DEFAULT_COVER_TEMPLATE_ID } from '../data/coverTemplates'
 import type { WorldStory, OXQuestion } from '../services/studentUnitSummaryService'
 import { supabase } from '../../../shared/lib/supabase'
-
+import html2canvas from 'html2canvas'
+import { jsPDF } from 'jspdf'
 const BGM_PATH = '/audio/viewer/if-i-had-a-chicken.mp3';
 
 function hexToRgba(hex: string, opacity: number) {
@@ -916,9 +917,6 @@ export default function StudentComicViewerPage() {
     try {
       setIsPdfDownloading(true);
 
-      const { default: html2canvas } = await import('html2canvas');
-      const { jsPDF } = await import('jspdf');
-
       const pageNodes = pdfCaptureRef.current?.querySelectorAll('[data-pdf-page="true"]');
 
       if (!pageNodes || pageNodes.length === 0) {
@@ -1002,7 +1000,6 @@ export default function StudentComicViewerPage() {
       }
 
       // 2. Extract pages as images
-      const { default: html2canvas } = await import('html2canvas');
       const pageNodes = pdfCaptureRef.current?.querySelectorAll('[data-pdf-page="true"]');
       if (!pageNodes || pageNodes.length === 0) {
         throw new Error('공유할 페이지가 없습니다.');
