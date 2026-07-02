@@ -8,6 +8,7 @@ import { CURRICULUM_UNITS } from '../data/mockClasses'
 import LicenseCard from '../components/LicenseCard'
 import UnitSettingModal from '../components/UnitSettingModal'
 import ConfirmModal from '../components/ConfirmModal'
+import TeacherMessageModal from '../components/TeacherMessageModal'
 
 const GRADES = [1, 2, 3, 4, 5, 6]
 
@@ -17,6 +18,7 @@ export default function ClassManagementPage() {
   const [selectedGrade, setSelectedGrade] = useState(1)
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set())
   const [unitModalClass, setUnitModalClass] = useState<ClassRoom | null>(null)
+  const [messageModalClass, setMessageModalClass] = useState<ClassRoom | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState(false)
   const [toast, setToast] = useState('')
 
@@ -118,7 +120,7 @@ export default function ClassManagementPage() {
         {/* 표 헤더 */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: '40px 60px 1fr 160px 80px 120px',
+          gridTemplateColumns: '40px 60px 1fr 160px 80px 220px',
           padding: '14px 20px',
           background: '#fafafa',
           borderBottom: '1.5px solid #f0f0f0',
@@ -132,7 +134,7 @@ export default function ClassManagementPage() {
           <div>학급명</div>
           <div>단원 제한 설정</div>
           <div style={{ textAlign: 'center' }}>학생 수</div>
-          <div style={{ textAlign: 'center' }}>단원 설정</div>
+          <div style={{ textAlign: 'center' }}>관리</div>
         </div>
 
         {gradeClasses.length === 0 ? (
@@ -143,7 +145,7 @@ export default function ClassManagementPage() {
           gradeClasses.map((cls, idx) => (
             <div key={cls.id} style={{
               display: 'grid',
-              gridTemplateColumns: '40px 60px 1fr 160px 80px 120px',
+              gridTemplateColumns: '40px 60px 1fr 160px 80px 220px',
               padding: '14px 20px',
               borderBottom: idx < gradeClasses.length - 1 ? '1px solid #f9f9f9' : 'none',
               alignItems: 'center',
@@ -174,11 +176,15 @@ export default function ClassManagementPage() {
               <div style={{ textAlign: 'center', fontSize: 15, fontWeight: 700, color: '#333' }}>
                 {cls.studentCount}명
               </div>
-              <div style={{ textAlign: 'center' }}>
+              <div style={{ textAlign: 'center', display: 'flex', gap: 6, justifyContent: 'center' }}>
                 <button onClick={() => setUnitModalClass(cls)} style={{
-                  padding: '6px 14px', borderRadius: 8, fontSize: 13, fontWeight: 600,
+                  padding: '6px 10px', borderRadius: 8, fontSize: 13, fontWeight: 600,
                   background: '#fff0f6', color: '#ff2778', border: '1px solid #ffc6de', cursor: 'pointer',
                 }}>단원 설정</button>
+                <button onClick={() => setMessageModalClass(cls)} style={{
+                  padding: '6px 10px', borderRadius: 8, fontSize: 13, fontWeight: 600,
+                  background: '#f0f9ff', color: '#0ea5e9', border: '1px solid #bae6fd', cursor: 'pointer',
+                }}>선생님 말씀</button>
               </div>
             </div>
           ))
@@ -192,6 +198,18 @@ export default function ClassManagementPage() {
           allUnits={CURRICULUM_UNITS}
           onSave={handleSaveUnit}
           onClose={() => setUnitModalClass(null)}
+        />
+      )}
+
+      {/* 선생님 말씀 모달 */}
+      {messageModalClass && (
+        <TeacherMessageModal
+          classRoom={messageModalClass}
+          onClose={() => setMessageModalClass(null)}
+          onSaved={() => {
+            setMessageModalClass(null);
+            showToast('선생님 말씀이 저장되었습니다.');
+          }}
         />
       )}
 

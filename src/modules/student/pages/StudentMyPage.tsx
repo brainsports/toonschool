@@ -9,9 +9,11 @@ import StudentPageShell from '../components/layout/StudentPageShell'
 import WorkCard from '../components/mypage/WorkCard'
 import type { MyWork } from '../components/mypage/WorkCard'
 import AllWorksModal from '../components/mypage/AllWorksModal'
+import TeacherMessageModal from '../components/mypage/TeacherMessageModal'
 
 import { useAuth } from '../../../shared/contexts/AuthContext'
 import { getStudentWorks } from '../services/studentWorkService'
+import { getLatestTeacherMessageForClass, getTeacherMessagesForClass, resolveStudentClassKey, type TeacherMessage } from '../services/teacherMessageService'
 
 
 
@@ -130,9 +132,13 @@ export default function StudentMyPage() {
   const navigate = useNavigate()
   const { user, profile } = useAuth()
   const [isAllWorksModalOpen, setIsAllWorksModalOpen] = useState(false);
+  const [isTeacherMessageModalOpen, setIsTeacherMessageModalOpen] = useState(false);
   const [myWorks, setMyWorks] = useState<MyWork[]>([]);
   const [isLoadingWorks, setIsLoadingWorks] = useState(true);
   const [worksError, setWorksError] = useState<string | null>(null);
+  
+  const [latestMessage, setLatestMessage] = useState<TeacherMessage | null>(null);
+  const [allMessages, setAllMessages] = useState<TeacherMessage[]>([]);
 
   // Mock data for attendance
   const weeklyAttendance = [
@@ -173,8 +179,23 @@ export default function StudentMyPage() {
         setIsLoadingWorks(false);
       }
     }
+
+    async function loadTeacherMessage() {
+      const classKey = resolveStudentClassKey(profile, user);
+      const msg = await getLatestTeacherMessageForClass(classKey);
+      setLatestMessage(msg);
+    }
+
     loadWorks();
+    loadTeacherMessage();
   }, [user, profile]);
+
+  const handleOpenTeacherMessages = async () => {
+    setIsTeacherMessageModalOpen(true);
+    const classKey = resolveStudentClassKey(profile, user);
+    const msgs = await getTeacherMessagesForClass(classKey);
+    setAllMessages(msgs);
+  };
 
   const recommendedLearning = getTodayRecommendedLearning()
   // Evaluation areas data
@@ -379,25 +400,40 @@ export default function StudentMyPage() {
                   </div>
                   <h3 className="font-bold text-slate-800">선생님 말씀</h3>
                 </div>
-                <button className="text-xs font-medium text-slate-500 hover:bg-slate-50 px-2 py-1 rounded-md">
+                <button 
+                  onClick={handleOpenTeacherMessages}
+                  className="text-xs font-medium text-slate-500 hover:bg-slate-50 px-2 py-1 rounded-md"
+                >
                   더보기 <ChevronRight className="w-3 h-3 inline" />
                 </button>
               </div>
 
-              <div className="flex gap-4 mt-2">
-                <div className="w-12 h-12 bg-pink-50 rounded-full overflow-hidden shrink-0 relative">
-                  <img src="/images/toonschool/characters/v2/hana-master/hana-v2-front.png" alt="Teacher" className="w-full h-full object-cover object-top" />
-                </div>
-                <div className="flex flex-col gap-1.5 pt-1">
-                  <div className="flex items-center gap-1 text-sm font-bold text-slate-800">
-                    <span>정말 잘했어요! 👏🏻</span>
+              {latestMessage ? (
+                <div className="flex gap-4 mt-2">
+                  <div className="w-12 h-12 bg-pink-50 rounded-full overflow-hidden shrink-0 relative">
+                    <img src="/images/toonschool/characters/v2/hana-master/hana-v2-front.png" alt="Teacher" className="w-full h-full object-cover object-top" />
                   </div>
-                  <p className="text-xs font-medium text-slate-600 leading-relaxed">
-                    스토리가 점점 더 풍성해지고 표현도 아주 멋져요!
-                  </p>
-                  <span className="text-[10px] text-slate-400 self-end mt-1">2024.05.23</span>
+                  <div className="flex flex-col gap-1.5 pt-1 flex-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-bold text-slate-800">
+                        {latestMessage.title || '선생님 말씀'}
+                      </span>
+                    </div>
+                    <p className="text-[13px] font-medium text-slate-600 leading-relaxed line-clamp-3">
+                      {latestMessage.content}
+                    </p>
+                    <span className="text-[10px] text-slate-400 self-end mt-1">
+                      {new Date(latestMessage.message_date).toLocaleDateString()}
+                    </span>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-6 text-center">
+                  <span className="text-3xl mb-3">💬</span>
+                  <p className="text-slate-500 font-medium text-sm">아직 선생님 말씀이 없어요.</p>
+                  <p className="text-slate-400 text-xs mt-1">선생님 말씀이 도착하면 이곳에 보여요.</p>
+                </div>
+              )}
             </div>
 
             {/* 알림함 */}
@@ -458,6 +494,11 @@ export default function StudentMyPage() {
           isOpen={isAllWorksModalOpen} 
           onClose={() => setIsAllWorksModalOpen(false)} 
           works={myWorks} 
+        />
+        <TeacherMessageModal
+          isOpen={isTeacherMessageModalOpen}
+          onClose={() => setIsTeacherMessageModalOpen(false)}
+          messages={allMessages}
         />
     </StudentPageShell>
   )
