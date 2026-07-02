@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { 
   BookOpen, Star, Trophy, Calendar, 
@@ -6,6 +7,42 @@ import {
 } from 'lucide-react'
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts'
 import StudentPageShell from '../components/layout/StudentPageShell'
+
+const getSubjectDefaultThumbnail = (subject: string) => {
+  switch (subject) {
+    case '국어': return '/images/toonschool/thumbnails/subjects/korean-default.png';
+    case '수학': return '/images/toonschool/thumbnails/subjects/math-default.png';
+    case '과학': return '/images/toonschool/thumbnails/subjects/science-default.png';
+    case '사회': return '/images/toonschool/thumbnails/subjects/social-default.png';
+    case '영어': return '/images/toonschool/thumbnails/subjects/english-default.png';
+    case '미술': return '/images/toonschool/thumbnails/subjects/art-default.png';
+    default: return '/images/toonschool/thumbnails/subjects/korean-default.png';
+  }
+};
+
+const WorkThumbnail = ({ src, alt, subject, borderClass }: { src?: string, alt: string, subject: string, fallbackBgClass?: string, borderClass: string }) => {
+  const [error, setError] = useState(false);
+  const defaultThumbnail = getSubjectDefaultThumbnail(subject);
+  const displaySrc = (!src || error) ? defaultThumbnail : src;
+
+  return (
+    <div className={`aspect-[4/3] rounded-xl overflow-hidden bg-slate-100 border border-slate-200 cursor-pointer ${borderClass} transition-colors relative group`}>
+      <img 
+        src={displaySrc} 
+        alt={alt} 
+        className="w-full h-full object-cover group-hover:scale-105 transition-transform" 
+        onError={(e) => {
+          if (!error) {
+            setError(true);
+          } else {
+            // Prevent infinite loop if the default image also fails
+            (e.target as HTMLImageElement).src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+          }
+        }}
+      />
+    </div>
+  )
+}
 
 export default function StudentMyPage() {
   const navigate = useNavigate()
@@ -125,9 +162,13 @@ export default function StudentMyPage() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {/* 1 */}
                 <div className="flex flex-col gap-2">
-                  <div className="aspect-[4/3] rounded-xl overflow-hidden bg-slate-100 border border-slate-200 cursor-pointer hover:border-pink-300 transition-colors relative group">
-                    <img src="/images/toonschool/covers/korean/korean-cover-default.png" alt="용기 있는 한 걸음" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-                  </div>
+                  <WorkThumbnail 
+                    src=""
+                    alt="용기 있는 한 걸음"
+                    subject="국어"
+                    fallbackBgClass="bg-pink-400"
+                    borderClass="hover:border-pink-300"
+                  />
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] font-bold text-white bg-pink-500 px-1.5 py-0.5 rounded">국어</span>
                     <span className="text-xs font-bold text-slate-700 truncate">용기 있는 한 걸음</span>
@@ -142,9 +183,13 @@ export default function StudentMyPage() {
 
                 {/* 2 */}
                 <div className="flex flex-col gap-2">
-                  <div className="aspect-[4/3] rounded-xl overflow-hidden bg-slate-100 border border-slate-200 cursor-pointer hover:border-sky-300 transition-colors relative group">
-                    <img src="/images/toonschool/covers/science/science-cover-default.png" alt="바다 속 친구들" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-                  </div>
+                  <WorkThumbnail 
+                    src=""
+                    alt="바다 속 친구들"
+                    subject="과학"
+                    fallbackBgClass="bg-sky-400"
+                    borderClass="hover:border-sky-300"
+                  />
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] font-bold text-white bg-sky-500 px-1.5 py-0.5 rounded">과학</span>
                     <span className="text-xs font-bold text-slate-700 truncate">바다 속 친구들</span>
@@ -159,9 +204,13 @@ export default function StudentMyPage() {
 
                 {/* 3 */}
                 <div className="flex flex-col gap-2">
-                  <div className="aspect-[4/3] rounded-xl overflow-hidden bg-slate-100 border border-slate-200 cursor-pointer hover:border-amber-300 transition-colors relative group">
-                    <img src="/images/toonschool/covers/social/social-cover-default.png" alt="우리 동네 탐험기" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-                  </div>
+                  <WorkThumbnail 
+                    src=""
+                    alt="우리 동네 탐험기"
+                    subject="사회"
+                    fallbackBgClass="bg-amber-400"
+                    borderClass="hover:border-amber-300"
+                  />
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] font-bold text-white bg-amber-500 px-1.5 py-0.5 rounded">사회</span>
                     <span className="text-xs font-bold text-slate-700 truncate">우리 동네 탐험기</span>
@@ -176,9 +225,13 @@ export default function StudentMyPage() {
 
                 {/* 4 */}
                 <div className="flex flex-col gap-2">
-                  <div className="aspect-[4/3] rounded-xl overflow-hidden bg-slate-100 border border-slate-200 cursor-pointer hover:border-emerald-300 transition-colors relative group">
-                    <img src="/images/toonschool/covers/english/english-cover-default.png" alt="재미있는 알파벳" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-                  </div>
+                  <WorkThumbnail 
+                    src=""
+                    alt="재미있는 알파벳"
+                    subject="영어"
+                    fallbackBgClass="bg-emerald-400"
+                    borderClass="hover:border-emerald-300"
+                  />
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] font-bold text-white bg-emerald-500 px-1.5 py-0.5 rounded">영어</span>
                     <span className="text-xs font-bold text-slate-700 truncate">재미있는 알파벳</span>
