@@ -82,11 +82,11 @@ export default function StudentMyPage() {
                 </div>
 
                 <button 
-                  onClick={() => navigate('/toon')}
+                  onClick={() => navigate('/student/select-unit')}
                   className="mt-2 bg-pink-500 hover:bg-pink-600 text-white font-bold py-3 px-6 rounded-full shadow-md shadow-pink-500/20 hover:shadow-lg transition-all flex items-center gap-2 w-fit active:scale-95"
                 >
                   <Play className="w-5 h-5 fill-current" />
-                  <span>이어서 만들기</span>
+                  <span>툰스쿨</span>
                 </button>
               </div>
               <img 
