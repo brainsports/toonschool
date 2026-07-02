@@ -581,15 +581,15 @@ export default function StudentComicViewerPage() {
              </div>
              <div 
                className="w-[90%] max-w-[1200px] bg-white shadow-xl border-[12px] border-[#dbeafe] rounded-[40px] relative overflow-hidden shrink-0 comic-read-cut-frame"
-               style={{ aspectRatio: '67 / 44' }}
+               style={{ width: '100%', height: 'auto', aspectRatio: '343 / 251' }}
              >
                 {data.backgroundImageUrl ? (
-                  <img src={data.backgroundImageUrl} className="absolute inset-0 w-full h-full object-cover block" alt="cut bg" />
+                  <img src={data.backgroundImageUrl} className="absolute inset-0 w-full h-full object-contain block mx-auto" alt="cut bg" />
                 ) : (
                   <div className="absolute inset-0 w-full h-full flex items-center justify-center text-[50px] text-slate-400 font-bold bg-slate-50">그림 없음</div>
                 )}
                 <div className="absolute inset-0 w-full h-full pointer-events-none">
-                   <div style={{ transform: `scale(${1236 / 1400})`, transformOrigin: 'top left', width: 1400, height: 1400 * 44 / 67, position: 'absolute', top: 0, left: 0 }}>
+                   <div style={{ transform: `scale(${1176 / 1400})`, transformOrigin: 'top left', width: 1400, height: 1400 * 251 / 343, position: 'absolute', top: 0, left: 0 }}>
                      {data.elements?.map(el => <ReadonlyElement key={el.id} el={el} />)}
                    </div>
                 </div>
