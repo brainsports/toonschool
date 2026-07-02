@@ -25,6 +25,7 @@ export async function fetchStudentsByCenterAndGrade(centerId: string, grade: num
       .eq('status', 'active')
 
     console.log('[fetchStudentsByCenterAndGrade] Supabase query result -> data:', data, 'error:', error)
+    // 참고: assignment_status 필터는 요구사항에 없으므로 추가하지 않음 (status='active' 만 검사)
 
     if (error) throw error
 
