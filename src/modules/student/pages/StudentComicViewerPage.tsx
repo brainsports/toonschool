@@ -1058,13 +1058,48 @@ export default function StudentComicViewerPage() {
       const authorName = backCoverPage?.data?.authorName || '';
       const gradeClassInfo = backCoverPage?.data?.gradeClassInfo || '';
       const topicName = backCoverPage?.data?.topicName || '';
+      const subjectName = backCoverPage?.data?.subjectName || '';
+
+      // Title 추출
+      const pd = projectData as any;
+      const possibleTitles = [
+        pd?.title,
+        pd?.content?.topicTitle,
+        pd?.content?.selectedTopic?.title,
+        pd?.content?.title,
+        pd?.topicTitle,
+        topicName
+      ];
+      let finalTitle = possibleTitles.find(t => t && typeof t === 'string' && t.trim() !== '') || '툰스쿨 만화';
+
+      // Subject 추출
+      const possibleSubjects = [
+        pd?.subject,
+        pd?.content?.subject,
+        pd?.content?.curriculum?.subjectName,
+        pd?.content?.curriculum?.subject,
+        subjectName
+      ];
+      let finalSubject = possibleSubjects.find(s => s && typeof s === 'string' && s.trim() !== '');
+
+      if (!finalSubject) {
+        const textToSearch = `${finalTitle} ${pd?.summary || ''} ${pd?.content?.summary || ''} ${pd?.selectedStoryDescription || ''}`;
+        if (textToSearch.includes('사회') || textToSearch.includes('강줄기') || textToSearch.includes('급식') || textToSearch.includes('우리나라') || textToSearch.includes('국토') || textToSearch.includes('산지') || textToSearch.includes('지도')) finalSubject = '사회';
+        else if (textToSearch.includes('과학')) finalSubject = '과학';
+        else if (textToSearch.includes('수학')) finalSubject = '수학';
+        else if (textToSearch.includes('영어')) finalSubject = '영어';
+        else if (textToSearch.includes('미술')) finalSubject = '미술';
+        else if (textToSearch.includes('국어')) finalSubject = '국어';
+        else finalSubject = '기타';
+      }
 
       const { error: insertError } = await supabase
         .from('shared_comic_books')
         .insert({
           slug,
           project_id: currentProjectId,
-          title: topicName || '툰스쿨 만화',
+          title: finalTitle,
+          subject: finalSubject,
           student_name: authorName,
           grade: gradeClassInfo,
           thumbnail_url: thumbnailUrl,
