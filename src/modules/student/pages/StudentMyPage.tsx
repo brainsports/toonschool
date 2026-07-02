@@ -44,10 +44,121 @@ const WorkThumbnail = ({ src, alt, subject, borderClass }: { src?: string, alt: 
   )
 }
 
+type RecommendationSource = 'teacher-assigned' | 'in-progress' | 'rotation' | 'default';
+
+interface RecommendedLearning {
+  subject: string;
+  unitTitle: string;
+  description: string;
+  source: RecommendationSource;
+}
+
+/**
+ * 오늘의 추천 학습 로직
+ * 
+ * 추천 우선순위:
+ * A. 교사 지정 과제가 있으면 최우선
+ * B. 미완성 작품이 있으면 이어서 추천
+ * C. 과목 순환 추천 (국어 → 영어 → 수학 → 사회 → 과학 → 다시 국어)
+ * D. 해당 과목에서 다음 중단원 추천
+ * E. 해당 과목 기록이 없으면 첫 중단원 추천
+ * F. 해당 과목의 모든 중단원을 완료했다면 다음 과목으로 넘어가기
+ * G. 모든 데이터가 없을 때 기본 추천
+ */
+const getTodayRecommendedLearning = (): RecommendedLearning => {
+  // TODO: 실제 Supabase 학습 기록 데이터와 연동 (studentMockData 등 활용 가능)
+  const mockTeacherAssignedTask: any = null; // ex: { subject: '국어', unitTitle: '...', description: '...' }
+  const mockInProgressWork: any = null;      // ex: { subject: '과학', unitTitle: '...', description: '...' }
+  const mockLastWorkedSubject = '과학';        // 순환 테스트를 위해 '과학'으로 임시 설정 (다음은 '국어')
+
+  // A. 교사 지정 과제가 있으면 최우선
+  if (mockTeacherAssignedTask) {
+    return {
+      subject: mockTeacherAssignedTask.subject || '국어',
+      unitTitle: mockTeacherAssignedTask.unitTitle || '과제 단원',
+      description: mockTeacherAssignedTask.description || '선생님이 지정하신 과제를 시작하세요.',
+      source: 'teacher-assigned',
+    };
+  }
+
+  // B. 미완성 작품이 있으면 이어서 추천
+  if (mockInProgressWork) {
+    return {
+      subject: mockInProgressWork.subject || '국어',
+      unitTitle: mockInProgressWork.unitTitle || '미완성 단원',
+      description: mockInProgressWork.description || '만들던 작품을 이어서 완성해보세요.',
+      source: 'in-progress',
+    };
+  }
+
+  // C. 과목 순환 추천 기준
+  const subjectRotation = ['국어', '영어', '수학', '사회', '과학'];
+  let startIndex = subjectRotation.indexOf(mockLastWorkedSubject);
+  if (startIndex === -1) startIndex = -1;
+
+  // 과목별 학습 기록 Mock (실제로는 API 연동)
+  const mockRecords: Record<string, { lastCompletedUnit: number; totalUnits: number }> = {
+    '국어': { lastCompletedUnit: 3, totalUnits: 10 },
+    '영어': { lastCompletedUnit: 0, totalUnits: 10 },
+    '수학': { lastCompletedUnit: 5, totalUnits: 10 },
+    '사회': { lastCompletedUnit: 2, totalUnits: 10 },
+    '과학': { lastCompletedUnit: 4, totalUnits: 10 },
+  };
+
+  // 최대 5과목을 순환하며 (F)
+  for (let i = 1; i <= subjectRotation.length; i++) {
+    const nextIndex = (startIndex + i) % subjectRotation.length;
+    const subject = subjectRotation[nextIndex];
+    const record = mockRecords[subject];
+
+    // E. 기록이 아예 없는 경우
+    if (!record) {
+      return {
+        subject,
+        unitTitle: '1단원',
+        description: '새로운 과목의 학습을 시작해보세요.',
+        source: 'rotation',
+      };
+    }
+
+    // D. 다음 중단원 추천
+    if (record.lastCompletedUnit < record.totalUnits) {
+      const nextUnit = record.lastCompletedUnit + 1;
+      
+      let description = '다음 단원을 학습해보세요.';
+      // 기존 예시 화면과 비슷한 출력을 위해 하드코딩된 예외 처리
+      if (subject === '국어' && nextUnit === 4) {
+        description = '만화로 마음 표현하기';
+        return {
+          subject,
+          unitTitle: `${nextUnit}단원. 마음을 전해요`,
+          description,
+          source: 'rotation',
+        };
+      }
+
+      return {
+        subject,
+        unitTitle: `${nextUnit}단원`,
+        description,
+        source: 'rotation',
+      };
+    }
+  }
+
+  // G. 기본 추천
+  return {
+    subject: '국어',
+    unitTitle: '1단원. 마음을 전해요',
+    description: '만화로 마음 표현하기',
+    source: 'default',
+  };
+};
+
 export default function StudentMyPage() {
   const navigate = useNavigate()
 
-
+  const recommendedLearning = getTodayRecommendedLearning()
   // Chart data
   const growthData = [
     { name: '5주 전', score: 20 },
@@ -69,16 +180,16 @@ export default function StudentMyPage() {
             <div className="bg-gradient-to-r from-pink-50 to-pink-100/50 rounded-[2rem] p-8 flex items-center justify-between border border-pink-100 relative overflow-hidden min-h-[260px] shadow-sm">
               <div className="z-10 flex flex-col gap-4">
                 <div className="flex items-center gap-2">
-                  <h2 className="text-2xl font-black text-pink-600">오늘의 학습</h2>
+                  <h2 className="text-2xl font-black text-pink-600">오늘의 추천 학습</h2>
                   <span className="text-2xl">☀️</span>
                 </div>
                 
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <span className="px-3 py-1 bg-pink-500 text-white text-sm font-bold rounded-full">국어</span>
-                    <span className="font-bold text-slate-700 text-lg">4단원. 마음을 전해요</span>
+                    <span className="px-3 py-1 bg-pink-500 text-white text-sm font-bold rounded-full">{recommendedLearning.subject}</span>
+                    <span className="font-bold text-slate-700 text-lg">{recommendedLearning.unitTitle}</span>
                   </div>
-                  <p className="text-slate-500 font-medium ml-1">만화로 마음 표현하기</p>
+                  <p className="text-slate-500 font-medium ml-1">{recommendedLearning.description}</p>
                 </div>
 
                 <button 
@@ -86,7 +197,7 @@ export default function StudentMyPage() {
                   className="mt-2 bg-pink-500 hover:bg-pink-600 text-white font-bold py-3 px-6 rounded-full shadow-md shadow-pink-500/20 hover:shadow-lg transition-all flex items-center gap-2 w-fit active:scale-95"
                 >
                   <Play className="w-5 h-5 fill-current" />
-                  <span>툰스쿨</span>
+                  <span>{recommendedLearning.source === 'teacher-assigned' ? '과제 시작' : '툰스쿨 에디터'}</span>
                 </button>
               </div>
               <img 
