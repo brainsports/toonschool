@@ -51,6 +51,14 @@ import AssessmentPage from '../modules/admin-lms/pages/AssessmentPage'
 import TeacherManagementPage from '../modules/admin-lms/pages/TeacherManagementPage'
 import AdminProfilePage from '../modules/admin-lms/pages/AdminProfilePage'
 
+// 기관관리자 라우트
+import OrgAdminLayout from '../modules/admin-org/components/OrgAdminLayout'
+import OrgAdminDashboard from '../modules/admin-org/pages/OrgAdminDashboard'
+import OrgTeacherManagement from '../modules/admin-org/pages/OrgTeacherManagement'
+import OrgLicenseManagement from '../modules/admin-org/pages/OrgLicenseManagement'
+import OrgNotificationSender from '../modules/admin-org/pages/OrgNotificationSender'
+import OrgSentNotifications from '../modules/admin-org/pages/OrgSentNotifications'
+
 export default function AppRouter() {
   return (
     <Routes>
@@ -107,6 +115,16 @@ export default function AppRouter() {
         <Route path="assessments" element={<AssessmentPage />} />
         <Route path="teachers" element={<TeacherManagementPage />} />
         <Route path="profile" element={<AdminProfilePage />} />
+      </Route>
+
+      {/* 기관관리자 라우트 */}
+      <Route path="/admin/org" element={<OrgAdminLayout />}>
+        <Route index element={<Navigate to="dashboard" replace />} />
+        <Route path="dashboard" element={<OrgAdminDashboard />} />
+        <Route path="teachers" element={<OrgTeacherManagement />} />
+        <Route path="licenses" element={<OrgLicenseManagement />} />
+        <Route path="notifications/send" element={<OrgNotificationSender />} />
+        <Route path="notifications/sent" element={<OrgSentNotifications />} />
       </Route>
     </Routes>
   )
