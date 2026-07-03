@@ -28,8 +28,10 @@ export default function ClassManagementPage() {
   const [toast, setToast] = useState('')
 
   useEffect(() => {
-    fetchLicenseInfo().then(setLicense)
-  }, [])
+    if (profile?.id) {
+      fetchLicenseInfo(profile.id, profile.center_id || undefined).then(setLicense)
+    }
+  }, [profile?.id, profile?.center_id])
 
   useEffect(() => {
     if (!profile?.center_id) return
