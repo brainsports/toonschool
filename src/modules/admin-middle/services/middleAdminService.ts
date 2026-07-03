@@ -44,10 +44,11 @@ export const middleAdminService = {
         if (centerIds.length > 0) {
           const { data: studentsData } = await supabase
             .from('students')
-            .select('center_id')
+            .select('id, center_id')
             .in('center_id', centerIds)
 
-          totalStudents = studentsData?.length || 0
+          const uniqueStudentIds = new Set(studentsData?.map(s => s.id))
+          totalStudents = uniqueStudentIds.size
           
           const uniqueStudentCenters = new Set(studentsData?.map(s => s.center_id))
           totalClasses = uniqueStudentCenters.size
@@ -91,20 +92,31 @@ export const middleAdminService = {
       if (centerIds.length > 0) {
         const { data: studentsData } = await supabase
           .from('students')
-          .select('center_id')
+          .select('id, center_id')
           .in('center_id', centerIds)
           
-        studentCount = studentsData?.length || 0
+        const uniqueStudentIds = new Set(studentsData?.map(s => s.id))
+        studentCount = uniqueStudentIds.size
+
         const uniqueStudentCenters = new Set(studentsData?.map(s => s.center_id))
         classCount = uniqueStudentCenters.size
       }
+
+      // 기관관리자 대시보드와 동일하게 사용 이용권(allocatedLicenses) 계산
+      const { data: allocations } = await supabase
+        .from('license_allocations')
+        .select('quantity')
+        .eq('organization_id', org.id)
+
+      const allocatedLicenses = allocations?.reduce((acc, curr) => acc + curr.quantity, 0) || 0
 
       return {
         ...org,
         status: org.status || 'active',
         teacher_count: teachersData?.length || 0,
         student_count: studentCount,
-        class_count: classCount
+        class_count: classCount,
+        used_licenses: allocatedLicenses
       }
     }))
 
@@ -134,10 +146,12 @@ export const middleAdminService = {
     if (centerIds.length > 0) {
       const { data: studentsData } = await supabase
         .from('students')
-        .select('center_id')
+        .select('id, center_id')
         .in('center_id', centerIds)
         
-      studentCount = studentsData?.length || 0
+      const uniqueStudentIds = new Set(studentsData?.map(s => s.id))
+      studentCount = uniqueStudentIds.size
+
       const uniqueStudentCenters = new Set(studentsData?.map(s => s.center_id))
       classCount = uniqueStudentCenters.size
     }
