@@ -10,10 +10,12 @@ import WorkCard from '../components/mypage/WorkCard'
 import type { MyWork } from '../components/mypage/WorkCard'
 import AllWorksModal from '../components/mypage/AllWorksModal'
 import TeacherMessageModal from '../components/mypage/TeacherMessageModal'
+import AllNotificationsModal from '../components/mypage/AllNotificationsModal'
 
 import { useAuth } from '../../../shared/contexts/AuthContext'
 import { getStudentWorks } from '../services/studentWorkService'
 import { getLatestTeacherMessageForClass, getTeacherMessagesForClass, resolveStudentClassKey, type TeacherMessage } from '../services/teacherMessageService'
+import { getNotificationsForTarget, type StudentNotification } from '../services/notificationService'
 
 
 
@@ -140,6 +142,9 @@ export default function StudentMyPage() {
   const [latestMessage, setLatestMessage] = useState<TeacherMessage | null>(null);
   const [allMessages, setAllMessages] = useState<TeacherMessage[]>([]);
 
+  const [notifications, setNotifications] = useState<StudentNotification[]>([]);
+  const [isAllNotificationsModalOpen, setIsAllNotificationsModalOpen] = useState(false);
+
   // Mock data for attendance
   const daysOfWeek = ['일', '월', '화', '수', '목', '금', '토'];
   // 2026년 7월 1일은 수요일(인덱스 3), 총 31일.
@@ -184,14 +189,18 @@ export default function StudentMyPage() {
       }
     }
 
-    async function loadTeacherMessage() {
+    async function loadTeacherMessageAndNotifications() {
       const classKey = resolveStudentClassKey(profile, user);
+      
       const msg = await getLatestTeacherMessageForClass(classKey);
       setLatestMessage(msg);
+
+      const notis = await getNotificationsForTarget(classKey);
+      setNotifications(notis);
     }
 
     loadWorks();
-    loadTeacherMessage();
+    loadTeacherMessageAndNotifications();
   }, [user, profile]);
 
   const handleOpenTeacherMessages = async () => {
@@ -480,44 +489,50 @@ export default function StudentMyPage() {
                   </div>
                   <h3 className="font-bold text-slate-800">알림함</h3>
                 </div>
-                <button className="text-xs font-medium text-slate-500 hover:bg-slate-50 px-2 py-1 rounded-md">
+                <button 
+                  onClick={() => setIsAllNotificationsModalOpen(true)}
+                  className="text-xs font-medium text-slate-500 hover:bg-slate-50 px-2 py-1 rounded-md"
+                >
                   더보기 <ChevronRight className="w-3 h-3 inline" />
                 </button>
               </div>
 
               <div className="flex flex-col gap-4 mt-2">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-pink-50 flex items-center justify-center shrink-0">
-                    <Trophy className="w-4 h-4 text-pink-500" />
+                {notifications.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-6 text-center">
+                    <span className="text-3xl mb-3">📭</span>
+                    <p className="text-slate-500 font-medium text-sm">아직 도착한 알림이 없어요.</p>
+                    <p className="text-slate-400 text-xs mt-1">새로운 소식이 생기면 이곳에 알려드릴게요!</p>
                   </div>
-                  <div className="flex-1 flex items-center justify-between">
-                    <span className="text-xs font-medium text-slate-700">새 미션이 도착했어요!</span>
-                    <span className="text-[10px] text-slate-400">30분 전</span>
-                  </div>
-                  <div className="w-1.5 h-1.5 rounded-full bg-pink-500"></div>
-                </div>
-                
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-sky-50 flex items-center justify-center shrink-0">
-                    <MessageSquare className="w-4 h-4 text-sky-500" />
-                  </div>
-                  <div className="flex-1 flex items-center justify-between">
-                    <span className="text-xs font-medium text-slate-700">선생님이 댓글을 남겼어요.</span>
-                    <span className="text-[10px] text-slate-400">2시간 전</span>
-                  </div>
-                  <div className="w-1.5 h-1.5 rounded-full bg-pink-500"></div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-emerald-50 flex items-center justify-center shrink-0">
-                    <Star className="w-4 h-4 text-emerald-500" />
-                  </div>
-                  <div className="flex-1 flex items-center justify-between">
-                    <span className="text-xs font-medium text-slate-700">작품이 추천 작품으로 선정되었어요!</span>
-                    <span className="text-[10px] text-slate-400">1일 전</span>
-                  </div>
-                  <div className="w-1.5 h-1.5 rounded-full bg-pink-500"></div>
-                </div>
+                ) : (
+                  notifications.slice(0, 3).map((noti) => (
+                    <div key={noti.id} className="flex items-center gap-3">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+                        noti.category === 'notice' ? 'bg-sky-50 text-sky-500' :
+                        noti.category === 'learning' ? 'bg-emerald-50 text-emerald-500' :
+                        noti.category === 'event' ? 'bg-purple-50 text-purple-500' :
+                        noti.category === 'mission' ? 'bg-pink-50 text-pink-500' :
+                        'bg-slate-50 text-slate-500'
+                      }`}>
+                        {noti.category === 'notice' ? <Bell className="w-4 h-4" /> :
+                         noti.category === 'learning' ? <Star className="w-4 h-4" /> :
+                         noti.category === 'event' ? <MessageSquare className="w-4 h-4" /> :
+                         noti.category === 'mission' ? <Trophy className="w-4 h-4" /> :
+                         <Bell className="w-4 h-4" />}
+                      </div>
+                      <div className="flex-1 flex flex-col justify-center overflow-hidden">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-bold text-slate-800 truncate">{noti.title}</span>
+                          <span className="text-[10px] font-medium text-slate-400 shrink-0">
+                            {new Date(noti.notice_date).toLocaleDateString(undefined, { month: 'numeric', day: 'numeric' })}
+                          </span>
+                        </div>
+                        <span className="text-[11px] text-slate-500 truncate">{noti.content}</span>
+                      </div>
+                      <div className="w-1.5 h-1.5 rounded-full bg-pink-500 shrink-0"></div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
 
@@ -534,6 +549,11 @@ export default function StudentMyPage() {
           isOpen={isTeacherMessageModalOpen}
           onClose={() => setIsTeacherMessageModalOpen(false)}
           messages={allMessages}
+        />
+        <AllNotificationsModal
+          isOpen={isAllNotificationsModalOpen}
+          onClose={() => setIsAllNotificationsModalOpen(false)}
+          notifications={notifications}
         />
     </StudentPageShell>
   )

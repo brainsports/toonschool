@@ -11,6 +11,7 @@ import LicenseCard from '../components/LicenseCard'
 import UnitSettingModal from '../components/UnitSettingModal'
 import ConfirmModal from '../components/ConfirmModal'
 import TeacherMessageModal from '../components/TeacherMessageModal'
+import NotificationWriteModal from '../components/NotificationWriteModal'
 
 const GRADES = [1, 2, 3, 4, 5, 6]
 
@@ -22,6 +23,7 @@ export default function ClassManagementPage() {
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set())
   const [unitModalClass, setUnitModalClass] = useState<ClassRoom | null>(null)
   const [messageModalClass, setMessageModalClass] = useState<ClassRoom | null>(null)
+  const [notificationModalClass, setNotificationModalClass] = useState<ClassRoom | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState(false)
   const [toast, setToast] = useState('')
 
@@ -198,6 +200,10 @@ export default function ClassManagementPage() {
                   padding: '6px 10px', borderRadius: 8, fontSize: 13, fontWeight: 600,
                   background: '#f0f9ff', color: '#0ea5e9', border: '1px solid #bae6fd', cursor: 'pointer',
                 }}>선생님 말씀</button>
+                <button onClick={() => setNotificationModalClass(cls)} style={{
+                  padding: '6px 10px', borderRadius: 8, fontSize: 13, fontWeight: 600,
+                  background: '#f3e8ff', color: '#8b5cf6', border: '1px solid #ddd6fe', cursor: 'pointer',
+                }}>알림함 쓰기</button>
               </div>
             </div>
           ))
@@ -222,6 +228,18 @@ export default function ClassManagementPage() {
           onSaved={() => {
             setMessageModalClass(null);
             showToast('선생님 말씀이 저장되었습니다.');
+          }}
+        />
+      )}
+
+      {/* 알림함 쓰기 모달 */}
+      {notificationModalClass && (
+        <NotificationWriteModal
+          classRoom={notificationModalClass}
+          onClose={() => setNotificationModalClass(null)}
+          onSaved={() => {
+            setNotificationModalClass(null);
+            showToast('알림이 저장되었습니다.');
           }}
         />
       )}
