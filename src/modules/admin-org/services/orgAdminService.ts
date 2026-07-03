@@ -22,29 +22,31 @@ export const orgAdminService = {
       .eq('organization_id', orgId)
       .eq('role', 'teacher')
 
-    // 해당 기관 소속 선생님들의 id 조회
+    // 해당 기관 소속 선생님들의 center_id 조회
     const { data: teachers } = await supabase
       .from('profiles')
-      .select('id')
+      .select('center_id')
       .eq('organization_id', orgId)
       .eq('role', 'teacher')
+      .not('center_id', 'is', null)
 
     let studentCount = 0
 
     if (teachers && teachers.length > 0) {
-      const teacherIds = teachers.map(t => t.id)
+      const centerIds = Array.from(new Set(teachers.map(t => t.center_id)))
       
-      // 선생님이 담당하는 학생 수 계산 (profiles.center_id 가 선생님 id인 경우)
-      // center_id에 중복 매핑될 수 있는 경우를 대비해 distinct 처리(동일 학생의 여러번 카운팅 방지)
-      const { data: students } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('role', 'student')
-        .in('center_id', teacherIds)
-        
-      if (students) {
-        const uniqueStudentIds = new Set(students.map(s => s.id))
-        studentCount = uniqueStudentIds.size
+      if (centerIds.length > 0) {
+        // center_id 기준으로 소속 학생 수 계산
+        const { data: students } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('role', 'student')
+          .in('center_id', centerIds)
+          
+        if (students) {
+          const uniqueStudentIds = new Set(students.map(s => s.id))
+          studentCount = uniqueStudentIds.size
+        }
       }
     }
 
@@ -131,33 +133,32 @@ export const orgAdminService = {
   },
 
   async getOrgStudents(orgId: string): Promise<any[]> {
-    // 1. 해당 기관 소속 선생님들의 id 조회
+    // 1. 해당 기관 소속 선생님들의 center_id 조회
     const { data: teachers } = await supabase
       .from('profiles')
-      .select('id')
+      .select('center_id')
       .eq('organization_id', orgId)
       .eq('role', 'teacher')
+      .not('center_id', 'is', null)
 
     if (!teachers || teachers.length === 0) return []
 
-    const teacherIds = teachers.map(t => t.id)
+    const centerIds = Array.from(new Set(teachers.map(t => t.center_id)))
 
-    // 2. 해당 선생님들이 담당하는 학생 목록 조회 (profiles.organization_id 가 NULL 이더라도 조회되도록 수정)
+    if (centerIds.length === 0) return []
+
+    // 2. 해당 선생님들이 속한 center_id의 학생 목록 조회
     const { data: students, error: studentsError } = await supabase
       .from('profiles')
-      .select('id, name, grade, center_id') // center_id maps to teacher ID mostly
+      .select('id, name, grade, center_id')
       .eq('role', 'student')
-      .in('center_id', teacherIds)
+      .in('center_id', centerIds)
       .order('grade', { ascending: true })
       .order('name', { ascending: true })
 
     if (studentsError) throw studentsError
     
-    // Also fetch teacher mapping to display teacher name?
-    // Using center_id to map to teacher might be complex if no explicit relation. 
-    // We'll just return what's available.
-    
-    // 중복 제거 (같은 학생이 여러 학급에 배정된 경우 1명으로)
+    // 중복 제거 (같은 학생이 여러번 조회된 경우 1명으로)
     const uniqueStudents = students ? Array.from(new Map(students.map(s => [s.id, s])).values()) : []
     return uniqueStudents
   },
