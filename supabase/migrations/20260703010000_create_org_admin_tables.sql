@@ -11,14 +11,6 @@ CREATE TABLE IF NOT EXISTS public.organizations (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- RLS 설정
-ALTER TABLE public.organizations ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Enable read access for users in the same organization"
-    ON public.organizations FOR SELECT
-    USING (id = (SELECT organization_id FROM public.profiles WHERE id = auth.uid() LIMIT 1));
-
-
 -- 2. profiles 테이블에 organization_id 컬럼 추가 (기존에 없다면)
 DO $$ 
 BEGIN
@@ -30,7 +22,14 @@ BEGIN
     END IF;
 END $$;
 
--- 3. 이용권 할당 (license_allocations) 테이블 생성
+-- 3. organizations RLS 설정
+ALTER TABLE public.organizations ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Enable read access for users in the same organization"
+    ON public.organizations FOR SELECT
+    USING (id = (SELECT organization_id FROM public.profiles WHERE id = auth.uid() LIMIT 1));
+
+-- 4. 이용권 할당 (license_allocations) 테이블 생성
 CREATE TABLE IF NOT EXISTS public.license_allocations (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     organization_id UUID REFERENCES public.organizations(id) NOT NULL,
@@ -52,7 +51,7 @@ CREATE POLICY "Enable all access for org_admin to their org license_allocations"
     USING (organization_id = (SELECT organization_id FROM public.profiles WHERE id = auth.uid() LIMIT 1));
 
 
--- 4. 이용권 변동 이력 (license_logs) 테이블 생성
+-- 5. 이용권 변동 이력 (license_logs) 테이블 생성
 CREATE TABLE IF NOT EXISTS public.license_logs (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     organization_id UUID REFERENCES public.organizations(id) NOT NULL,
@@ -74,7 +73,7 @@ CREATE POLICY "Enable all access for org_admin to their org license_logs"
     USING (organization_id = (SELECT organization_id FROM public.profiles WHERE id = auth.uid() LIMIT 1));
 
 
--- 5. 기관 알림 (org_notifications) 테이블 생성
+-- 6. 기관 알림 (org_notifications) 테이블 생성
 CREATE TABLE IF NOT EXISTS public.org_notifications (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     organization_id UUID REFERENCES public.organizations(id) NOT NULL,
@@ -97,7 +96,7 @@ CREATE POLICY "Enable all access for org_admin to their org notifications"
     USING (organization_id = (SELECT organization_id FROM public.profiles WHERE id = auth.uid() LIMIT 1));
 
 
--- 6. 기관 알림 읽음 상태 (org_notification_reads) 테이블 생성
+-- 7. 기관 알림 읽음 상태 (org_notification_reads) 테이블 생성
 CREATE TABLE IF NOT EXISTS public.org_notification_reads (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     notification_id UUID REFERENCES public.org_notifications(id) NOT NULL,
