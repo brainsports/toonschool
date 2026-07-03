@@ -1,6 +1,7 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../../shared/contexts/AuthContext'
+import MiddleAdminNotificationInbox from './MiddleAdminNotificationInbox'
 
 const MENU_ITEMS = [
   { label: '대시보드', path: '/manager/dashboard' },
@@ -17,6 +18,9 @@ export default function MiddleAdminLayout() {
   const { profile, loading, user, signOut } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
+
+  const [isInboxOpen, setIsInboxOpen] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
 
   useEffect(() => {
     if (!loading) {
@@ -82,24 +86,115 @@ export default function MiddleAdminLayout() {
                 <div style={{ fontSize: 11, color: '#7c3aed', fontWeight: 600 }}>중간관리자</div>
               </div>
             </Link>
-            <button 
-              onClick={async () => {
-                try {
-                  await signOut()
-                  navigate('/login', { replace: true })
-                } catch (error) {
-                  console.error('로그아웃 오류:', error)
-                }
-              }}
-              style={{
-                fontSize: 13, color: '#888', textDecoration: 'none', fontWeight: 500,
-                padding: '6px 14px', borderRadius: 20, border: '1px solid #eee',
-                background: 'transparent', cursor: 'pointer',
-                transition: 'all 0.2s',
-              }}
-            >
-              로그아웃
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+              {/* 알림 벨 아이콘 */}
+              <div style={{ position: 'relative' }}>
+                <button
+                  onClick={() => setIsInboxOpen(true)}
+                  style={{
+                    background: 'white',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '50%',
+                    width: 36,
+                    height: 36,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    position: 'relative'
+                  }}
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                  </svg>
+                  {unreadCount > 0 && (
+                    <div style={{
+                      position: 'absolute',
+                      top: -4,
+                      right: -4,
+                      background: '#ef4444',
+                      color: 'white',
+                      fontSize: 10,
+                      fontWeight: 700,
+                      minWidth: 16,
+                      height: 16,
+                      borderRadius: 8,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '0 4px',
+                      boxShadow: '0 0 0 2px white'
+                    }}>
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </div>
+                  )}
+                </button>
+                {isInboxOpen && (
+                  <MiddleAdminNotificationInbox 
+                    onClose={() => setIsInboxOpen(false)} 
+                    onCountChange={setUnreadCount}
+                  />
+                )}
+                {/* 최초 렌더링 시 알림 개수를 가져오기 위해 보이지 않게 컴포넌트를 하나 렌더링 */}
+                {!isInboxOpen && (
+                  <div style={{ display: 'none' }}>
+                    <MiddleAdminNotificationInbox 
+                      onClose={() => {}} 
+                      onCountChange={setUnreadCount}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* 현재 로그인 계정 프로필 칩 */}
+              <div style={{ 
+                display: 'flex', alignItems: 'center', gap: 8, 
+                background: '#f8fafc', padding: '6px 12px 6px 6px', 
+                borderRadius: 24, border: '1px solid #e2e8f0' 
+              }}>
+                <div style={{
+                  width: 28, height: 28, borderRadius: '50%', background: '#7c3aed',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: 'white', fontSize: 12, fontWeight: 700, flexShrink: 0
+                }}>
+                  {(profile.name ? profile.name.charAt(0) : ((profile as any).full_name ? (profile as any).full_name.charAt(0) : (user.email ? user.email.charAt(0).toUpperCase() : 'M')))}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', maxWidth: 160 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: '#334155', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {profile.name || (profile as any).full_name || (user.email ? user.email.split('@')[0] : '중간관리자')}
+                    </span>
+                    <span style={{ fontSize: 10, fontWeight: 600, color: '#7c3aed', background: '#f3e8ff', padding: '2px 6px', borderRadius: 4, whiteSpace: 'nowrap' }}>
+                      중간관리자
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 11, color: '#64748b', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {user.email || (profile as any).email}
+                  </div>
+                </div>
+              </div>
+
+              <button 
+                onClick={async () => {
+                  try {
+                    await signOut()
+                    navigate('/login', { replace: true })
+                  } catch (error) {
+                    console.error('로그아웃 오류:', error)
+                  }
+                }}
+                style={{
+                  fontSize: 13, color: '#888', textDecoration: 'none', fontWeight: 500,
+                  padding: '6px 14px', borderRadius: 20, border: '1px solid #eee',
+                  background: 'transparent', cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  flexShrink: 0
+                }}
+              >
+                로그아웃
+              </button>
+            </div>
           </div>
 
           {/* 1단 탭 메뉴 */}
