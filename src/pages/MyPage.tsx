@@ -3,12 +3,20 @@ import { useNavigate } from 'react-router-dom'
 import { LogOut, User, Award, Shield, FileClock } from 'lucide-react'
 
 export default function MyPage() {
-  const { user, profile, signOut } = useAuth()
+  const { user, profile, loading, signOut } = useAuth()
   const navigate = useNavigate()
 
   const handleLogout = async () => {
     await signOut()
     navigate('/login')
+  }
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center">
+        <p className="text-slate-500">불러오는 중입니다...</p>
+      </div>
+    )
   }
 
   if (!user) {

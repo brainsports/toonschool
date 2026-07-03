@@ -65,6 +65,9 @@ export default function Login() {
             case 'super_admin':
               navigate('/super-admin')
               break
+            case 'org_admin':
+              navigate('/admin/org/dashboard')
+              break
             case 'center_admin':
               navigate('/center-admin')
               break
