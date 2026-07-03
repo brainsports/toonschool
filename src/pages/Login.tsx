@@ -46,7 +46,7 @@ export default function Login() {
 
           // 2. 중간관리자 계정인 경우 무조건 /manager로 이동
           if (profile.role === 'middle_admin') {
-            navigate('/manager')
+            window.location.href = '/manager'
             return
           }
 
