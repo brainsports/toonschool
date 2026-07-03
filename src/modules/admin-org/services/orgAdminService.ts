@@ -31,9 +31,11 @@ export const orgAdminService = {
       .not('center_id', 'is', null)
 
     let studentCount = 0
+    console.log('[OrgAdminService] teacherProfiles:', teachers)
 
     if (teachers && teachers.length > 0) {
       const centerIds = Array.from(new Set(teachers.map(t => t.center_id)))
+      console.log('[OrgAdminService] centerIds:', centerIds)
       
       if (centerIds.length > 0) {
         // center_id 기준으로 소속 학생 수 계산
@@ -42,9 +44,12 @@ export const orgAdminService = {
           .select('id')
           .in('center_id', centerIds)
           
+        console.log('[OrgAdminService] students query result:', students, 'Error:', studentsError)
+        
         if (students && !studentsError) {
           const uniqueStudentIds = new Set(students.map(s => s.id))
           studentCount = uniqueStudentIds.size
+          console.log('[OrgAdminService] computed studentCount:', studentCount)
         }
       }
     }

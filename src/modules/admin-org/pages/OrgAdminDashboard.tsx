@@ -19,10 +19,12 @@ export default function OrgAdminDashboard() {
 
   const loadData = async () => {
     if (!profile?.organization_id) return
+    console.log("[OrgAdminDashboard] Current Login Profile:", profile)
+    console.log("[OrgAdminDashboard] Current organization_id:", profile.organization_id)
     try {
       setLoading(true)
       const statsData = await orgAdminService.getOrgAdminDashboard(profile.organization_id)
-      console.log("[OrgAdminDashboard] loadData - statsData:", statsData)
+      console.log("[OrgAdminDashboard] loadData - final statsData:", statsData)
       setStats(statsData)
       const notisData = await orgAdminService.getSentOrgNotifications(profile.organization_id)
       setNotifications(notisData)
