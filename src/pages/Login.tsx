@@ -44,12 +44,17 @@ export default function Login() {
             return
           }
 
-          // 2. 관리자/선생님 계정인 경우 (adminLmsRoles)
-          const adminLmsRoles = ['teacher', 'org_admin', 'middle_admin', 'super_admin']
+          // 2. 중간관리자 계정인 경우 무조건 /manager로 이동
+          if (profile.role === 'middle_admin') {
+            navigate('/manager')
+            return
+          }
+
+          // 3. 관리자/선생님 계정인 경우 (adminLmsRoles)
+          const adminLmsRoles = ['teacher', 'org_admin', 'super_admin']
           if (adminLmsRoles.includes(profile.role)) {
             if (!redirectUrl || redirectUrl === '/admin/lms' || redirectUrl === '/admin/lms/classes' || redirectUrl === '/mypage' || redirectUrl === '/') {
               if (profile.role === 'org_admin') navigate('/admin/lms/organization')
-              else if (profile.role === 'middle_admin') navigate('/manager/dashboard')
               else if (profile.role === 'super_admin') navigate('/admin/lms/super')
               else navigate('/admin/lms/classes') // teacher
             } else {

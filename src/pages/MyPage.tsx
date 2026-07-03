@@ -11,6 +11,8 @@ export default function MyPage() {
     if (!loading && profile) {
       if (profile.role === 'org_admin') {
         navigate('/admin/org/dashboard', { replace: true })
+      } else if (profile.role === 'middle_admin') {
+        navigate('/manager', { replace: true })
       } else if (profile.role === 'student') {
         navigate('/student/mypage', { replace: true })
       }
