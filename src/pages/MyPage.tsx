@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useAuth } from '../shared/contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import { LogOut, User, Award, Shield, FileClock } from 'lucide-react'
@@ -5,6 +6,16 @@ import { LogOut, User, Award, Shield, FileClock } from 'lucide-react'
 export default function MyPage() {
   const { user, profile, loading, signOut } = useAuth()
   const navigate = useNavigate()
+
+  useEffect(() => {
+    if (!loading && profile) {
+      if (profile.role === 'org_admin') {
+        navigate('/admin/org/dashboard', { replace: true })
+      } else if (profile.role === 'student') {
+        navigate('/student/mypage', { replace: true })
+      }
+    }
+  }, [loading, profile, navigate])
 
   const handleLogout = async () => {
     await signOut()

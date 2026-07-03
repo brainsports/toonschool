@@ -44,6 +44,17 @@ export default function Login() {
             return
           }
 
+          // 2. 기관관리자 계정인 경우
+          if (profile.role === 'org_admin') {
+            // redirect 파라미터가 /mypage이거나 없으면 /admin/org/dashboard로 이동
+            if (!redirectUrl || redirectUrl === '/mypage' || redirectUrl === '/') {
+              navigate('/admin/org/dashboard')
+            } else {
+              navigate(redirectUrl)
+            }
+            return
+          }
+
           if (redirectUrl && redirectUrl.startsWith('/admin/lms')) {
             const allowedRoles = ['teacher', 'center_admin', 'middle_admin', 'super_admin']
             if (allowedRoles.includes(profile.role)) {
@@ -64,9 +75,6 @@ export default function Login() {
           switch (profile.role) {
             case 'super_admin':
               navigate('/super-admin')
-              break
-            case 'org_admin':
-              navigate('/admin/org/dashboard')
               break
             case 'center_admin':
               navigate('/center-admin')
