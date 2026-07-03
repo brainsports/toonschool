@@ -203,6 +203,13 @@ export default function StudentMyPage() {
     loadTeacherMessageAndNotifications();
   }, [user, profile]);
 
+  const refreshNotifications = async () => {
+    const classKey = resolveStudentClassKey(profile, user);
+    const notis = await getNotificationsForTarget(classKey, profile);
+    setNotifications(notis);
+  };
+
+
   const handleOpenTeacherMessages = async () => {
     setIsTeacherMessageModalOpen(true);
     const classKey = resolveStudentClassKey(profile, user);
@@ -559,6 +566,7 @@ export default function StudentMyPage() {
           isOpen={isAllNotificationsModalOpen}
           onClose={() => setIsAllNotificationsModalOpen(false)}
           notifications={notifications}
+          onDeleted={refreshNotifications}
         />
     </StudentPageShell>
   )

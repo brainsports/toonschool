@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { orgAdminService } from '../services/orgAdminService'
 import { useAuth } from '../../../shared/contexts/AuthContext'
 import type { OrgTeacher } from '../types/orgAdmin'
@@ -9,23 +9,45 @@ interface OrgStudentNotificationModalProps {
   onSuccess: () => void
 }
 
+const getLocalDateString = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 export default function OrgStudentNotificationModal({ isOpen, onClose, onSuccess }: OrgStudentNotificationModalProps) {
   const { profile, user } = useAuth()
   const [teachers, setTeachers] = useState<OrgTeacher[]>([])
-  const [formData, setFormData] = useState({
-    targetType: 'all_students' as 'all_students' | 'specific_class',
-    targetTeacherId: '',
-    title: '',
-    message: '',
-    priority: 'normal' as 'normal' | 'high'
-  })
+  const [students, setStudents] = useState<any[]>([])
+  
+  const [targetType, setTargetType] = useState<'all_students' | 'specific_class' | 'specific_student'>('all_students')
+  const [targetTeacherId, setTargetTeacherId] = useState('')
+  const [targetStudentId, setTargetStudentId] = useState('')
+  const [searchStudentTerm, setSearchStudentTerm] = useState('')
+  
+  const [category, setCategory] = useState('notice')
+  const [priority, setPriority] = useState<'normal' | 'high'>('normal')
+  const [title, setTitle] = useState('')
+  const [message, setMessage] = useState('')
+  const [noticeDate, setNoticeDate] = useState(getLocalDateString())
+  const [isPublic, setIsPublic] = useState(true)
+  
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (isOpen && profile?.organization_id) {
       orgAdminService.getOrgTeachers(profile.organization_id).then(setTeachers).catch(console.error)
+      orgAdminService.getOrgStudents(profile.organization_id).then(setStudents).catch(console.error)
     }
   }, [isOpen, profile])
+
+  const filteredStudents = useMemo(() => {
+    if (!searchStudentTerm.trim()) return students;
+    return students.filter(s => s.name.includes(searchStudentTerm.trim()));
+  }, [students, searchStudentTerm]);
 
   if (!isOpen) return null
 
@@ -33,79 +55,122 @@ export default function OrgStudentNotificationModal({ isOpen, onClose, onSuccess
     e.preventDefault()
     if (!profile?.organization_id || !user) return
 
-    if (!formData.title || !formData.message) {
-      alert("제목과 내용은 필수입니다.")
+    if (!title.trim() || !message.trim()) {
+      setError("제목과 내용을 입력해 주세요.")
       return
     }
 
-    if (formData.targetType === 'specific_class' && !formData.targetTeacherId) {
-      alert("대상이 될 선생님을 선택해 주세요.")
+    if (targetType === 'specific_class' && !targetTeacherId) {
+      setError("대상이 될 선생님을 선택해 주세요.")
+      return
+    }
+    
+    if (targetType === 'specific_student' && !targetStudentId) {
+      setError("대상이 될 학생을 선택해 주세요.")
       return
     }
 
+    setError(null)
     try {
       setLoading(true)
       await orgAdminService.sendOrgNotification(profile.organization_id, user.id, {
-        targetType: formData.targetType,
-        targetTeacherId: formData.targetType === 'specific_class' ? formData.targetTeacherId : undefined,
-        title: formData.title,
-        message: formData.message,
-        priority: formData.priority
+        targetType: targetType,
+        targetTeacherId: targetType === 'specific_class' ? targetTeacherId : undefined,
+        targetUserId: targetType === 'specific_student' ? targetStudentId : undefined,
+        title: title.trim(),
+        message: message.trim(),
+        priority: priority,
+        category: category,
+        noticeDate: noticeDate,
+        isPublic: isPublic
       })
       alert("학생 알림을 보냈습니다.")
       onSuccess()
       onClose()
-      setFormData({
-        targetType: 'all_students',
-        targetTeacherId: '',
-        title: '',
-        message: '',
-        priority: 'normal'
-      })
+      
+      // Reset
+      setTargetType('all_students')
+      setTargetTeacherId('')
+      setTargetStudentId('')
+      setSearchStudentTerm('')
+      setCategory('notice')
+      setPriority('normal')
+      setTitle('')
+      setMessage('')
+      setNoticeDate(getLocalDateString())
+      setIsPublic(true)
     } catch (err: any) {
-      alert(`발송 중 오류가 발생했습니다: ${err.message}`)
+      setError(`발송 중 오류가 발생했습니다: ${err.message}`)
     } finally {
       setLoading(false)
     }
   }
 
+  const getStudentTeacherName = (centerId: string) => {
+    const teacher = teachers.find(t => t.assigned_class === centerId);
+    return teacher ? teacher.name : '선생님 미지정';
+  };
+
   const inputStyle = {
-    width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #ddd', marginBottom: 16, fontSize: 14
-  }
-  const labelStyle = {
-    display: 'block', fontSize: 13, fontWeight: 700, color: '#1a1a2e', marginBottom: 6
+    padding: '10px 14px', borderRadius: 8, border: '1px solid #ddd',
+    fontSize: 15, fontFamily: 'inherit', outline: 'none', background: 'white', width: '100%'
   }
 
   return (
     <div style={{
       position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-      background: 'rgba(0,0,0,0.5)', zIndex: 9999,
+      background: 'rgba(0,0,0,0.5)', zIndex: 1000,
       display: 'flex', alignItems: 'center', justifyContent: 'center'
     }}>
       <div style={{
-        background: 'white', borderRadius: 16, padding: 32, width: '100%', maxWidth: 500,
-        boxShadow: '0 10px 40px rgba(0,0,0,0.2)', maxHeight: '90vh', overflowY: 'auto'
+        background: 'white', borderRadius: 20, width: 500, maxWidth: '90%',
+        boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
+        maxHeight: '90vh', display: 'flex', flexDirection: 'column'
       }}>
-        <h2 style={{ fontSize: 20, fontWeight: 800, marginBottom: 20, color: '#1a1a2e' }}>학생 알림 보내기</h2>
+        <div style={{ padding: '24px 30px', borderBottom: '1px solid #f0f0f0', flexShrink: 0 }}>
+          <h3 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: '#1a1a2e' }}>학생 알림 보내기</h3>
+        </div>
         
-        <form onSubmit={handleSubmit}>
-          <label style={labelStyle}>받는 대상 *</label>
-          <select 
-            style={inputStyle}
-            value={formData.targetType}
-            onChange={(e) => setFormData(p => ({ ...p, targetType: e.target.value as any, targetTeacherId: '' }))}
-          >
-            <option value="all_students">전체 학생</option>
-            <option value="specific_class">특정 선생님 소속 학생 전체</option>
-          </select>
+        <div style={{ padding: '24px 30px', display: 'flex', flexDirection: 'column', gap: 20, overflowY: 'auto' }}>
+          {error && <div style={{ color: '#ef4444', fontSize: 13, background: '#fee2e2', padding: '10px 14px', borderRadius: 8 }}>{error}</div>}
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <label style={{ fontSize: 14, fontWeight: 600, color: '#333' }}>받는 대상 *</label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, cursor: 'pointer', color: '#333' }}>
+                <input 
+                  type="radio" 
+                  checked={targetType === 'all_students'} 
+                  onChange={() => setTargetType('all_students')} 
+                />
+                전체 학생
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, cursor: 'pointer', color: '#333' }}>
+                <input 
+                  type="radio" 
+                  checked={targetType === 'specific_class'} 
+                  onChange={() => setTargetType('specific_class')} 
+                />
+                특정 선생님의 학생 전체
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, cursor: 'pointer', color: '#333' }}>
+                <input 
+                  type="radio" 
+                  checked={targetType === 'specific_student'} 
+                  onChange={() => setTargetType('specific_student')} 
+                />
+                특정 학생
+              </label>
+            </div>
+          </div>
 
-          {formData.targetType === 'specific_class' && (
-            <div>
-              <label style={labelStyle}>선생님 선택 *</label>
+          {targetType === 'specific_class' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <label style={{ fontSize: 14, fontWeight: 600, color: '#333' }}>선생님 선택 *</label>
               <select 
                 style={inputStyle}
-                value={formData.targetTeacherId}
-                onChange={(e) => setFormData(p => ({ ...p, targetTeacherId: e.target.value }))}
+                value={targetTeacherId}
+                onChange={(e) => setTargetTeacherId(e.target.value)}
               >
                 <option value="">선택해 주세요</option>
                 {teachers.map(t => (
@@ -114,68 +179,147 @@ export default function OrgStudentNotificationModal({ isOpen, onClose, onSuccess
               </select>
             </div>
           )}
-          
-          <label style={labelStyle}>중요도 *</label>
-          <div style={{ display: 'flex', gap: 16, marginBottom: 16 }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, cursor: 'pointer' }}>
+
+          {targetType === 'specific_student' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <label style={{ fontSize: 14, fontWeight: 600, color: '#333' }}>학생 선택 *</label>
               <input 
-                type="radio" 
-                name="priority_s" 
-                value="normal" 
-                checked={formData.priority === 'normal'}
-                onChange={() => setFormData(p => ({ ...p, priority: 'normal' }))}
-              /> 일반
-            </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, cursor: 'pointer', color: '#ff2778', fontWeight: 600 }}>
-              <input 
-                type="radio" 
-                name="priority_s" 
-                value="high" 
-                checked={formData.priority === 'high'}
-                onChange={() => setFormData(p => ({ ...p, priority: 'high' }))}
-              /> 중요
-            </label>
+                type="text" 
+                placeholder="학생 이름 검색..." 
+                value={searchStudentTerm}
+                onChange={e => setSearchStudentTerm(e.target.value)}
+                style={{ ...inputStyle, marginBottom: 8 }}
+              />
+              <select 
+                style={inputStyle}
+                value={targetStudentId}
+                onChange={(e) => setTargetStudentId(e.target.value)}
+              >
+                <option value="">학생을 선택해 주세요</option>
+                {filteredStudents.map(s => (
+                  <option key={s.id} value={s.id}>
+                    {s.name} / {s.grade ? `${s.grade}학년` : '학년미상'} / {s.center_id || '학급미상'} / {getStudentTeacherName(s.center_id)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <label style={{ fontSize: 14, fontWeight: 600, color: '#333' }}>알림 카테고리</label>
+            <select 
+              value={category}
+              onChange={e => setCategory(e.target.value)}
+              style={inputStyle}
+            >
+              <option value="notice">공지</option>
+              <option value="info">안내</option>
+              <option value="homework">과제</option>
+              <option value="event">행사</option>
+              <option value="urgent">긴급</option>
+              <option value="other">기타</option>
+            </select>
           </div>
 
-          <label style={labelStyle}>제목 *</label>
-          <input 
-            style={inputStyle}
-            value={formData.title}
-            onChange={(e) => setFormData(p => ({ ...p, title: e.target.value }))}
-            placeholder="알림 제목을 입력하세요"
-            maxLength={50}
-            required
-          />
-
-          <label style={labelStyle}>내용 *</label>
-          <textarea 
-            style={{ ...inputStyle, minHeight: 120, resize: 'vertical' }}
-            value={formData.message}
-            onChange={(e) => setFormData(p => ({ ...p, message: e.target.value }))}
-            placeholder="알림 내용을 입력하세요"
-            maxLength={500}
-            required
-          />
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 24 }}>
-            <button 
-              type="button" 
-              onClick={onClose}
-              style={{ padding: '10px 20px', borderRadius: 8, border: '1px solid #ddd', background: 'white', fontWeight: 600, cursor: 'pointer' }}
-            >
-              취소
-            </button>
-            <button 
-              type="submit"
-              disabled={loading}
-              style={{
-                background: '#1a1a2e', color: 'white', border: 'none', padding: '10px 24px', borderRadius: 8, fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1
-              }}
-            >
-              {loading ? '보내는 중...' : '보내기'}
-            </button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <label style={{ fontSize: 14, fontWeight: 600, color: '#333' }}>중요도 *</label>
+            <div style={{ display: 'flex', gap: 16 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, cursor: 'pointer' }}>
+                <input 
+                  type="radio" 
+                  value="normal" 
+                  checked={priority === 'normal'}
+                  onChange={() => setPriority('normal')}
+                /> 일반
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, cursor: 'pointer', color: '#ef4444', fontWeight: 600 }}>
+                <input 
+                  type="radio" 
+                  value="high" 
+                  checked={priority === 'high'}
+                  onChange={() => setPriority('high')}
+                /> 중요
+              </label>
+            </div>
           </div>
-        </form>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <label style={{ fontSize: 14, fontWeight: 600, color: '#333' }}>제목 *</label>
+            <input 
+              type="text"
+              value={title}
+              onChange={e => setTitle(e.target.value)}
+              placeholder="제목을 입력하세요."
+              style={inputStyle}
+              maxLength={50}
+            />
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <label style={{ fontSize: 14, fontWeight: 600, color: '#333' }}>내용 *</label>
+            <textarea 
+              value={message} 
+              onChange={e => setMessage(e.target.value)}
+              placeholder="내용을 입력하세요."
+              rows={4}
+              style={{ ...inputStyle, resize: 'vertical', minHeight: 100 }}
+              maxLength={500}
+            />
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <label style={{ fontSize: 14, fontWeight: 600, color: '#333' }}>날짜</label>
+            <input 
+              type="date" 
+              value={noticeDate} 
+              onChange={e => setNoticeDate(e.target.value)}
+              style={inputStyle}
+            />
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <input 
+              type="checkbox" 
+              id="publish-toggle-org-noti"
+              checked={isPublic}
+              onChange={e => setIsPublic(e.target.checked)}
+              style={{ width: 16, height: 16, cursor: 'pointer' }}
+            />
+            <label htmlFor="publish-toggle-org-noti" style={{ fontSize: 14, fontWeight: 600, color: '#333', cursor: 'pointer' }}>
+              공개 (체크 시 학생 알림함에 노출)
+            </label>
+          </div>
+        </div>
+
+        <div style={{
+          padding: '20px 30px', background: '#fafafa', borderTop: '1px solid #f0f0f0',
+          borderBottomLeftRadius: 20, borderBottomRightRadius: 20,
+          display: 'flex', justifyContent: 'flex-end', gap: 10, flexShrink: 0
+        }}>
+          <button 
+            type="button"
+            onClick={onClose}
+            disabled={loading}
+            style={{
+              padding: '10px 20px', borderRadius: 10, fontSize: 15, fontWeight: 600,
+              background: 'white', color: '#666', border: '1px solid #ddd', cursor: 'pointer'
+            }}
+          >
+            취소
+          </button>
+          <button 
+            type="button"
+            onClick={handleSubmit}
+            disabled={loading}
+            style={{
+              padding: '10px 24px', borderRadius: 10, fontSize: 15, fontWeight: 600,
+              background: '#8b5cf6', color: 'white', border: 'none', cursor: loading ? 'wait' : 'pointer',
+              boxShadow: '0 4px 12px rgba(139, 92, 246, 0.3)'
+            }}
+          >
+            {loading ? '보내는 중...' : '보내기'}
+          </button>
+        </div>
       </div>
     </div>
   )

@@ -110,6 +110,24 @@ export const orgAdminService = {
     })
   },
 
+  async getOrgStudents(orgId: string): Promise<any[]> {
+    const { data: students, error: studentsError } = await supabase
+      .from('profiles')
+      .select('id, name, grade, center_id') // center_id maps to class mostly
+      .eq('organization_id', orgId)
+      .eq('role', 'student')
+      .order('grade', { ascending: true })
+      .order('name', { ascending: true })
+
+    if (studentsError) throw studentsError
+    
+    // Also fetch teacher mapping to display teacher name?
+    // Using center_id to map to teacher might be complex if no explicit relation. 
+    // We'll just return what's available.
+    return students || []
+  },
+
+
   async createTeacherForOrg(orgId: string, adminId: string, data: { name: string; email: string; assigned_class: string; initial_licenses: number; memo: string; license_start_date?: string; license_end_date?: string }): Promise<void> {
     // Check organization license dates first
     const orgStats = await this.getOrgAdminDashboard(orgId)
@@ -287,6 +305,9 @@ export const orgAdminService = {
       title: string
       message: string
       priority: 'normal' | 'high'
+      category?: string
+      noticeDate?: string
+      isPublic?: boolean
     }
   ): Promise<void> {
     const { error } = await supabase.from('org_notifications').insert({
@@ -298,7 +319,10 @@ export const orgAdminService = {
       target_teacher_id: data.targetTeacherId,
       title: data.title,
       message: data.message,
-      priority: data.priority
+      priority: data.priority,
+      category: data.category || 'notice',
+      notice_date: data.noticeDate || new Date().toISOString().split('T')[0],
+      is_public: data.isPublic !== undefined ? data.isPublic : true
     })
 
     if (error) throw error

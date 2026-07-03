@@ -10,6 +10,7 @@ export interface StudentNotification {
   content: string;
   notice_date: string;
   is_published: boolean;
+  priority?: string;
   created_at: string;
   updated_at: string;
 }
@@ -37,29 +38,51 @@ export async function getNotificationsForTarget(targetKey: string, profile?: any
 
     // 2. Get from org_notifications if profile has organization_id
     if (profile?.organization_id) {
-      // students see 'all_students' and 'specific_class' (if targetTeacherId matches their class, but simpler to just fetch all_students for MVP)
       const { data: orgData, error: orgError } = await supabase
         .from('org_notifications')
-        .select('*')
+        .select('*, organizations(name)')
         .eq('organization_id', profile.organization_id)
-        .in('target_type', ['all_students'])
+        .eq('is_public', true)
         .is('deleted_at', null)
-        .order('created_at', { ascending: false });
-        
+        .order('notice_date', { ascending: false });
+
       if (!orgError && orgData) {
-        const orgMapped = orgData.map(n => ({
-          id: n.id,
-          target_key: n.target_type,
-          sender_id: n.sender_id,
-          sender_role: n.sender_role,
-          category: n.priority === 'high' ? 'notice' : 'learning', // Default category logic
-          title: n.title,
-          content: n.message,
-          notice_date: n.created_at,
-          is_published: true,
-          created_at: n.created_at,
-          updated_at: n.created_at
-        }));
+        // filter by target manually in case RLS allows more or we need specific logic
+        let filteredOrgData = orgData.filter(n => {
+          if (n.target_type === 'all_students') return true;
+          if (n.target_type === 'specific_class' && profile.center_id && n.target_teacher_id === profile.center_id) return true;
+          if (n.target_type === 'specific_student' && n.target_user_id === profile.id) return true;
+          return false;
+        });
+
+        // Get hidden notifications
+        const { data: hiddenData } = await supabase
+          .from('student_notification_hidden')
+          .select('notification_id')
+          .eq('student_id', profile.id);
+
+        const hiddenSet = new Set(hiddenData?.map(h => h.notification_id) || []);
+
+        const orgMapped = filteredOrgData
+          .filter(n => !hiddenSet.has(n.id))
+          .map(n => {
+            const orgName = n.organizations?.name || '기관관리자';
+            const senderName = n.sender_role === 'org_admin' ? `${orgName} / 기관관리자` : '기관관리자';
+            return {
+              id: n.id,
+              target_key: n.target_type,
+              sender_id: n.sender_id,
+              sender_role: senderName, // We reuse sender_role to display the formatted sender string
+              category: n.category || 'notice',
+              title: n.title,
+              content: n.message,
+              notice_date: n.notice_date || n.created_at,
+              is_published: n.is_public,
+              priority: n.priority,
+              created_at: n.created_at,
+              updated_at: n.created_at
+            };
+          });
         allNotis = [...allNotis, ...orgMapped];
       }
     }
@@ -71,6 +94,29 @@ export async function getNotificationsForTarget(targetKey: string, profile?: any
   } catch (err) {
     console.error('[notificationService] getNotificationsForTarget exception:', err);
     return [];
+  }
+}
+
+/**
+ * 학생: 기관 알림 숨김 처리
+ */
+export async function hideOrgNotification(studentId: string, notificationId: string): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('student_notification_hidden')
+      .insert({
+        student_id: studentId,
+        notification_id: notificationId
+      });
+
+    if (error) {
+      console.error('[notificationService] hideOrgNotification error:', error);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error('[notificationService] hideOrgNotification exception:', err);
+    return false;
   }
 }
 

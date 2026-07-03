@@ -1,13 +1,20 @@
-import { Bell, Trophy, MessageSquare, Star, Info, X } from 'lucide-react';
+import { Bell, Trophy, MessageSquare, Star, Info, X, Trash2 } from 'lucide-react';
 import type { StudentNotification } from '../../services/notificationService';
+import { hideOrgNotification } from '../../services/notificationService';
+import { useAuth } from '../../../../shared/contexts/AuthContext';
+import { useState } from 'react';
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
   notifications: StudentNotification[];
+  onDeleted?: () => void;
 }
 
-export default function AllNotificationsModal({ isOpen, onClose, notifications }: Props) {
+export default function AllNotificationsModal({ isOpen, onClose, notifications, onDeleted }: Props) {
+  const { user } = useAuth();
+  const [isDeleting, setIsDeleting] = useState(false);
+
   if (!isOpen) return null;
 
   const getCategoryIcon = (category: string) => {
@@ -25,12 +32,25 @@ export default function AllNotificationsModal({ isOpen, onClose, notifications }
     }
   };
 
+  const getCategoryLabel = (category: string) => {
+    switch (category) {
+      case 'notice': return '공지';
+      case 'learning': return '학습';
+      case 'info': return '안내';
+      case 'homework': return '과제';
+      case 'event': return '행사';
+      case 'urgent': return '긴급';
+      default: return '기타';
+    }
+  };
+
   const getCategoryBg = (category: string) => {
     switch (category) {
       case 'notice': return 'bg-sky-50';
       case 'learning': return 'bg-emerald-50';
       case 'event': return 'bg-purple-50';
       case 'mission': return 'bg-pink-50';
+      case 'urgent': return 'bg-red-50';
       default: return 'bg-slate-50';
     }
   };
@@ -38,6 +58,20 @@ export default function AllNotificationsModal({ isOpen, onClose, notifications }
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')}`;
+  };
+
+  const handleDelete = async (notificationId: string) => {
+    if (!user) return;
+    if (window.confirm("이 알림을 삭제하시겠습니까?")) {
+      setIsDeleting(true);
+      const success = await hideOrgNotification(user.id, notificationId);
+      setIsDeleting(false);
+      if (success && onDeleted) {
+        onDeleted();
+      } else if (!success) {
+        alert("알림 삭제에 실패했습니다.");
+      }
+    }
   };
 
   return (
@@ -68,16 +102,16 @@ export default function AllNotificationsModal({ isOpen, onClose, notifications }
           {notifications.length > 0 ? (
             <div className="flex flex-col gap-4">
               {notifications.map((noti) => (
-                <div key={noti.id} className="flex gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:shadow-sm transition-all">
+                <div key={noti.id} className="flex gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:shadow-sm transition-all relative group">
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${getCategoryBg(noti.category)}`}>
                     {getCategoryIcon(noti.category)}
                   </div>
-                    <div className="flex flex-col gap-1.5 flex-1">
+                    <div className="flex flex-col gap-1.5 flex-1 pr-6">
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          {noti.sender_role === 'org_admin' && (
-                            <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded shrink-0">기관관리자</span>
-                          )}
+                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0 ${noti.priority === 'high' ? 'bg-red-100 text-red-600' : 'bg-slate-200 text-slate-600'}`}>
+                            [{getCategoryLabel(noti.category)}]
+                          </span>
                           <span className="text-sm font-bold text-slate-800 leading-tight">
                             {noti.title}
                           </span>
@@ -89,7 +123,18 @@ export default function AllNotificationsModal({ isOpen, onClose, notifications }
                     <p className="text-[13px] text-slate-600 leading-relaxed whitespace-pre-wrap">
                       {noti.content}
                     </p>
+                    {noti.sender_role && (
+                      <span className="text-[11px] text-slate-400 mt-1">보낸 사람: {noti.sender_role}</span>
+                    )}
                   </div>
+                  <button
+                    onClick={() => handleDelete(noti.id)}
+                    disabled={isDeleting}
+                    className="absolute top-4 right-4 p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+                    title="삭제"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
               ))}
             </div>
