@@ -84,9 +84,7 @@ export default function Layout() {
                 </div>
                 <div className="overflow-hidden">
                   <p className="text-slate-200 font-bold text-[10px] truncate">{user.email}</p>
-                  <span className="text-[9px] text-purple-400 font-semibold bg-purple-950/40 px-1 py-0.5 rounded border border-purple-950/50 uppercase">
-                    {profile?.role === 'middle_admin' ? '중간관리자' : (profile?.role || 'free_user')}
-                  </span>
+                  <span className="text-[9px] text-purple-400 font-semibold bg-purple-950/40 px-1 py-0.5 rounded border border-purple-950/50 uppercase">{profile?.role || 'free_user'}</span>
                 </div>
               </div>
               <NavLink 
