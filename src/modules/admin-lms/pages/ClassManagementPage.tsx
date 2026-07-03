@@ -135,7 +135,7 @@ export default function ClassManagementPage() {
         {/* 표 헤더 */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: '40px 60px 1fr 160px 80px 220px',
+          gridTemplateColumns: '40px 60px 1fr 160px 80px 300px',
           padding: '14px 20px',
           background: '#fafafa',
           borderBottom: '1.5px solid #f0f0f0',
@@ -160,7 +160,7 @@ export default function ClassManagementPage() {
           gradeClasses.map((cls, idx) => (
             <div key={cls.id} style={{
               display: 'grid',
-              gridTemplateColumns: '40px 60px 1fr 160px 80px 220px',
+              gridTemplateColumns: '40px 60px 1fr 160px 80px 300px',
               padding: '14px 20px',
               borderBottom: idx < gradeClasses.length - 1 ? '1px solid #f9f9f9' : 'none',
               alignItems: 'center',
@@ -191,18 +191,21 @@ export default function ClassManagementPage() {
               <div style={{ textAlign: 'center', fontSize: 15, fontWeight: 700, color: '#333' }}>
                 {cls.studentCount}명
               </div>
-              <div style={{ textAlign: 'center', display: 'flex', gap: 6, justifyContent: 'center' }}>
+              <div style={{ textAlign: 'center', display: 'flex', gap: 8, justifyContent: 'center' }}>
                 <button onClick={() => setUnitModalClass(cls)} style={{
                   padding: '6px 10px', borderRadius: 8, fontSize: 13, fontWeight: 600,
                   background: '#fff0f6', color: '#ff2778', border: '1px solid #ffc6de', cursor: 'pointer',
+                  whiteSpace: 'nowrap',
                 }}>단원 설정</button>
                 <button onClick={() => setMessageModalClass(cls)} style={{
                   padding: '6px 10px', borderRadius: 8, fontSize: 13, fontWeight: 600,
                   background: '#f0f9ff', color: '#0ea5e9', border: '1px solid #bae6fd', cursor: 'pointer',
+                  whiteSpace: 'nowrap',
                 }}>선생님 말씀</button>
                 <button onClick={() => setNotificationModalClass(cls)} style={{
                   padding: '6px 10px', borderRadius: 8, fontSize: 13, fontWeight: 600,
                   background: '#f3e8ff', color: '#8b5cf6', border: '1px solid #ddd6fe', cursor: 'pointer',
+                  whiteSpace: 'nowrap',
                 }}>알림함 쓰기</button>
               </div>
             </div>
