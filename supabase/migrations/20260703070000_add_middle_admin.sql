@@ -54,13 +54,17 @@ CREATE POLICY "Enable all access for middle_admin to assigned orgs license_logs"
     ));
 
 -- 5. students RLS 정책 추가 (중간관리자용)
--- 중간관리자는 자신에게 배정된 기관의 학생 관리 가능
+-- 중간관리자는 자신에게 배정된 기관에 소속된 선생님(center_id)이 관리하는 학생을 조회 가능
 CREATE POLICY "Enable all access for middle_admin to assigned org students"
     ON public.students FOR ALL
     USING (EXISTS (
-        SELECT 1 FROM public.organizations
-        WHERE organizations.id = students.organization_id
-        AND organizations.middle_admin_id = auth.uid()
+        SELECT 1 FROM public.profiles teacher
+        WHERE teacher.center_id = students.center_id
+        AND EXISTS (
+            SELECT 1 FROM public.organizations
+            WHERE organizations.id = teacher.organization_id
+            AND organizations.middle_admin_id = auth.uid()
+        )
     ) AND EXISTS (
         SELECT 1 FROM public.profiles
         WHERE profiles.id = auth.uid()

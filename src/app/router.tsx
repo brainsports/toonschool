@@ -51,6 +51,7 @@ import AssessmentPage from '../modules/admin-lms/pages/AssessmentPage'
 import TeacherManagementPage from '../modules/admin-lms/pages/TeacherManagementPage'
 import AdminProfilePage from '../modules/admin-lms/pages/AdminProfilePage'
 import { SuperAdminDashboardPlaceholder, PlaceholderPage } from '../modules/admin-lms/pages/PlaceholderPages'
+import MiddleAdminManagementPage from '../modules/admin-lms/pages/MiddleAdminManagementPage'
 
 // 기관관리자 라우트
 import OrgAdminLayout from '../modules/admin-org/components/OrgAdminLayout'
@@ -145,6 +146,7 @@ export default function AppRouter() {
         <Route path="super" element={<SuperAdminDashboardPlaceholder />} />
         <Route path="all-centers" element={<PlaceholderPage title="전체 기관관리" />} />
         <Route path="all-admins" element={<PlaceholderPage title="전체 관리자관리" />} />
+        <Route path="middle-admins" element={<MiddleAdminManagementPage />} />
         <Route path="all-licenses" element={<PlaceholderPage title="이용권/결제관리" />} />
         <Route path="settings" element={<PlaceholderPage title="시스템 설정" />} />
       </Route>

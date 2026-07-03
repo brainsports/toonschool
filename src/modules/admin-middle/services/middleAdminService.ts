@@ -28,20 +28,24 @@ export const middleAdminService = {
       const orgIds = orgs.map(org => org.id)
       
       if (orgIds.length > 0) {
-        const { count: teacherCount } = await supabase
+        const { data: teachersData } = await supabase
           .from('profiles')
-          .select('*', { count: 'exact', head: true })
+          .select('id, center_id')
           .in('organization_id', orgIds)
           .eq('role', 'teacher')
           
-        totalTeachers = teacherCount || 0
+        totalTeachers = teachersData?.length || 0
 
-        const { count: studentCount } = await supabase
-          .from('students')
-          .select('*', { count: 'exact', head: true })
-          .in('organization_id', orgIds)
+        const centerIds = Array.from(new Set(teachersData?.map(t => t.center_id).filter(Boolean)))
+        
+        if (centerIds.length > 0) {
+          const { count: studentCount } = await supabase
+            .from('students')
+            .select('*', { count: 'exact', head: true })
+            .in('center_id', centerIds)
 
-        totalStudents = studentCount || 0
+          totalStudents = studentCount || 0
+        }
       }
     }
 
@@ -67,22 +71,28 @@ export const middleAdminService = {
 
     // Fetch stats per org
     const orgsWithStats = await Promise.all(orgs.map(async (org) => {
-      const { count: teacherCount } = await supabase
+      const { data: teachersData } = await supabase
         .from('profiles')
-        .select('*', { count: 'exact', head: true })
+        .select('id, center_id')
         .eq('organization_id', org.id)
         .eq('role', 'teacher')
 
-      const { count: studentCount } = await supabase
-        .from('students')
-        .select('*', { count: 'exact', head: true })
-        .eq('organization_id', org.id)
+      const centerIds = Array.from(new Set(teachersData?.map(t => t.center_id).filter(Boolean)))
+      
+      let studentCount = 0
+      if (centerIds.length > 0) {
+        const { count } = await supabase
+          .from('students')
+          .select('*', { count: 'exact', head: true })
+          .in('center_id', centerIds)
+        studentCount = count || 0
+      }
 
       return {
         ...org,
         status: org.status || 'active',
-        teacher_count: teacherCount || 0,
-        student_count: studentCount || 0,
+        teacher_count: teachersData?.length || 0,
+        student_count: studentCount,
         class_count: 0
       }
     }))
@@ -99,22 +109,28 @@ export const middleAdminService = {
 
     if (error) throw error
 
-    const { count: teacherCount } = await supabase
+    const { data: teachersData } = await supabase
       .from('profiles')
-      .select('*', { count: 'exact', head: true })
+      .select('id, center_id')
       .eq('organization_id', orgId)
       .eq('role', 'teacher')
 
-    const { count: studentCount } = await supabase
-      .from('students')
-      .select('*', { count: 'exact', head: true })
-      .eq('organization_id', orgId)
+    const centerIds = Array.from(new Set(teachersData?.map(t => t.center_id).filter(Boolean)))
+    
+    let studentCount = 0
+    if (centerIds.length > 0) {
+      const { count } = await supabase
+        .from('students')
+        .select('*', { count: 'exact', head: true })
+        .in('center_id', centerIds)
+      studentCount = count || 0
+    }
 
     return {
       ...org,
       status: org.status || 'active',
-      teacher_count: teacherCount || 0,
-      student_count: studentCount || 0,
+      teacher_count: teachersData?.length || 0,
+      student_count: studentCount,
       class_count: 0
     }
   },
@@ -206,19 +222,32 @@ export const middleAdminService = {
     if (orgs.length === 0) return []
     const orgIds = orgs.map(o => o.id)
     
+    const { data: teachersData } = await supabase
+      .from('profiles')
+      .select('id, name, center_id, organization_id')
+      .in('organization_id', orgIds)
+      .eq('role', 'teacher')
+      
+    const centerIds = Array.from(new Set(teachersData?.map(t => t.center_id).filter(Boolean)))
+    
+    if (centerIds.length === 0) return []
+
     const { data: students, error } = await supabase
       .from('students')
-      .select('id, login_id, display_name, grade_level, class_name, organization_id, status, created_by')
-      .in('organization_id', orgIds)
+      .select('id, login_id, name, grade, center_id, status')
+      .in('center_id', centerIds)
 
     if (error) throw error
 
     return students.map(s => {
-      const org = orgs.find(o => o.id === s.organization_id)
+      const teacher = teachersData?.find(t => t.center_id === s.center_id)
+      const org = orgs.find(o => o.id === teacher?.organization_id)
       return {
         ...s,
+        display_name: s.name,
+        grade_level: s.grade,
         org_name: org?.name || '알 수 없음',
-        teacher_name: '-', // fetch teacher name by created_by
+        teacher_name: teacher?.name || '선생님 미지정',
       }
     })
   }

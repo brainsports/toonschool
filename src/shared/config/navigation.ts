@@ -12,6 +12,7 @@ export const NAVIGATION_BY_ROLE: Record<UserRole, NavigationItem[]> = {
     { name: '슈퍼관리자 대시보드', path: ROUTES.superAdminHome, iconName: 'ShieldAlert' },
     { name: '기관 관리', path: ROUTES.superAdminOrganizations, iconName: 'Building' },
     { name: '사용자 관리', path: ROUTES.superAdminUsers, iconName: 'Users' },
+    { name: '중간관리자 관리', path: '/admin/lms/middle-admins', iconName: 'Users' },
     { name: '교과 DB 관리', path: ROUTES.superAdminCurriculum, iconName: 'Database' },
     { name: '작품 관리', path: ROUTES.superAdminComics, iconName: 'Compass' },
     { name: '평가 관리', path: ROUTES.superAdminEvaluations, iconName: 'BarChart3' },
