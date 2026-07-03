@@ -42,6 +42,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.warn('Error fetching profile or profile does not exist yet:', error.message)
         return null
       }
+      // user_metadata.role 또는 기본값 free_user가 profiles.role을 덮어쓰지 않도록,
+      // 순수하게 DB의 public.profiles.role 데이터만 사용합니다.
       return data as Profile
     } catch (err) {
       console.error('Failed to fetch user profile:', err)

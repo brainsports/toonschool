@@ -84,8 +84,8 @@ export default function MyPage() {
                 <Shield className="h-3.5 w-3.5 text-purple-400" />
                 <span>회원 권한 (Role)</span>
               </span>
-              <span className="px-2 py-0.5 rounded bg-purple-950 border border-purple-800 text-purple-300 font-bold text-[10px]">
-                {profile?.role || 'free_user'}
+              <span className="px-2 py-0.5 rounded bg-purple-950 border border-purple-800 text-purple-300 font-bold text-[10px] uppercase">
+                {profile?.role === 'middle_admin' ? '중간관리자' : (profile?.role || 'free_user')}
               </span>
             </div>
             <div className="flex justify-between border-b border-slate-850/50 pb-2">
