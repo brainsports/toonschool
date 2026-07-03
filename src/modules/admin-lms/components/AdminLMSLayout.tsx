@@ -4,6 +4,8 @@
 import { useEffect } from 'react'
 import { NavLink, Outlet, Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../../shared/contexts/AuthContext'
+import { useState } from 'react'
+import TeacherNotificationInbox from './TeacherNotificationInbox'
 
 const getMenuItems = (role: string) => {
   switch (role) {
@@ -45,6 +47,9 @@ export default function AdminLMSLayout() {
   const { profile, loading, user, signOut } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
+  
+  const [isInboxOpen, setIsInboxOpen] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
 
   useEffect(() => {
     if (!loading) {
@@ -104,6 +109,68 @@ export default function AdminLMSLayout() {
             </Link>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+              {/* 알림 벨 아이콘 (선생님만 표시) */}
+              {profile.role === 'teacher' && (
+                <div style={{ position: 'relative' }}>
+                  <button
+                    onClick={() => setIsInboxOpen(true)}
+                    style={{
+                      background: 'white',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '50%',
+                      width: 36,
+                      height: 36,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      position: 'relative'
+                    }}
+                  >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                      <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                    </svg>
+                    {unreadCount > 0 && (
+                      <div style={{
+                        position: 'absolute',
+                        top: -4,
+                        right: -4,
+                        background: '#ef4444',
+                        color: 'white',
+                        fontSize: 10,
+                        fontWeight: 700,
+                        minWidth: 16,
+                        height: 16,
+                        borderRadius: 8,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '0 4px',
+                        boxShadow: '0 0 0 2px white'
+                      }}>
+                        {unreadCount > 99 ? '99+' : unreadCount}
+                      </div>
+                    )}
+                  </button>
+                  {isInboxOpen && (
+                    <TeacherNotificationInbox 
+                      onClose={() => setIsInboxOpen(false)} 
+                      onCountChange={setUnreadCount}
+                    />
+                  )}
+                  {/* 최초 렌더링 시 알림 개수를 가져오기 위해 보이지 않게 컴포넌트를 하나 렌더링하여 초기 카운트를 가져옴 */}
+                  {!isInboxOpen && (
+                    <div style={{ display: 'none' }}>
+                      <TeacherNotificationInbox 
+                        onClose={() => {}} 
+                        onCountChange={setUnreadCount}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* 현재 로그인 계정 프로필 칩 */}
               <div style={{ 
                 display: 'flex', alignItems: 'center', gap: 8, 
