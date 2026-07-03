@@ -22,11 +22,31 @@ export const orgAdminService = {
       .eq('organization_id', orgId)
       .eq('role', 'teacher')
 
-    const { count: studentCount } = await supabase
+    // 해당 기관 소속 선생님들의 id 조회
+    const { data: teachers } = await supabase
       .from('profiles')
-      .select('*', { count: 'exact', head: true })
+      .select('id')
       .eq('organization_id', orgId)
-      .eq('role', 'student')
+      .eq('role', 'teacher')
+
+    let studentCount = 0
+
+    if (teachers && teachers.length > 0) {
+      const teacherIds = teachers.map(t => t.id)
+      
+      // 선생님이 담당하는 학생 수 계산 (profiles.center_id 가 선생님 id인 경우)
+      // center_id에 중복 매핑될 수 있는 경우를 대비해 distinct 처리(동일 학생의 여러번 카운팅 방지)
+      const { data: students } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('role', 'student')
+        .in('center_id', teacherIds)
+        
+      if (students) {
+        const uniqueStudentIds = new Set(students.map(s => s.id))
+        studentCount = uniqueStudentIds.size
+      }
+    }
 
     const { data: notifications } = await supabase
       .from('org_notifications')
@@ -111,11 +131,23 @@ export const orgAdminService = {
   },
 
   async getOrgStudents(orgId: string): Promise<any[]> {
+    // 1. 해당 기관 소속 선생님들의 id 조회
+    const { data: teachers } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('organization_id', orgId)
+      .eq('role', 'teacher')
+
+    if (!teachers || teachers.length === 0) return []
+
+    const teacherIds = teachers.map(t => t.id)
+
+    // 2. 해당 선생님들이 담당하는 학생 목록 조회 (profiles.organization_id 가 NULL 이더라도 조회되도록 수정)
     const { data: students, error: studentsError } = await supabase
       .from('profiles')
-      .select('id, name, grade, center_id') // center_id maps to class mostly
-      .eq('organization_id', orgId)
+      .select('id, name, grade, center_id') // center_id maps to teacher ID mostly
       .eq('role', 'student')
+      .in('center_id', teacherIds)
       .order('grade', { ascending: true })
       .order('name', { ascending: true })
 
@@ -124,7 +156,10 @@ export const orgAdminService = {
     // Also fetch teacher mapping to display teacher name?
     // Using center_id to map to teacher might be complex if no explicit relation. 
     // We'll just return what's available.
-    return students || []
+    
+    // 중복 제거 (같은 학생이 여러 학급에 배정된 경우 1명으로)
+    const uniqueStudents = students ? Array.from(new Map(students.map(s => [s.id, s])).values()) : []
+    return uniqueStudents
   },
 
 

@@ -48,6 +48,7 @@ export async function fetchStudentsByCenterAndGrade(centerId: string, grade: num
 
 export async function createStudent(data: Omit<Student, 'id' | 'createdAt'>): Promise<Student> {
   // TODO: supabase.auth.admin.createUser + supabase.from('profiles').insert(...)
+  // 참고: 생성 시 선생님의 organization_id를 조회하여 profiles.organization_id에 함께 넣어주어야 함
   const newStudent: Student = {
     ...data,
     id: `stu-${Date.now()}`,
@@ -59,6 +60,7 @@ export async function createStudent(data: Omit<Student, 'id' | 'createdAt'>): Pr
 
 export async function updateStudent(id: string, data: Partial<Student>): Promise<void> {
   // TODO: supabase.from('profiles').update(data).eq('id', id)
+  // 학생이 배정/수정될 때 선생님의 organization_id로 profiles.organization_id 도 업데이트 되도록 처리 필요
   const idx = MOCK_STUDENTS.findIndex(s => s.id === id)
   if (idx !== -1) Object.assign(MOCK_STUDENTS[idx], data)
 }
@@ -73,6 +75,7 @@ export async function deleteStudents(ids: string[]): Promise<void> {
 
 export async function moveStudentsToClass(studentIds: string[], targetClassId: string, targetClassName: string): Promise<void> {
   // TODO: supabase.from('profiles').update({ class_id: targetClassId })...
+  // TODO: 이동하려는 학급/선생님의 organization_id도 조회하여 profiles.organization_id에 함께 넣어주도록 처리
   studentIds.forEach(id => {
     const student = MOCK_STUDENTS.find(s => s.id === id)
     if (student) {
