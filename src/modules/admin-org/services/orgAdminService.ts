@@ -37,13 +37,12 @@ export const orgAdminService = {
       
       if (centerIds.length > 0) {
         // center_id 기준으로 소속 학생 수 계산
-        const { data: students } = await supabase
-          .from('profiles')
+        const { data: students, error: studentsError } = await supabase
+          .from('students')
           .select('id')
-          .eq('role', 'student')
           .in('center_id', centerIds)
           
-        if (students) {
+        if (students && !studentsError) {
           const uniqueStudentIds = new Set(students.map(s => s.id))
           studentCount = uniqueStudentIds.size
         }
