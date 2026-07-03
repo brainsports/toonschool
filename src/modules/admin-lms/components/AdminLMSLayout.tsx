@@ -6,6 +6,7 @@ import { NavLink, Outlet, Link, useNavigate, useLocation } from 'react-router-do
 import { useAuth } from '../../../shared/contexts/AuthContext'
 import { useState } from 'react'
 import TeacherNotificationInbox from './TeacherNotificationInbox'
+import OrgAdminNotificationInbox from './OrgAdminNotificationInbox'
 
 const getMenuItems = (role: string) => {
   switch (role) {
@@ -109,8 +110,8 @@ export default function AdminLMSLayout() {
             </Link>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-              {/* 알림 벨 아이콘 (선생님만 표시) */}
-              {profile.role === 'teacher' && (
+              {/* 알림 벨 아이콘 (선생님 및 기관관리자 표시) */}
+              {(profile.role === 'teacher' || profile.role === 'org_admin') && (
                 <div style={{ position: 'relative' }}>
                   <button
                     onClick={() => setIsInboxOpen(true)}
@@ -154,18 +155,32 @@ export default function AdminLMSLayout() {
                     )}
                   </button>
                   {isInboxOpen && (
-                    <TeacherNotificationInbox 
-                      onClose={() => setIsInboxOpen(false)} 
-                      onCountChange={setUnreadCount}
-                    />
+                    profile.role === 'teacher' ? (
+                      <TeacherNotificationInbox 
+                        onClose={() => setIsInboxOpen(false)} 
+                        onCountChange={setUnreadCount}
+                      />
+                    ) : (
+                      <OrgAdminNotificationInbox 
+                        onClose={() => setIsInboxOpen(false)} 
+                        onCountChange={setUnreadCount}
+                      />
+                    )
                   )}
                   {/* 최초 렌더링 시 알림 개수를 가져오기 위해 보이지 않게 컴포넌트를 하나 렌더링하여 초기 카운트를 가져옴 */}
                   {!isInboxOpen && (
                     <div style={{ display: 'none' }}>
-                      <TeacherNotificationInbox 
-                        onClose={() => {}} 
-                        onCountChange={setUnreadCount}
-                      />
+                      {profile.role === 'teacher' ? (
+                        <TeacherNotificationInbox 
+                          onClose={() => {}} 
+                          onCountChange={setUnreadCount}
+                        />
+                      ) : (
+                        <OrgAdminNotificationInbox 
+                          onClose={() => {}} 
+                          onCountChange={setUnreadCount}
+                        />
+                      )}
                     </div>
                   )}
                 </div>
