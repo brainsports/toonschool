@@ -5,13 +5,43 @@ import { useEffect } from 'react'
 import { NavLink, Outlet, Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../../shared/contexts/AuthContext'
 
-const MENU_ITEMS = [
-  { label: '학급관리', path: '/admin/lms/classes' },
-  { label: '학생관리', path: '/admin/lms/students' },
-  { label: '평가관리', path: '/admin/lms/assessments' },
-  { label: '선생님관리', path: '/admin/lms/teachers' },
-  { label: '관리자정보', path: '/admin/lms/profile' },
-]
+const getMenuItems = (role: string) => {
+  switch (role) {
+    case 'org_admin':
+      return [
+        { label: '기관대시보드', path: '/admin/lms/organization' },
+        { label: '학급관리', path: '/admin/lms/classes' },
+        { label: '학생관리', path: '/admin/lms/students' },
+        { label: '선생님관리', path: '/admin/lms/org-teachers' },
+        { label: '이용권관리', path: '/admin/lms/licenses' },
+        { label: '관리자정보', path: '/admin/lms/profile' },
+      ];
+    case 'middle_admin':
+      return [
+        { label: '중간관리자 대시보드', path: '/admin/lms/manager' },
+        { label: '기관관리', path: '/admin/lms/centers' },
+        { label: '이용현황', path: '/admin/lms/usage' },
+        { label: '선생님/학생 현황', path: '/admin/lms/status' },
+        { label: '관리자정보', path: '/admin/lms/profile' },
+      ];
+    case 'super_admin':
+      return [
+        { label: '슈퍼관리자 대시보드', path: '/admin/lms/super' },
+        { label: '전체 기관관리', path: '/admin/lms/all-centers' },
+        { label: '전체 관리자관리', path: '/admin/lms/all-admins' },
+        { label: '이용권/결제관리', path: '/admin/lms/all-licenses' },
+        { label: '시스템 설정', path: '/admin/lms/settings' },
+      ];
+    case 'teacher':
+    default:
+      return [
+        { label: '학급관리', path: '/admin/lms/classes' },
+        { label: '학생관리', path: '/admin/lms/students' },
+        { label: '평가관리', path: '/admin/lms/assessments' },
+        { label: '관리자정보', path: '/admin/lms/profile' },
+      ];
+  }
+}
 
 export default function AdminLMSLayout() {
   const { profile, loading, user, signOut } = useAuth()
@@ -92,7 +122,7 @@ export default function AdminLMSLayout() {
 
           {/* 1단 탭 메뉴 */}
           <nav style={{ display: 'flex', gap: 4, paddingBottom: 0, overflowX: 'auto' }}>
-            {MENU_ITEMS.map(item => (
+            {getMenuItems(profile.role).map(item => (
               <NavLink
                 key={item.path}
                 to={item.path}

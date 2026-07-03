@@ -50,6 +50,7 @@ import AdminStudentManagementPage from '../modules/admin-lms/pages/StudentManage
 import AssessmentPage from '../modules/admin-lms/pages/AssessmentPage'
 import TeacherManagementPage from '../modules/admin-lms/pages/TeacherManagementPage'
 import AdminProfilePage from '../modules/admin-lms/pages/AdminProfilePage'
+import { MiddleAdminDashboard, SuperAdminDashboardPlaceholder, PlaceholderPage } from '../modules/admin-lms/pages/PlaceholderPages'
 
 // 기관관리자 라우트
 import OrgAdminLayout from '../modules/admin-org/components/OrgAdminLayout'
@@ -110,14 +111,33 @@ export default function AppRouter() {
       {/* 관리 LMS 라우트 */}
       <Route path="/admin/lms" element={<AdminLMSLayout />}>
         <Route index element={<AdminLMSPage />} />
+        {/* 공통/선생님 */}
         <Route path="classes" element={<ClassManagementPage />} />
         <Route path="students" element={<AdminStudentManagementPage />} />
         <Route path="assessments" element={<AssessmentPage />} />
         <Route path="teachers" element={<TeacherManagementPage />} />
         <Route path="profile" element={<AdminProfilePage />} />
+        
+        {/* 기관관리자 (org_admin) */}
+        <Route path="organization" element={<OrgAdminDashboard />} />
+        <Route path="org-teachers" element={<OrgTeacherManagement />} />
+        <Route path="licenses" element={<OrgLicenseManagement />} />
+
+        {/* 중간관리자 (middle_admin) */}
+        <Route path="manager" element={<MiddleAdminDashboard />} />
+        <Route path="centers" element={<PlaceholderPage title="기관관리" />} />
+        <Route path="usage" element={<PlaceholderPage title="이용현황" />} />
+        <Route path="status" element={<PlaceholderPage title="선생님/학생 현황" />} />
+
+        {/* 슈퍼관리자 (super_admin) */}
+        <Route path="super" element={<SuperAdminDashboardPlaceholder />} />
+        <Route path="all-centers" element={<PlaceholderPage title="전체 기관관리" />} />
+        <Route path="all-admins" element={<PlaceholderPage title="전체 관리자관리" />} />
+        <Route path="all-licenses" element={<PlaceholderPage title="이용권/결제관리" />} />
+        <Route path="settings" element={<PlaceholderPage title="시스템 설정" />} />
       </Route>
 
-      {/* 기관관리자 라우트 */}
+      {/* 기존 기관관리자 라우트 (하위 호환성을 위해 유지) */}
       <Route path="/admin/org" element={<OrgAdminLayout />}>
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<OrgAdminDashboard />} />

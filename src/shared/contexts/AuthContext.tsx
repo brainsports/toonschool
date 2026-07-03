@@ -6,7 +6,7 @@ export interface Profile {
   id: string
   email: string | null
   name?: string | null
-  role: 'super_admin' | 'org_admin' | 'center_admin' | 'teacher' | 'student' | 'free_user'
+  role: 'super_admin' | 'org_admin' | 'middle_admin' | 'center_admin' | 'teacher' | 'student' | 'free_user'
   plan_type: string
   monthly_quota: number
   center_id?: string | null

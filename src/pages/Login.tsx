@@ -44,27 +44,25 @@ export default function Login() {
             return
           }
 
-          // 2. 기관관리자 계정인 경우
-          if (profile.role === 'org_admin') {
-            // redirect 파라미터가 /mypage이거나 없으면 /admin/org/dashboard로 이동
-            if (!redirectUrl || redirectUrl === '/mypage' || redirectUrl === '/') {
-              navigate('/admin/org/dashboard')
+          // 2. 관리자/선생님 계정인 경우 (adminLmsRoles)
+          const adminLmsRoles = ['teacher', 'org_admin', 'middle_admin', 'super_admin']
+          if (adminLmsRoles.includes(profile.role)) {
+            if (!redirectUrl || redirectUrl === '/admin/lms' || redirectUrl === '/admin/lms/classes' || redirectUrl === '/mypage' || redirectUrl === '/') {
+              if (profile.role === 'org_admin') navigate('/admin/lms/organization')
+              else if (profile.role === 'middle_admin') navigate('/admin/lms/manager')
+              else if (profile.role === 'super_admin') navigate('/admin/lms/super')
+              else navigate('/admin/lms/classes') // teacher
             } else {
               navigate(redirectUrl)
             }
             return
           }
 
+          // 그 외 역할이 /admin/lms 로 접근하려 할 때
           if (redirectUrl && redirectUrl.startsWith('/admin/lms')) {
-            const allowedRoles = ['teacher', 'center_admin', 'middle_admin', 'super_admin']
-            if (allowedRoles.includes(profile.role)) {
-              navigate(redirectUrl)
-              return
-            } else {
-              setError('관리 LMS는 선생님 및 관리자 계정만 이용할 수 있습니다.')
-              await supabase.auth.signOut()
-              return
-            }
+            setError('관리 LMS는 선생님 및 관리자 계정만 이용할 수 있습니다.')
+            await supabase.auth.signOut()
+            return
           }
 
           if (redirectUrl) {
@@ -72,18 +70,8 @@ export default function Login() {
             return
           }
 
-          switch (profile.role) {
-            case 'super_admin':
-              navigate('/super-admin')
-              break
-            case 'center_admin':
-              navigate('/center-admin')
-              break
-            case 'free_user':
-            default:
-              navigate('/mypage')
-              break
-          }
+          // 나머지 일반 사용자 (free_user 등)
+          navigate('/mypage')
         } else {
           navigate('/mypage')
         }
