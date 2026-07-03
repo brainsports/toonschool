@@ -50,6 +50,7 @@ export interface OrgNotification {
   message: string
   priority: 'normal' | 'high'
   created_at: string
+  deleted_at?: string | null
 }
 
 export interface OrgNotificationRead {
@@ -79,7 +80,11 @@ export interface OrgDashboardStats {
   remainingLicenses: number
   teacherCount: number
   studentCount: number
-  recentNotificationCount: number
+  recentNotificationCount: number // (keep for backwards compat if needed, or remove. I will replace it)
+  teacherNotificationCount: number
+  studentNotificationCount: number
+  totalNotificationCount: number
+  lastNotificationDate: string | null
   licenseStartDate?: string | null
   licenseEndDate?: string | null
 }

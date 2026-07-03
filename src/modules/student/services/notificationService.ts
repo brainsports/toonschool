@@ -17,23 +17,57 @@ export interface StudentNotification {
 /**
  * 특정 타겟의 공개된 알림 목록을 최신순으로 조회합니다. (전체 대상 포함)
  */
-export async function getNotificationsForTarget(targetKey: string): Promise<StudentNotification[]> {
+export async function getNotificationsForTarget(targetKey: string, profile?: any): Promise<StudentNotification[]> {
   if (!targetKey) return [];
 
   try {
-    const { data, error } = await supabase
+    let allNotis: StudentNotification[] = [];
+
+    // 1. Get from student_notifications
+    const { data: studentData, error: studentError } = await supabase
       .from('student_notifications')
       .select('*')
       .in('target_key', [targetKey, 'all-grades'])
       .eq('is_published', true)
-      .order('notice_date', { ascending: false })
-      .order('created_at', { ascending: false });
+      .order('notice_date', { ascending: false });
 
-    if (error) {
-      console.error('[notificationService] getNotificationsForTarget error:', error);
-      return [];
+    if (!studentError && studentData) {
+      allNotis = [...studentData as StudentNotification[]];
     }
-    return data as StudentNotification[];
+
+    // 2. Get from org_notifications if profile has organization_id
+    if (profile?.organization_id) {
+      // students see 'all_students' and 'specific_class' (if targetTeacherId matches their class, but simpler to just fetch all_students for MVP)
+      const { data: orgData, error: orgError } = await supabase
+        .from('org_notifications')
+        .select('*')
+        .eq('organization_id', profile.organization_id)
+        .in('target_type', ['all_students'])
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false });
+        
+      if (!orgError && orgData) {
+        const orgMapped = orgData.map(n => ({
+          id: n.id,
+          target_key: n.target_type,
+          sender_id: n.sender_id,
+          sender_role: n.sender_role,
+          category: n.priority === 'high' ? 'notice' : 'learning', // Default category logic
+          title: n.title,
+          content: n.message,
+          notice_date: n.created_at,
+          is_published: true,
+          created_at: n.created_at,
+          updated_at: n.created_at
+        }));
+        allNotis = [...allNotis, ...orgMapped];
+      }
+    }
+
+    // Sort combined notifications by notice_date desc
+    allNotis.sort((a, b) => new Date(b.notice_date).getTime() - new Date(a.notice_date).getTime());
+
+    return allNotis;
   } catch (err) {
     console.error('[notificationService] getNotificationsForTarget exception:', err);
     return [];

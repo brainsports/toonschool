@@ -195,7 +195,7 @@ export default function StudentMyPage() {
       const msg = await getLatestTeacherMessageForClass(classKey);
       setLatestMessage(msg);
 
-      const notis = await getNotificationsForTarget(classKey);
+      const notis = await getNotificationsForTarget(classKey, profile);
       setNotifications(notis);
     }
 
@@ -522,7 +522,12 @@ export default function StudentMyPage() {
                       </div>
                       <div className="flex-1 flex flex-col justify-center overflow-hidden">
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-xs font-bold text-slate-800 truncate">{noti.title}</span>
+                          <div className="flex items-center gap-1.5 truncate">
+                            {noti.sender_role === 'org_admin' && (
+                              <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded shrink-0">기관관리자</span>
+                            )}
+                            <span className="text-xs font-bold text-slate-800 truncate">{noti.title}</span>
+                          </div>
                           <span className="text-[10px] font-medium text-slate-400 shrink-0">
                             {new Date(noti.notice_date).toLocaleDateString(undefined, { month: 'numeric', day: 'numeric' })}
                           </span>

@@ -28,12 +28,28 @@ export const orgAdminService = {
       .eq('organization_id', orgId)
       .eq('role', 'student')
 
-    const { count: recentNotificationCount } = await supabase
+    const { data: notifications } = await supabase
       .from('org_notifications')
-      .select('*', { count: 'exact', head: true })
+      .select('target_type, created_at')
       .eq('organization_id', orgId)
-      // in last 7 days
-      .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
+      .is('deleted_at', null)
+
+    let teacherNotis = 0
+    let studentNotis = 0
+    let lastDate: string | null = null
+
+    if (notifications) {
+      notifications.forEach(n => {
+        if (['all', 'specific_teacher', 'all_teachers'].includes(n.target_type)) {
+          teacherNotis++
+        } else {
+          studentNotis++
+        }
+        if (!lastDate || new Date(n.created_at) > new Date(lastDate)) {
+          lastDate = n.created_at
+        }
+      })
+    }
 
     // 배정된 전체 이용권 수는 license_allocations에서 합산 (간이 구현)
     const { data: allocations } = await supabase
@@ -52,7 +68,11 @@ export const orgAdminService = {
       remainingLicenses: orgData.total_licenses - allocatedLicenses,
       teacherCount: teacherCount || 0,
       studentCount: studentCount || 0,
-      recentNotificationCount: recentNotificationCount || 0,
+      recentNotificationCount: (teacherNotis + studentNotis),
+      teacherNotificationCount: teacherNotis,
+      studentNotificationCount: studentNotis,
+      totalNotificationCount: (teacherNotis + studentNotis),
+      lastNotificationDate: lastDate,
       licenseStartDate: orgData.license_start_date,
       licenseEndDate: orgData.license_end_date
     }
@@ -261,7 +281,7 @@ export const orgAdminService = {
     orgId: string,
     adminId: string,
     data: {
-      targetType: 'all_teachers' | 'all_students' | 'specific_teacher' | 'specific_student'
+      targetType: 'all_teachers' | 'all_students' | 'specific_teacher' | 'specific_student' | 'specific_class'
       targetUserId?: string
       targetTeacherId?: string
       title: string
@@ -289,9 +309,20 @@ export const orgAdminService = {
       .from('org_notifications')
       .select('*')
       .eq('organization_id', orgId)
+      .is('deleted_at', null)
       .order('created_at', { ascending: false })
 
     if (error) throw error
     return data as OrgNotification[]
+  },
+
+  async deleteOrgNotification(orgId: string, notificationId: string): Promise<void> {
+    const { error } = await supabase
+      .from('org_notifications')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', notificationId)
+      .eq('organization_id', orgId)
+
+    if (error) throw error
   }
 }

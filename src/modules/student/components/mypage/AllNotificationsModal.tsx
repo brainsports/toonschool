@@ -72,15 +72,20 @@ export default function AllNotificationsModal({ isOpen, onClose, notifications }
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${getCategoryBg(noti.category)}`}>
                     {getCategoryIcon(noti.category)}
                   </div>
-                  <div className="flex flex-col gap-1.5 flex-1">
-                    <div className="flex items-start justify-between gap-2">
-                      <span className="text-sm font-bold text-slate-800 leading-tight">
-                        {noti.title}
-                      </span>
-                      <span className="text-[11px] font-medium text-slate-400 shrink-0">
-                        {formatDate(noti.notice_date)}
-                      </span>
-                    </div>
+                    <div className="flex flex-col gap-1.5 flex-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {noti.sender_role === 'org_admin' && (
+                            <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded shrink-0">기관관리자</span>
+                          )}
+                          <span className="text-sm font-bold text-slate-800 leading-tight">
+                            {noti.title}
+                          </span>
+                        </div>
+                        <span className="text-[11px] font-medium text-slate-400 shrink-0 mt-0.5">
+                          {formatDate(noti.notice_date)}
+                        </span>
+                      </div>
                     <p className="text-[13px] text-slate-600 leading-relaxed whitespace-pre-wrap">
                       {noti.content}
                     </p>
