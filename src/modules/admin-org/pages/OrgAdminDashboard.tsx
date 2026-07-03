@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { orgAdminService } from '../services/orgAdminService'
 import type { OrgDashboardStats } from '../types/orgAdmin'
 import { useAuth } from '../../../shared/contexts/AuthContext'
+import { formatDate, getLicenseStatus } from '../utils/dateUtils'
 
 export default function OrgAdminDashboard() {
   const { profile } = useAuth()
@@ -33,28 +34,51 @@ export default function OrgAdminDashboard() {
     return <div style={{ padding: 40, textAlign: 'center', color: 'red' }}>데이터를 불러올 수 없습니다. ({error})</div>
   }
 
+  const licenseStatus = stats ? getLicenseStatus(stats.licenseStartDate, stats.licenseEndDate) : null
+  const periodText = stats?.licenseStartDate && stats?.licenseEndDate 
+    ? `${formatDate(stats.licenseStartDate)} ~ ${formatDate(stats.licenseEndDate)}` 
+    : '기간 미설정'
+
   return (
     <div>
       <h1 style={{ fontSize: 24, fontWeight: 800, color: '#1a1a2e', marginBottom: 24 }}>
         {stats.orgName} 대시보드
       </h1>
 
-      {/* 만료 예정 안내 영역 */}
-      <div style={{
-        background: '#fff0f6',
-        border: '1px solid #ffd6e7',
-        borderRadius: 12,
-        padding: '16px 24px',
-        marginBottom: 24,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between'
-      }}>
-        <div>
-          <h3 style={{ fontSize: 16, fontWeight: 700, color: '#ff2778', margin: '0 0 4px 0' }}>안내</h3>
-          <p style={{ margin: 0, fontSize: 14, color: '#666' }}>기관 이용권 만료 기간을 확인하고 필요시 연장해 주세요.</p>
+      {/* 이용권 기간 안내 영역 */}
+      {licenseStatus && (
+        <div style={{
+          background: licenseStatus.statusBg,
+          border: `1px solid ${licenseStatus.statusColor}33`,
+          borderRadius: 12,
+          padding: '16px 24px',
+          marginBottom: 24,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
+        }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+              <h3 style={{ fontSize: 16, fontWeight: 700, color: licenseStatus.statusColor, margin: 0 }}>기관 이용권 현황</h3>
+              <span style={{ 
+                background: licenseStatus.statusColor, 
+                color: 'white', 
+                padding: '2px 8px', 
+                borderRadius: 12, 
+                fontSize: 12, 
+                fontWeight: 600 
+              }}>
+                {licenseStatus.statusText}
+              </span>
+            </div>
+            <p style={{ margin: 0, fontSize: 14, color: '#444' }}>
+              <span style={{ fontWeight: 600 }}>이용기간:</span> {periodText} 
+              <span style={{ margin: '0 8px', color: '#ccc' }}>|</span>
+              <span style={{ fontWeight: 600 }}>남은 기간:</span> {licenseStatus.remainingDaysText}
+            </p>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* 통계 카드 그리드 */}
       <div style={{

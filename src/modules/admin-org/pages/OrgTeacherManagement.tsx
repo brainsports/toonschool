@@ -4,6 +4,7 @@ import type { OrgTeacher } from '../types/orgAdmin'
 import { useAuth } from '../../../shared/contexts/AuthContext'
 import TeacherCreateModal from '../components/TeacherCreateModal'
 import TeacherEditModal from '../components/TeacherEditModal'
+import { formatDate, getLicenseStatus } from '../utils/dateUtils'
 
 export default function OrgTeacherManagement() {
   const { profile, user } = useAuth()
@@ -85,6 +86,8 @@ export default function OrgTeacherManagement() {
                 <th style={{ padding: '16px 20px', fontWeight: 600, color: '#555', fontSize: 14 }}>이메일</th>
                 <th style={{ padding: '16px 20px', fontWeight: 600, color: '#555', fontSize: 14 }}>담당 학급</th>
                 <th style={{ padding: '16px 20px', fontWeight: 600, color: '#555', fontSize: 14, textAlign: 'center' }}>배정/사용/남음</th>
+                <th style={{ padding: '16px 20px', fontWeight: 600, color: '#555', fontSize: 14, textAlign: 'center' }}>이용기간</th>
+                <th style={{ padding: '16px 20px', fontWeight: 600, color: '#555', fontSize: 14, textAlign: 'center' }}>남은 기간</th>
                 <th style={{ padding: '16px 20px', fontWeight: 600, color: '#555', fontSize: 14, textAlign: 'center' }}>상태</th>
                 <th style={{ padding: '16px 20px', fontWeight: 600, color: '#555', fontSize: 14, textAlign: 'center' }}>관리 버튼</th>
               </tr>
@@ -98,13 +101,21 @@ export default function OrgTeacherManagement() {
                   <td style={{ padding: '16px 20px', color: '#666', fontSize: 14, textAlign: 'center' }}>
                     {t.allocated_licenses} / {t.used_licenses} / <span style={{ color: '#ff2778', fontWeight: 700 }}>{t.remaining_licenses}</span>
                   </td>
+                  <td style={{ padding: '16px 20px', color: '#666', fontSize: 13, textAlign: 'center' }}>
+                    {t.license_start_date && t.license_end_date 
+                      ? `${formatDate(t.license_start_date)} ~ ${formatDate(t.license_end_date)}` 
+                      : '기간 미설정'}
+                  </td>
+                  <td style={{ padding: '16px 20px', color: '#666', fontSize: 14, textAlign: 'center', fontWeight: 600 }}>
+                    {getLicenseStatus(t.license_start_date, t.license_end_date).remainingDaysText}
+                  </td>
                   <td style={{ padding: '16px 20px', textAlign: 'center' }}>
                     <span style={{ 
-                      background: t.status === 'active' ? '#e0f2fe' : '#fee2e2', 
-                      color: t.status === 'active' ? '#0369a1' : '#b91c1c', 
+                      background: getLicenseStatus(t.license_start_date, t.license_end_date).statusBg, 
+                      color: getLicenseStatus(t.license_start_date, t.license_end_date).statusColor, 
                       padding: '4px 8px', borderRadius: 12, fontSize: 12, fontWeight: 600 
                     }}>
-                      {t.status === 'active' ? '사용 중' : '사용 정지'}
+                      {t.status === 'active' ? getLicenseStatus(t.license_start_date, t.license_end_date).statusText : '사용 정지'}
                     </span>
                   </td>
                   <td style={{ padding: '16px 20px', textAlign: 'center' }}>

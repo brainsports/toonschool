@@ -10,6 +10,8 @@ interface TeacherCreateModalProps {
     assigned_class: string
     initial_licenses: number
     memo: string
+    license_start_date?: string
+    license_end_date?: string
   }) => Promise<void>
 }
 
@@ -20,7 +22,9 @@ export default function TeacherCreateModal({ isOpen, onClose, onSubmit }: Teache
     tempPassword: '',
     assigned_class: '',
     initial_licenses: 0,
-    memo: ''
+    memo: '',
+    license_start_date: '',
+    license_end_date: ''
   })
   const [loading, setLoading] = useState(false)
 
@@ -39,10 +43,14 @@ export default function TeacherCreateModal({ isOpen, onClose, onSubmit }: Teache
 
     try {
       setLoading(true)
-      await onSubmit(formData)
+      await onSubmit({
+        ...formData,
+        license_start_date: formData.license_start_date || undefined,
+        license_end_date: formData.license_end_date || undefined
+      })
       alert("선생님을 추가했어요.")
       onClose()
-      setFormData({ name: '', email: '', tempPassword: '', assigned_class: '', initial_licenses: 0, memo: '' })
+      setFormData({ name: '', email: '', tempPassword: '', assigned_class: '', initial_licenses: 0, memo: '', license_start_date: '', license_end_date: '' })
     } catch (err: any) {
       alert(`저장 중 문제가 생겼어요. 다시 확인해 주세요.\n(${err.message})`)
     } finally {
@@ -115,6 +123,27 @@ export default function TeacherCreateModal({ isOpen, onClose, onSubmit }: Teache
             value={formData.initial_licenses}
             onChange={(e) => setFormData(p => ({ ...p, initial_licenses: parseInt(e.target.value) || 0 }))}
           />
+
+          <div style={{ display: 'flex', gap: 12 }}>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#555', marginBottom: 4 }}>이용권 시작일</label>
+              <input 
+                style={inputStyle}
+                type="date"
+                value={formData.license_start_date}
+                onChange={(e) => setFormData(p => ({ ...p, license_start_date: e.target.value }))}
+              />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#555', marginBottom: 4 }}>이용권 종료일</label>
+              <input 
+                style={inputStyle}
+                type="date"
+                value={formData.license_end_date}
+                onChange={(e) => setFormData(p => ({ ...p, license_end_date: e.target.value }))}
+              />
+            </div>
+          </div>
 
           <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#555', marginBottom: 4 }}>메모</label>
           <textarea 

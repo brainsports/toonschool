@@ -9,6 +9,8 @@ interface TeacherEditModalProps {
     assigned_class: string
     status: string
     memo: string
+    license_start_date?: string
+    license_end_date?: string
   }) => Promise<void>
 }
 
@@ -17,7 +19,9 @@ export default function TeacherEditModal({ isOpen, onClose, teacher, onSubmit }:
     name: '',
     assigned_class: '',
     status: 'active',
-    memo: ''
+    memo: '',
+    license_start_date: '',
+    license_end_date: ''
   })
   const [loading, setLoading] = useState(false)
 
@@ -27,7 +31,9 @@ export default function TeacherEditModal({ isOpen, onClose, teacher, onSubmit }:
         name: teacher.name || '',
         assigned_class: teacher.assigned_class || '',
         status: teacher.status || 'active',
-        memo: teacher.memo || ''
+        memo: teacher.memo || '',
+        license_start_date: teacher.license_start_date ? teacher.license_start_date.split('T')[0] : '',
+        license_end_date: teacher.license_end_date ? teacher.license_end_date.split('T')[0] : ''
       })
     }
   }, [teacher])
@@ -43,7 +49,11 @@ export default function TeacherEditModal({ isOpen, onClose, teacher, onSubmit }:
 
     try {
       setLoading(true)
-      await onSubmit(teacher.id, formData)
+      await onSubmit(teacher.id, {
+        ...formData,
+        license_start_date: formData.license_start_date || undefined,
+        license_end_date: formData.license_end_date || undefined
+      })
       alert("선생님 정보를 수정했어요.")
       onClose()
     } catch (err: any) {
@@ -98,6 +108,27 @@ export default function TeacherEditModal({ isOpen, onClose, teacher, onSubmit }:
             <option value="suspended">사용 정지</option>
             <option value="inactive">비활성화</option>
           </select>
+
+          <div style={{ display: 'flex', gap: 12 }}>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#555', marginBottom: 4 }}>이용권 시작일</label>
+              <input 
+                style={inputStyle}
+                type="date"
+                value={formData.license_start_date}
+                onChange={(e) => setFormData(p => ({ ...p, license_start_date: e.target.value }))}
+              />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#555', marginBottom: 4 }}>이용권 종료일</label>
+              <input 
+                style={inputStyle}
+                type="date"
+                value={formData.license_end_date}
+                onChange={(e) => setFormData(p => ({ ...p, license_end_date: e.target.value }))}
+              />
+            </div>
+          </div>
 
           <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#555', marginBottom: 4 }}>메모</label>
           <textarea 

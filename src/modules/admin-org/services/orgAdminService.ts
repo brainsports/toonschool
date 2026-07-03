@@ -52,7 +52,9 @@ export const orgAdminService = {
       remainingLicenses: orgData.total_licenses - allocatedLicenses,
       teacherCount: teacherCount || 0,
       studentCount: studentCount || 0,
-      recentNotificationCount: recentNotificationCount || 0
+      recentNotificationCount: recentNotificationCount || 0,
+      licenseStartDate: orgData.license_start_date,
+      licenseEndDate: orgData.license_end_date
     }
   },
 
@@ -82,11 +84,21 @@ export const orgAdminService = {
         remaining_licenses: (allocation?.quantity || 0) - (allocation?.used_quantity || 0),
         status: 'active', // TODO: Get actual status if added to profiles
         assigned_class: p.center_id, // temporarily use center_id for class or similar mapping if exist
+        license_start_date: allocation?.license_start_date,
+        license_end_date: allocation?.license_end_date
       } as OrgTeacher
     })
   },
 
-  async createTeacherForOrg(orgId: string, adminId: string, data: { name: string; email: string; assigned_class: string; initial_licenses: number; memo: string }): Promise<void> {
+  async createTeacherForOrg(orgId: string, adminId: string, data: { name: string; email: string; assigned_class: string; initial_licenses: number; memo: string; license_start_date?: string; license_end_date?: string }): Promise<void> {
+    // Check organization license dates first
+    const orgStats = await this.getOrgAdminDashboard(orgId)
+    if (data.license_end_date && orgStats.licenseEndDate) {
+      if (new Date(data.license_end_date) > new Date(orgStats.licenseEndDate)) {
+        throw new Error(`선생님 이용권 종료일은 기관 이용권 종료일(${orgStats.licenseEndDate.split('T')[0]})을 넘을 수 없습니다.`)
+      }
+    }
+    
     // 1. Create User via Auth Admin (Note: In actual app, we need backend edge function to create user)
     // Here we'll simulate creating profile directly or use an edge function
     // Assuming backend handles auth creation, for MVP we just insert to profiles and simulate auth
@@ -105,12 +117,22 @@ export const orgAdminService = {
 
     if (profileError) throw profileError
 
-    if (data.initial_licenses > 0) {
-      await this.allocateTeacherLicense(orgId, adminId, fakeId, data.initial_licenses, data.memo)
+    if (data.initial_licenses > 0 || data.license_start_date || data.license_end_date) {
+      await this.allocateTeacherLicense(orgId, adminId, fakeId, data.initial_licenses, data.memo, data.license_start_date, data.license_end_date)
     }
   },
 
-  async updateOrgTeacher(orgId: string, teacherId: string, updates: { name: string; assigned_class: string; status: string; memo: string }): Promise<void> {
+  async updateOrgTeacher(orgId: string, teacherId: string, updates: { name: string; assigned_class: string; status: string; memo: string; license_start_date?: string; license_end_date?: string }): Promise<void> {
+    // Check organization license dates first
+    if (updates.license_end_date) {
+      const orgStats = await this.getOrgAdminDashboard(orgId)
+      if (orgStats.licenseEndDate) {
+        if (new Date(updates.license_end_date) > new Date(orgStats.licenseEndDate)) {
+          throw new Error(`선생님 이용권 종료일은 기관 이용권 종료일(${orgStats.licenseEndDate.split('T')[0]})을 넘을 수 없습니다.`)
+        }
+      }
+    }
+
     const { error } = await supabase
       .from('profiles')
       .update({ name: updates.name }) // center_id as assigned_class could be mapped
@@ -118,6 +140,19 @@ export const orgAdminService = {
       .eq('organization_id', orgId)
 
     if (error) throw error
+    
+    // Update license dates if provided
+    if (updates.license_start_date || updates.license_end_date) {
+      await supabase
+        .from('license_allocations')
+        .update({
+          license_start_date: updates.license_start_date,
+          license_end_date: updates.license_end_date,
+          updated_at: new Date().toISOString()
+        })
+        .eq('organization_id', orgId)
+        .eq('to_user_id', teacherId)
+    }
   },
 
   async suspendOrgTeacher(orgId: string, teacherId: string): Promise<void> {
@@ -131,7 +166,7 @@ export const orgAdminService = {
   },
 
   // --- Licenses ---
-  async allocateTeacherLicense(orgId: string, adminId: string, teacherId: string, quantity: number, memo: string): Promise<void> {
+  async allocateTeacherLicense(orgId: string, adminId: string, teacherId: string, quantity: number, memo: string, startDate?: string, endDate?: string): Promise<void> {
     // 1. Check org remaining
     const orgStats = await this.getOrgAdminDashboard(orgId)
     if (orgStats.remainingLicenses < quantity) {
@@ -152,9 +187,13 @@ export const orgAdminService = {
     if (existing) {
       beforeQuantity = existing.quantity
       afterQuantity = existing.quantity + quantity
+      const updateData: any = { quantity: afterQuantity, updated_at: new Date().toISOString() }
+      if (startDate) updateData.license_start_date = startDate
+      if (endDate) updateData.license_end_date = endDate
+      
       await supabase
         .from('license_allocations')
-        .update({ quantity: afterQuantity, updated_at: new Date().toISOString() })
+        .update(updateData)
         .eq('id', existing.id)
     } else {
       await supabase
@@ -163,7 +202,9 @@ export const orgAdminService = {
           organization_id: orgId,
           from_user_id: adminId,
           to_user_id: teacherId,
-          quantity: quantity
+          quantity: quantity,
+          license_start_date: startDate || orgStats.licenseStartDate,
+          license_end_date: endDate || orgStats.licenseEndDate
         })
     }
 

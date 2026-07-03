@@ -6,6 +6,8 @@ export interface Organization {
   total_licenses: number
   used_licenses: number
   created_at: string
+  license_start_date?: string | null
+  license_end_date?: string | null
 }
 
 export interface LicenseAllocation {
@@ -19,6 +21,8 @@ export interface LicenseAllocation {
   status: string
   created_at: string
   updated_at: string
+  license_start_date?: string | null
+  license_end_date?: string | null
 }
 
 export interface LicenseLog {
@@ -63,6 +67,8 @@ export interface OrgTeacher extends Profile {
   status: 'active' | 'suspended' | 'inactive'
   assigned_class?: string
   memo?: string
+  license_start_date?: string | null
+  license_end_date?: string | null
 }
 
 export interface OrgDashboardStats {
@@ -74,4 +80,6 @@ export interface OrgDashboardStats {
   teacherCount: number
   studentCount: number
   recentNotificationCount: number
+  licenseStartDate?: string | null
+  licenseEndDate?: string | null
 }
