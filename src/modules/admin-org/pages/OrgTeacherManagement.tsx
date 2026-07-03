@@ -5,6 +5,7 @@ import { useAuth } from '../../../shared/contexts/AuthContext'
 import TeacherCreateModal from '../components/TeacherCreateModal'
 import TeacherEditModal from '../components/TeacherEditModal'
 import { formatDate, getLicenseStatus } from '../utils/dateUtils'
+import TeacherNotificationModal from '../components/TeacherNotificationModal'
 
 export default function OrgTeacherManagement() {
   const { profile, user } = useAuth()
@@ -14,6 +15,7 @@ export default function OrgTeacherManagement() {
 
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [editTeacher, setEditTeacher] = useState<OrgTeacher | null>(null)
+  const [notifyTeacher, setNotifyTeacher] = useState<OrgTeacher | null>(null)
 
   const loadTeachers = async () => {
     if (!profile?.organization_id) return
@@ -58,6 +60,21 @@ export default function OrgTeacherManagement() {
     }
   }
 
+  const handleNotifySubmit = async (title: string, content: string) => {
+    if (!profile?.organization_id || !user || !notifyTeacher) return
+    await orgAdminService.sendOrgNotification(
+      profile.organization_id,
+      user.id,
+      {
+        targetType: 'specific_teacher',
+        targetTeacherId: notifyTeacher.id,
+        title,
+        message: content,
+        priority: 'normal'
+      }
+    )
+  }
+
   if (loading) return <div style={{ padding: 40, textAlign: 'center', color: '#888' }}>불러오는 중입니다...</div>
   if (error) return <div style={{ padding: 40, textAlign: 'center', color: 'red' }}>에러: {error}</div>
 
@@ -89,7 +106,7 @@ export default function OrgTeacherManagement() {
                 <th style={{ padding: '16px 20px', fontWeight: 600, color: '#555', fontSize: 14, textAlign: 'center' }}>이용기간</th>
                 <th style={{ padding: '16px 20px', fontWeight: 600, color: '#555', fontSize: 14, textAlign: 'center' }}>남은 기간</th>
                 <th style={{ padding: '16px 20px', fontWeight: 600, color: '#555', fontSize: 14, textAlign: 'center' }}>상태</th>
-                <th style={{ padding: '16px 20px', fontWeight: 600, color: '#555', fontSize: 14, textAlign: 'center' }}>관리 버튼</th>
+                <th style={{ padding: '16px 20px', fontWeight: 600, color: '#555', fontSize: 14, textAlign: 'center', width: '200px', whiteSpace: 'nowrap' }}>관리 버튼</th>
               </tr>
             </thead>
             <tbody>
@@ -118,12 +135,11 @@ export default function OrgTeacherManagement() {
                       {t.status === 'active' ? getLicenseStatus(t.license_start_date, t.license_end_date).statusText : '사용 정지'}
                     </span>
                   </td>
-                  <td style={{ padding: '16px 20px', textAlign: 'center' }}>
+                  <td style={{ padding: '16px 20px', textAlign: 'center', whiteSpace: 'nowrap' }}>
                     <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
                       <button onClick={() => setEditTeacher(t)} style={btnStyle}>수정</button>
                       <button onClick={() => handleDelete(t)} style={{...btnStyle, color: '#b91c1c', background: '#fee2e2'}}>삭제</button>
-                      {/* 이용권 조정 및 알림 보내기는 해당 탭으로 이동하거나 별도 액션 */}
-                      <button onClick={() => alert("이용권 관리는 '이용권 관리' 탭에서 진행해 주세요.")} style={btnStyle}>이용권</button>
+                      <button onClick={() => setNotifyTeacher(t)} style={btnStyle}>알림</button>
                     </div>
                   </td>
                 </tr>
@@ -144,6 +160,13 @@ export default function OrgTeacherManagement() {
         onClose={() => setEditTeacher(null)}
         teacher={editTeacher}
         onSubmit={handleEditSubmit}
+      />
+
+      <TeacherNotificationModal
+        isOpen={!!notifyTeacher}
+        onClose={() => setNotifyTeacher(null)}
+        teacher={notifyTeacher}
+        onSubmit={handleNotifySubmit}
       />
     </div>
   )
