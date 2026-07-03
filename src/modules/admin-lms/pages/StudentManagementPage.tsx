@@ -28,9 +28,15 @@ export default function StudentManagementPage() {
   const [moveTargetClassId, setMoveTargetClassId] = useState('')
   const [toast, setToast] = useState('')
 
+  const fetchAndSetLicense = () => {
+    if (profile?.id) {
+      fetchLicenseInfo(profile.id, actualCenterId || profile.center_id || undefined).then(setLicense)
+    }
+  }
+
   useEffect(() => {
-    fetchLicenseInfo().then(setLicense)
-  }, [])
+    fetchAndSetLicense()
+  }, [profile?.id, actualCenterId, profile?.center_id])
 
   useEffect(() => {
     if (profile) {
@@ -100,6 +106,7 @@ export default function StudentManagementPage() {
     if (!selectedClassId || newStudent.classId === selectedClassId) {
       setStudents(prev => [...prev, newStudent])
     }
+    fetchAndSetLicense()
     showToast(`${newStudent.name} 학생이 생성되었습니다.`)
   }
 
@@ -107,6 +114,7 @@ export default function StudentManagementPage() {
     await deleteStudents([...checkedIds])
     setStudents(prev => prev.filter(s => !checkedIds.has(s.id)))
     setCheckedIds(new Set())
+    fetchAndSetLicense()
     showToast('학생이 삭제되었습니다.')
   }
 
