@@ -42,9 +42,18 @@ export default function TeacherMessageModal({ isOpen, onClose, messages }: Props
                 </div>
                 <div className="flex flex-col gap-1.5 pt-1 flex-1">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-bold text-slate-800">
-                      {msg.title || '선생님 말씀'}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold text-slate-800">
+                        {msg.title || '선생님 말씀'}
+                      </span>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                        msg.class_key === 'all-grades' 
+                          ? 'bg-purple-100 text-purple-600' 
+                          : 'bg-sky-100 text-sky-600'
+                      }`}>
+                        {msg.class_key === 'all-grades' ? '전체 학년' : '5학년 전체'}
+                      </span>
+                    </div>
                     <span className="text-[11px] text-slate-400 font-medium">
                       {new Date(msg.message_date).toLocaleDateString()}
                     </span>

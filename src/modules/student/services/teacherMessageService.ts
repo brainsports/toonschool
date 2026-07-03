@@ -28,7 +28,7 @@ export function resolveStudentClassKey(profile: any, studentProfile?: any): stri
 }
 
 /**
- * 특정 학급의 가장 최근 공개된 선생님 말씀 1개를 조회합니다.
+ * 특정 학급의 가장 최근 공개된 선생님 말씀 1개를 조회합니다. (전체 학년 말씀 포함)
  */
 export async function getLatestTeacherMessageForClass(classKey: string): Promise<TeacherMessage | null> {
   if (!classKey) return null;
@@ -37,7 +37,7 @@ export async function getLatestTeacherMessageForClass(classKey: string): Promise
     const { data, error } = await supabase
       .from('teacher_messages')
       .select('*')
-      .eq('class_key', classKey)
+      .in('class_key', [classKey, 'all-grades'])
       .eq('is_published', true)
       .order('message_date', { ascending: false })
       .order('created_at', { ascending: false })
@@ -58,7 +58,7 @@ export async function getLatestTeacherMessageForClass(classKey: string): Promise
 }
 
 /**
- * 특정 학급의 모든 공개된 선생님 말씀 목록을 최신순으로 조회합니다.
+ * 특정 학급의 모든 공개된 선생님 말씀 목록을 최신순으로 조회합니다. (전체 학년 말씀 포함)
  */
 export async function getTeacherMessagesForClass(classKey: string): Promise<TeacherMessage[]> {
   if (!classKey) return [];
@@ -67,7 +67,7 @@ export async function getTeacherMessagesForClass(classKey: string): Promise<Teac
     const { data, error } = await supabase
       .from('teacher_messages')
       .select('*')
-      .eq('class_key', classKey)
+      .in('class_key', [classKey, 'all-grades'])
       .eq('is_published', true)
       .order('message_date', { ascending: false })
       .order('created_at', { ascending: false });

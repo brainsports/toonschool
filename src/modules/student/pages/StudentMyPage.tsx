@@ -441,9 +441,18 @@ export default function StudentMyPage() {
                   </div>
                   <div className="flex flex-col gap-1.5 pt-1 flex-1">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-bold text-slate-800">
-                        {latestMessage.title || '선생님 말씀'}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-slate-800">
+                          {latestMessage.title || '선생님 말씀'}
+                        </span>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                          latestMessage.class_key === 'all-grades' 
+                            ? 'bg-purple-100 text-purple-600' 
+                            : 'bg-sky-100 text-sky-600'
+                        }`}>
+                          {latestMessage.class_key === 'all-grades' ? '전체 학년' : '5학년 전체'}
+                        </span>
+                      </div>
                     </div>
                     <p className="text-[13px] font-medium text-slate-600 leading-relaxed line-clamp-3">
                       {latestMessage.content}

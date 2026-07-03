@@ -22,6 +22,7 @@ export default function TeacherMessageModal({ classRoom, onClose, onSaved }: Pro
   const [content, setContent] = useState('');
   const [messageDate, setMessageDate] = useState(getLocalDateString());
   const [isPublished, setIsPublished] = useState(true);
+  const [targetType, setTargetType] = useState<'class' | 'all'>('class');
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [messages, setMessages] = useState<TeacherMessage[]>([]);
@@ -60,7 +61,7 @@ export default function TeacherMessageModal({ classRoom, onClose, onSaved }: Pro
 
     try {
       await createTeacherMessage({
-        class_key: classRoom.id, // e.g. cls-1
+        class_key: targetType === 'all' ? 'all-grades' : classRoom.id, // e.g. cls-1 or all-grades
         content: content.trim(),
         message_date: messageDate,
         is_published: isPublished,
@@ -94,6 +95,28 @@ export default function TeacherMessageModal({ classRoom, onClose, onSaved }: Pro
         <div style={{ padding: '24px 30px', display: 'flex', flexDirection: 'column', gap: 20 }}>
           {error && <div style={{ color: '#ef4444', fontSize: 13, background: '#fee2e2', padding: '10px 14px', borderRadius: 8 }}>{error}</div>}
           
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <label style={{ fontSize: 14, fontWeight: 600, color: '#333' }}>발송 대상</label>
+            <div style={{ display: 'flex', gap: 16 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, cursor: 'pointer', color: '#333' }}>
+                <input 
+                  type="radio" 
+                  checked={targetType === 'class'} 
+                  onChange={() => setTargetType('class')} 
+                />
+                현재 학년/학급 ({classRoom.grade}학년 전체)
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, cursor: 'pointer', color: '#333' }}>
+                <input 
+                  type="radio" 
+                  checked={targetType === 'all'} 
+                  onChange={() => setTargetType('all')} 
+                />
+                전체 학년
+              </label>
+            </div>
+          </div>
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <label style={{ fontSize: 14, fontWeight: 600, color: '#333' }}>날짜</label>
             <input 
@@ -147,7 +170,12 @@ export default function TeacherMessageModal({ classRoom, onClose, onSaved }: Pro
               {messages.slice(0, 5).map(msg => (
                 <div key={msg.id} style={{ padding: 12, borderRadius: 8, background: '#f8fafc', border: '1px solid #e2e8f0' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: '#475569' }}>{msg.message_date}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: '#475569' }}>{msg.message_date}</span>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: msg.class_key === 'all-grades' ? '#9333ea' : '#3b82f6', background: msg.class_key === 'all-grades' ? '#f3e8ff' : '#eff6ff', padding: '2px 6px', borderRadius: 4 }}>
+                        {msg.class_key === 'all-grades' ? '전체 학년' : `${classRoom.grade}학년 전체`}
+                      </span>
+                    </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <span style={{ fontSize: 12, color: msg.is_published ? '#10b981' : '#ef4444', fontWeight: 600 }}>
                         {msg.is_published ? '공개' : '비공개'}
