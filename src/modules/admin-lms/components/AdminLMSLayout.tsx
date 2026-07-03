@@ -23,7 +23,7 @@ export default function AdminLMSLayout() {
       if (!user || !profile) {
         navigate(`/login?redirect=${encodeURIComponent(location.pathname)}`, { replace: true })
       } else {
-        const allowedRoles = ['teacher', 'center_admin', 'middle_admin', 'super_admin']
+        const allowedRoles = ['teacher', 'center_admin', 'middle_admin', 'super_admin', 'org_admin']
         if (!allowedRoles.includes(profile.role)) {
           alert('관리 LMS는 선생님 및 관리자 계정만 이용할 수 있습니다.')
           if (profile.role === 'student') {
@@ -40,7 +40,7 @@ export default function AdminLMSLayout() {
     return null
   }
 
-  const allowedRoles = ['teacher', 'center_admin', 'middle_admin', 'super_admin']
+  const allowedRoles = ['teacher', 'center_admin', 'middle_admin', 'super_admin', 'org_admin']
   if (!allowedRoles.includes(profile.role)) {
     return null
   }
