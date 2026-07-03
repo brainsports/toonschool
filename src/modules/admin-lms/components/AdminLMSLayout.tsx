@@ -90,7 +90,7 @@ export default function AdminLMSLayout() {
       }}>
         <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 24px' }}>
           {/* 로고 & 타이틀 */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 16, paddingBottom: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 16, paddingBottom: 8, flexWrap: 'wrap', gap: 12 }}>
             <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
               <div style={{
                 width: 36, height: 36, background: '#ff2778', borderRadius: 10,
@@ -102,24 +102,61 @@ export default function AdminLMSLayout() {
                 <div style={{ fontSize: 11, color: '#ff2778', fontWeight: 600 }}>관리 LMS</div>
               </div>
             </Link>
-            <button 
-              onClick={async () => {
-                try {
-                  await signOut()
-                  navigate('/login', { replace: true })
-                } catch (error) {
-                  console.error('로그아웃 오류:', error)
-                }
-              }}
-              style={{
-                fontSize: 13, color: '#888', textDecoration: 'none', fontWeight: 500,
-                padding: '6px 14px', borderRadius: 20, border: '1px solid #eee',
-                background: 'transparent', cursor: 'pointer',
-                transition: 'all 0.2s',
-              }}
-            >
-              로그아웃
-            </button>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+              {/* 현재 로그인 계정 프로필 칩 */}
+              <div style={{ 
+                display: 'flex', alignItems: 'center', gap: 8, 
+                background: '#f8fafc', padding: '6px 12px 6px 6px', 
+                borderRadius: 24, border: '1px solid #e2e8f0' 
+              }}>
+                <div style={{
+                  width: 28, height: 28, borderRadius: '50%', background: '#ff2778',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: 'white', fontSize: 12, fontWeight: 700, flexShrink: 0
+                }}>
+                  {(profile.name ? profile.name.charAt(0) : ((profile as any).full_name ? (profile as any).full_name.charAt(0) : (user.email ? user.email.charAt(0).toUpperCase() : 'T')))}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', maxWidth: 160 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: '#334155', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {profile.name || (profile as any).full_name || (user.email ? user.email.split('@')[0] : '사용자')}
+                    </span>
+                    <span style={{ fontSize: 10, fontWeight: 600, color: '#ff2778', background: '#ffe4ee', padding: '2px 6px', borderRadius: 4, whiteSpace: 'nowrap' }}>
+                      {profile.role === 'teacher' ? '선생님' :
+                       profile.role === 'org_admin' ? '기관관리자' :
+                       profile.role === 'middle_admin' ? '중간관리자' :
+                       profile.role === 'super_admin' ? '슈퍼관리자' :
+                       profile.role === 'student' ? '학생' :
+                       profile.role === 'free_user' ? '일반회원' : '사용자'}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 11, color: '#64748b', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {user.email || (profile as any).email}
+                  </div>
+                </div>
+              </div>
+
+              <button 
+                onClick={async () => {
+                  try {
+                    await signOut()
+                    navigate('/login', { replace: true })
+                  } catch (error) {
+                    console.error('로그아웃 오류:', error)
+                  }
+                }}
+                style={{
+                  fontSize: 13, color: '#888', textDecoration: 'none', fontWeight: 500,
+                  padding: '6px 14px', borderRadius: 20, border: '1px solid #eee',
+                  background: 'transparent', cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  flexShrink: 0
+                }}
+              >
+                로그아웃
+              </button>
+            </div>
           </div>
 
           {/* 1단 탭 메뉴 */}
