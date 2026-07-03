@@ -4,6 +4,9 @@ import type {
   MiddleOrganization,
 } from '../types/middleAdmin'
 
+// TODO: 나중에 중간관리자 프로필에 전체 이용권 컬럼이 생기면 동적으로 조회하도록 변경
+const MIDDLE_ADMIN_TOTAL_LICENSES = 500;
+
 export const middleAdminService = {
   async getDashboardStats(middleAdminId: string): Promise<MiddleDashboardStats> {
     const { data: orgs, error } = await supabase
@@ -14,7 +17,7 @@ export const middleAdminService = {
     if (error) throw error
 
     let totalOrgs = 0
-    let totalLicenses = 0
+    let totalLicenses = MIDDLE_ADMIN_TOTAL_LICENSES
     let usedLicenses = 0
     let totalTeachers = 0
     let totalStudents = 0
@@ -22,8 +25,8 @@ export const middleAdminService = {
 
     if (orgs) {
       totalOrgs = orgs.length
-      totalLicenses = orgs.reduce((sum, org) => sum + org.total_licenses, 0)
-      usedLicenses = orgs.reduce((sum, org) => sum + org.used_licenses, 0)
+      // 중간관리자가 사용한 이용권 = 하위 기관에 배정한 이용권의 합
+      usedLicenses = orgs.reduce((sum, org) => sum + (org.total_licenses || 0), 0)
 
       const orgIds = orgs.map(org => org.id)
       
@@ -39,12 +42,15 @@ export const middleAdminService = {
         const centerIds = Array.from(new Set(teachersData?.map(t => t.center_id).filter(Boolean)))
         
         if (centerIds.length > 0) {
-          const { count: studentCount } = await supabase
+          const { data: studentsData } = await supabase
             .from('students')
-            .select('*', { count: 'exact', head: true })
+            .select('center_id')
             .in('center_id', centerIds)
 
-          totalStudents = studentCount || 0
+          totalStudents = studentsData?.length || 0
+          
+          const uniqueStudentCenters = new Set(studentsData?.map(s => s.center_id))
+          totalClasses = uniqueStudentCenters.size
         }
       }
     }
@@ -80,12 +86,17 @@ export const middleAdminService = {
       const centerIds = Array.from(new Set(teachersData?.map(t => t.center_id).filter(Boolean)))
       
       let studentCount = 0
+      let classCount = 0
+      
       if (centerIds.length > 0) {
-        const { count } = await supabase
+        const { data: studentsData } = await supabase
           .from('students')
-          .select('*', { count: 'exact', head: true })
+          .select('center_id')
           .in('center_id', centerIds)
-        studentCount = count || 0
+          
+        studentCount = studentsData?.length || 0
+        const uniqueStudentCenters = new Set(studentsData?.map(s => s.center_id))
+        classCount = uniqueStudentCenters.size
       }
 
       return {
@@ -93,7 +104,7 @@ export const middleAdminService = {
         status: org.status || 'active',
         teacher_count: teachersData?.length || 0,
         student_count: studentCount,
-        class_count: 0
+        class_count: classCount
       }
     }))
 
@@ -118,20 +129,36 @@ export const middleAdminService = {
     const centerIds = Array.from(new Set(teachersData?.map(t => t.center_id).filter(Boolean)))
     
     let studentCount = 0
+    let classCount = 0
+    
     if (centerIds.length > 0) {
-      const { count } = await supabase
+      const { data: studentsData } = await supabase
         .from('students')
-        .select('*', { count: 'exact', head: true })
+        .select('center_id')
         .in('center_id', centerIds)
-      studentCount = count || 0
+        
+      studentCount = studentsData?.length || 0
+      const uniqueStudentCenters = new Set(studentsData?.map(s => s.center_id))
+      classCount = uniqueStudentCenters.size
     }
+    
+    // Fetch org admin info (for the manager_name and email)
+    const { data: orgAdminData } = await supabase
+      .from('profiles')
+      .select('name, email, phone')
+      .eq('organization_id', orgId)
+      .eq('role', 'org_admin')
+      .single()
 
     return {
       ...org,
       status: org.status || 'active',
       teacher_count: teachersData?.length || 0,
       student_count: studentCount,
-      class_count: 0
+      class_count: classCount,
+      manager_name: orgAdminData?.name || orgAdminData?.email || '미지정',
+      manager_email: orgAdminData?.email,
+      phone: orgAdminData?.phone || '-'
     }
   },
 

@@ -93,14 +93,98 @@ export default function OrganizationDetail() {
         ))}
       </div>
 
-      {/* 탭 내용 영역 (현재는 임시 텍스트) */}
+      {/* 탭 내용 영역 */}
       <div style={{ background: 'white', padding: 32, borderRadius: 16, boxShadow: '0 4px 20px rgba(0,0,0,0.03)', minHeight: 400 }}>
-        {activeTab === 'status' && <div><h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>기관 상세 정보</h3><p>현재 기관의 세부 상태를 보여주는 화면입니다.</p></div>}
-        {activeTab === 'classes' && <div><h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>소속 학급 목록</h3><p>이 기관에 속한 학급 목록이 표시됩니다.</p></div>}
-        {activeTab === 'teachers' && <div><h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>소속 선생님 목록</h3><p>이 기관에 소속된 선생님 목록이 표시됩니다.</p></div>}
-        {activeTab === 'students' && <div><h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>소속 학생 목록</h3><p>이 기관에 소속된 학생 목록이 표시됩니다.</p></div>}
-        {activeTab === 'licenses' && <div><h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>이용권 할당 이력</h3><p>기관 내 선생님들에게 할당된 이용권 이력이 표시됩니다.</p></div>}
-        {activeTab === 'notification' && <div><h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>기관 알림 보내기</h3><p>이 기관 소속 사용자에게 알림을 발송합니다.</p></div>}
+        {activeTab === 'status' && (
+          <div>
+            <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 24, borderBottom: '1px solid #f1f5f9', paddingBottom: 12 }}>기관 상세 현황</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <InfoRow label="기관명" value={org.name} />
+                <InfoRow label="기관관리자 이름" value={org.manager_name || '미지정'} />
+                <InfoRow label="기관관리자 이메일" value={org.manager_email || '-'} />
+                <InfoRow label="최근 알림 발송일" value="-" />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <InfoRow label="전체 이용권" value={`${org.total_licenses || 0}개`} />
+                <InfoRow label="사용 이용권" value={`${org.used_licenses || 0}개`} valueColor="#dc2626" />
+                <InfoRow label="남은 이용권" value={`${remainingLicenses}개`} valueColor="#2563eb" />
+                <InfoRow 
+                  label="이용권 사용률" 
+                  value={org.total_licenses ? `${Math.round(((org.used_licenses || 0) / org.total_licenses) * 100)}%` : '0%'} 
+                />
+              </div>
+            </div>
+          </div>
+        )}
+        {activeTab === 'classes' && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h3 style={{ fontSize: 18, fontWeight: 700 }}>소속 학급 목록</h3>
+              <span style={{ fontSize: 14, color: '#64748b' }}>총 {org.class_count || 0}개</span>
+            </div>
+            {org.class_count > 0 ? (
+              <div style={{ padding: 40, textAlign: 'center', color: '#64748b', background: '#f8fafc', borderRadius: 8 }}>
+                학급 목록 데이터를 불러오는 중이거나 현재 화면에 표시할 수 있도록 준비 중입니다.
+              </div>
+            ) : (
+              <div style={{ padding: 40, textAlign: 'center', color: '#888' }}>등록된 학급이 없습니다.</div>
+            )}
+          </div>
+        )}
+        {activeTab === 'teachers' && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h3 style={{ fontSize: 18, fontWeight: 700 }}>소속 선생님 목록</h3>
+              <span style={{ fontSize: 14, color: '#64748b' }}>총 {org.teacher_count || 0}명</span>
+            </div>
+            {org.teacher_count > 0 ? (
+              <div style={{ padding: 40, textAlign: 'center', color: '#64748b', background: '#f8fafc', borderRadius: 8 }}>
+                선생님 목록 데이터를 불러오는 중이거나 현재 화면에 표시할 수 있도록 준비 중입니다.
+              </div>
+            ) : (
+              <div style={{ padding: 40, textAlign: 'center', color: '#888' }}>등록된 선생님이 없습니다.</div>
+            )}
+          </div>
+        )}
+        {activeTab === 'students' && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h3 style={{ fontSize: 18, fontWeight: 700 }}>소속 학생 목록</h3>
+              <span style={{ fontSize: 14, color: '#64748b' }}>총 {org.student_count || 0}명</span>
+            </div>
+            {org.student_count > 0 ? (
+              <div style={{ padding: 40, textAlign: 'center', color: '#64748b', background: '#f8fafc', borderRadius: 8 }}>
+                학생 목록 데이터를 불러오는 중이거나 현재 화면에 표시할 수 있도록 준비 중입니다.
+              </div>
+            ) : (
+              <div style={{ padding: 40, textAlign: 'center', color: '#888' }}>등록된 학생이 없습니다.</div>
+            )}
+          </div>
+        )}
+        {activeTab === 'licenses' && (
+          <div>
+            <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>이용권 할당 이력</h3>
+            <div style={{ padding: 40, textAlign: 'center', color: '#64748b', background: '#f8fafc', borderRadius: 8 }}>
+              이용권 할당 내역을 불러오고 있습니다.
+            </div>
+          </div>
+        )}
+        {activeTab === 'notification' && (
+          <div>
+            <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>기관 알림 보내기</h3>
+            <div style={{ padding: 24, border: '1px solid #e2e8f0', borderRadius: 8 }}>
+              <p style={{ color: '#64748b', marginBottom: 16 }}>이 기관의 기관관리자 및 선생님들에게 알림을 발송합니다.</p>
+              <textarea 
+                placeholder="알림 내용을 입력하세요" 
+                style={{ width: '100%', height: 100, padding: 12, borderRadius: 6, border: '1px solid #cbd5e1', marginBottom: 12, resize: 'vertical' }} 
+              />
+              <button style={{ padding: '10px 20px', background: '#7c3aed', color: 'white', border: 'none', borderRadius: 6, fontWeight: 600, cursor: 'pointer' }}>
+                알림 발송
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -111,6 +195,15 @@ function SummaryCard({ title, value, color = '#1a1a2e' }: { title: string, value
     <div style={{ background: 'white', padding: '20px', borderRadius: 12, boxShadow: '0 2px 10px rgba(0,0,0,0.02)' }}>
       <div style={{ fontSize: 13, color: '#64748b', fontWeight: 600, marginBottom: 8 }}>{title}</div>
       <div style={{ fontSize: 24, fontWeight: 800, color }}>{value}</div>
+    </div>
+  )
+}
+
+function InfoRow({ label, value, valueColor = '#1a1a2e' }: { label: string, value: string | number, valueColor?: string }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 12, borderBottom: '1px solid #f8fafc' }}>
+      <span style={{ color: '#64748b', fontSize: 14, fontWeight: 600 }}>{label}</span>
+      <span style={{ color: valueColor, fontSize: 15, fontWeight: 700 }}>{value}</span>
     </div>
   )
 }

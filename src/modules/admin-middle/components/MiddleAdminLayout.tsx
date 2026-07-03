@@ -7,9 +7,6 @@ const MENU_ITEMS = [
   { label: '대시보드', path: '/manager/dashboard' },
   { label: '테스트기관 관리', path: '/manager/organizations' },
   { label: '이용권 관리', path: '/manager/licenses' },
-  { label: '학급 관리', path: '/manager/classes' },
-  { label: '선생님 관리', path: '/manager/teachers' },
-  { label: '학생 관리', path: '/manager/students' },
   { label: '알림 보내기', path: '/manager/notifications/send' },
   { label: '설정', path: '/manager/settings' },
 ]

@@ -15,6 +15,7 @@ export interface MiddleOrganization {
   used_licenses: number
   created_at: string
   manager_name?: string
+  manager_email?: string
   phone?: string
   status: 'active' | 'inactive'
   
