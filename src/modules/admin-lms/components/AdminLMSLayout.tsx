@@ -10,8 +10,6 @@ const getMenuItems = (role: string) => {
     case 'org_admin':
       return [
         { label: '기관대시보드', path: '/admin/lms/organization' },
-        { label: '학급관리', path: '/admin/lms/classes' },
-        { label: '학생관리', path: '/admin/lms/students' },
         { label: '선생님관리', path: '/admin/lms/org-teachers' },
         { label: '이용권관리', path: '/admin/lms/licenses' },
         { label: '관리자정보', path: '/admin/lms/profile' },
@@ -60,6 +58,10 @@ export default function AdminLMSLayout() {
             navigate('/student', { replace: true })
           } else {
             navigate('/', { replace: true })
+          }
+        } else if (profile.role === 'org_admin') {
+          if (location.pathname.startsWith('/admin/lms/classes') || location.pathname.startsWith('/admin/lms/students')) {
+            navigate('/admin/lms/organization', { replace: true })
           }
         }
       }
