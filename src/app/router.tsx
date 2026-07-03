@@ -50,7 +50,7 @@ import AdminStudentManagementPage from '../modules/admin-lms/pages/StudentManage
 import AssessmentPage from '../modules/admin-lms/pages/AssessmentPage'
 import TeacherManagementPage from '../modules/admin-lms/pages/TeacherManagementPage'
 import AdminProfilePage from '../modules/admin-lms/pages/AdminProfilePage'
-import { MiddleAdminDashboard, SuperAdminDashboardPlaceholder, PlaceholderPage } from '../modules/admin-lms/pages/PlaceholderPages'
+import { SuperAdminDashboardPlaceholder, PlaceholderPage } from '../modules/admin-lms/pages/PlaceholderPages'
 
 // 기관관리자 라우트
 import OrgAdminLayout from '../modules/admin-org/components/OrgAdminLayout'
@@ -59,6 +59,18 @@ import OrgTeacherManagement from '../modules/admin-org/pages/OrgTeacherManagemen
 import OrgLicenseManagement from '../modules/admin-org/pages/OrgLicenseManagement'
 import OrgNotificationSender from '../modules/admin-org/pages/OrgNotificationSender'
 import OrgSentNotifications from '../modules/admin-org/pages/OrgSentNotifications'
+
+// 중간관리자 라우트
+import MiddleAdminLayout from '../modules/admin-middle/components/MiddleAdminLayout'
+import MiddleDashboard from '../modules/admin-middle/pages/MiddleDashboard'
+import OrganizationManagement from '../modules/admin-middle/pages/OrganizationManagement'
+import OrganizationDetail from '../modules/admin-middle/pages/OrganizationDetail'
+import LicenseManagement from '../modules/admin-middle/pages/LicenseManagement'
+import ClassManagement from '../modules/admin-middle/pages/ClassManagement'
+import TeacherManagement from '../modules/admin-middle/pages/TeacherManagement'
+import StudentManagement from '../modules/admin-middle/pages/StudentManagement'
+import NotificationSender from '../modules/admin-middle/pages/NotificationSender'
+import MiddleSettings from '../modules/admin-middle/pages/MiddleSettings'
 
 export default function AppRouter() {
   return (
@@ -123,11 +135,11 @@ export default function AppRouter() {
         <Route path="org-teachers" element={<OrgTeacherManagement />} />
         <Route path="licenses" element={<OrgLicenseManagement />} />
 
-        {/* 중간관리자 (middle_admin) */}
-        <Route path="manager" element={<MiddleAdminDashboard />} />
-        <Route path="centers" element={<PlaceholderPage title="기관관리" />} />
-        <Route path="usage" element={<PlaceholderPage title="이용현황" />} />
-        <Route path="status" element={<PlaceholderPage title="선생님/학생 현황" />} />
+        {/* 중간관리자 (middle_admin) 이전 임시라우트 (삭제 가능하지만 호환성 위해 남김) */}
+        <Route path="manager" element={<Navigate to="/manager/dashboard" replace />} />
+        <Route path="centers" element={<Navigate to="/manager/organizations" replace />} />
+        <Route path="usage" element={<Navigate to="/manager/licenses" replace />} />
+        <Route path="status" element={<Navigate to="/manager/teachers" replace />} />
 
         {/* 슈퍼관리자 (super_admin) */}
         <Route path="super" element={<SuperAdminDashboardPlaceholder />} />
@@ -145,6 +157,20 @@ export default function AppRouter() {
         <Route path="licenses" element={<OrgLicenseManagement />} />
         <Route path="notifications/send" element={<OrgNotificationSender />} />
         <Route path="notifications/sent" element={<OrgSentNotifications />} />
+      </Route>
+
+      {/* 중간관리자 전용 라우트 */}
+      <Route path="/manager" element={<MiddleAdminLayout />}>
+        <Route index element={<Navigate to="dashboard" replace />} />
+        <Route path="dashboard" element={<MiddleDashboard />} />
+        <Route path="organizations" element={<OrganizationManagement />} />
+        <Route path="organizations/:organizationId" element={<OrganizationDetail />} />
+        <Route path="licenses" element={<LicenseManagement />} />
+        <Route path="classes" element={<ClassManagement />} />
+        <Route path="teachers" element={<TeacherManagement />} />
+        <Route path="students" element={<StudentManagement />} />
+        <Route path="notifications/send" element={<NotificationSender />} />
+        <Route path="settings" element={<MiddleSettings />} />
       </Route>
     </Routes>
   )

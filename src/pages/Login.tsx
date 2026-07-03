@@ -49,7 +49,7 @@ export default function Login() {
           if (adminLmsRoles.includes(profile.role)) {
             if (!redirectUrl || redirectUrl === '/admin/lms' || redirectUrl === '/admin/lms/classes' || redirectUrl === '/mypage' || redirectUrl === '/') {
               if (profile.role === 'org_admin') navigate('/admin/lms/organization')
-              else if (profile.role === 'middle_admin') navigate('/admin/lms/manager')
+              else if (profile.role === 'middle_admin') navigate('/manager/dashboard')
               else if (profile.role === 'super_admin') navigate('/admin/lms/super')
               else navigate('/admin/lms/classes') // teacher
             } else {
