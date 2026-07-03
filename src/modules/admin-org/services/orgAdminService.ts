@@ -220,7 +220,7 @@ export const orgAdminService = {
     orgId: string,
     adminId: string,
     data: {
-      targetType: 'all' | 'specific_teacher' | 'all_students' | 'specific_class' | 'specific_student'
+      targetType: 'all_teachers' | 'all_students' | 'specific_teacher' | 'specific_student'
       targetUserId?: string
       targetTeacherId?: string
       title: string

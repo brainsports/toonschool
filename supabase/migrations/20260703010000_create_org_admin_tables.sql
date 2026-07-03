@@ -117,7 +117,7 @@ CREATE TABLE IF NOT EXISTS public.org_notifications (
     organization_id UUID REFERENCES public.organizations(id) NOT NULL,
     sender_id UUID REFERENCES public.profiles(id) NOT NULL,
     sender_role TEXT NOT NULL,
-    target_type TEXT NOT NULL, -- 'all', 'specific_teacher', 'all_students', 'specific_class', 'specific_student'
+    target_type TEXT NOT NULL, -- 'all_teachers', 'all_students', 'specific_teacher', 'specific_student'
     target_user_id UUID REFERENCES public.profiles(id),
     target_teacher_id UUID REFERENCES public.profiles(id),
     title TEXT NOT NULL,
@@ -147,12 +147,12 @@ CREATE POLICY "Enable read access for targeted users"
             SELECT 1 FROM public.profiles
             WHERE profiles.id = auth.uid()
             AND profiles.organization_id = org_notifications.organization_id
-        ) AND (
-            target_type = 'all' OR
-            (target_type = 'all_students' AND EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'student')) OR
-            (target_type = 'specific_teacher' AND target_teacher_id = auth.uid()) OR
-            (target_type = 'specific_student' AND target_user_id = auth.uid()) OR
-            target_type = 'specific_class' -- 클래스 필터링은 애플리케이션 단에서 수행
+            AND (
+                (org_notifications.target_type = 'all_teachers' AND profiles.role = 'teacher') OR
+                (org_notifications.target_type = 'all_students' AND profiles.role = 'student') OR
+                (org_notifications.target_type = 'specific_teacher' AND org_notifications.target_teacher_id = auth.uid()) OR
+                (org_notifications.target_type = 'specific_student' AND org_notifications.target_user_id = auth.uid())
+            )
         )
     );
 

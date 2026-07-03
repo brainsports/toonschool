@@ -10,8 +10,9 @@ export default function OrgNotificationSender() {
   
   const [teachers, setTeachers] = useState<OrgTeacher[]>([])
   const [formData, setFormData] = useState({
-    targetType: 'all' as 'all' | 'specific_teacher' | 'all_students' | 'specific_class' | 'specific_student',
+    targetType: 'all_teachers' as 'all_teachers' | 'all_students' | 'specific_teacher' | 'specific_student',
     targetTeacherId: '',
+    targetUserId: '',
     title: '',
     message: '',
     priority: 'normal' as 'normal' | 'high'
@@ -33,8 +34,12 @@ export default function OrgNotificationSender() {
       return
     }
 
-    if ((formData.targetType === 'specific_teacher' || formData.targetType === 'specific_class') && !formData.targetTeacherId) {
+    if (formData.targetType === 'specific_teacher' && !formData.targetTeacherId) {
       alert("대상이 될 선생님을 선택해 주세요.")
+      return
+    }
+    if (formData.targetType === 'specific_student' && !formData.targetUserId) {
+      alert("학생 ID를 입력해 주세요.")
       return
     }
 
@@ -75,13 +80,13 @@ export default function OrgNotificationSender() {
             value={formData.targetType}
             onChange={(e) => setFormData(p => ({ ...p, targetType: e.target.value as any }))}
           >
-            <option value="all">선생님 전체</option>
+            <option value="all_teachers">선생님 전체</option>
             <option value="specific_teacher">특정 선생님</option>
             <option value="all_students">학생 전체</option>
-            <option value="specific_class">특정 선생님 학급의 학생</option>
+            <option value="specific_student">특정 학생</option>
           </select>
 
-          {(formData.targetType === 'specific_teacher' || formData.targetType === 'specific_class') && (
+          {formData.targetType === 'specific_teacher' && (
             <div style={{ marginBottom: 20 }}>
               <label style={labelStyle}>선생님 선택 *</label>
               <select 
@@ -94,6 +99,18 @@ export default function OrgNotificationSender() {
                   <option key={t.id} value={t.id}>{t.name} ({t.assigned_class || '학급미지정'})</option>
                 ))}
               </select>
+            </div>
+          )}
+          
+          {formData.targetType === 'specific_student' && (
+            <div style={{ marginBottom: 20 }}>
+              <label style={labelStyle}>특정 학생 ID *</label>
+              <input 
+                style={inputStyle}
+                value={formData.targetUserId || ''}
+                onChange={(e) => setFormData(p => ({ ...p, targetUserId: e.target.value }))}
+                placeholder="대상 학생의 ID를 입력하세요"
+              />
             </div>
           )}
 
