@@ -25,9 +25,25 @@ END $$;
 -- 3. organizations RLS 설정
 ALTER TABLE public.organizations ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Enable read access for users in the same organization"
+-- 기관관리자는 자신의 기관 정보를 모두 제어 가능 (role = 'org_admin' 조건 추가)
+CREATE POLICY "Enable all access for org_admin"
+    ON public.organizations FOR ALL
+    USING (EXISTS (
+        SELECT 1 FROM public.profiles
+        WHERE profiles.id = auth.uid()
+        AND profiles.organization_id = organizations.id
+        AND profiles.role = 'org_admin'
+    ));
+
+-- 일반 구성원(선생님, 학생)은 자신이 속한 기관 정보를 조회만 가능
+CREATE POLICY "Enable read access for organization members"
     ON public.organizations FOR SELECT
-    USING (id = (SELECT organization_id FROM public.profiles WHERE id = auth.uid() LIMIT 1));
+    USING (EXISTS (
+        SELECT 1 FROM public.profiles
+        WHERE profiles.id = auth.uid()
+        AND profiles.organization_id = organizations.id
+    ));
+
 
 -- 4. 이용권 할당 (license_allocations) 테이블 생성
 CREATE TABLE IF NOT EXISTS public.license_allocations (
@@ -46,9 +62,20 @@ CREATE TABLE IF NOT EXISTS public.license_allocations (
 -- RLS 설정
 ALTER TABLE public.license_allocations ENABLE ROW LEVEL SECURITY;
 
+-- 기관관리자는 자신의 기관에 속한 할당 정보를 모두 제어 가능 (role = 'org_admin' 조건 추가)
 CREATE POLICY "Enable all access for org_admin to their org license_allocations"
     ON public.license_allocations FOR ALL
-    USING (organization_id = (SELECT organization_id FROM public.profiles WHERE id = auth.uid() LIMIT 1));
+    USING (EXISTS (
+        SELECT 1 FROM public.profiles
+        WHERE profiles.id = auth.uid()
+        AND profiles.organization_id = license_allocations.organization_id
+        AND profiles.role = 'org_admin'
+    ));
+
+-- 선생님은 자신에게 할당된 이용권 정보만 조회 가능
+CREATE POLICY "Enable read access for teachers to their own license_allocations"
+    ON public.license_allocations FOR SELECT
+    USING (to_user_id = auth.uid());
 
 
 -- 5. 이용권 변동 이력 (license_logs) 테이블 생성
@@ -68,9 +95,20 @@ CREATE TABLE IF NOT EXISTS public.license_logs (
 -- RLS 설정
 ALTER TABLE public.license_logs ENABLE ROW LEVEL SECURITY;
 
+-- 기관관리자는 자신의 기관 이력을 모두 제어 가능 (role = 'org_admin' 조건 추가)
 CREATE POLICY "Enable all access for org_admin to their org license_logs"
     ON public.license_logs FOR ALL
-    USING (organization_id = (SELECT organization_id FROM public.profiles WHERE id = auth.uid() LIMIT 1));
+    USING (EXISTS (
+        SELECT 1 FROM public.profiles
+        WHERE profiles.id = auth.uid()
+        AND profiles.organization_id = license_logs.organization_id
+        AND profiles.role = 'org_admin'
+    ));
+
+-- 선생님은 자신과 관련된 이력만 조회 가능
+CREATE POLICY "Enable read access for users to their own license_logs"
+    ON public.license_logs FOR SELECT
+    USING (target_id = auth.uid() OR actor_id = auth.uid());
 
 
 -- 6. 기관 알림 (org_notifications) 테이블 생성
@@ -91,9 +129,32 @@ CREATE TABLE IF NOT EXISTS public.org_notifications (
 -- RLS 설정
 ALTER TABLE public.org_notifications ENABLE ROW LEVEL SECURITY;
 
+-- 기관관리자는 자신의 기관 알림을 모두 제어 가능 (role = 'org_admin' 조건 추가)
 CREATE POLICY "Enable all access for org_admin to their org notifications"
     ON public.org_notifications FOR ALL
-    USING (organization_id = (SELECT organization_id FROM public.profiles WHERE id = auth.uid() LIMIT 1));
+    USING (EXISTS (
+        SELECT 1 FROM public.profiles
+        WHERE profiles.id = auth.uid()
+        AND profiles.organization_id = org_notifications.organization_id
+        AND profiles.role = 'org_admin'
+    ));
+
+-- 일반 구성원(선생님, 학생)은 같은 기관에서 발송된 알림 중 본인 대상의 알림만 조회 가능
+CREATE POLICY "Enable read access for targeted users"
+    ON public.org_notifications FOR SELECT
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.profiles
+            WHERE profiles.id = auth.uid()
+            AND profiles.organization_id = org_notifications.organization_id
+        ) AND (
+            target_type = 'all' OR
+            (target_type = 'all_students' AND EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'student')) OR
+            (target_type = 'specific_teacher' AND target_teacher_id = auth.uid()) OR
+            (target_type = 'specific_student' AND target_user_id = auth.uid()) OR
+            target_type = 'specific_class' -- 클래스 필터링은 애플리케이션 단에서 수행
+        )
+    );
 
 
 -- 7. 기관 알림 읽음 상태 (org_notification_reads) 테이블 생성
@@ -108,11 +169,18 @@ CREATE TABLE IF NOT EXISTS public.org_notification_reads (
 -- RLS 설정
 ALTER TABLE public.org_notification_reads ENABLE ROW LEVEL SECURITY;
 
+-- 기관관리자는 같은 기관의 모든 읽음 상태 기록 조회 가능 (role = 'org_admin' 조건 포함)
 CREATE POLICY "Enable read access for org_admin to their org notification reads"
     ON public.org_notification_reads FOR SELECT
-    USING (
-        notification_id IN (
-            SELECT id FROM public.org_notifications 
-            WHERE organization_id = (SELECT organization_id FROM public.profiles WHERE id = auth.uid() LIMIT 1)
-        )
-    );
+    USING (EXISTS (
+        SELECT 1 FROM public.org_notifications n
+        JOIN public.profiles p ON p.organization_id = n.organization_id
+        WHERE n.id = org_notification_reads.notification_id
+        AND p.id = auth.uid()
+        AND p.role = 'org_admin'
+    ));
+
+-- 일반 구성원(선생님, 학생)은 자신의 읽음 상태만 제어(생성/조회/수정) 가능
+CREATE POLICY "Enable all access for users to their own notification reads"
+    ON public.org_notification_reads FOR ALL
+    USING (user_id = auth.uid());
