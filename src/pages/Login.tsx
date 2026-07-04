@@ -141,6 +141,9 @@ export default function Login() {
               <div>
                 <input
                   type="email"
+                  name="email"
+                  autoComplete="username"
+                  inputMode="email"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -153,6 +156,8 @@ export default function Login() {
               <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}
+                  name="password"
+                  autoComplete="current-password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
