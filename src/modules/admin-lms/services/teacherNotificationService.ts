@@ -19,37 +19,32 @@ export const teacherNotificationService = {
    * 선생님 수신 알림 목록 조회 (teacher_notification_status 기준)
    */
   async getNotifications(teacherId: string, _orgId: string): Promise<TeacherNotification[]> {
-    // 1. Fetch from teacher_notification_status with JOIN on org_notifications
-    const { data: statuses, error } = await supabase
+    // 1. Fetch from teacher_notification_status
+    const { data: statuses, error: statusError } = await supabase
       .from('teacher_notification_status')
-      .select(`
-        id,
-        is_read,
-        notification_id,
-        teacher_id,
-        hidden_at,
-        org_notifications!inner (
-          id,
-          title,
-          message,
-          sender_role,
-          sender_id,
-          priority,
-          category,
-          notice_date,
-          created_at,
-          target_type,
-          organization_id
-        )
-      `)
+      .select('*')
       .eq('teacher_id', teacherId)
       .is('hidden_at', null)
+      .order('created_at', { ascending: false })
 
-    if (error) throw error
+    if (statusError) throw statusError
     if (!statuses || statuses.length === 0) return []
 
-    // 2. Fetch sender names
-    const senderIds = Array.from(new Set(statuses.map((s: any) => s.org_notifications?.sender_id).filter(Boolean)))
+    const notificationIds = statuses.map(s => s.notification_id)
+
+    // 2. Fetch notifications
+    const { data: notifications, error: notifError } = await supabase
+      .from('org_notifications')
+      .select('*')
+      .in('id', notificationIds)
+
+    if (notifError) throw notifError
+    
+    // Create a map for quick lookup
+    const notifMap = new Map((notifications || []).map(n => [n.id, n]))
+
+    // 3. Fetch sender names
+    const senderIds = Array.from(new Set((notifications || []).map(n => n.sender_id).filter(Boolean)))
     
     let senderMap = new Map()
     if (senderIds.length > 0) {
@@ -61,9 +56,11 @@ export const teacherNotificationService = {
       senderMap = new Map(senders?.map(s => [s.id, s.name]) || [])
     }
 
-    // 3. Map to TeacherNotification and Sort
+    // 4. Map to TeacherNotification and Sort
     const results: TeacherNotification[] = statuses.map((status: any) => {
-      const n = status.org_notifications
+      const n = notifMap.get(status.notification_id)
+      if (!n) return null
+      
       return {
         id: status.id, // Use status ID for updates
         notification_id: status.notification_id,
@@ -77,7 +74,7 @@ export const teacherNotificationService = {
         created_at: n.created_at,
         is_read: status.is_read || false
       }
-    })
+    }).filter(Boolean) as TeacherNotification[]
 
     // Sort by created_at DESC
     results.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
