@@ -19,6 +19,10 @@ export interface MiddleOrganization {
   phone?: string
   status: 'active' | 'inactive'
   
+  license_start_date?: string | null
+  license_end_date?: string | null
+  license_memo?: string | null
+
   // Computed fields
   teacher_count: number
   student_count: number

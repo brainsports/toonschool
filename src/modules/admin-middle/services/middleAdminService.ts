@@ -180,14 +180,6 @@ export const middleAdminService = {
   },
 
   async updateOrganization(orgId: string, orgData: any) {
-    // Cannot reduce total_licenses below used_licenses
-    if (orgData.total_licenses !== undefined) {
-      const { data: currentOrg } = await supabase.from('organizations').select('used_licenses').eq('id', orgId).single()
-      if (currentOrg && orgData.total_licenses < currentOrg.used_licenses) {
-        throw new Error('이미 사용한 이용권 수보다 적게 설정할 수 없습니다.')
-      }
-    }
-
     const { data, error } = await supabase
       .from('organizations')
       .update(orgData)
@@ -196,6 +188,24 @@ export const middleAdminService = {
       .single()
 
     if (error) throw error
+    return data
+  },
+  
+  async updateLicense(orgId: string, licenseData: { total_licenses: number, start_date: string, end_date: string, memo: string }) {
+    const { data, error } = await supabase.rpc('update_middle_org_license', {
+      p_org_id: orgId,
+      p_total_licenses: licenseData.total_licenses,
+      p_start_date: licenseData.start_date,
+      p_end_date: licenseData.end_date,
+      p_memo: licenseData.memo
+    })
+
+    if (error) throw error
+    
+    if (data && data.success === false) {
+      throw new Error(data.error || '이용권 정보 업데이트 중 오류가 발생했습니다.')
+    }
+    
     return data
   },
   
