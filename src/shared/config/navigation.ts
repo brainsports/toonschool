@@ -21,7 +21,7 @@ export const NAVIGATION_BY_ROLE: Record<UserRole, NavigationItem[]> = {
   ],
   middle_admin: [
     { name: '중간관리자 대시보드', path: '/manager/dashboard', iconName: 'Layout' },
-    { name: '테스트기관 관리', path: '/manager/organizations', iconName: 'Building' },
+    { name: '소속기관 관리', path: '/manager/organizations', iconName: 'Building' },
     { name: '이용권 관리', path: '/manager/licenses', iconName: 'CreditCard' },
     { name: '학급 관리', path: '/manager/classes', iconName: 'FolderCanvas' },
     { name: '선생님 관리', path: '/manager/teachers', iconName: 'UserCheck' },

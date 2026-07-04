@@ -30,7 +30,7 @@ export default function OrganizationManagement() {
   }
 
   const handleDelete = async (orgId: string) => {
-    if (!window.confirm('정말 이 테스트기관을 삭제하시겠습니까? 소속된 사용자가 있다면 실패할 수 있습니다. 가급적 수정에서 비활성화를 권장합니다.')) return
+    if (!window.confirm('정말 이 소속기관을 삭제하시겠습니까? 소속된 사용자가 있다면 실패할 수 있습니다. 가급적 수정에서 비활성화를 권장합니다.')) return
     
     try {
       await middleAdminService.deleteOrganization(orgId)
@@ -46,12 +46,12 @@ export default function OrganizationManagement() {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <h2 style={{ fontSize: 24, fontWeight: 800, color: '#1a1a2e' }}>테스트기관 관리</h2>
+        <h2 style={{ fontSize: 24, fontWeight: 800, color: '#1a1a2e' }}>소속기관 관리</h2>
         <button 
           onClick={() => { setSelectedOrg(undefined); setIsModalOpen(true) }}
           style={{ padding: '10px 20px', background: '#7c3aed', color: 'white', borderRadius: 8, fontWeight: 700, border: 'none', cursor: 'pointer' }}
         >
-          테스트기관 추가
+          소속기관 추가
         </button>
       </div>
 
@@ -59,7 +59,7 @@ export default function OrganizationManagement() {
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
           <thead>
             <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-              <th style={{ padding: '16px 20px', color: '#64748b', fontWeight: 600, fontSize: 14 }}>테스트기관명</th>
+              <th style={{ padding: '16px 20px', color: '#64748b', fontWeight: 600, fontSize: 14 }}>소속기관명</th>
               <th style={{ padding: '16px 20px', color: '#64748b', fontWeight: 600, fontSize: 14 }}>전체 이용권</th>
               <th style={{ padding: '16px 20px', color: '#64748b', fontWeight: 600, fontSize: 14 }}>사용 이용권</th>
               <th style={{ padding: '16px 20px', color: '#64748b', fontWeight: 600, fontSize: 14 }}>상태</th>
@@ -70,7 +70,7 @@ export default function OrganizationManagement() {
             {orgs.length === 0 ? (
               <tr>
                 <td colSpan={5} style={{ padding: 40, textAlign: 'center', color: '#888' }}>
-                  등록된 테스트기관이 없습니다.
+                  등록된 소속기관이 없습니다.
                 </td>
               </tr>
             ) : (

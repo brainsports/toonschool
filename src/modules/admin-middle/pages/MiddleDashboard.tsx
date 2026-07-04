@@ -43,7 +43,7 @@ export default function MiddleDashboard() {
 
       {/* 요약 카드 영역 */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 20, marginBottom: 40 }}>
-        <StatCard title="전체 테스트기관" value={stats?.totalOrgs || 0} color="#7c3aed" suffix="개" />
+        <StatCard title="전체 소속기관" value={stats?.totalOrgs || 0} color="#7c3aed" suffix="개" />
         <StatCard title="전체 이용권" value={stats?.totalLicenses || 0} color="#059669" suffix="개" />
         <StatCard title="사용한 이용권" value={stats?.usedLicenses || 0} color="#dc2626" suffix="개" />
         <StatCard title="남은 이용권" value={stats?.remainingLicenses || 0} color="#2563eb" suffix="개" />
@@ -52,14 +52,14 @@ export default function MiddleDashboard() {
         <StatCard title="전체 학급" value={stats?.totalClasses || 0} color="#4f46e5" suffix="개" />
       </div>
 
-      <h3 style={{ fontSize: 20, fontWeight: 700, color: '#1a1a2e', marginBottom: 16 }}>테스트기관 현황</h3>
+      <h3 style={{ fontSize: 20, fontWeight: 700, color: '#1a1a2e', marginBottom: 16 }}>소속기관 현황</h3>
       
       {/* 표 영역 */}
       <div style={{ background: 'white', borderRadius: 16, overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
           <thead>
             <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-              <th style={{ padding: '16px 20px', color: '#64748b', fontWeight: 600, fontSize: 14 }}>테스트기관명</th>
+              <th style={{ padding: '16px 20px', color: '#64748b', fontWeight: 600, fontSize: 14 }}>소속기관명</th>
               <th style={{ padding: '16px 20px', color: '#64748b', fontWeight: 600, fontSize: 14 }}>전체 이용권</th>
               <th style={{ padding: '16px 20px', color: '#64748b', fontWeight: 600, fontSize: 14 }}>사용 이용권</th>
               <th style={{ padding: '16px 20px', color: '#64748b', fontWeight: 600, fontSize: 14 }}>남은 이용권</th>
@@ -73,7 +73,7 @@ export default function MiddleDashboard() {
             {orgs.length === 0 ? (
               <tr>
                 <td colSpan={8} style={{ padding: 40, textAlign: 'center', color: '#888' }}>
-                  등록된 테스트기관이 없습니다.
+                  등록된 소속기관이 없습니다.
                 </td>
               </tr>
             ) : (

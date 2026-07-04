@@ -38,14 +38,14 @@ export default function OrganizationFormModal({ middleAdminId, existingOrg, onCl
           total_licenses: totalLicenses,
           status,
         })
-        alert('테스트기관이 수정되었습니다.')
+        alert('소속기관이 수정되었습니다.')
       } else {
         await middleAdminService.createOrganization(middleAdminId, {
           name,
           total_licenses: totalLicenses,
           status,
         })
-        alert('테스트기관이 추가되었습니다.')
+        alert('소속기관이 추가되었습니다.')
       }
       onSuccess()
     } catch (err: any) {
@@ -63,7 +63,7 @@ export default function OrganizationFormModal({ middleAdminId, existingOrg, onCl
     }}>
       <div style={{ background: 'white', borderRadius: 20, width: '100%', maxWidth: 480, padding: 32, boxShadow: '0 10px 40px rgba(0,0,0,0.1)' }}>
         <h3 style={{ fontSize: 20, fontWeight: 800, color: '#1a1a2e', marginBottom: 24 }}>
-          {existingOrg ? '테스트기관 수정' : '테스트기관 추가'}
+          {existingOrg ? '소속기관 수정' : '소속기관 추가'}
         </h3>
         
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>

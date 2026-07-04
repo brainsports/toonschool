@@ -62,7 +62,7 @@ export default function NotificationSender() {
               onChange={e => setSelectedOrgId(e.target.value)}
               style={{ width: '100%', padding: '12px 16px', borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 15 }}
             >
-              <option value="">-- 테스트기관 선택 --</option>
+              <option value="">-- 소속기관 선택 --</option>
               {orgs.map(org => (
                 <option key={org.id} value={org.id}>{org.name}</option>
               ))}

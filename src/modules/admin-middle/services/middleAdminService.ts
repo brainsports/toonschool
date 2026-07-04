@@ -112,44 +112,49 @@ export const middleAdminService = {
 
     if (error) throw error
 
-    const { data: teachersData } = await supabase
-      .from('profiles')
-      .select('id, center_id')
-      .eq('organization_id', orgId)
-      .eq('role', 'teacher')
-
-    const centerIds = Array.from(new Set(teachersData?.map(t => t.center_id).filter(Boolean)))
+    // RPC 함수를 통해 RLS 우회하여 기관별 통계 획득 (목록 조회 시와 동일)
+    const { data: orgsStats, error: statsError } = await supabase.rpc('get_middle_orgs_stats')
     
-    let studentCount = 0
-    let classCount = 0
-    
-    if (centerIds.length > 0) {
-      const { data: studentsData } = await supabase
-        .from('students')
-        .select('id, center_id')
-        .in('center_id', centerIds)
-        
-      const uniqueStudentIds = new Set(studentsData?.map(s => s.id))
-      studentCount = uniqueStudentIds.size
-
-      const uniqueStudentCenters = new Set(studentsData?.map(s => s.center_id))
-      classCount = uniqueStudentCenters.size
+    if (statsError) {
+      console.error('[MiddleAdminService] get_middle_orgs_stats error:', statsError)
     }
-    
+
+    let teacher_count = 0
+    let student_count = 0
+    let class_count = 0
+
+    if (Array.isArray(orgsStats)) {
+      const stat = orgsStats.find((s: any) => s.organization_id === orgId)
+      if (stat) {
+        teacher_count = stat.teacher_count || 0
+        student_count = stat.student_count || 0
+        class_count = stat.class_count || 0
+      }
+    }
+
+    // 실제 사용된(할당된) 이용권 계산
+    const { data: allocations } = await supabase
+      .from('license_allocations')
+      .select('quantity')
+      .eq('organization_id', orgId)
+
+    const allocatedLicenses = allocations?.reduce((acc, curr) => acc + curr.quantity, 0) || 0
+
     // Fetch org admin info (for the manager_name and email)
     const { data: orgAdminData } = await supabase
       .from('profiles')
       .select('name, email, phone')
       .eq('organization_id', orgId)
       .eq('role', 'org_admin')
-      .single()
+      .maybeSingle()
 
     return {
       ...org,
       status: org.status || 'active',
-      teacher_count: teachersData?.length || 0,
-      student_count: studentCount,
-      class_count: classCount,
+      teacher_count,
+      student_count,
+      class_count,
+      used_licenses: allocatedLicenses,
       manager_name: orgAdminData?.name || orgAdminData?.email || '미지정',
       manager_email: orgAdminData?.email,
       phone: orgAdminData?.phone || '-'

@@ -5,7 +5,7 @@ import MiddleAdminNotificationInbox from './MiddleAdminNotificationInbox'
 
 const MENU_ITEMS = [
   { label: '대시보드', path: '/manager/dashboard' },
-  { label: '테스트기관 관리', path: '/manager/organizations' },
+  { label: '소속기관 관리', path: '/manager/organizations' },
   { label: '이용권 관리', path: '/manager/licenses' },
   { label: '알림 보내기', path: '/manager/notifications/send' },
   { label: '설정', path: '/manager/settings' },
