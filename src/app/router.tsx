@@ -6,11 +6,15 @@ import NotFound from '../pages/NotFound'
 import Login from '../pages/Login'
 import Signup from '../pages/Signup'
 import MyPage from '../pages/MyPage'
-import SuperAdminLayout from '../modules/super-admin/components/SuperAdminLayout'
-import SuperAdminDashboard from '../modules/super-admin/pages/SuperAdminDashboard'
-import CenterManagementPage from '../modules/super-admin/pages/CenterManagementPage'
-import UserManagementPage from '../modules/super-admin/pages/UserManagementPage'
-import PlanManagementPage from '../modules/super-admin/pages/PlanManagementPage'
+import SuperAdminLayout from '../modules/admin-super/components/SuperAdminLayout'
+import SuperDashboard from '../modules/admin-super/pages/SuperDashboard'
+import SuperMiddleAdminManagement from '../modules/admin-super/pages/MiddleAdminManagement'
+import SuperUserManagement from '../modules/admin-super/pages/UserManagement'
+import SuperOrganizationManagement from '../modules/admin-super/pages/OrganizationManagement'
+import SuperLicenseManagement from '../modules/admin-super/pages/LicenseManagement'
+import SuperNotificationManagement from '../modules/admin-super/pages/NotificationManagement'
+import SuperResourceManagement from '../modules/admin-super/pages/ResourceManagement'
+import SuperAuditLogPage from '../modules/admin-super/pages/AuditLogPage'
 import CenterAdminLayout from '../modules/center-admin/components/CenterAdminLayout'
 import CenterAdminDashboard from '../modules/center-admin/pages/CenterAdminDashboard'
 import StudentManagementPageLegacy from '../modules/center-admin/pages/StudentManagementPage'
@@ -50,8 +54,6 @@ import AdminStudentManagementPage from '../modules/admin-lms/pages/StudentManage
 import AssessmentPage from '../modules/admin-lms/pages/AssessmentPage'
 import TeacherManagementPage from '../modules/admin-lms/pages/TeacherManagementPage'
 import AdminProfilePage from '../modules/admin-lms/pages/AdminProfilePage'
-import { SuperAdminDashboardPlaceholder, PlaceholderPage } from '../modules/admin-lms/pages/PlaceholderPages'
-import MiddleAdminManagementPage from '../modules/admin-lms/pages/MiddleAdminManagementPage'
 
 // 기관관리자 라우트
 import OrgAdminLayout from '../modules/admin-org/components/OrgAdminLayout'
@@ -88,12 +90,7 @@ export default function AppRouter() {
       <Route element={<Layout />}>
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="mypage" element={<MyPage />} />
-        <Route path="super-admin" element={<SuperAdminLayout />}>
-          <Route index element={<SuperAdminDashboard />} />
-          <Route path="centers" element={<CenterManagementPage />} />
-          <Route path="users" element={<UserManagementPage />} />
-          <Route path="plans" element={<PlanManagementPage />} />
-        </Route>
+        <Route path="super-admin/*" element={<Navigate to="/admin/super/dashboard" replace />} />
         <Route path="center-admin" element={<CenterAdminLayout />}>
           <Route index element={<CenterAdminDashboard />} />
           <Route path="students" element={<StudentManagementPageLegacy />} />
@@ -143,12 +140,12 @@ export default function AppRouter() {
         <Route path="status" element={<Navigate to="/manager/teachers" replace />} />
 
         {/* 슈퍼관리자 (super_admin) */}
-        <Route path="super" element={<SuperAdminDashboardPlaceholder />} />
-        <Route path="all-centers" element={<PlaceholderPage title="전체 기관관리" />} />
-        <Route path="all-admins" element={<PlaceholderPage title="전체 관리자관리" />} />
-        <Route path="middle-admins" element={<MiddleAdminManagementPage />} />
-        <Route path="all-licenses" element={<PlaceholderPage title="이용권/결제관리" />} />
-        <Route path="settings" element={<PlaceholderPage title="시스템 설정" />} />
+        <Route path="super/*" element={<Navigate to="/admin/super/dashboard" replace />} />
+        <Route path="all-centers" element={<Navigate to="/admin/super/organizations" replace />} />
+        <Route path="all-admins" element={<Navigate to="/admin/super/users" replace />} />
+        <Route path="middle-admins" element={<Navigate to="/admin/super/middle-admins" replace />} />
+        <Route path="all-licenses" element={<Navigate to="/admin/super/licenses" replace />} />
+        <Route path="settings" element={<Navigate to="/admin/super/dashboard" replace />} />
       </Route>
 
       {/* 기존 기관관리자 라우트 (하위 호환성을 위해 유지) */}
@@ -173,6 +170,19 @@ export default function AppRouter() {
         <Route path="students" element={<StudentManagement />} />
         <Route path="notifications/send" element={<NotificationSender />} />
         <Route path="settings" element={<MiddleSettings />} />
+      </Route>
+
+      {/* 수퍼관리자 전용 라우트 */}
+      <Route path="/admin/super" element={<SuperAdminLayout />}>
+        <Route index element={<Navigate to="dashboard" replace />} />
+        <Route path="dashboard" element={<SuperDashboard />} />
+        <Route path="middle-admins" element={<SuperMiddleAdminManagement />} />
+        <Route path="users" element={<SuperUserManagement />} />
+        <Route path="organizations" element={<SuperOrganizationManagement />} />
+        <Route path="licenses" element={<SuperLicenseManagement />} />
+        <Route path="notifications" element={<SuperNotificationManagement />} />
+        <Route path="resources" element={<SuperResourceManagement />} />
+        <Route path="audit-logs" element={<SuperAuditLogPage />} />
       </Route>
     </Routes>
   )
