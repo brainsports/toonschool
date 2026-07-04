@@ -16,7 +16,7 @@ export default function OrgSentNotifications() {
       if (!profile?.organization_id) return
       try {
         setLoading(true)
-        const data = await orgAdminService.getSentOrgNotifications(profile.organization_id)
+        const data = await orgAdminService.getSentOrgNotifications(profile.organization_id, profile.id)
         setNotifications(data)
       } catch (err: any) {
         setError(err.message)

@@ -26,7 +26,7 @@ export default function OrgAdminDashboard() {
       const statsData = await orgAdminService.getOrgAdminDashboard(profile.organization_id)
       console.log("[OrgAdminDashboard] loadData - final statsData:", statsData)
       setStats(statsData)
-      const notisData = await orgAdminService.getSentOrgNotifications(profile.organization_id)
+      const notisData = await orgAdminService.getSentOrgNotifications(profile.organization_id, profile.id)
       setNotifications(notisData)
     } catch (err: any) {
       setError(err.message)

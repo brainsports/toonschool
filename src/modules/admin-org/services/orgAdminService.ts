@@ -344,11 +344,12 @@ export const orgAdminService = {
     if (error) throw error
   },
 
-  async getSentOrgNotifications(orgId: string): Promise<OrgNotification[]> {
+  async getSentOrgNotifications(orgId: string, adminId: string): Promise<OrgNotification[]> {
     const { data, error } = await supabase
       .from('org_notifications')
       .select('*')
       .eq('organization_id', orgId)
+      .eq('sender_id', adminId)
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
 
