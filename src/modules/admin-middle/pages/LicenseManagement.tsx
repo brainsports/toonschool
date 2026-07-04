@@ -4,8 +4,6 @@ import { middleAdminService } from '../services/middleAdminService'
 import OrgLicenseManageModal from '../components/OrgLicenseManageModal'
 import type { MiddleOrganization } from '../types/middleAdmin'
 
-const TOTAL_LICENSES = 500
-
 export default function LicenseManagement() {
   const { profile } = useAuth()
   const [orgs, setOrgs] = useState<MiddleOrganization[]>([])
@@ -60,6 +58,11 @@ export default function LicenseManagement() {
     return { text: '사용 중', color: '#10b981', bg: '#d1fae5' }
   }
 
+  const formatDate = (isoString?: string | null) => {
+    if (!isoString) return '-';
+    return isoString.split('T')[0];
+  }
+
   const getRemainingDays = (end?: string | null) => {
     if (!end) return '-'
     const today = new Date()
@@ -75,8 +78,10 @@ export default function LicenseManagement() {
 
   if (loading) return <div style={{ padding: 40, textAlign: 'center' }}>로딩 중...</div>
 
-  const usedLicenses = orgs.reduce((acc, o) => acc + (o.total_licenses || 0), 0)
-  const remainingLicenses = TOTAL_LICENSES - usedLicenses
+  const totalAssignedLicenses = orgs.reduce((acc, o) => acc + (o.total_licenses || 0), 0)
+  const totalUsedLicenses = orgs.reduce((acc, o) => acc + (o.student_count || 0), 0)
+  const remainingLicenses = totalAssignedLicenses - totalUsedLicenses
+  const remainingLicensesDisplay = remainingLicenses < 0 ? 0 : remainingLicenses
 
   return (
     <div>
@@ -84,16 +89,19 @@ export default function LicenseManagement() {
       
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 20, marginBottom: 40 }}>
         <div style={{ background: 'white', padding: 24, borderRadius: 16, boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
-          <div style={{ fontSize: 15, color: '#64748b', fontWeight: 600 }}>전체 이용권</div>
-          <div style={{ fontSize: 32, fontWeight: 800, color: '#1a1a2e', marginTop: 8 }}>{TOTAL_LICENSES}개</div>
+          <div style={{ fontSize: 15, color: '#64748b', fontWeight: 600 }}>배정 이용권</div>
+          <div style={{ fontSize: 32, fontWeight: 800, color: '#1a1a2e', marginTop: 8 }}>{totalAssignedLicenses}개</div>
         </div>
         <div style={{ background: 'white', padding: 24, borderRadius: 16, boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
           <div style={{ fontSize: 15, color: '#64748b', fontWeight: 600 }}>사용 이용권</div>
-          <div style={{ fontSize: 32, fontWeight: 800, color: '#7c3aed', marginTop: 8 }}>{usedLicenses}개</div>
+          <div style={{ fontSize: 32, fontWeight: 800, color: '#7c3aed', marginTop: 8 }}>{totalUsedLicenses}개</div>
         </div>
         <div style={{ background: 'white', padding: 24, borderRadius: 16, boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
           <div style={{ fontSize: 15, color: '#64748b', fontWeight: 600 }}>남은 이용권</div>
-          <div style={{ fontSize: 32, fontWeight: 800, color: '#10b981', marginTop: 8 }}>{remainingLicenses}개</div>
+          <div style={{ fontSize: 32, fontWeight: 800, color: '#10b981', marginTop: 8 }}>
+            {remainingLicensesDisplay}개
+            {remainingLicenses < 0 && <span style={{ fontSize: 14, color: '#ef4444', marginLeft: 8 }}>(초과: {Math.abs(remainingLicenses)}개)</span>}
+          </div>
         </div>
       </div>
 
@@ -114,16 +122,22 @@ export default function LicenseManagement() {
           </thead>
           <tbody>
             {orgs.map(org => {
-              const remaining = (org.total_licenses || 0) - (org.used_licenses || 0)
+              const assigned = org.total_licenses || 0
+              const used = org.student_count || 0
+              const remaining = assigned - used
+              const remainingDisplay = remaining < 0 ? 0 : remaining
               const status = getLicenseStatus(org.license_start_date, org.license_end_date)
               return (
                 <tr key={org.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
                   <td style={{ padding: '16px 20px', fontWeight: 700, color: '#1a1a2e' }}>{org.name}</td>
-                  <td style={{ padding: '16px 20px', color: '#334155' }}>{org.total_licenses || 0}</td>
-                  <td style={{ padding: '16px 20px', color: '#dc2626', fontWeight: 600 }}>{org.used_licenses || 0}</td>
-                  <td style={{ padding: '16px 20px', color: '#2563eb', fontWeight: 600 }}>{remaining}</td>
-                  <td style={{ padding: '16px 20px', color: '#334155' }}>{org.license_start_date ? org.license_start_date.replace(/-/g, '.') : '-'}</td>
-                  <td style={{ padding: '16px 20px', color: '#334155' }}>{org.license_end_date ? org.license_end_date.replace(/-/g, '.') : '-'}</td>
+                  <td style={{ padding: '16px 20px', color: '#334155' }}>{assigned}</td>
+                  <td style={{ padding: '16px 20px', color: '#dc2626', fontWeight: 600 }}>{used}</td>
+                  <td style={{ padding: '16px 20px', color: '#2563eb', fontWeight: 600 }}>
+                    {remainingDisplay}
+                    {remaining < 0 && <span style={{ fontSize: 12, color: '#ef4444', marginLeft: 6, fontWeight: 500 }}>(초과)</span>}
+                  </td>
+                  <td style={{ padding: '16px 20px', color: '#334155' }}>{formatDate(org.license_start_date)}</td>
+                  <td style={{ padding: '16px 20px', color: '#334155' }}>{formatDate(org.license_end_date)}</td>
                   <td style={{ padding: '16px 20px', color: '#334155' }}>{getRemainingDays(org.license_end_date)}</td>
                   <td style={{ padding: '16px 20px' }}>
                     <span style={{
