@@ -68,8 +68,7 @@ export default function OrganizationDetail() {
           { id: 'classes', label: '학급' },
           { id: 'teachers', label: '선생님' },
           { id: 'students', label: '학생' },
-          { id: 'licenses', label: '이용권' },
-          { id: 'notification', label: '알림 보내기' }
+          { id: 'licenses', label: '이용권' }
         ].map(tab => (
           <button
             key={tab.id}
@@ -167,21 +166,6 @@ export default function OrganizationDetail() {
             <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>이용권 할당 이력</h3>
             <div style={{ padding: 40, textAlign: 'center', color: '#64748b', background: '#f8fafc', borderRadius: 8 }}>
               이용권 할당 내역을 불러오고 있습니다.
-            </div>
-          </div>
-        )}
-        {activeTab === 'notification' && (
-          <div>
-            <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>기관 알림 보내기</h3>
-            <div style={{ padding: 24, border: '1px solid #e2e8f0', borderRadius: 8 }}>
-              <p style={{ color: '#64748b', marginBottom: 16 }}>이 기관의 기관관리자 및 선생님들에게 알림을 발송합니다.</p>
-              <textarea 
-                placeholder="알림 내용을 입력하세요" 
-                style={{ width: '100%', height: 100, padding: 12, borderRadius: 6, border: '1px solid #cbd5e1', marginBottom: 12, resize: 'vertical' }} 
-              />
-              <button style={{ padding: '10px 20px', background: '#7c3aed', color: 'white', border: 'none', borderRadius: 6, fontWeight: 600, cursor: 'pointer' }}>
-                알림 발송
-              </button>
             </div>
           </div>
         )}
