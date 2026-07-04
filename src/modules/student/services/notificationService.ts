@@ -87,8 +87,8 @@ export async function getNotificationsForTarget(targetKey: string, profile?: any
       }
     }
 
-    // Sort combined notifications by notice_date desc
-    allNotis.sort((a, b) => new Date(b.notice_date).getTime() - new Date(a.notice_date).getTime());
+    // Sort combined notifications by created_at desc
+    allNotis.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
     return allNotis;
   } catch (err) {
