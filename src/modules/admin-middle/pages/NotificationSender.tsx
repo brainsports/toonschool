@@ -51,16 +51,12 @@ export default function NotificationSender() {
 
     setIsSubmitting(true)
     try {
-      const { error } = await supabase.from('org_notifications').insert({
-        organization_id: selectedOrgId,
-        sender_id: profile?.id,
-        sender_role: profile?.role,
-        target_type: targetType,
-        title,
-        message: content,
-        priority: isImportant ? 'high' : 'normal',
-        is_public: true,
-        created_at: new Date().toISOString()
+      const { error } = await supabase.rpc('create_org_notification', {
+        p_organization_id: selectedOrgId,
+        p_target_type: targetType,
+        p_title: title,
+        p_message: content,
+        p_priority: isImportant ? 'high' : 'normal'
       })
 
       if (error) throw error
