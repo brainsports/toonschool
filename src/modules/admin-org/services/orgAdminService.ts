@@ -16,43 +16,19 @@ export const orgAdminService = {
 
     if (orgError) throw orgError
 
-    const { count: teacherCount } = await supabase
-      .from('profiles')
-      .select('*', { count: 'exact', head: true })
-      .eq('organization_id', orgId)
-      .eq('role', 'teacher')
-
-    // 해당 기관 소속 선생님들의 center_id 조회
-    const { data: teachers } = await supabase
-      .from('profiles')
-      .select('center_id')
-      .eq('organization_id', orgId)
-      .eq('role', 'teacher')
-      .not('center_id', 'is', null)
-
-    let studentCount = 0
-    console.log('[OrgAdminService] teacherProfiles:', teachers)
-
-    if (teachers && teachers.length > 0) {
-      const centerIds = Array.from(new Set(teachers.map(t => t.center_id)))
-      console.log('[OrgAdminService] centerIds:', centerIds)
-      
-      if (centerIds.length > 0) {
-        // center_id 기준으로 소속 학생 수 계산
-        const { data: students, error: studentsError } = await supabase
-          .from('students')
-          .select('id')
-          .in('center_id', centerIds)
-          
-        console.log('[OrgAdminService] students query result:', students, 'Error:', studentsError)
-        
-        if (students && !studentsError) {
-          const uniqueStudentIds = new Set(students.map(s => s.id))
-          studentCount = uniqueStudentIds.size
-          console.log('[OrgAdminService] computed studentCount:', studentCount)
-        }
-      }
+    // RPC 함수를 통해 RLS 우회하여 통계값만 안전하게 획득
+    const { data: statsData, error: statsError } = await supabase.rpc('get_org_dashboard_stats')
+    
+    if (statsError) {
+      console.error('[OrgAdminService] get_org_dashboard_stats error:', statsError)
     }
+    
+    if (statsData?.error) {
+      console.error('[OrgAdminService] get_org_dashboard_stats logical error:', statsData.error)
+    }
+
+    const teacherCount = statsData?.teacherCount || 0
+    const studentCount = statsData?.studentCount || 0
 
     const { data: notifications } = await supabase
       .from('org_notifications')

@@ -28,32 +28,20 @@ export const middleAdminService = {
       // 중간관리자가 사용한 이용권 = 하위 기관에 배정한 이용권의 합
       usedLicenses = orgs.reduce((sum, org) => sum + (org.total_licenses || 0), 0)
 
-      const orgIds = orgs.map(org => org.id)
-      
-      if (orgIds.length > 0) {
-        const { data: teachersData } = await supabase
-          .from('profiles')
-          .select('id, center_id')
-          .in('organization_id', orgIds)
-          .eq('role', 'teacher')
-          
-        totalTeachers = teachersData?.length || 0
+      // RPC 함수를 통해 RLS 우회하여 통계값만 안전하게 획득
+      const { data: statsData, error: statsError } = await supabase.rpc('get_middle_dashboard_stats')
 
-        const centerIds = Array.from(new Set(teachersData?.map(t => t.center_id).filter(Boolean)))
-        
-        if (centerIds.length > 0) {
-          const { data: studentsData } = await supabase
-            .from('students')
-            .select('id, center_id')
-            .in('center_id', centerIds)
-
-          const uniqueStudentIds = new Set(studentsData?.map(s => s.id))
-          totalStudents = uniqueStudentIds.size
-          
-          const uniqueStudentCenters = new Set(studentsData?.map(s => s.center_id))
-          totalClasses = uniqueStudentCenters.size
-        }
+      if (statsError) {
+        console.error('[MiddleAdminService] get_middle_dashboard_stats error:', statsError)
       }
+
+      if (statsData?.error) {
+        console.error('[MiddleAdminService] get_middle_dashboard_stats logical error:', statsData.error)
+      }
+
+      totalTeachers = statsData?.teacherCount || 0
+      totalStudents = statsData?.studentCount || 0
+      totalClasses = statsData?.classCount || 0
     }
 
     return {
