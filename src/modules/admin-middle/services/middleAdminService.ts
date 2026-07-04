@@ -64,31 +64,23 @@ export const middleAdminService = {
 
     if (error) throw error
 
+    // RPC 함수를 통해 RLS 우회하여 기관별 통계 획득
+    const { data: orgsStats, error: statsError } = await supabase.rpc('get_middle_orgs_stats')
+    
+    if (statsError) {
+      console.error('[MiddleAdminService] get_middle_orgs_stats error:', statsError)
+    }
+
+    const statsMap = new Map()
+    if (Array.isArray(orgsStats)) {
+      orgsStats.forEach((stat: any) => {
+        statsMap.set(stat.organization_id, stat)
+      })
+    }
+
     // Fetch stats per org
     const orgsWithStats = await Promise.all(orgs.map(async (org) => {
-      const { data: teachersData } = await supabase
-        .from('profiles')
-        .select('id, center_id')
-        .eq('organization_id', org.id)
-        .eq('role', 'teacher')
-
-      const centerIds = Array.from(new Set(teachersData?.map(t => t.center_id).filter(Boolean)))
-      
-      let studentCount = 0
-      let classCount = 0
-      
-      if (centerIds.length > 0) {
-        const { data: studentsData } = await supabase
-          .from('students')
-          .select('id, center_id')
-          .in('center_id', centerIds)
-          
-        const uniqueStudentIds = new Set(studentsData?.map(s => s.id))
-        studentCount = uniqueStudentIds.size
-
-        const uniqueStudentCenters = new Set(studentsData?.map(s => s.center_id))
-        classCount = uniqueStudentCenters.size
-      }
+      const stats = statsMap.get(org.id) || { teacher_count: 0, student_count: 0, class_count: 0 }
 
       // 기관관리자 대시보드와 동일하게 사용 이용권(allocatedLicenses) 계산
       const { data: allocations } = await supabase
@@ -101,9 +93,9 @@ export const middleAdminService = {
       return {
         ...org,
         status: org.status || 'active',
-        teacher_count: teachersData?.length || 0,
-        student_count: studentCount,
-        class_count: classCount,
+        teacher_count: stats.teacher_count,
+        student_count: stats.student_count,
+        class_count: stats.class_count,
         used_licenses: allocatedLicenses
       }
     }))
