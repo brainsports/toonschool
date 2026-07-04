@@ -30,7 +30,7 @@ export const teacherNotificationService = {
 
     // Filter notifications for this teacher
     const relevantNotis = (notifications || []).filter(n => {
-      if (n.target_type === 'all_teachers') return true
+      if (n.target_type === 'all_teachers' || n.target_type === 'teacher' || n.target_type === 'all') return true
       if (n.target_type === 'specific_teacher' && n.target_teacher_id === teacherId) return true
       if (n.target_type === 'specific_student' && n.target_user_id === teacherId) return true // just in case target_user_id was used
       if (n.target_type === 'teacher' && (n.target_teacher_id === teacherId || n.target_user_id === teacherId)) return true

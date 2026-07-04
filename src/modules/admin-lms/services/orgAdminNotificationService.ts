@@ -35,7 +35,7 @@ export const orgAdminNotificationService = {
 
     // Filter notifications for this org admin
     const relevantNotis = (notifications || []).filter(n => {
-      if (n.target_type === 'all_org_admins') return true
+      if (n.target_type === 'all_org_admins' || n.target_type === 'org_admin' || n.target_type === 'all') return true
       if (n.target_type === 'all_organizations') return true
       if (n.target_type === 'specific_org_admin' && n.target_user_id === orgAdminId) return true
       // Also include notifications targeted to the organization generally, if needed

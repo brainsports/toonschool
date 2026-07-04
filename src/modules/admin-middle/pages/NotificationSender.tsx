@@ -13,12 +13,36 @@ export default function NotificationSender() {
   const [content, setContent] = useState('')
   const [isImportant, setIsImportant] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [history, setHistory] = useState<any[]>([])
 
   useEffect(() => {
     if (profile) {
-      middleAdminService.getOrganizations(profile.id).then(setOrgs)
+      if (profile.role === 'super_admin') {
+        supabase.from('organizations').select('*').order('created_at', { ascending: false })
+          .then(({ data }) => setOrgs(data || []))
+      } else {
+        middleAdminService.getOrganizations(profile.id).then(setOrgs)
+      }
+      fetchHistory()
     }
   }, [profile])
+
+  const fetchHistory = async () => {
+    if (!profile) return
+    
+    // 중간관리자/수퍼관리자 발송 이력 조회
+    let query = supabase
+      .from('org_notifications')
+      .select('*, organizations(name)')
+      .eq('sender_id', profile.id)
+      .order('created_at', { ascending: false })
+      .limit(10)
+
+    const { data, error } = await query
+    if (!error && data) {
+      setHistory(data)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -30,10 +54,12 @@ export default function NotificationSender() {
       const { error } = await supabase.from('org_notifications').insert({
         organization_id: selectedOrgId,
         sender_id: profile?.id,
+        sender_role: profile?.role,
         target_type: targetType,
         title,
-        content,
-        is_important: isImportant,
+        message: content,
+        priority: isImportant ? 'high' : 'normal',
+        is_public: true,
         created_at: new Date().toISOString()
       })
 
@@ -42,6 +68,7 @@ export default function NotificationSender() {
       alert('알림이 발송되었습니다.')
       setTitle('')
       setContent('')
+      fetchHistory()
     } catch (err: any) {
       alert(err.message || '알림 발송에 실패했습니다.')
     } finally {
@@ -73,9 +100,10 @@ export default function NotificationSender() {
             <label style={{ display: 'block', fontSize: 15, fontWeight: 700, color: '#1a1a2e', marginBottom: 8 }}>발송 대상</label>
             <div style={{ display: 'flex', gap: 16 }}>
               {[
+                { id: 'all', label: '모두에게' },
                 { id: 'org_admin', label: '기관관리자 전체' },
-                { id: 'all_teachers', label: '선생님 전체' },
-                { id: 'all_students', label: '학생 전체' }
+                { id: 'teacher', label: '선생님 전체' },
+                { id: 'student', label: '학생 전체' }
               ].map(opt => (
                 <label key={opt.id} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
                   <input 
@@ -138,6 +166,60 @@ export default function NotificationSender() {
             {isSubmitting ? '발송 중...' : '알림 발송하기'}
           </button>
         </form>
+      </div>
+      <div style={{ marginTop: 40 }}>
+        <h3 style={{ fontSize: 20, fontWeight: 800, color: '#1a1a2e', marginBottom: 16 }}>최근 발송 이력</h3>
+        <div style={{ background: 'white', borderRadius: 16, overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+            <thead>
+              <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                <th style={{ padding: '16px 24px', fontSize: 14, fontWeight: 700, color: '#475569' }}>발송일</th>
+                <th style={{ padding: '16px 24px', fontSize: 14, fontWeight: 700, color: '#475569' }}>기관명</th>
+                <th style={{ padding: '16px 24px', fontSize: 14, fontWeight: 700, color: '#475569' }}>발송 대상</th>
+                <th style={{ padding: '16px 24px', fontSize: 14, fontWeight: 700, color: '#475569' }}>제목</th>
+                <th style={{ padding: '16px 24px', fontSize: 14, fontWeight: 700, color: '#475569' }}>중요 여부</th>
+              </tr>
+            </thead>
+            <tbody>
+              {history.length === 0 ? (
+                <tr>
+                  <td colSpan={5} style={{ padding: '32px', textAlign: 'center', color: '#94a3b8', fontSize: 15 }}>
+                    발송 이력이 없습니다.
+                  </td>
+                </tr>
+              ) : (
+                history.map(item => (
+                  <tr key={item.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                    <td style={{ padding: '16px 24px', fontSize: 14, color: '#334155' }}>
+                      {new Date(item.created_at).toLocaleDateString()}
+                    </td>
+                    <td style={{ padding: '16px 24px', fontSize: 14, color: '#334155' }}>
+                      {item.organizations?.name || '알 수 없음'}
+                    </td>
+                    <td style={{ padding: '16px 24px', fontSize: 14, color: '#334155' }}>
+                      {item.target_type === 'all' ? '모두에게' : 
+                       item.target_type === 'org_admin' ? '기관관리자' : 
+                       item.target_type === 'teacher' ? '선생님' : 
+                       item.target_type === 'student' ? '학생' : item.target_type}
+                    </td>
+                    <td style={{ padding: '16px 24px', fontSize: 14, color: '#334155', fontWeight: 500 }}>
+                      {item.title}
+                    </td>
+                    <td style={{ padding: '16px 24px', fontSize: 14 }}>
+                      {item.priority === 'high' ? (
+                        <span style={{ padding: '4px 8px', background: '#fee2e2', color: '#dc2626', borderRadius: 4, fontWeight: 700, fontSize: 12 }}>
+                          중요
+                        </span>
+                      ) : (
+                        <span style={{ color: '#94a3b8' }}>-</span>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   )

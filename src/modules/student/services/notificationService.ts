@@ -49,7 +49,7 @@ export async function getNotificationsForTarget(targetKey: string, profile?: any
       if (!orgError && orgData) {
         // filter by target manually in case RLS allows more or we need specific logic
         let filteredOrgData = orgData.filter(n => {
-          if (n.target_type === 'all_students') return true;
+          if (n.target_type === 'all_students' || n.target_type === 'student' || n.target_type === 'all') return true;
           if (n.target_type === 'specific_class' && profile.center_id && n.target_teacher_id === profile.center_id) return true;
           if (n.target_type === 'specific_student' && n.target_user_id === profile.id) return true;
           return false;
