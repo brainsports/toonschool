@@ -1,7 +1,8 @@
 import { supabase } from '../../../shared/lib/supabase'
 
 export interface TeacherNotification {
-  id: string
+  id: string // teacher_notification_status.id
+  notification_id: string
   title: string
   message: string
   sender_role: string
@@ -15,61 +16,57 @@ export interface TeacherNotification {
 
 export const teacherNotificationService = {
   /**
-   * 선생님 수신 알림 목록 조회
+   * 선생님 수신 알림 목록 조회 (teacher_notification_status 기준)
    */
-  async getNotifications(teacherId: string, orgId: string): Promise<TeacherNotification[]> {
-    // 1. Fetch targeted notifications
-    const { data: notifications, error: notiError } = await supabase
-      .from('org_notifications')
-      .select('id, title, message, sender_role, sender_id, priority, category, notice_date, created_at, target_type, target_teacher_id, target_user_id')
-      .eq('organization_id', orgId)
-      .is('deleted_at', null)
-      .order('created_at', { ascending: false })
-
-    if (notiError) throw notiError
-
-    // Filter notifications for this teacher
-    const relevantNotis = (notifications || []).filter(n => {
-      if (n.target_type === 'all_teachers' || n.target_type === 'teacher' || n.target_type === 'all') return true
-      if (n.target_type === 'specific_teacher' && n.target_teacher_id === teacherId) return true
-      if (n.target_type === 'specific_student' && n.target_user_id === teacherId) return true // just in case target_user_id was used
-      if (n.target_type === 'teacher' && (n.target_teacher_id === teacherId || n.target_user_id === teacherId)) return true
-      if (n.target_type === 'center_teachers') return true
-      return false
-    })
-
-    if (relevantNotis.length === 0) return []
-
-    // 2. Fetch sender names (since sender_id is there)
-    const senderIds = Array.from(new Set(relevantNotis.map(n => n.sender_id)))
-    const { data: senders } = await supabase
-      .from('profiles')
-      .select('id, name')
-      .in('id', senderIds)
-    
-    const senderMap = new Map(senders?.map(s => [s.id, s.name]) || [])
-
-    // 3. Fetch status
-    const notiIds = relevantNotis.map(n => n.id)
-    const { data: statuses, error: statusError } = await supabase
+  async getNotifications(teacherId: string, _orgId: string): Promise<TeacherNotification[]> {
+    // 1. Fetch from teacher_notification_status with JOIN on org_notifications
+    const { data: statuses, error } = await supabase
       .from('teacher_notification_status')
-      .select('notification_id, is_read, hidden_at')
+      .select(`
+        id,
+        is_read,
+        notification_id,
+        teacher_id,
+        hidden_at,
+        org_notifications!inner (
+          id,
+          title,
+          message,
+          sender_role,
+          sender_id,
+          priority,
+          category,
+          notice_date,
+          created_at,
+          target_type,
+          organization_id
+        )
+      `)
       .eq('teacher_id', teacherId)
-      .in('notification_id', notiIds)
+      .is('hidden_at', null)
 
-    if (statusError) throw statusError
+    if (error) throw error
+    if (!statuses || statuses.length === 0) return []
 
-    const statusMap = new Map(statuses?.map(s => [s.notification_id, s]) || [])
-
-    // 4. Map and filter out hidden
-    const results: TeacherNotification[] = []
+    // 2. Fetch sender names
+    const senderIds = Array.from(new Set(statuses.map((s: any) => s.org_notifications?.sender_id).filter(Boolean)))
     
-    for (const n of relevantNotis) {
-      const status = statusMap.get(n.id)
-      if (status?.hidden_at) continue // skip hidden
+    let senderMap = new Map()
+    if (senderIds.length > 0) {
+      const { data: senders } = await supabase
+        .from('profiles')
+        .select('id, name')
+        .in('id', senderIds)
+      
+      senderMap = new Map(senders?.map(s => [s.id, s.name]) || [])
+    }
 
-      results.push({
-        id: n.id,
+    // 3. Map to TeacherNotification and Sort
+    const results: TeacherNotification[] = statuses.map((status: any) => {
+      const n = status.org_notifications
+      return {
+        id: status.id, // Use status ID for updates
+        notification_id: status.notification_id,
         title: n.title,
         message: n.message,
         sender_role: n.sender_role,
@@ -78,46 +75,43 @@ export const teacherNotificationService = {
         category: n.category || '기타',
         notice_date: n.notice_date || n.created_at.split('T')[0],
         created_at: n.created_at,
-        is_read: status?.is_read || false
-      })
-    }
+        is_read: status.is_read || false
+      }
+    })
+
+    // Sort by created_at DESC
+    results.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
 
     return results
   },
 
   /**
-   * 알림 읽음 처리
+   * 알림 읽음 처리 (teacher_notification_status.id 기준)
    */
-  async markAsRead(teacherId: string, notificationId: string): Promise<void> {
+  async markAsRead(teacherId: string, statusId: string): Promise<void> {
     const { error } = await supabase
       .from('teacher_notification_status')
-      .upsert(
-        {
-          teacher_id: teacherId,
-          notification_id: notificationId,
-          is_read: true,
-          read_at: new Date().toISOString()
-        },
-        { onConflict: 'teacher_id,notification_id' }
-      )
+      .update({
+        is_read: true,
+        read_at: new Date().toISOString()
+      })
+      .eq('id', statusId)
+      .eq('teacher_id', teacherId)
 
     if (error) throw error
   },
 
   /**
-   * 알림 숨김(삭제) 처리
+   * 알림 숨김(삭제) 처리 (teacher_notification_status.id 기준)
    */
-  async hideNotification(teacherId: string, notificationId: string): Promise<void> {
+  async hideNotification(teacherId: string, statusId: string): Promise<void> {
     const { error } = await supabase
       .from('teacher_notification_status')
-      .upsert(
-        {
-          teacher_id: teacherId,
-          notification_id: notificationId,
-          hidden_at: new Date().toISOString()
-        },
-        { onConflict: 'teacher_id,notification_id' }
-      )
+      .update({
+        hidden_at: new Date().toISOString()
+      })
+      .eq('id', statusId)
+      .eq('teacher_id', teacherId)
 
     if (error) throw error
   }
