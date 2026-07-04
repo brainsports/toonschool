@@ -13,6 +13,7 @@ import {
 export default function SuperDashboard() {
   const [stats, setStats] = useState<SuperDashboardStats | null>(null)
   const [middleAdmins, setMiddleAdmins] = useState<any[]>([])
+  const [organizations, setOrganizations] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -21,12 +22,14 @@ export default function SuperDashboard() {
 
   const fetchData = async () => {
     try {
-      const [statsData, adminsData] = await Promise.all([
+      const [statsData, adminsData, orgsData] = await Promise.all([
         superAdminService.getDashboardStats(),
-        superAdminService.getMiddleAdmins()
+        superAdminService.getMiddleAdmins(),
+        superAdminService.getAllOrganizations()
       ])
       setStats(statsData)
       setMiddleAdmins(adminsData)
+      setOrganizations(orgsData)
     } catch (error) {
       console.error('Failed to fetch dashboard data:', error)
     } finally {
@@ -37,6 +40,10 @@ export default function SuperDashboard() {
   if (loading) {
     return <div className="flex justify-center items-center h-64">로딩 중...</div>
   }
+
+  const totalMiddleLicenses = middleAdmins.reduce((sum, admin) => sum + (admin.license_total || 0), 0)
+  const totalOrgLicenses = organizations.reduce((sum, org) => sum + (org.total_licenses || 0), 0)
+  const remainingLicenses = totalMiddleLicenses - totalOrgLicenses
 
   return (
     <div className="space-y-6">
@@ -96,11 +103,11 @@ export default function SuperDashboard() {
             <Ticket className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-sm text-gray-500 font-medium">전체 이용권</p>
+            <p className="text-sm text-gray-500 font-medium">배정 이용권 현황</p>
             <div className="flex flex-col">
-              <h3 className="text-2xl font-bold text-gray-900">{stats?.licenses.total}</h3>
+              <h3 className="text-2xl font-bold text-gray-900">{totalMiddleLicenses.toLocaleString()}</h3>
               <div className="text-xs text-gray-500 mt-1">
-                사용: {stats?.licenses.used} | 남은 수: {stats?.licenses.remaining}
+                중간관리자 이하 사용: {totalOrgLicenses.toLocaleString()} | 잔여: {remainingLicenses.toLocaleString()}
               </div>
             </div>
           </div>
