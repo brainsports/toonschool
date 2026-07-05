@@ -19,7 +19,7 @@ export const superAdminService = {
   async getMiddleAdmins() {
     const { data, error } = await supabase
       .from('middle_admins')
-      .select('*, profiles:profile_id(email)')
+      .select('*, profiles:profile_id(name, email)')
       .order('created_at', { ascending: false })
     if (error) throw error
     return data

@@ -155,8 +155,8 @@ export default function SuperDashboard() {
             <tbody className="divide-y divide-gray-200">
               {middleAdmins.map((admin) => (
                 <tr key={admin.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 font-medium text-gray-900">{admin.display_name}</td>
-                  <td className="px-6 py-4 text-gray-500">{admin.profiles?.email}</td>
+                  <td className="px-6 py-4 font-medium text-gray-900">{admin.profiles?.name || admin.display_name || '이름 없음'}</td>
+                  <td className="px-6 py-4 text-gray-500">{admin.profiles?.email || '-'}</td>
                   <td className="px-6 py-4 text-gray-900 font-medium">{admin.license_total}</td>
                   <td className="px-6 py-4 text-gray-500">
                     {admin.license_start ? new Date(admin.license_start).toLocaleDateString() : '-'} ~ 
