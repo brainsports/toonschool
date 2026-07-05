@@ -22,7 +22,14 @@ export const superAdminService = {
       .select('*, profiles:profile_id(name, email)')
       .order('created_at', { ascending: false })
     if (error) throw error
-    return data
+    
+    return data.map((admin: any) => {
+      const profile = Array.isArray(admin.profiles) ? admin.profiles[0] : admin.profiles;
+      return {
+        ...admin,
+        profiles: profile || {}
+      };
+    });
   },
 
   async assignUserRole(userId: string, role: string, orgId?: string | null, middleAdminId?: string | null) {
