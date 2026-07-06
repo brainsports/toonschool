@@ -55,42 +55,44 @@ serve(async (req) => {
     const { name, adminName, adminEmail, adminPassword, middleAdminId, totalLicenses, startDate, endDate } = body
     const cleanEmail = adminEmail.trim().toLowerCase()
 
-    if (!name || !adminName || !cleanEmail || !adminPassword || !middleAdminId) {
+    if (!name || !adminName || !cleanEmail || !adminPassword) {
       throw new Error('요청 검증: 필수 정보가 누락되었습니다.')
     }
 
-    // 3. 중간관리자 ID 검증 및 변환
-    let resolvedMiddleAdminId = middleAdminId
+    // 3. 중간관리자 ID 검증 및 변환 (profile_id로 변환)
+    let resolvedMiddleAdminProfileId = null;
     
-    // 먼저 middleAdminId가 middle_admins.id인지 확인
-    const { data: adminById, error: adminByIdError } = await adminClient
-      .from('middle_admins')
-      .select('id')
-      .eq('id', middleAdminId)
-      .maybeSingle()
-
-    if (adminByIdError) {
-      throw new Error(`중간관리자 조회: ${adminByIdError.message}`)
-    }
-
-    if (adminById) {
-      resolvedMiddleAdminId = adminById.id
-    } else {
-      // id로 존재하지 않으면 profile_id로 검색
-      const { data: adminByProfile, error: adminByProfileError } = await adminClient
+    if (middleAdminId) {
+      // 먼저 middleAdminId가 middle_admins.id인지 확인
+      const { data: adminById, error: adminByIdError } = await adminClient
         .from('middle_admins')
-        .select('id')
-        .eq('profile_id', middleAdminId)
+        .select('profile_id')
+        .eq('id', middleAdminId)
         .maybeSingle()
 
-      if (adminByProfileError) {
-        throw new Error(`중간관리자 조회(profile_id): ${adminByProfileError.message}`)
+      if (adminByIdError) {
+        throw new Error(`중간관리자 조회: ${adminByIdError.message}`)
       }
 
-      if (adminByProfile) {
-        resolvedMiddleAdminId = adminByProfile.id
+      if (adminById && adminById.profile_id) {
+        resolvedMiddleAdminProfileId = adminById.profile_id
       } else {
-        throw new Error('중간관리자 확인 실패: 유효한 중간관리자를 찾을 수 없습니다.')
+        // id로 존재하지 않으면 이미 profile_id인지 확인 (profiles 테이블 조회)
+        const { data: profileExists, error: profileExistsError } = await adminClient
+          .from('profiles')
+          .select('id')
+          .eq('id', middleAdminId)
+          .maybeSingle()
+
+        if (profileExistsError) {
+          throw new Error(`중간관리자 프로필 확인: ${profileExistsError.message}`)
+        }
+
+        if (profileExists) {
+          resolvedMiddleAdminProfileId = profileExists.id
+        } else {
+          throw new Error('중간관리자 확인 실패: 유효한 중간관리자를 찾을 수 없습니다.')
+        }
       }
     }
 
@@ -158,20 +160,26 @@ serve(async (req) => {
     }
 
     // 7. organizations 생성
+    const orgPayload = {
+      name: name,
+      admin_profile_id: targetUserId,
+      middle_admin_id: resolvedMiddleAdminProfileId,
+      total_licenses: totalLicenses || 0,
+      license_start_date: startDate || new Date().toISOString(),
+      license_end_date: endDate || new Date().toISOString(),
+      status: 'active'
+    };
+
+    console.log('[create-organization] organizations insert payload:', orgPayload);
+
     const { data: orgData, error: orgError } = await adminClient
       .from('organizations')
-      .insert({
-        name: name,
-        middle_admin_id: resolvedMiddleAdminId,
-        total_licenses: totalLicenses || 0,
-        license_start_date: startDate || new Date().toISOString(),
-        license_end_date: endDate || new Date().toISOString(),
-        status: 'active'
-      })
+      .insert(orgPayload)
       .select('id')
       .single()
 
     if (orgError) {
+      console.error('[create-organization] organizations insert error:', orgError);
       throw new Error(`기관 생성: organizations 정보 저장 실패 - ${orgError.message}`)
     }
 

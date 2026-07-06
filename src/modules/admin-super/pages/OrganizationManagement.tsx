@@ -92,10 +92,6 @@ export default function OrganizationManagement() {
 
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!middleAdminId) {
-      alert('담당 중간관리자를 선택해주세요.')
-      return
-    }
 
     try {
       await superAdminService.createOrganization({
@@ -119,10 +115,6 @@ export default function OrganizationManagement() {
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!selectedOrg) return
-    if (!middleAdminId) {
-      alert('담당 중간관리자를 선택해주세요.')
-      return
-    }
 
     setConfirmConfig({
       open: true,
@@ -272,10 +264,9 @@ export default function OrganizationManagement() {
           <select 
             value={middleAdminId}
             onChange={(e) => setMiddleAdminId(e.target.value)}
-            required
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6B4EFE] focus:border-[#6B4EFE]"
           >
-            <option value="">중간관리자를 선택해주세요</option>
+            <option value="">선택 안 함</option>
             {middleAdmins.map((admin) => (
               <option key={admin.id} value={admin.id}>
                 {admin.display_name || admin.profiles?.name || admin.profiles?.email}

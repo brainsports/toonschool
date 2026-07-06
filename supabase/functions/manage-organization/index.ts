@@ -112,6 +112,10 @@ serve(async (req) => {
     } else if (action === 'updateStatus') {
       const { status } = body
 
+      if (status !== 'active' && status !== 'inactive') {
+        throw new Error(`유효하지 않은 상태 값입니다. (허용값: active, inactive, 입력값: ${status})`)
+      }
+
       // organizations 상태 변경
       const { error: orgError } = await adminClient
         .from('organizations')
@@ -156,7 +160,7 @@ serve(async (req) => {
 
   } catch (error: any) {
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ message: error.message }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
     )
   }
