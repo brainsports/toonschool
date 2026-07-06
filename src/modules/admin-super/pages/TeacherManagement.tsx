@@ -61,18 +61,18 @@ export default function TeacherManagement() {
 
     try {
       await superAdminService.updateTeacherStatus(selectedTeacher.id, status)
-      alert('저장되었습니다.')
+      alert('설정이 저장되었습니다.')
       setIsModalOpen(false)
       fetchData()
     } catch (error: any) {
-      alert(`오류가 발생했습니다: ${error.message}`)
+      alert(error.message)
     }
   }
 
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!createEmail || !createPassword || !createName || !createOrganizationId) {
-      alert('이름, 이메일, 비밀번호, 소속 기관을 모두 입력/선택해주세요.')
+      alert('이름, 이메일, 비밀번호, 소속 기관을 모두 입력 또는 선택해 주세요.')
       return
     }
 
@@ -84,11 +84,11 @@ export default function TeacherManagement() {
         organization_id: createOrganizationId,
         status: createStatus
       })
-      alert('신규 선생님이 추가되었습니다.')
+      alert('신규 선생님이 성공적으로 추가되었습니다.')
       setIsCreateModalOpen(false)
       fetchData()
     } catch (error: any) {
-      alert(`오류가 발생했습니다: ${error.message}`)
+      alert(error.message)
     }
   }
 

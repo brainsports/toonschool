@@ -52,10 +52,10 @@ export default function OrgTeacherManagement() {
       if (!profile?.organization_id) return
       try {
         await orgAdminService.suspendOrgTeacher(profile.organization_id, teacher.id)
-        alert("선생님을 사용중지(또는 삭제) 처리했습니다.")
+        alert('선생님을 성공적으로 사용 정지(또는 삭제) 처리했습니다.')
         await loadTeachers()
       } catch (err: any) {
-        alert("오류가 발생했습니다: " + err.message)
+        alert(err.message)
       }
     }
   }

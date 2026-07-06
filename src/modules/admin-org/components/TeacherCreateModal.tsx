@@ -33,11 +33,11 @@ export default function TeacherCreateModal({ isOpen, onClose, onSubmit }: Teache
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!formData.name || !formData.email || !formData.tempPassword) {
-      alert("이름, 아이디/이메일, 임시 비밀번호는 필수입니다.")
+      alert('이름, 이메일, 임시 비밀번호를 모두 입력해 주세요.')
       return
     }
     if (formData.initial_licenses < 0) {
-      alert("배정할 이용권 수는 0 이상이어야 합니다.")
+      alert('배정할 이용권 수는 0 이상이어야 합니다.')
       return
     }
 
@@ -48,11 +48,11 @@ export default function TeacherCreateModal({ isOpen, onClose, onSubmit }: Teache
         license_start_date: formData.license_start_date || undefined,
         license_end_date: formData.license_end_date || undefined
       })
-      alert("선생님을 추가했어요.")
+      alert('신규 선생님이 성공적으로 추가되었습니다.')
       onClose()
       setFormData({ name: '', email: '', tempPassword: '', assigned_class: '', initial_licenses: 0, memo: '', license_start_date: '', license_end_date: '' })
     } catch (err: any) {
-      alert(`저장 중 문제가 생겼어요. 다시 확인해 주세요.\n(${err.message})`)
+      alert(err.message)
     } finally {
       setLoading(false)
     }

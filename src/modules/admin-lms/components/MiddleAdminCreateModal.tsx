@@ -51,7 +51,7 @@ export default function MiddleAdminCreateModal({ isOpen, onClose, onSuccess }: M
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!formData.name || !formData.email || !formData.password) {
-      alert("이름, 이메일, 비밀번호는 필수 입력 항목입니다.")
+      alert('이름, 이메일, 비밀번호를 모두 입력해 주세요.')
       return
     }
 
@@ -71,11 +71,11 @@ export default function MiddleAdminCreateModal({ isOpen, onClose, onSuccess }: M
     try {
       setLoading(true)
       await superAdminService.createMiddleAdmin(formData, selectedOrgs)
-      alert("중간관리자 계정이 성공적으로 생성되었습니다.")
+      alert('신규 중간관리자가 성공적으로 추가되었습니다.')
       onSuccess()
       onClose()
     } catch (err: any) {
-      alert(`저장 중 오류가 발생했습니다.\n${err.message}`)
+      alert(err.message)
     } finally {
       setLoading(false)
     }

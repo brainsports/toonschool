@@ -79,18 +79,18 @@ export default function MiddleAdminManagement() {
         licenseEnd ? new Date(licenseEnd).toISOString() : new Date().toISOString(),
         status
       )
-      alert('저장되었습니다.')
+      alert('설정이 저장되었습니다.')
       setIsModalOpen(false)
       fetchAdmins()
     } catch (error: any) {
-      alert(`오류가 발생했습니다: ${error.message}`)
+      alert(error.message)
     }
   }
 
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!createEmail || !createPassword || !createName) {
-      alert('이름, 이메일, 비밀번호를 모두 입력해주세요.')
+      alert('이름, 이메일, 비밀번호를 모두 입력해 주세요.')
       return
     }
 
@@ -104,11 +104,11 @@ export default function MiddleAdminManagement() {
         licenseEnd: createLicenseEnd ? new Date(createLicenseEnd).toISOString() : new Date().toISOString(),
         status: createStatus
       })
-      alert('신규 중간관리자가 추가되었습니다.')
+      alert('신규 중간관리자가 성공적으로 추가되었습니다.')
       setIsCreateModalOpen(false)
       fetchAdmins()
     } catch (error: any) {
-      alert(`오류가 발생했습니다: ${error.message}`)
+      alert(error.message)
     }
   }
 

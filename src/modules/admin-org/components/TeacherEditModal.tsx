@@ -43,7 +43,7 @@ export default function TeacherEditModal({ isOpen, onClose, teacher, onSubmit }:
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!formData.name) {
-      alert("이름은 필수입니다.")
+      alert('선생님 이름을 입력해 주세요.')
       return
     }
 
@@ -54,10 +54,10 @@ export default function TeacherEditModal({ isOpen, onClose, teacher, onSubmit }:
         license_start_date: formData.license_start_date || undefined,
         license_end_date: formData.license_end_date || undefined
       })
-      alert("선생님 정보를 수정했어요.")
+      alert('선생님 정보가 성공적으로 수정되었습니다.')
       onClose()
     } catch (err: any) {
-      alert(`저장 중 문제가 생겼어요. 다시 확인해 주세요.\n(${err.message})`)
+      alert(err.message)
     } finally {
       setLoading(false)
     }

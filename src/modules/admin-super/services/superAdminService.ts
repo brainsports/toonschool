@@ -10,6 +10,27 @@ export interface SuperDashboardStats {
   resources: { total: number }
 }
 
+const translateError = (error: any): string => {
+  const msg = error?.message || String(error)
+  if (msg.includes('Email address is invalid')) {
+    return '이 이메일은 사용할 수 없습니다. 실제로 받을 수 있는 이메일 주소를 입력해 주세요.'
+  }
+  if (msg.includes('User already registered') || msg.includes('already exists')) {
+    return '이미 등록된 이메일 주소입니다. 다른 이메일을 사용해 주세요.'
+  }
+  if (msg.includes('Password should be at least')) {
+    return '비밀번호는 최소 6자 이상이어야 합니다.'
+  }
+  return `오류가 발생했습니다: ${msg}`
+}
+
+const validateEmail = (email: string) => {
+  const domain = email.split('@')[1]
+  if (domain === 'test.com' || domain === 'example.com') {
+    throw new Error('테스트용 도메인(test.com, example.com)은 사용할 수 없습니다. 실제로 받을 수 있는 이메일 주소를 입력해 주세요.')
+  }
+}
+
 export const superAdminService = {
   async getDashboardStats(): Promise<SuperDashboardStats> {
     const { data, error } = await supabase.rpc('get_super_dashboard_stats')
@@ -61,12 +82,15 @@ export const superAdminService = {
     const key = import.meta.env.VITE_SUPABASE_ANON_KEY
     if (!url || !key) throw new Error("Supabase 환경 변수가 없습니다.")
 
+    const cleanEmail = adminData.email.trim().toLowerCase()
+    validateEmail(cleanEmail)
+
     const tempClient = createClient(url, key, {
       auth: { persistSession: false, autoRefreshToken: false }
     })
 
     const { data: authData, error: authError } = await tempClient.auth.signUp({
-      email: adminData.email,
+      email: cleanEmail,
       password: adminData.password,
       options: {
         data: {
@@ -76,8 +100,8 @@ export const superAdminService = {
       }
     })
 
-    if (authError) throw authError
-    if (!authData.user) throw new Error("계정 생성 실패")
+    if (authError) throw new Error(translateError(authError))
+    if (!authData.user) throw new Error("계정 생성에 실패했습니다. 다시 시도해 주세요.")
 
     const userId = authData.user.id
 
@@ -93,7 +117,7 @@ export const superAdminService = {
     if (profileError) {
       await supabase.from('profiles').insert({
         id: userId,
-        email: adminData.email,
+        email: cleanEmail,
         name: adminData.name,
         role: 'middle_admin',
         status: adminData.status || 'active',
@@ -164,12 +188,15 @@ export const superAdminService = {
     const key = import.meta.env.VITE_SUPABASE_ANON_KEY
     if (!url || !key) throw new Error("Supabase 환경 변수가 없습니다.")
 
+    const cleanEmail = teacherData.email.trim().toLowerCase()
+    validateEmail(cleanEmail)
+
     const tempClient = createClient(url, key, {
       auth: { persistSession: false, autoRefreshToken: false }
     })
 
     const { data: authData, error: authError } = await tempClient.auth.signUp({
-      email: teacherData.email,
+      email: cleanEmail,
       password: teacherData.password,
       options: {
         data: {
@@ -179,8 +206,8 @@ export const superAdminService = {
       }
     })
 
-    if (authError) throw authError
-    if (!authData.user) throw new Error("계정 생성 실패")
+    if (authError) throw new Error(translateError(authError))
+    if (!authData.user) throw new Error("계정 생성에 실패했습니다. 다시 시도해 주세요.")
 
     const userId = authData.user.id
 
@@ -197,7 +224,7 @@ export const superAdminService = {
     if (profileError) {
       await supabase.from('profiles').insert({
         id: userId,
-        email: teacherData.email,
+        email: cleanEmail,
         name: teacherData.name,
         role: 'teacher',
         status: teacherData.status || 'active',
