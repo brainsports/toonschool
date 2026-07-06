@@ -358,51 +358,69 @@ export const superAdminService = {
   },
 
   async getAllOrganizations() {
-    const { data, error } = await supabase
+    // 1. 기본 기관 목록 조회
+    // status가 null인 경우 누락을 방지하기 위해 전체를 가져와서 클라이언트에서 필터링하거나, 
+    // 혹은 is_deleted 등의 플래그를 고려하여 삭제된 것만 명시적으로 제외합니다.
+    const { data: orgData, error: orgError } = await supabase
       .from('organizations')
       .select('*')
-      .neq('status', 'deleted')
       .order('created_at', { ascending: false })
       
-    if (error) {
-      console.error("[SuperAdmin] Fetch organizations error:", error);
+    if (orgError) {
+      console.error("[SuperAdmin] Fetch organizations error:", orgError);
       return [];
     }
     
-    if (data && data.length > 0) {
-      // 1. Fetch org_admins
-      const orgIds = data.map(org => org.id);
-      let orgAdminsData: any[] = [];
-      if (orgIds.length > 0) {
-        const { data: oaData, error: oaError } = await supabase
-          .from('profiles')
-          .select('id, name, email, status, organization_id')
-          .eq('role', 'org_admin')
-          .in('organization_id', orgIds);
-          
-        if (oaError) console.error('[SuperAdmin] Fetch org_admins error:', oaError);
-        orgAdminsData = oaData || [];
-      }
+    if (!orgData || orgData.length === 0) {
+      return [];
+    }
+
+    // 상태가 'deleted'인 기관은 제외 (활성, 정지 기관 등은 포함)
+    const activeOrgs = orgData.filter(org => org.status !== 'deleted');
+
+    if (activeOrgs.length === 0) {
+      return [];
+    }
+
+    const orgIds = activeOrgs.map(org => org.id);
+
+    // 2. 기관관리자(org_admin) 조회 (profiles 테이블)
+    let orgAdminsData: any[] = [];
+    const { data: oaData, error: oaError } = await supabase
+      .from('profiles')
+      .select('id, name, email, status, organization_id')
+      .eq('role', 'org_admin')
+      .in('organization_id', orgIds);
       
-      const orgAdminMap = new Map();
-      orgAdminsData.forEach(admin => {
+    if (oaError) {
+      console.warn('[SuperAdmin] Fetch org_admins error (RLS or other):', oaError);
+    } else {
+      orgAdminsData = oaData || [];
+    }
+    
+    const orgAdminMap = new Map();
+    orgAdminsData.forEach(admin => {
+      if (admin.organization_id) {
         if (!orgAdminMap.has(admin.organization_id)) {
            orgAdminMap.set(admin.organization_id, admin);
-        } else if (admin.id === null) {
-           console.warn(`[Warning] org_admin found with null organization_id: ${admin.email}`);
         }
-      });
+      }
+    });
 
-      const adminIds = data.map(org => org.middle_admin_id).filter(id => id);
-      if (adminIds.length > 0) {
-         const { data: middleAdminsData, error: mError } = await supabase
-           .from('middle_admins')
-           .select('id, profile_id, display_name')
-           .in('id', adminIds);
-           
-         if (mError) console.error('[SuperAdmin] Fetch middle_admins for organizations error:', mError);
+    // 3. 담당 중간관리자(middle_admins -> profiles) 조회
+    const adminIds = activeOrgs.map(org => org.middle_admin_id).filter(Boolean);
+    const middleAdminMap = new Map();
+
+    if (adminIds.length > 0) {
+       const { data: middleAdminsData, error: mError } = await supabase
+         .from('middle_admins')
+         .select('id, profile_id, display_name')
+         .in('id', adminIds);
          
-         const profileIds = middleAdminsData?.map(m => m.profile_id).filter(id => id) || [];
+       if (mError) {
+         console.warn('[SuperAdmin] Fetch middle_admins for organizations error:', mError);
+       } else if (middleAdminsData && middleAdminsData.length > 0) {
+         const profileIds = middleAdminsData.map(m => m.profile_id).filter(Boolean);
          let profilesData: any[] = [];
          
          if (profileIds.length > 0) {
@@ -410,31 +428,32 @@ export const superAdminService = {
              .from('profiles')
              .select('id, name, email')
              .in('id', profileIds);
-           if (pError) console.error('[SuperAdmin] Fetch profiles for organizations error:', pError);
-           profilesData = pData || [];
+             
+           if (pError) {
+             console.warn('[SuperAdmin] Fetch profiles for middle_admins error:', pError);
+           } else {
+             profilesData = pData || [];
+           }
          }
          
          const profileMap = new Map(profilesData.map(p => [p.id, p]));
-         const middleAdminMap = new Map(middleAdminsData?.map(m => [
-           m.id, 
-           { ...m, profile: m.profile_id ? profileMap.get(m.profile_id) : null }
-         ]));
          
-         return data.map(org => ({
-           ...org,
-           middle_admin: org.middle_admin_id ? middleAdminMap.get(org.middle_admin_id) : null,
-           org_admin: orgAdminMap.get(org.id) || null
-         }));
-      } else {
-        return data.map(org => ({
-           ...org,
-           middle_admin: null,
-           org_admin: orgAdminMap.get(org.id) || null
-         }));
-      }
+         middleAdminsData.forEach(m => {
+           middleAdminMap.set(m.id, {
+             ...m,
+             profile: m.profile_id ? profileMap.get(m.profile_id) : null
+           });
+         });
+       }
     }
     
-    return data || [];
+    // 4. organizations를 기준으로 최종 데이터 조합
+    // 조회 실패하더라도 기관 목록 자체가 사라지지 않도록 org_admin, middle_admin이 없으면 null 반환
+    return activeOrgs.map(org => ({
+      ...org,
+      middle_admin: org.middle_admin_id ? middleAdminMap.get(org.middle_admin_id) || null : null,
+      org_admin: orgAdminMap.get(org.id) || null
+    }));
   },
 
   async createOrganization(orgData: any) {
