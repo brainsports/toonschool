@@ -51,6 +51,7 @@ export const superAdminService = {
     const { data, error } = await supabase
       .from('middle_admins')
       .select('*, profiles:profile_id(name, email)')
+      .neq('status', 'deleted')
       .order('created_at', { ascending: false })
     if (error) throw error
     
@@ -114,6 +115,37 @@ export const superAdminService = {
       throw new Error(data.error)
     }
 
+    return data
+  },
+
+  async updateMiddleAdminStatus(middleAdminId: string, status: string) {
+    const { data, error } = await supabase
+      .from('middle_admins')
+      .update({ status })
+      .eq('id', middleAdminId)
+      .select()
+      .single()
+    
+    if (error) {
+      console.error('[중간관리자 상태 변경] 에러:', error)
+      throw new Error('상태 변경에 실패했습니다. 다시 시도해 주세요.')
+    }
+    return data
+  },
+
+  async deleteMiddleAdmin(middleAdminId: string) {
+    // 하드 삭제보다 상태를 deleted로 변경하는 소프트 삭제 사용
+    const { data, error } = await supabase
+      .from('middle_admins')
+      .update({ status: 'deleted' })
+      .eq('id', middleAdminId)
+      .select()
+      .single()
+    
+    if (error) {
+      console.error('[중간관리자 삭제] 에러:', error)
+      throw new Error('삭제 처리 중 문제가 발생했습니다. (연결된 기관이나 선생님이 있을 수 있습니다)')
+    }
     return data
   },
 

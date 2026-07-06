@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { superAdminService } from '../services/superAdminService'
-import { Edit2, ShieldCheck, Ticket, Plus } from 'lucide-react'
+import { Edit2, ShieldCheck, Ticket, Plus, Ban, Play, Trash2 } from 'lucide-react'
+import ConfirmModal from '../../../shared/components/ConfirmModal'
 
 export default function MiddleAdminManagement() {
   const [admins, setAdmins] = useState<any[]>([])
@@ -24,6 +25,24 @@ export default function MiddleAdminManagement() {
   const [createLicenseStart, setCreateLicenseStart] = useState('')
   const [createLicenseEnd, setCreateLicenseEnd] = useState('')
   const [createStatus, setCreateStatus] = useState('active')
+
+  // Confirm Modal state
+  const [confirmConfig, setConfirmConfig] = useState<{
+    open: boolean
+    title: string
+    description: string
+    confirmText?: string
+    variant?: 'warning' | 'danger' | 'default'
+    onConfirm: () => void
+  }>({
+    open: false,
+    title: '',
+    description: '',
+    onConfirm: () => {}
+  })
+  const [isConfirming, setIsConfirming] = useState(false)
+
+  const closeConfirm = () => setConfirmConfig(prev => ({ ...prev, open: false }))
 
   useEffect(() => {
     fetchAdmins()
@@ -69,24 +88,81 @@ export default function MiddleAdminManagement() {
     setIsCreateModalOpen(true)
   }
 
-  const handleEditSubmit = async (e: React.FormEvent) => {
+  const handleEditSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!selectedAdmin) return
 
-    try {
-      await superAdminService.updateMiddleAdminLicense(
-        selectedAdmin.id,
-        licenseTotal,
-        licenseStart ? new Date(licenseStart).toISOString() : new Date().toISOString(),
-        licenseEnd ? new Date(licenseEnd).toISOString() : new Date().toISOString(),
-        status
-      )
-      alert('설정이 저장되었습니다.')
-      setIsModalOpen(false)
-      fetchAdmins()
-    } catch (error: any) {
-      alert(error.message)
-    }
+    setConfirmConfig({
+      open: true,
+      title: '이용권 정보를 변경하시겠습니까?',
+      description: '변경된 이용권 수량과 사용기간이 즉시 반영됩니다.',
+      confirmText: '변경하기',
+      variant: 'warning',
+      onConfirm: async () => {
+        setIsConfirming(true)
+        try {
+          await superAdminService.updateMiddleAdminLicense(
+            selectedAdmin.id,
+            licenseTotal,
+            licenseStart ? new Date(licenseStart).toISOString() : new Date().toISOString(),
+            licenseEnd ? new Date(licenseEnd).toISOString() : new Date().toISOString(),
+            status
+          )
+          setIsModalOpen(false)
+          fetchAdmins()
+        } catch (error: any) {
+          alert(error.message)
+        } finally {
+          setIsConfirming(false)
+          closeConfirm()
+        }
+      }
+    })
+  }
+
+  const handleStatusChange = (admin: any, newStatus: 'active' | 'inactive') => {
+    const isSuspend = newStatus === 'inactive'
+    setConfirmConfig({
+      open: true,
+      title: isSuspend ? '정말 이용을 정지하시겠습니까?' : '정말 이용을 재개하시겠습니까?',
+      description: isSuspend ? '이 계정은 더 이상 서비스를 이용할 수 없습니다.' : '이 계정은 다시 서비스를 이용할 수 있습니다.',
+      confirmText: isSuspend ? '이용정지' : '이용재개',
+      variant: 'warning',
+      onConfirm: async () => {
+        setIsConfirming(true)
+        try {
+          await superAdminService.updateMiddleAdminStatus(admin.id, newStatus)
+          fetchAdmins()
+        } catch (error: any) {
+          alert(error.message)
+        } finally {
+          setIsConfirming(false)
+          closeConfirm()
+        }
+      }
+    })
+  }
+
+  const handleDelete = (admin: any) => {
+    setConfirmConfig({
+      open: true,
+      title: '정말 삭제하시겠습니까?',
+      description: '삭제된 데이터는 복구하기 어려울 수 있습니다.',
+      confirmText: '삭제',
+      variant: 'danger',
+      onConfirm: async () => {
+        setIsConfirming(true)
+        try {
+          await superAdminService.deleteMiddleAdmin(admin.id)
+          fetchAdmins()
+        } catch (error: any) {
+          alert(error.message)
+        } finally {
+          setIsConfirming(false)
+          closeConfirm()
+        }
+      }
+    })
   }
 
   const handleCreateSubmit = async (e: React.FormEvent) => {
@@ -166,13 +242,39 @@ export default function MiddleAdminManagement() {
                     ~ {admin.license_end ? new Date(admin.license_end).toLocaleDateString() : '-'}
                   </td>
                   <td className="px-6 py-4 text-center">
-                    <button
-                      onClick={() => openEditModal(admin)}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-[#6B4EFE] bg-[#F4F2FF] rounded-lg hover:bg-[#EAE6FF] transition-colors"
-                    >
-                      <Edit2 className="w-4 h-4" />
-                      설정
-                    </button>
+                    <div className="flex items-center justify-center gap-2">
+                      <button
+                        onClick={() => openEditModal(admin)}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-[#6B4EFE] bg-[#F4F2FF] rounded-lg hover:bg-[#EAE6FF] transition-colors"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                        설정
+                      </button>
+                      {admin.status === 'active' ? (
+                        <button
+                          onClick={() => handleStatusChange(admin, 'inactive')}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-orange-600 bg-orange-50 rounded-lg hover:bg-orange-100 transition-colors"
+                        >
+                          <Ban className="w-4 h-4" />
+                          이용정지
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleStatusChange(admin, 'active')}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-green-600 bg-green-50 rounded-lg hover:bg-green-100 transition-colors"
+                        >
+                          <Play className="w-4 h-4" />
+                          이용재개
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleDelete(admin)}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        삭제
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -416,6 +518,17 @@ export default function MiddleAdminManagement() {
           </div>
         </div>
       )}
+      {/* Confirm Modal */}
+      <ConfirmModal
+        open={confirmConfig.open}
+        title={confirmConfig.title}
+        description={confirmConfig.description}
+        confirmText={confirmConfig.confirmText}
+        variant={confirmConfig.variant}
+        loading={isConfirming}
+        onConfirm={confirmConfig.onConfirm}
+        onCancel={closeConfirm}
+      />
     </div>
   )
 }
