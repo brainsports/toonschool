@@ -130,7 +130,13 @@ export const superAdminService = {
       }
     })
 
-    if (authError) throw new Error(translateError(authError))
+    if (authError) {
+      console.error('[중간관리자 생성] Auth 생성 실패:', authError)
+      if (authError.status === 429) {
+        throw new Error('계정 생성 요청이 너무 많아 잠시 제한되었습니다. 몇 분 후 다시 시도해 주세요.')
+      }
+      throw new Error(translateError(authError))
+    }
     if (!authData.user) throw new Error("계정 생성에 실패했습니다. 다시 시도해 주세요.")
 
     const userId = authData.user.id
@@ -160,7 +166,7 @@ export const superAdminService = {
         })
 
         if (profileInsertError) {
-          console.error('profiles insert error:', profileInsertError)
+          console.error('[중간관리자 생성] profiles 저장 실패:', profileInsertError)
           throw new Error('profiles_failed')
         }
       }
@@ -176,12 +182,15 @@ export const superAdminService = {
       })
 
       if (middleAdminInsertError) {
-        console.error('middle_admins insert error:', middleAdminInsertError)
+        console.error('[중간관리자 생성] middle_admins 저장 실패:', middleAdminInsertError)
         throw new Error('middle_admins_failed')
       }
     } catch (err: any) {
-      if (err.message === 'profiles_failed' || err.message === 'middle_admins_failed') {
-        throw new Error("계정은 생성되었지만 관리자 정보 저장에 실패했습니다. Supabase 테이블과 RLS 정책을 확인해 주세요.")
+      if (err.message === 'profiles_failed') {
+        throw new Error("Auth 계정은 생성되었으나 프로필(profiles) 정보 저장에 실패했습니다. Supabase 테이블과 RLS 정책을 확인해 주세요.")
+      }
+      if (err.message === 'middle_admins_failed') {
+        throw new Error("프로필은 생성되었으나 중간관리자(middle_admins) 상세 정보 저장에 실패했습니다. Supabase 테이블을 확인해 주세요.")
       }
       throw err
     }
