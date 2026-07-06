@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { superAdminService } from '../services/superAdminService'
-import { FileText, Plus, Trash2 } from 'lucide-react'
+import { FileText, Plus, Trash2, Download } from 'lucide-react'
 
 export default function ResourceManagement() {
   const [resources, setResources] = useState<any[]>([])
@@ -125,6 +125,30 @@ export default function ResourceManagement() {
     }
   }
 
+  const handleDownload = async (resource: any) => {
+    try {
+      if (resource.file_url) {
+        window.open(resource.file_url, '_blank')
+        return
+      }
+      
+      if (resource.file_path) {
+        const url = await superAdminService.getResourceDownloadUrl(resource.file_path)
+        if (url) {
+          window.open(url, '_blank')
+        } else {
+          alert('다운로드 링크를 생성할 수 없습니다.')
+        }
+        return
+      }
+      
+      alert('다운로드 가능한 파일 경로가 없습니다.')
+    } catch (error: any) {
+      console.error('Download error:', error)
+      alert('다운로드 중 오류가 발생했습니다.')
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -179,13 +203,20 @@ export default function ResourceManagement() {
                     {resource.importance === 'urgent' ? <span className="text-red-500 font-bold">긴급</span> :
                      resource.importance === 'important' ? <span className="text-[#6B4EFE] font-bold">중요</span> : '일반'}
                   </td>
-                  <td className="px-6 py-4 text-center">
+                  <td className="px-6 py-4 text-center flex items-center justify-center gap-1">
                     <button
                       onClick={() => openEditModal(resource)}
-                      className="inline-flex items-center gap-1 p-2 text-[#6B4EFE] hover:bg-[#6B4EFE]/10 rounded-lg transition-colors mr-2"
+                      className="inline-flex items-center gap-1 p-2 text-[#6B4EFE] hover:bg-[#6B4EFE]/10 rounded-lg transition-colors"
                       title="수정"
                     >
                       <FileText className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDownload(resource)}
+                      className="inline-flex items-center gap-1 p-2 text-green-500 hover:bg-green-50 rounded-lg transition-colors"
+                      title="다운로드"
+                    >
+                      <Download className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => handleDelete(resource.id)}

@@ -730,5 +730,22 @@ export const superAdminService = {
       .limit(100)
     if (error) throw error
     return data
+  },
+
+  async getResourceDownloadUrl(filePath: string): Promise<string> {
+    const { data, error } = await supabase.storage
+      .from('admin-resources')
+      .createSignedUrl(filePath, 3600); // 1시간 유효
+
+    if (!error && data?.signedUrl) {
+      return data.signedUrl;
+    }
+
+    // signed URL 생성이 안 될 경우 public URL로 폴백
+    const { data: publicData } = supabase.storage
+      .from('admin-resources')
+      .getPublicUrl(filePath);
+      
+    return publicData.publicUrl;
   }
 }
