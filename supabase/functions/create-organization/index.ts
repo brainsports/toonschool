@@ -30,14 +30,14 @@ serve(async (req) => {
     // 1. 요청한 사용자가 수퍼관리자인지 확인
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) {
-      throw new Error('인증 헤더가 없습니다. 수퍼관리자만 접근 가능합니다.')
+      throw new Error('인증: 인증 헤더가 없습니다. 수퍼관리자만 접근 가능합니다.')
     }
 
     const token = authHeader.replace('Bearer ', '')
     const { data: { user: callerUser }, error: verifyError } = await adminClient.auth.getUser(token)
     
     if (verifyError || !callerUser) {
-      throw new Error('유효하지 않은 인증 토큰입니다.')
+      throw new Error('인증: 유효하지 않은 인증 토큰입니다.')
     }
 
     const { data: callerProfile, error: callerProfileError } = await adminClient
@@ -47,7 +47,7 @@ serve(async (req) => {
       .single()
 
     if (callerProfileError || callerProfile.role !== 'super_admin') {
-      throw new Error('수퍼관리자 권한이 필요합니다.')
+      throw new Error('인증: 수퍼관리자 권한이 필요합니다.')
     }
 
     // 2. 요청 데이터 파싱
@@ -56,7 +56,7 @@ serve(async (req) => {
     const cleanEmail = adminEmail.trim().toLowerCase()
 
     if (!name || !adminName || !cleanEmail || !adminPassword || !middleAdminId) {
-      throw new Error('필수 정보가 누락되었습니다.')
+      throw new Error('요청 검증: 필수 정보가 누락되었습니다.')
     }
 
     // 3. 이메일 중복 확인 (profiles 기준)
@@ -66,11 +66,11 @@ serve(async (req) => {
       .eq('email', cleanEmail)
       
     if (checkError) {
-      throw new Error('이메일 중복 확인 중 오류가 발생했습니다.')
+      throw new Error(`이메일 확인: 이메일 중복 확인 중 오류가 발생했습니다. (${checkError.message})`)
     }
     
     if (existingProfiles && existingProfiles.length > 0) {
-      throw new Error('이미 등록된 이메일입니다. 다른 이메일을 입력해 주세요.')
+      throw new Error('이메일 확인: 이미 등록된 이메일입니다. 다른 이메일을 입력해 주세요.')
     }
 
     // 4. Auth 사용자 생성 (기관관리자)
@@ -96,9 +96,9 @@ serve(async (req) => {
 
       if (authError) {
         if (authError.message.includes('already registered')) {
-          throw new Error('이미 가입된 Auth 계정입니다. 그러나 사용자 조회를 실패했습니다.')
+          throw new Error('계정 생성: 이미 가입된 Auth 계정입니다. 그러나 사용자 조회를 실패했습니다.')
         }
-        throw new Error(`계정 생성 실패: ${authError.message}`)
+        throw new Error(`계정 생성: ${authError.message}`)
       }
       
       targetUserId = authData.user.id
@@ -119,7 +119,7 @@ serve(async (req) => {
       }, { onConflict: 'id' })
 
     if (profileError) {
-      throw new Error(`profiles 정보 저장 실패: ${profileError.message}`)
+      throw new Error(`프로필 생성: profiles 정보 저장 실패 - ${profileError.message}`)
     }
 
     // 6. organizations 생성
@@ -137,7 +137,7 @@ serve(async (req) => {
       .single()
 
     if (orgError) {
-      throw new Error(`organizations 정보 저장 실패: ${orgError.message}`)
+      throw new Error(`기관 생성: organizations 정보 저장 실패 - ${orgError.message}`)
     }
 
     const newOrgId = orgData.id
@@ -149,7 +149,7 @@ serve(async (req) => {
       .eq('id', targetUserId)
 
     if (profileUpdateError) {
-      throw new Error(`기관관리자 프로필에 기관 정보 연결 실패: ${profileUpdateError.message}`)
+      throw new Error(`권한 연결: 기관관리자 프로필에 기관 정보 연결 실패 - ${profileUpdateError.message}`)
     }
 
     // 성공 반환
@@ -159,7 +159,7 @@ serve(async (req) => {
     )
   } catch (error: any) {
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ message: error.message }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
     )
   }

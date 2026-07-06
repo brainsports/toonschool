@@ -208,6 +208,11 @@ export default function OrganizationManagement() {
     return `${d.getFullYear()}. ${d.getMonth() + 1}. ${d.getDate()}.`
   }
 
+  const isOrgActive = (org: any) => {
+    if (!org.status) return true;
+    return org.status === 'active';
+  }
+
   const renderModalForm = (isEdit: boolean) => {
     return (
       <>
@@ -350,7 +355,9 @@ export default function OrganizationManagement() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {organizations.map((org) => (
+              {organizations.map((org) => {
+                const activeStatus = isOrgActive(org);
+                return (
                 <tr key={org.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-6 py-4 font-medium text-gray-900">{org.name || '미지정'}</td>
                   <td className="px-6 py-4 text-gray-500">{org.org_admin?.name || '미지정'}</td>
@@ -360,16 +367,16 @@ export default function OrganizationManagement() {
                   </td>
                   <td className="px-6 py-4 text-center">
                     <span className={`px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
-                      org.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+                      activeStatus ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
                     }`}>
-                      {org.status === 'active' ? '활성' : '비활성'}
+                      {activeStatus ? '활성' : '비활성'}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right font-medium text-gray-900">
                     {org.total_licenses?.toLocaleString() || 0}
                   </td>
                   <td className="px-6 py-4 text-right font-medium text-gray-500">
-                    {org.used_licenses?.toLocaleString() || 0}
+                    {(org.used_licenses ?? org.total_licenses)?.toLocaleString() || 0}
                   </td>
                   <td className="px-6 py-4 text-center text-gray-500 text-xs whitespace-nowrap">
                     {formatToKoreanDate(org.license_start_date)} <br/>
@@ -384,9 +391,9 @@ export default function OrganizationManagement() {
                         <Edit2 className="w-4 h-4" />
                         설정
                       </button>
-                      {org.status === 'active' ? (
+                      {activeStatus ? (
                         <button
-                          onClick={() => handleStatusChange(org, 'suspended')}
+                          onClick={() => handleStatusChange(org, 'inactive')}
                           className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-orange-600 bg-orange-50 rounded-lg hover:bg-orange-100 transition-colors whitespace-nowrap"
                         >
                           <Ban className="w-4 h-4" />
@@ -411,7 +418,7 @@ export default function OrganizationManagement() {
                     </div>
                   </td>
                 </tr>
-              ))}
+              )})}
               {organizations.length === 0 && !loading && (
                 <tr>
                   <td colSpan={9} className="px-6 py-12 text-center text-gray-500">
