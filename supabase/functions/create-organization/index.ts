@@ -163,7 +163,6 @@ serve(async (req) => {
       .insert({
         name: name,
         middle_admin_id: resolvedMiddleAdminId,
-        admin_profile_id: targetUserId,
         total_licenses: totalLicenses || 0,
         license_start_date: startDate || new Date().toISOString(),
         license_end_date: endDate || new Date().toISOString(),
