@@ -632,6 +632,25 @@ export const superAdminService = {
     if (error) throw error
   },
 
+  async uploadResourceFile(file: File): Promise<{ path: string; name: string; size: number; type: string }> {
+    const fileExt = file.name.split('.').pop()
+    const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${fileExt}`
+    const filePath = `uploads/${fileName}`
+
+    const { error } = await supabase.storage
+      .from('admin-resources')
+      .upload(filePath, file)
+
+    if (error) throw error
+
+    return {
+      path: filePath,
+      name: file.name,
+      size: file.size,
+      type: file.type
+    }
+  },
+
   async getResources() {
     const { data, error } = await supabase
       .from('admin_resources')
@@ -642,17 +661,41 @@ export const superAdminService = {
     return data
   },
 
-  async createResource(resourceData: { title: string; description: string; target_role: string; file_path: string }) {
-    // In a real app, we would upload to storage first and get file_path, 
-    // but here we just simulate it by saving to DB.
+  async createResource(resourceData: { 
+    title: string; 
+    description: string; 
+    target_role: string; 
+    status: string;
+    importance: string;
+    file_path: string;
+    file_name: string;
+    file_size: number;
+    file_type: string;
+  }) {
+    const { data: userData } = await supabase.auth.getUser()
     const { data, error } = await supabase
       .from('admin_resources')
       .insert([{
         ...resourceData,
-        created_by: (await supabase.auth.getUser()).data.user?.id
+        created_by: userData.user?.id
       }])
       .select()
       .single()
+    if (error) throw error
+    return data
+  },
+
+  async updateResource(resourceId: string, resourceData: any) {
+    const { data, error } = await supabase
+      .from('admin_resources')
+      .update({
+        ...resourceData,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', resourceId)
+      .select()
+      .single()
+    
     if (error) throw error
     return data
   },
@@ -668,8 +711,9 @@ export const superAdminService = {
     if (error) throw error
 
     // Log deletion
+    const { data: userData } = await supabase.auth.getUser()
     await supabase.from('audit_logs').insert([{
-      actor_id: (await supabase.auth.getUser()).data.user?.id,
+      actor_id: userData.user?.id,
       action: 'DELETE_RESOURCE',
       target_table: 'admin_resources',
       target_id: resourceId
