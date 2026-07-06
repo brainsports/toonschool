@@ -313,11 +313,31 @@ export const superAdminService = {
 
     const orgMap = new Map(orgs.map(o => [o.id, o]))
 
+    // 선생님 배정 이용권 가져오기
+    const teacherIds = teachers.map(t => t.id)
+    let allocationsMap = new Map()
+    if (teacherIds.length > 0) {
+      const { data: allocationsData } = await supabase
+        .from('license_allocations')
+        .select('*')
+        .in('to_user_id', teacherIds)
+      
+      if (allocationsData) {
+        allocationsData.forEach(a => {
+          allocationsMap.set(a.to_user_id, a)
+        })
+      }
+    }
+
     return teachers.map(teacher => {
       const org = teacher.organization_id ? orgMap.get(teacher.organization_id) : null
+      const allocation = allocationsMap.get(teacher.id)
       return {
         ...teacher,
-        organization: org || null
+        organization: org || null,
+        allocated_licenses: allocation?.quantity || 0,
+        license_start_date: allocation?.license_start_date || null,
+        license_end_date: allocation?.license_end_date || null
       }
     })
   },
@@ -361,7 +381,7 @@ export const superAdminService = {
       .eq('id', userId)
 
     if (profileError) {
-      await supabase.from('profiles').insert({
+      const { error: insertError } = await supabase.from('profiles').insert({
         id: userId,
         email: cleanEmail,
         name: teacherData.name,
@@ -371,6 +391,24 @@ export const superAdminService = {
         plan_type: 'free',
         monthly_quota: 0
       })
+      if (insertError) throw insertError
+    }
+
+    // 이용권 배정
+    if (teacherData.licenseTotal > 0 || teacherData.licenseStart || teacherData.licenseEnd) {
+      const { error: allocError } = await supabase
+        .from('license_allocations')
+        .insert({
+          organization_id: teacherData.organization_id,
+          to_user_id: userId,
+          quantity: teacherData.licenseTotal || 0,
+          license_start_date: teacherData.licenseStart || null,
+          license_end_date: teacherData.licenseEnd || null
+        })
+      
+      if (allocError) {
+        console.error('[Teacher Create] License allocation error:', allocError)
+      }
     }
   },
 
@@ -383,6 +421,53 @@ export const superAdminService = {
       .single()
     if (error) throw error
     return data
+  },
+
+  async deleteTeacher(teacherId: string) {
+    const { data, error } = await supabase
+      .from('profiles')
+      .update({ status: 'deleted' })
+      .eq('id', teacherId)
+      .select()
+      .single()
+    
+    if (error) {
+      console.error('[선생님 삭제] 에러:', error)
+      throw new Error('삭제 처리 중 문제가 발생했습니다.')
+    }
+    return data
+  },
+
+  async updateTeacherLicense(teacherId: string, orgId: string, licenseTotal: number, startDate: string, endDate: string) {
+    const { data: existing } = await supabase
+      .from('license_allocations')
+      .select('id')
+      .eq('to_user_id', teacherId)
+      .single()
+
+    if (existing) {
+      const { error } = await supabase
+        .from('license_allocations')
+        .update({
+          quantity: licenseTotal,
+          license_start_date: startDate || null,
+          license_end_date: endDate || null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', existing.id)
+      if (error) throw error
+    } else {
+      const { error } = await supabase
+        .from('license_allocations')
+        .insert({
+          organization_id: orgId,
+          to_user_id: teacherId,
+          quantity: licenseTotal,
+          license_start_date: startDate || null,
+          license_end_date: endDate || null
+        })
+      if (error) throw error
+    }
   },
 
   async getPendingUsers() {

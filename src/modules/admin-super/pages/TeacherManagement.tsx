@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { superAdminService } from '../services/superAdminService'
-import { Edit2, Users, Plus, Building2 } from 'lucide-react'
+import { Edit2, Users, Plus, Building2, Ticket, Ban, Play, Trash2 } from 'lucide-react'
+import ConfirmModal from '../../../shared/components/ConfirmModal'
 
 export default function TeacherManagement() {
   const [teachers, setTeachers] = useState<any[]>([])
@@ -13,6 +14,9 @@ export default function TeacherManagement() {
   
   // Edit Form state
   const [status, setStatus] = useState('active')
+  const [licenseTotal, setLicenseTotal] = useState(0)
+  const [licenseStart, setLicenseStart] = useState('')
+  const [licenseEnd, setLicenseEnd] = useState('')
 
   // Create Form state
   const [createName, setCreateName] = useState('')
@@ -20,6 +24,27 @@ export default function TeacherManagement() {
   const [createPassword, setCreatePassword] = useState('')
   const [createOrganizationId, setCreateOrganizationId] = useState('')
   const [createStatus, setCreateStatus] = useState('active')
+  const [createLicenseTotal, setCreateLicenseTotal] = useState(0)
+  const [createLicenseStart, setCreateLicenseStart] = useState('')
+  const [createLicenseEnd, setCreateLicenseEnd] = useState('')
+
+  // Confirm Modal state
+  const [confirmConfig, setConfirmConfig] = useState<{
+    open: boolean
+    title: string
+    description: string
+    confirmText?: string
+    variant?: 'warning' | 'danger' | 'default'
+    onConfirm: () => void
+  }>({
+    open: false,
+    title: '',
+    description: '',
+    onConfirm: () => {}
+  })
+  const [isConfirming, setIsConfirming] = useState(false)
+
+  const closeConfirm = () => setConfirmConfig(prev => ({ ...prev, open: false }))
 
   useEffect(() => {
     fetchData()
@@ -31,7 +56,8 @@ export default function TeacherManagement() {
         superAdminService.getTeachers(),
         superAdminService.getAllOrganizations()
       ])
-      setTeachers(teachersData)
+      // Filter out deleted teachers
+      setTeachers(teachersData.filter(t => t.status !== 'deleted'))
       setOrganizations(orgsData)
     } catch (error) {
       console.error('Failed to fetch data:', error)
@@ -43,6 +69,16 @@ export default function TeacherManagement() {
   const openEditModal = (teacher: any) => {
     setSelectedTeacher(teacher)
     setStatus(teacher.status || 'active')
+    setLicenseTotal(teacher.allocated_licenses || 0)
+    
+    const formatDate = (dateStr: string) => {
+      if (!dateStr) return ''
+      const d = new Date(dateStr)
+      return d.toISOString().split('T')[0]
+    }
+    
+    setLicenseStart(formatDate(teacher.license_start_date))
+    setLicenseEnd(formatDate(teacher.license_end_date))
     setIsModalOpen(true)
   }
 
@@ -52,21 +88,43 @@ export default function TeacherManagement() {
     setCreatePassword('')
     setCreateOrganizationId('')
     setCreateStatus('active')
+    setCreateLicenseTotal(0)
+    setCreateLicenseStart('')
+    setCreateLicenseEnd('')
     setIsCreateModalOpen(true)
   }
 
-  const handleEditSubmit = async (e: React.FormEvent) => {
+  const handleEditSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!selectedTeacher) return
 
-    try {
-      await superAdminService.updateTeacherStatus(selectedTeacher.id, status)
-      alert('설정이 저장되었습니다.')
-      setIsModalOpen(false)
-      fetchData()
-    } catch (error: any) {
-      alert(error.message)
-    }
+    setConfirmConfig({
+      open: true,
+      title: '선생님 정보를 변경하시겠습니까?',
+      description: '상태 및 배정 이용권 설정이 즉시 반영됩니다.',
+      confirmText: '변경하기',
+      variant: 'warning',
+      onConfirm: async () => {
+        setIsConfirming(true)
+        try {
+          await superAdminService.updateTeacherStatus(selectedTeacher.id, status)
+          await superAdminService.updateTeacherLicense(
+            selectedTeacher.id,
+            selectedTeacher.organization_id,
+            licenseTotal,
+            licenseStart ? new Date(licenseStart).toISOString() : new Date().toISOString(),
+            licenseEnd ? new Date(licenseEnd).toISOString() : new Date().toISOString()
+          )
+          setIsModalOpen(false)
+          fetchData()
+        } catch (error: any) {
+          alert(error.message)
+        } finally {
+          setIsConfirming(false)
+          closeConfirm()
+        }
+      }
+    })
   }
 
   const handleCreateSubmit = async (e: React.FormEvent) => {
@@ -82,7 +140,10 @@ export default function TeacherManagement() {
         email: createEmail,
         password: createPassword,
         organization_id: createOrganizationId,
-        status: createStatus
+        status: createStatus,
+        licenseTotal: createLicenseTotal,
+        licenseStart: createLicenseStart ? new Date(createLicenseStart).toISOString() : null,
+        licenseEnd: createLicenseEnd ? new Date(createLicenseEnd).toISOString() : null
       })
       alert('신규 선생님이 성공적으로 추가되었습니다.')
       setIsCreateModalOpen(false)
@@ -90,6 +151,51 @@ export default function TeacherManagement() {
     } catch (error: any) {
       alert(error.message)
     }
+  }
+
+  const handleStatusChange = (teacher: any, newStatus: 'active' | 'inactive') => {
+    const isSuspend = newStatus === 'inactive'
+    setConfirmConfig({
+      open: true,
+      title: isSuspend ? '정말 이 선생님의 이용을 정지하시겠습니까?' : '정말 이 선생님의 이용을 다시 시작하시겠습니까?',
+      description: isSuspend ? '이 선생님 계정은 더 이상 서비스를 이용할 수 없습니다.' : '이 선생님 계정은 다시 서비스를 이용할 수 있습니다.',
+      confirmText: isSuspend ? '이용정지' : '이용개시',
+      variant: 'warning',
+      onConfirm: async () => {
+        setIsConfirming(true)
+        try {
+          await superAdminService.updateTeacherStatus(teacher.id, newStatus)
+          fetchData()
+        } catch (error: any) {
+          alert(error.message)
+        } finally {
+          setIsConfirming(false)
+          closeConfirm()
+        }
+      }
+    })
+  }
+
+  const handleDelete = (teacher: any) => {
+    setConfirmConfig({
+      open: true,
+      title: '정말 이 선생님을 삭제하시겠습니까?',
+      description: '이 작업은 되돌릴 수 없습니다.',
+      confirmText: '삭제',
+      variant: 'danger',
+      onConfirm: async () => {
+        setIsConfirming(true)
+        try {
+          await superAdminService.deleteTeacher(teacher.id)
+          fetchData()
+        } catch (error: any) {
+          alert(error.message)
+        } finally {
+          setIsConfirming(false)
+          closeConfirm()
+        }
+      }
+    })
   }
 
   return (
@@ -117,6 +223,8 @@ export default function TeacherManagement() {
                 <th className="px-6 py-4 font-semibold">이메일</th>
                 <th className="px-6 py-4 font-semibold">담당 중간관리자</th>
                 <th className="px-6 py-4 font-semibold">소속 기관</th>
+                <th className="px-6 py-4 font-semibold text-right">배정 이용권</th>
+                <th className="px-6 py-4 font-semibold text-center">이용기간</th>
                 <th className="px-6 py-4 font-semibold text-center">상태</th>
                 <th className="px-6 py-4 font-semibold text-center">관리</th>
               </tr>
@@ -133,6 +241,13 @@ export default function TeacherManagement() {
                       {teacher.organization?.name || '소속 없음'}
                     </div>
                   </td>
+                  <td className="px-6 py-4 text-right font-medium text-gray-900">
+                    {teacher.allocated_licenses?.toLocaleString() || 0}
+                  </td>
+                  <td className="px-6 py-4 text-center text-gray-500 text-xs">
+                    {teacher.license_start_date ? new Date(teacher.license_start_date).toLocaleDateString() : '-'} <br/>
+                    ~ {teacher.license_end_date ? new Date(teacher.license_end_date).toLocaleDateString() : '-'}
+                  </td>
                   <td className="px-6 py-4 text-center">
                     <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
                       teacher.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
@@ -141,19 +256,45 @@ export default function TeacherManagement() {
                     </span>
                   </td>
                   <td className="px-6 py-4 text-center">
-                    <button
-                      onClick={() => openEditModal(teacher)}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-[#6B4EFE] bg-[#F4F2FF] rounded-lg hover:bg-[#EAE6FF] transition-colors"
-                    >
-                      <Edit2 className="w-4 h-4" />
-                      설정
-                    </button>
+                    <div className="flex items-center justify-center gap-2">
+                      <button
+                        onClick={() => openEditModal(teacher)}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-[#6B4EFE] bg-[#F4F2FF] rounded-lg hover:bg-[#EAE6FF] transition-colors"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                        설정
+                      </button>
+                      {teacher.status === 'active' ? (
+                        <button
+                          onClick={() => handleStatusChange(teacher, 'inactive')}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-orange-600 bg-orange-50 rounded-lg hover:bg-orange-100 transition-colors"
+                        >
+                          <Ban className="w-4 h-4" />
+                          이용정지
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleStatusChange(teacher, 'active')}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-green-600 bg-green-50 rounded-lg hover:bg-green-100 transition-colors"
+                        >
+                          <Play className="w-4 h-4" />
+                          이용개시
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleDelete(teacher)}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        삭제
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
               {teachers.length === 0 && !loading && (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
                     등록된 선생님이 없습니다.
                   </td>
                 </tr>
@@ -168,13 +309,13 @@ export default function TeacherManagement() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl w-full max-w-md overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
-              <h3 className="text-lg font-bold text-gray-900">선생님 상태 설정</h3>
+              <h3 className="text-lg font-bold text-gray-900">선생님 설정</h3>
               <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600">
                 ✕
               </button>
             </div>
             
-            <form onSubmit={handleEditSubmit} className="p-6 space-y-4">
+            <form onSubmit={handleEditSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">이름</label>
                 <input 
@@ -206,7 +347,7 @@ export default function TeacherManagement() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">상태 (중단/활성)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">상태</label>
                 <select 
                   value={status}
                   onChange={(e) => setStatus(e.target.value)}
@@ -215,6 +356,47 @@ export default function TeacherManagement() {
                   <option value="active">활성</option>
                   <option value="inactive">비활성 (중단)</option>
                 </select>
+              </div>
+
+              <div className="pt-4 border-t border-gray-100">
+                <h4 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-1">
+                  <Ticket className="w-4 h-4 text-[#6B4EFE]" />
+                  이용권 설정
+                </h4>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">배정 수량</label>
+                    <input 
+                      type="number" 
+                      min="0"
+                      value={licenseTotal}
+                      onChange={(e) => setLicenseTotal(Number(e.target.value))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6B4EFE] focus:border-[#6B4EFE]"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">시작일</label>
+                      <input 
+                        type="date" 
+                        required
+                        value={licenseStart}
+                        onChange={(e) => setLicenseStart(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6B4EFE] focus:border-[#6B4EFE]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">종료일</label>
+                      <input 
+                        type="date" 
+                        required
+                        value={licenseEnd}
+                        onChange={(e) => setLicenseEnd(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6B4EFE] focus:border-[#6B4EFE]"
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div className="pt-4 flex justify-end gap-2">
@@ -248,7 +430,7 @@ export default function TeacherManagement() {
               </button>
             </div>
             
-            <form onSubmit={handleCreateSubmit} className="p-6 space-y-4">
+            <form onSubmit={handleCreateSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">이름</label>
                 <input 
@@ -314,6 +496,47 @@ export default function TeacherManagement() {
                 </select>
               </div>
 
+              <div className="pt-4 border-t border-gray-100">
+                <h4 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-1">
+                  <Ticket className="w-4 h-4 text-[#6B4EFE]" />
+                  초기 이용권 배정
+                </h4>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">배정 수량</label>
+                    <input 
+                      type="number" 
+                      min="0"
+                      value={createLicenseTotal}
+                      onChange={(e) => setCreateLicenseTotal(Number(e.target.value))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6B4EFE] focus:border-[#6B4EFE]"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">시작일</label>
+                      <input 
+                        type="date" 
+                        required
+                        value={createLicenseStart}
+                        onChange={(e) => setCreateLicenseStart(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6B4EFE] focus:border-[#6B4EFE]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">종료일</label>
+                      <input 
+                        type="date" 
+                        required
+                        value={createLicenseEnd}
+                        onChange={(e) => setCreateLicenseEnd(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6B4EFE] focus:border-[#6B4EFE]"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <div className="pt-4 flex justify-end gap-2">
                 <button
                   type="button"
@@ -333,6 +556,17 @@ export default function TeacherManagement() {
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        open={confirmConfig.open}
+        title={confirmConfig.title}
+        description={confirmConfig.description}
+        confirmText={confirmConfig.confirmText}
+        variant={confirmConfig.variant}
+        loading={isConfirming}
+        onConfirm={confirmConfig.onConfirm}
+        onCancel={closeConfirm}
+      />
     </div>
   )
 }
