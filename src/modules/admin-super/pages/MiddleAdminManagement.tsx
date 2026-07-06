@@ -7,6 +7,7 @@ export default function MiddleAdminManagement() {
   const [loading, setLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+  const [isCreating, setIsCreating] = useState(false)
   const [selectedAdmin, setSelectedAdmin] = useState<any>(null)
   
   // Edit Form state
@@ -96,6 +97,7 @@ export default function MiddleAdminManagement() {
     }
 
     try {
+      setIsCreating(true)
       await superAdminService.createMiddleAdmin({
         name: createName,
         email: createEmail,
@@ -110,6 +112,8 @@ export default function MiddleAdminManagement() {
       fetchAdmins()
     } catch (error: any) {
       alert(error.message)
+    } finally {
+      setIsCreating(false)
     }
   }
 
@@ -400,9 +404,12 @@ export default function MiddleAdminManagement() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-sm font-medium text-white bg-[#6B4EFE] rounded-lg hover:bg-[#5839F6]"
+                  disabled={isCreating}
+                  className={`px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors ${
+                    isCreating ? 'bg-gray-400 cursor-not-allowed' : 'bg-[#6B4EFE] hover:bg-[#5839F6]'
+                  }`}
                 >
-                  생성하기
+                  {isCreating ? '생성 중...' : '생성하기'}
                 </button>
               </div>
             </form>

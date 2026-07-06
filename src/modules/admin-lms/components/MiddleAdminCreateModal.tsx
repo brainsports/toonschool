@@ -185,9 +185,9 @@ export default function MiddleAdminCreateModal({ isOpen, onClose, onSuccess }: M
             <button 
               type="submit" 
               disabled={loading}
-              style={{ padding: '10px 20px', borderRadius: 8, background: '#0056b3', color: 'white', border: 'none', fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer' }}
+              style={{ padding: '10px 20px', borderRadius: 8, background: loading ? '#ccc' : '#0056b3', color: 'white', border: 'none', fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer' }}
             >
-              {loading ? '저장 중...' : '계정 생성하기'}
+              {loading ? '생성 중...' : '계정 생성하기'}
             </button>
           </div>
         </form>

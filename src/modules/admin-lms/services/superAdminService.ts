@@ -14,7 +14,10 @@ const translateError = (error: any): string => {
   if (msg.includes('Password should be at least')) {
     return '비밀번호는 최소 6자 이상이어야 합니다.'
   }
-  return `오류가 발생했습니다: ${msg}`
+  if (msg.includes('429') || msg.toLowerCase().includes('rate limit') || msg.toLowerCase().includes('too many requests')) {
+    return '계정 생성 요청이 너무 많아 잠시 제한되었습니다. 몇 분 후 다시 시도해 주세요.'
+  }
+  return `계정 생성 중 문제가 발생했습니다. 가능한 원인: 잘못된 데이터, 또는 네트워크 문제일 수 있습니다. (상세: ${msg})`
 }
 
 const validateEmail = (email: string) => {

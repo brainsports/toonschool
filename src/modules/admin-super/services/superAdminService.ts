@@ -27,7 +27,10 @@ const translateError = (error: any): string => {
   if (msg.includes('fetch') || msg.includes('failed to fetch')) {
     return '서버와 통신하는 중 문제가 발생했습니다.'
   }
-  return '알 수 없는 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.'
+  if (msg.includes('429') || msg.toLowerCase().includes('rate limit') || msg.toLowerCase().includes('too many requests')) {
+    return '계정 생성 요청이 너무 많아 잠시 제한되었습니다. 몇 분 후 다시 시도해 주세요.'
+  }
+  return `계정 생성 중 문제가 발생했습니다. 가능한 원인: 잘못된 데이터, 또는 서버 권한 문제일 수 있습니다. (상세: ${msg})`
 }
 
 const validateEmail = (email: string) => {
