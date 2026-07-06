@@ -10,6 +10,9 @@ export default function OrganizationManagement() {
   
   // Form state
   const [name, setName] = useState('')
+  const [adminName, setAdminName] = useState('')
+  const [adminEmail, setAdminEmail] = useState('')
+  const [adminPassword, setAdminPassword] = useState('')
   const [middleAdminId, setMiddleAdminId] = useState('')
   const [totalLicenses, setTotalLicenses] = useState(0)
   const [startDate, setStartDate] = useState('')
@@ -36,6 +39,9 @@ export default function OrganizationManagement() {
 
   const openCreateModal = () => {
     setName('')
+    setAdminName('')
+    setAdminEmail('')
+    setAdminPassword('')
     setMiddleAdminId('')
     setTotalLicenses(0)
     setStartDate('')
@@ -53,10 +59,13 @@ export default function OrganizationManagement() {
     try {
       await superAdminService.createOrganization({
         name,
-        middle_admin_id: middleAdminId,
-        total_licenses: totalLicenses,
-        license_start_date: startDate ? new Date(startDate).toISOString() : new Date().toISOString(),
-        license_end_date: endDate ? new Date(endDate).toISOString() : new Date().toISOString()
+        adminName,
+        adminEmail,
+        adminPassword,
+        middleAdminId,
+        totalLicenses,
+        startDate: startDate ? new Date(startDate).toISOString() : new Date().toISOString(),
+        endDate: endDate ? new Date(endDate).toISOString() : new Date().toISOString()
       })
       alert('기관이 생성되었습니다.')
       setIsModalOpen(false)
@@ -138,6 +147,43 @@ export default function OrganizationManagement() {
                   onChange={(e) => setName(e.target.value)}
                   required
                   placeholder="예) 강남초등학교"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6B4EFE] focus:border-[#6B4EFE]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">기관관리자 이름</label>
+                <input 
+                  type="text" 
+                  value={adminName}
+                  onChange={(e) => setAdminName(e.target.value)}
+                  required
+                  placeholder="예) 홍길동"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6B4EFE] focus:border-[#6B4EFE]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">기관관리자 이메일</label>
+                <input 
+                  type="email" 
+                  value={adminEmail}
+                  onChange={(e) => setAdminEmail(e.target.value)}
+                  required
+                  placeholder="예) admin@school.com"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6B4EFE] focus:border-[#6B4EFE]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">기관관리자 초기 비밀번호</label>
+                <input 
+                  type="password" 
+                  value={adminPassword}
+                  onChange={(e) => setAdminPassword(e.target.value)}
+                  required
+                  minLength={6}
+                  placeholder="6자 이상 입력"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6B4EFE] focus:border-[#6B4EFE]"
                 />
               </div>

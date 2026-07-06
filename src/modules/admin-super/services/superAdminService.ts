@@ -274,18 +274,27 @@ export const superAdminService = {
     const { data, error } = await supabase
       .from('organizations')
       .select('*, profiles:middle_admin_id(name, email)')
+      .neq('status', 'deleted')
       .order('created_at', { ascending: false })
     if (error) throw error
     return data
   },
 
-  async createOrganization(orgData: { name: string; middle_admin_id: string; total_licenses: number; license_start_date: string; license_end_date: string }) {
-    const { data, error } = await supabase
-      .from('organizations')
-      .insert([orgData])
-      .select()
-      .single()
-    if (error) throw error
+  async createOrganization(orgData: any) {
+    const { data, error } = await supabase.functions.invoke('create-organization', {
+      body: orgData
+    })
+
+    if (error) {
+      console.error('[기관 생성] Edge Function 에러:', error)
+      const errorMessage = error.context?.error || error.message || '알 수 없는 오류가 발생했습니다.'
+      throw new Error(`기관 생성 중 문제가 발생했습니다: ${errorMessage}`)
+    }
+
+    if (data?.error) {
+      throw new Error(data.error)
+    }
+
     return data
   },
 
