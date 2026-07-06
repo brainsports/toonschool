@@ -87,113 +87,34 @@ export const superAdminService = {
   },
 
   async createMiddleAdmin(adminData: any) {
-    const url = import.meta.env.VITE_SUPABASE_URL
-    const key = import.meta.env.VITE_SUPABASE_ANON_KEY
-    if (!url || !key) throw new Error("Supabase 환경 변수가 없습니다.")
-
     const cleanEmail = adminData.email.trim().toLowerCase()
     validateEmail(cleanEmail)
 
-    // 이메일 중복 및 역할 검증
-    const { data: existingProfiles, error: checkError } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('email', cleanEmail)
-      
-    if (checkError) {
-      throw new Error('이메일 중복 확인 중 오류가 발생했습니다.')
-    }
-    
-    if (existingProfiles && existingProfiles.length > 0) {
-      const existingRole = existingProfiles[0].role
-      if (existingRole === 'super_admin') {
-        throw new Error('이미 수퍼관리자로 등록된 이메일입니다. 다른 이메일을 입력해 주세요.')
-      } else if (existingRole === 'middle_admin') {
-        throw new Error('이미 중간관리자로 등록된 이메일입니다.')
-      } else {
-        throw new Error('이미 다른 역할로 등록된 이메일입니다. 다른 이메일을 입력해 주세요.')
-      }
-    }
-
-    const tempClient = createClient(url, key, {
-      auth: { persistSession: false, autoRefreshToken: false }
-    })
-
-    const { data: authData, error: authError } = await tempClient.auth.signUp({
-      email: cleanEmail,
-      password: adminData.password,
-      options: {
-        data: {
-          name: adminData.name,
-          role: 'middle_admin'
-        }
+    // Edge Function 호출
+    const { data, error } = await supabase.functions.invoke('create-admin-user', {
+      body: {
+        email: cleanEmail,
+        password: adminData.password,
+        name: adminData.name,
+        status: adminData.status,
+        licenseTotal: adminData.licenseTotal,
+        licenseStart: adminData.licenseStart,
+        licenseEnd: adminData.licenseEnd
       }
     })
 
-    if (authError) {
-      console.error('[중간관리자 생성] Auth 생성 실패:', authError)
-      if (authError.status === 429) {
-        throw new Error('계정 생성 요청이 너무 많아 잠시 제한되었습니다. 몇 분 후 다시 시도해 주세요.')
-      }
-      throw new Error(translateError(authError))
+    if (error) {
+      console.error('[중간관리자 생성] Edge Function 에러:', error)
+      // Edge Function이 반환한 에러 메시지 표시
+      const errorMessage = error.context?.error || error.message || '알 수 없는 오류가 발생했습니다.'
+      throw new Error(`계정 생성 중 문제가 발생했습니다: ${errorMessage}`)
     }
-    if (!authData.user) throw new Error("계정 생성에 실패했습니다. 다시 시도해 주세요.")
 
-    const userId = authData.user.id
-
-    try {
-      // 1. 프로필 업데이트 시도
-      const { data: updateData, error: profileUpdateError } = await supabase
-        .from('profiles')
-        .update({
-          name: adminData.name,
-          role: 'middle_admin',
-          status: adminData.status || 'active'
-        })
-        .eq('id', userId)
-        .select()
-
-      // 업데이트된 행이 없다면(신규 계정) insert 수행
-      if (profileUpdateError || !updateData || updateData.length === 0) {
-        const { error: profileInsertError } = await supabase.from('profiles').insert({
-          id: userId,
-          email: cleanEmail,
-          name: adminData.name,
-          role: 'middle_admin',
-          status: adminData.status || 'active',
-          plan_type: 'free',
-          monthly_quota: 0
-        })
-
-        if (profileInsertError) {
-          console.error('[중간관리자 생성] profiles 저장 실패:', profileInsertError)
-          throw new Error('profiles_failed')
-        }
-      }
-
-      // 2. middle_admins 및 이용권 정보 저장 (직접 insert)
-      const { error: middleAdminInsertError } = await supabase.from('middle_admins').insert({
-        profile_id: userId,
-        display_name: adminData.name,
-        status: adminData.status || 'active',
-        license_total: adminData.licenseTotal || 0,
-        license_start: adminData.licenseStart || new Date().toISOString(),
-        license_end: adminData.licenseEnd || new Date().toISOString()
-      })
-
-      if (middleAdminInsertError) {
-        console.error('[중간관리자 생성] middle_admins 저장 실패:', middleAdminInsertError)
-        throw new Error('middle_admins_failed')
-      }
-    } catch (err: any) {
-      if (err.message === 'profiles_failed') {
-        throw new Error("Auth 계정은 생성되었으나 프로필(profiles) 정보 저장에 실패했습니다. Supabase 테이블과 RLS 정책을 확인해 주세요.")
-      }
-      if (err.message === 'middle_admins_failed') {
-        throw new Error("프로필은 생성되었으나 중간관리자(middle_admins) 상세 정보 저장에 실패했습니다. Supabase 테이블을 확인해 주세요.")
-      }
-      throw err
+    if (data?.error) {
+      throw new Error(data.error)
     }
+
+    return data
   },
 
   async getTeachers() {
