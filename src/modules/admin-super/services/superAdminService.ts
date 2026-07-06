@@ -42,26 +42,109 @@ const validateEmail = (email: string) => {
 
 export const superAdminService = {
   async getDashboardStats(): Promise<SuperDashboardStats> {
-    const { data, error } = await supabase.rpc('get_super_dashboard_stats')
-    if (error) throw error
-    return data as SuperDashboardStats
+    try {
+      // 1. 중간관리자 (middle_admins)
+      const { data: middleAdmins } = await supabase
+        .from('middle_admins')
+        .select('status')
+        .neq('status', 'deleted')
+      
+      const middleTotal = middleAdmins?.length || 0
+      const middleActive = middleAdmins?.filter(a => a.status === 'active').length || 0
+
+      // 2. 기관관리자 (organizations)
+      const { data: orgs } = await supabase
+        .from('organizations')
+        .select('status')
+        .neq('status', 'deleted')
+        
+      const orgTotal = orgs?.length || 0
+      const orgPending = orgs?.filter(a => a.status === 'pending' || a.status === 'inactive').length || 0
+
+      // 3. 선생님 (profiles where role = teacher)
+      const { data: teachers } = await supabase
+        .from('profiles')
+        .select('status')
+        .eq('role', 'teacher')
+        .neq('status', 'deleted')
+        
+      const teacherTotal = teachers?.length || 0
+      const teacherPending = teachers?.filter(a => a.status === 'pending').length || 0
+
+      // 4. 이용권 현황
+      // 중간관리자에게 배정된 총 이용권
+      const { data: middleAdminsLicenses } = await supabase
+        .from('middle_admins')
+        .select('license_total')
+        .neq('status', 'deleted')
+        
+      const totalLicenses = middleAdminsLicenses?.reduce((sum, admin) => sum + (admin.license_total || 0), 0) || 0
+      
+      // 기관에 배정된 총 이용권
+      const { data: orgLicenses } = await supabase
+        .from('organizations')
+        .select('total_licenses')
+        .neq('status', 'deleted')
+        
+      const usedLicenses = orgLicenses?.reduce((sum, org) => sum + (org.total_licenses || 0), 0) || 0
+      const remainingLicenses = totalLicenses - usedLicenses
+
+      // 5. 등록 자료 수
+      const { count: resourceCount } = await supabase
+        .from('admin_resources')
+        .select('*', { count: 'exact', head: true })
+        .is('deleted_at', null)
+
+      return {
+        middle_admins: { total: middleTotal, active: middleActive },
+        org_admins: { total: orgTotal, pending: orgPending },
+        teachers: { total: teacherTotal, pending: teacherPending },
+        licenses: { total: totalLicenses, used: usedLicenses, remaining: remainingLicenses },
+        notifications: { recent_count: 0 },
+        resources: { total: resourceCount || 0 }
+      }
+    } catch (error) {
+      console.error('Failed to get dashboard stats:', error)
+      return {
+        middle_admins: { total: 0, active: 0 },
+        org_admins: { total: 0, pending: 0 },
+        teachers: { total: 0, pending: 0 },
+        licenses: { total: 0, used: 0, remaining: 0 },
+        notifications: { recent_count: 0 },
+        resources: { total: 0 }
+      }
+    }
   },
 
   async getMiddleAdmins() {
     const { data, error } = await supabase
       .from('middle_admins')
-      .select('*, profiles:profile_id(name, email)')
+      .select('*')
       .neq('status', 'deleted')
       .order('created_at', { ascending: false })
-    if (error) throw error
+      
+    if (error) {
+      console.error("Fetch middle_admins error:", error);
+      throw error;
+    }
     
-    return data.map((admin: any) => {
-      const profile = Array.isArray(admin.profiles) ? admin.profiles[0] : admin.profiles;
-      return {
-        ...admin,
-        profiles: profile || {}
-      };
-    });
+    if (data && data.length > 0) {
+      const profileIds = data.map(admin => admin.profile_id).filter(id => id);
+      if (profileIds.length > 0) {
+        const { data: profilesData } = await supabase
+          .from('profiles')
+          .select('id, name, email')
+          .in('id', profileIds);
+          
+        const profileMap = new Map(profilesData?.map(p => [p.id, p]));
+        return data.map(admin => ({
+          ...admin,
+          profiles: admin.profile_id ? profileMap.get(admin.profile_id) : {}
+        }));
+      }
+    }
+    
+    return data || [];
   },
 
   async assignUserRole(userId: string, role: string, orgId?: string | null, middleAdminId?: string | null) {
@@ -273,11 +356,32 @@ export const superAdminService = {
   async getAllOrganizations() {
     const { data, error } = await supabase
       .from('organizations')
-      .select('*, profiles:middle_admin_id(name, email)')
+      .select('*')
       .neq('status', 'deleted')
       .order('created_at', { ascending: false })
-    if (error) throw error
-    return data
+      
+    if (error) {
+      console.error("Fetch organizations error:", error);
+      throw error;
+    }
+    
+    if (data && data.length > 0) {
+      const adminIds = data.map(org => org.middle_admin_id).filter(id => id);
+      if (adminIds.length > 0) {
+         const { data: profilesData } = await supabase
+           .from('profiles')
+           .select('id, name, email')
+           .in('id', adminIds);
+         
+         const profileMap = new Map(profilesData?.map(p => [p.id, p]));
+         return data.map(org => ({
+           ...org,
+           profiles: org.middle_admin_id ? profileMap.get(org.middle_admin_id) : null
+         }));
+      }
+    }
+    
+    return data || [];
   },
 
   async createOrganization(orgData: any) {
