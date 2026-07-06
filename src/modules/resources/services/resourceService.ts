@@ -23,7 +23,7 @@ export const resourceService = {
         .select('*')
         .eq('status', 'published')
         .is('deleted_at', null)
-        .in('target_role', ['all', role])
+        .or(`target_role.in.("all","${role}"),target_roles.cs.{"all"},target_roles.cs.{"${role}"}`)
         .order('created_at', { ascending: false })
 
       if (error) {

@@ -16,6 +16,7 @@ const getMenuItems = (role: string) => {
         { label: '선생님관리', path: '/admin/lms/org-teachers' },
         { label: '이용권관리', path: '/admin/lms/licenses' },
         { label: '관리자정보', path: '/admin/lms/profile' },
+        { label: '자료실', path: '/admin/lms/resources' },
       ];
     case 'middle_admin':
       return [
