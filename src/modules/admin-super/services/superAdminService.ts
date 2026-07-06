@@ -285,16 +285,29 @@ export const superAdminService = {
       
       const middleAdminIds = orgs.map(o => o.middle_admin_id).filter(id => id)
       if (middleAdminIds.length > 0) {
-         const { data: adminData } = await supabase
-           .from('profiles')
-           .select('id, name')
+         const { data: middleAdminsData } = await supabase
+           .from('middle_admins')
+           .select('id, profile_id, display_name')
            .in('id', middleAdminIds)
-           
-         const adminMap = new Map(adminData?.map(a => [a.id, a.name]))
-         orgs = orgs.map(o => ({
-           ...o,
-           middle_admin_name: adminMap.get(o.middle_admin_id) || '미정'
-         }))
+
+         if (middleAdminsData && middleAdminsData.length > 0) {
+           const profileIds = middleAdminsData.map(m => m.profile_id).filter(Boolean)
+           const { data: profilesData } = await supabase
+             .from('profiles')
+             .select('id, name')
+             .in('id', profileIds)
+
+           const profileMap = new Map(profilesData?.map(p => [p.id, p.name]))
+           const adminNameMap = new Map(middleAdminsData.map(m => [
+             m.id, 
+             m.display_name || (m.profile_id ? profileMap.get(m.profile_id) : '미정')
+           ]))
+
+           orgs = orgs.map(o => ({
+             ...o,
+             middle_admin_name: adminNameMap.get(o.middle_admin_id) || '미정'
+           }))
+         }
       }
     }
 

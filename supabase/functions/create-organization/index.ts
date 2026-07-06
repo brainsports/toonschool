@@ -59,7 +59,42 @@ serve(async (req) => {
       throw new Error('요청 검증: 필수 정보가 누락되었습니다.')
     }
 
-    // 3. 이메일 중복 확인 (profiles 기준)
+    // 3. 중간관리자 ID 검증 및 변환
+    let resolvedMiddleAdminId = middleAdminId
+    
+    // 먼저 middleAdminId가 middle_admins.id인지 확인
+    const { data: adminById, error: adminByIdError } = await adminClient
+      .from('middle_admins')
+      .select('id')
+      .eq('id', middleAdminId)
+      .maybeSingle()
+
+    if (adminByIdError) {
+      throw new Error(`중간관리자 조회: ${adminByIdError.message}`)
+    }
+
+    if (adminById) {
+      resolvedMiddleAdminId = adminById.id
+    } else {
+      // id로 존재하지 않으면 profile_id로 검색
+      const { data: adminByProfile, error: adminByProfileError } = await adminClient
+        .from('middle_admins')
+        .select('id')
+        .eq('profile_id', middleAdminId)
+        .maybeSingle()
+
+      if (adminByProfileError) {
+        throw new Error(`중간관리자 조회(profile_id): ${adminByProfileError.message}`)
+      }
+
+      if (adminByProfile) {
+        resolvedMiddleAdminId = adminByProfile.id
+      } else {
+        throw new Error('중간관리자 확인 실패: 유효한 중간관리자를 찾을 수 없습니다.')
+      }
+    }
+
+    // 4. 이메일 중복 확인 (profiles 기준)
     const { data: existingProfiles, error: checkError } = await adminClient
       .from('profiles')
       .select('id, role')
@@ -73,7 +108,7 @@ serve(async (req) => {
       throw new Error('이메일 확인: 이미 등록된 이메일입니다. 다른 이메일을 입력해 주세요.')
     }
 
-    // 4. Auth 사용자 생성 (기관관리자)
+    // 5. Auth 사용자 생성 (기관관리자)
     let targetUserId = null
 
     // 기존 Auth에 사용자가 있는지 먼저 확인 시도 (migration sql의 내부 함수 호출)
@@ -104,7 +139,7 @@ serve(async (req) => {
       targetUserId = authData.user.id
     }
 
-    // 5. profiles 생성 (organization_id는 나중에 연결하거나 빈 값으로 먼저 생성)
+    // 6. profiles 생성 (organization_id는 나중에 연결하거나 빈 값으로 먼저 생성)
     const { error: profileError } = await adminClient
       .from('profiles')
       .upsert({
@@ -122,12 +157,13 @@ serve(async (req) => {
       throw new Error(`프로필 생성: profiles 정보 저장 실패 - ${profileError.message}`)
     }
 
-    // 6. organizations 생성
+    // 7. organizations 생성
     const { data: orgData, error: orgError } = await adminClient
       .from('organizations')
       .insert({
         name: name,
-        middle_admin_id: middleAdminId,
+        middle_admin_id: resolvedMiddleAdminId,
+        admin_profile_id: targetUserId,
         total_licenses: totalLicenses || 0,
         license_start_date: startDate || new Date().toISOString(),
         license_end_date: endDate || new Date().toISOString(),
