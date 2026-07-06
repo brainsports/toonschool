@@ -91,6 +91,27 @@ export const superAdminService = {
     const cleanEmail = adminData.email.trim().toLowerCase()
     validateEmail(cleanEmail)
 
+    // 이메일 중복 및 역할 검증
+    const { data: existingProfiles, error: checkError } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('email', cleanEmail)
+      
+    if (checkError) {
+      throw new Error('이메일 중복 확인 중 오류가 발생했습니다.')
+    }
+    
+    if (existingProfiles && existingProfiles.length > 0) {
+      const existingRole = existingProfiles[0].role
+      if (existingRole === 'super_admin') {
+        throw new Error('이미 수퍼관리자로 등록된 이메일입니다. 다른 이메일을 입력해 주세요.')
+      } else if (existingRole === 'middle_admin') {
+        throw new Error('이미 중간관리자로 등록된 이메일입니다.')
+      } else {
+        throw new Error('이미 다른 역할로 등록된 이메일입니다. 다른 이메일을 입력해 주세요.')
+      }
+    }
+
     const tempClient = createClient(url, key, {
       auth: { persistSession: false, autoRefreshToken: false }
     })
