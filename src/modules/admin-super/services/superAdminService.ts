@@ -105,34 +105,55 @@ export const superAdminService = {
 
     const userId = authData.user.id
 
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .update({
-        name: adminData.name,
-        role: 'middle_admin',
-        status: adminData.status || 'active'
-      })
-      .eq('id', userId)
+    try {
+      // 1. 프로필 업데이트 시도
+      const { data: updateData, error: profileUpdateError } = await supabase
+        .from('profiles')
+        .update({
+          name: adminData.name,
+          role: 'middle_admin',
+          status: adminData.status || 'active'
+        })
+        .eq('id', userId)
+        .select()
 
-    if (profileError) {
-      await supabase.from('profiles').insert({
-        id: userId,
-        email: cleanEmail,
-        name: adminData.name,
-        role: 'middle_admin',
-        status: adminData.status || 'active',
-        plan_type: 'free',
-        monthly_quota: 0
+      // 업데이트된 행이 없다면(신규 계정) insert 수행
+      if (profileUpdateError || !updateData || updateData.length === 0) {
+        const { error: profileInsertError } = await supabase.from('profiles').insert({
+          id: userId,
+          email: cleanEmail,
+          name: adminData.name,
+          role: 'middle_admin',
+          status: adminData.status || 'active',
+          plan_type: 'free',
+          monthly_quota: 0
+        })
+
+        if (profileInsertError) {
+          console.error('profiles insert error:', profileInsertError)
+          throw new Error('profiles_failed')
+        }
+      }
+
+      // 2. middle_admins 및 이용권 정보 저장 (RPC 호출)
+      const { error: rpcError } = await supabase.rpc('update_super_middle_admin', {
+        p_middle_admin_id: userId,
+        p_license_total: adminData.licenseTotal || 0,
+        p_license_start: adminData.licenseStart || new Date().toISOString(),
+        p_license_end: adminData.licenseEnd || new Date().toISOString(),
+        p_status: adminData.status || 'active'
       })
+
+      if (rpcError) {
+        console.error('middle_admins rpc error:', rpcError)
+        throw new Error('middle_admins_failed')
+      }
+    } catch (err: any) {
+      if (err.message === 'profiles_failed' || err.message === 'middle_admins_failed') {
+        throw new Error("계정은 생성되었지만 관리자 정보 저장에 실패했습니다. Supabase 테이블과 RLS 정책을 확인해 주세요.")
+      }
+      throw err
     }
-
-    await supabase.rpc('update_super_middle_admin', {
-      p_middle_admin_id: userId,
-      p_license_total: adminData.licenseTotal || 0,
-      p_license_start: adminData.licenseStart || new Date().toISOString(),
-      p_license_end: adminData.licenseEnd || new Date().toISOString(),
-      p_status: adminData.status || 'active'
-    })
   },
 
   async getTeachers() {

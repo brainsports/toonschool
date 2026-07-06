@@ -34,6 +34,7 @@ export default function MiddleAdminManagement() {
       setAdmins(data)
     } catch (error) {
       console.error('Failed to fetch middle admins:', error)
+      alert('중간관리자 목록을 불러오는데 실패했습니다.')
     } finally {
       setLoading(false)
     }
