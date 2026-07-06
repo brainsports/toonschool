@@ -205,7 +205,7 @@ export default function MiddleAdminManagement() {
           className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#6B4EFE] rounded-xl hover:bg-[#5839F6] transition-colors shadow-sm"
         >
           <Plus className="w-4 h-4" />
-          신규 중간관리자 추가
+          중간관리자 추가
         </button>
       </div>
 
