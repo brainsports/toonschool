@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react'
 import { superAdminService } from '../services/superAdminService'
-import { Bell, Send } from 'lucide-react'
+import { Bell, Send, Trash2 } from 'lucide-react'
+import ConfirmModal from '../../../shared/components/ConfirmModal'
 
 export default function NotificationManagement() {
   const [notifications, setNotifications] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
-  
+  const [deleteTarget, setDeleteTarget] = useState<any>(null)
   // Form state
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
@@ -54,6 +55,19 @@ export default function NotificationManagement() {
     }
   }
 
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return
+    try {
+      await superAdminService.deleteNotification(deleteTarget.id)
+      alert('알림이 삭제되었습니다.')
+      fetchData()
+    } catch (error: any) {
+      alert(`알림 삭제 중 오류가 발생했습니다: ${error.message}`)
+    } finally {
+      setDeleteTarget(null)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -80,6 +94,7 @@ export default function NotificationManagement() {
                 <th className="px-6 py-4 font-semibold">중요도</th>
                 <th className="px-6 py-4 font-semibold">제목</th>
                 <th className="px-6 py-4 font-semibold">내용</th>
+                <th className="px-6 py-4 font-semibold text-center w-24">관리</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -105,11 +120,20 @@ export default function NotificationManagement() {
                   </td>
                   <td className="px-6 py-4 font-medium text-gray-900">{noti.title}</td>
                   <td className="px-6 py-4 text-gray-500 max-w-xs truncate">{noti.content}</td>
+                  <td className="px-6 py-4 text-center">
+                    <button
+                      onClick={() => setDeleteTarget(noti)}
+                      className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      title="삭제"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </td>
                 </tr>
               ))}
               {notifications.length === 0 && !loading && (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
                     발송된 알림이 없습니다.
                   </td>
                 </tr>
@@ -202,6 +226,16 @@ export default function NotificationManagement() {
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        open={!!deleteTarget}
+        title="알림 삭제"
+        description="정말 이 알림을 삭제하시겠습니까?"
+        confirmText="삭제"
+        variant="danger"
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   )
 }

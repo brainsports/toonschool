@@ -625,6 +625,13 @@ export const superAdminService = {
     return data
   },
 
+  async deleteNotification(notificationId: string) {
+    const { error } = await supabase.rpc('delete_org_notification', {
+      p_notification_id: notificationId
+    })
+    if (error) throw error
+  },
+
   async getResources() {
     const { data, error } = await supabase
       .from('admin_resources')
