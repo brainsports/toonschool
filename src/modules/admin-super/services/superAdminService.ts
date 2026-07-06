@@ -21,7 +21,13 @@ const translateError = (error: any): string => {
   if (msg.includes('Password should be at least')) {
     return '비밀번호는 최소 6자 이상이어야 합니다.'
   }
-  return `오류가 발생했습니다: ${msg}`
+  if (msg.includes('network')) {
+    return '네트워크 연결 상태를 확인해 주세요.'
+  }
+  if (msg.includes('fetch') || msg.includes('failed to fetch')) {
+    return '서버와 통신하는 중 문제가 발생했습니다.'
+  }
+  return '알 수 없는 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.'
 }
 
 const validateEmail = (email: string) => {
@@ -135,17 +141,18 @@ export const superAdminService = {
         }
       }
 
-      // 2. middle_admins 및 이용권 정보 저장 (RPC 호출)
-      const { error: rpcError } = await supabase.rpc('update_super_middle_admin', {
-        p_middle_admin_id: userId,
-        p_license_total: adminData.licenseTotal || 0,
-        p_license_start: adminData.licenseStart || new Date().toISOString(),
-        p_license_end: adminData.licenseEnd || new Date().toISOString(),
-        p_status: adminData.status || 'active'
+      // 2. middle_admins 및 이용권 정보 저장 (직접 insert)
+      const { error: middleAdminInsertError } = await supabase.from('middle_admins').insert({
+        profile_id: userId,
+        display_name: adminData.name,
+        status: adminData.status || 'active',
+        license_total: adminData.licenseTotal || 0,
+        license_start: adminData.licenseStart || new Date().toISOString(),
+        license_end: adminData.licenseEnd || new Date().toISOString()
       })
 
-      if (rpcError) {
-        console.error('middle_admins rpc error:', rpcError)
+      if (middleAdminInsertError) {
+        console.error('middle_admins insert error:', middleAdminInsertError)
         throw new Error('middle_admins_failed')
       }
     } catch (err: any) {
