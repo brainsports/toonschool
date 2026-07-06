@@ -370,18 +370,9 @@ export const superAdminService = {
 
     const userId = authData.user.id
 
-    const { error: profileError } = await supabase
+    const { error: upsertError } = await supabase
       .from('profiles')
-      .update({
-        name: teacherData.name,
-        role: 'teacher',
-        status: teacherData.status || 'active',
-        organization_id: teacherData.organization_id
-      })
-      .eq('id', userId)
-
-    if (profileError) {
-      const { error: insertError } = await supabase.from('profiles').insert({
+      .upsert({
         id: userId,
         email: cleanEmail,
         name: teacherData.name,
@@ -390,9 +381,9 @@ export const superAdminService = {
         organization_id: teacherData.organization_id,
         plan_type: 'free',
         monthly_quota: 0
-      })
-      if (insertError) throw insertError
-    }
+      }, { onConflict: 'id' })
+
+    if (upsertError) throw upsertError
 
     // 이용권 배정
     if (teacherData.licenseTotal > 0 || teacherData.licenseStart || teacherData.licenseEnd) {
