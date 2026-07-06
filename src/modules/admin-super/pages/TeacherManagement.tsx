@@ -1,58 +1,48 @@
 import { useState, useEffect } from 'react'
 import { superAdminService } from '../services/superAdminService'
-import { Edit2, ShieldCheck, Ticket, Plus } from 'lucide-react'
+import { Edit2, Users, Plus, Building2 } from 'lucide-react'
 
-export default function MiddleAdminManagement() {
-  const [admins, setAdmins] = useState<any[]>([])
+export default function TeacherManagement() {
+  const [teachers, setTeachers] = useState<any[]>([])
+  const [organizations, setOrganizations] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
-  const [selectedAdmin, setSelectedAdmin] = useState<any>(null)
+  const [selectedTeacher, setSelectedTeacher] = useState<any>(null)
   
   // Edit Form state
-  const [licenseTotal, setLicenseTotal] = useState(0)
-  const [licenseStart, setLicenseStart] = useState('')
-  const [licenseEnd, setLicenseEnd] = useState('')
   const [status, setStatus] = useState('active')
 
   // Create Form state
   const [createName, setCreateName] = useState('')
   const [createEmail, setCreateEmail] = useState('')
   const [createPassword, setCreatePassword] = useState('')
-  const [createLicenseTotal, setCreateLicenseTotal] = useState(0)
-  const [createLicenseStart, setCreateLicenseStart] = useState('')
-  const [createLicenseEnd, setCreateLicenseEnd] = useState('')
+  const [createOrganizationId, setCreateOrganizationId] = useState('')
   const [createStatus, setCreateStatus] = useState('active')
 
   useEffect(() => {
-    fetchAdmins()
+    fetchData()
   }, [])
 
-  const fetchAdmins = async () => {
+  const fetchData = async () => {
     try {
-      const data = await superAdminService.getMiddleAdmins()
-      setAdmins(data)
+      const [teachersData, orgsData] = await Promise.all([
+        superAdminService.getTeachers(),
+        superAdminService.getAllOrganizations()
+      ])
+      setTeachers(teachersData)
+      setOrganizations(orgsData)
     } catch (error) {
-      console.error('Failed to fetch middle admins:', error)
+      console.error('Failed to fetch data:', error)
     } finally {
       setLoading(false)
     }
   }
 
-  const openEditModal = (admin: any) => {
-    setSelectedAdmin(admin)
-    setLicenseTotal(admin.license_total || 0)
-    
-    // Format dates to YYYY-MM-DD
-    const formatDate = (dateStr: string) => {
-      if (!dateStr) return ''
-      const d = new Date(dateStr)
-      return d.toISOString().split('T')[0]
-    }
-    
-    setLicenseStart(formatDate(admin.license_start))
-    setLicenseEnd(formatDate(admin.license_end))
-    setStatus(admin.status || 'active')
+  const openEditModal = (teacher: any) => {
+    setSelectedTeacher(teacher)
+    setStatus(teacher.status || 'active')
     setIsModalOpen(true)
   }
 
@@ -60,28 +50,20 @@ export default function MiddleAdminManagement() {
     setCreateName('')
     setCreateEmail('')
     setCreatePassword('')
-    setCreateLicenseTotal(0)
-    setCreateLicenseStart('')
-    setCreateLicenseEnd('')
+    setCreateOrganizationId('')
     setCreateStatus('active')
     setIsCreateModalOpen(true)
   }
 
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!selectedAdmin) return
+    if (!selectedTeacher) return
 
     try {
-      await superAdminService.updateMiddleAdminLicense(
-        selectedAdmin.id,
-        licenseTotal,
-        licenseStart ? new Date(licenseStart).toISOString() : new Date().toISOString(),
-        licenseEnd ? new Date(licenseEnd).toISOString() : new Date().toISOString(),
-        status
-      )
+      await superAdminService.updateTeacherStatus(selectedTeacher.id, status)
       alert('저장되었습니다.')
       setIsModalOpen(false)
-      fetchAdmins()
+      fetchData()
     } catch (error: any) {
       alert(`오류가 발생했습니다: ${error.message}`)
     }
@@ -89,24 +71,22 @@ export default function MiddleAdminManagement() {
 
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!createEmail || !createPassword || !createName) {
-      alert('이름, 이메일, 비밀번호를 모두 입력해주세요.')
+    if (!createEmail || !createPassword || !createName || !createOrganizationId) {
+      alert('이름, 이메일, 비밀번호, 소속 기관을 모두 입력/선택해주세요.')
       return
     }
 
     try {
-      await superAdminService.createMiddleAdmin({
+      await superAdminService.createTeacher({
         name: createName,
         email: createEmail,
         password: createPassword,
-        licenseTotal: createLicenseTotal,
-        licenseStart: createLicenseStart ? new Date(createLicenseStart).toISOString() : new Date().toISOString(),
-        licenseEnd: createLicenseEnd ? new Date(createLicenseEnd).toISOString() : new Date().toISOString(),
+        organization_id: createOrganizationId,
         status: createStatus
       })
-      alert('신규 중간관리자가 추가되었습니다.')
+      alert('신규 선생님이 추가되었습니다.')
       setIsCreateModalOpen(false)
-      fetchAdmins()
+      fetchData()
     } catch (error: any) {
       alert(`오류가 발생했습니다: ${error.message}`)
     }
@@ -116,15 +96,15 @@ export default function MiddleAdminManagement() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-          <ShieldCheck className="w-7 h-7 text-[#6B4EFE]" />
-          중간관리자 관리
+          <Users className="w-7 h-7 text-[#6B4EFE]" />
+          선생님 관리
         </h1>
         <button
           onClick={openCreateModal}
           className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#6B4EFE] rounded-xl hover:bg-[#5839F6] transition-colors shadow-sm"
         >
           <Plus className="w-4 h-4" />
-          신규 중간관리자 추가
+          신규 선생님 추가
         </button>
       </div>
 
@@ -135,34 +115,34 @@ export default function MiddleAdminManagement() {
               <tr>
                 <th className="px-6 py-4 font-semibold">이름</th>
                 <th className="px-6 py-4 font-semibold">이메일</th>
+                <th className="px-6 py-4 font-semibold">담당 중간관리자</th>
+                <th className="px-6 py-4 font-semibold">소속 기관</th>
                 <th className="px-6 py-4 font-semibold text-center">상태</th>
-                <th className="px-6 py-4 font-semibold text-right">배정 이용권</th>
-                <th className="px-6 py-4 font-semibold text-center">사용기간</th>
                 <th className="px-6 py-4 font-semibold text-center">관리</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {admins.map((admin) => (
-                <tr key={admin.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4 font-medium text-gray-900">{admin.profiles?.name || admin.display_name || '이름 없음'}</td>
-                  <td className="px-6 py-4 text-gray-500">{admin.profiles?.email || '-'}</td>
+              {teachers.map((teacher) => (
+                <tr key={teacher.id} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-6 py-4 font-medium text-gray-900">{teacher.name || '이름 없음'}</td>
+                  <td className="px-6 py-4 text-gray-500">{teacher.email || '-'}</td>
+                  <td className="px-6 py-4 text-gray-500">{teacher.organization?.middle_admin_name || '-'}</td>
+                  <td className="px-6 py-4 text-gray-900">
+                    <div className="flex items-center gap-1.5">
+                      <Building2 className="w-4 h-4 text-gray-400" />
+                      {teacher.organization?.name || '소속 없음'}
+                    </div>
+                  </td>
                   <td className="px-6 py-4 text-center">
                     <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
-                      admin.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+                      teacher.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
                     }`}>
-                      {admin.status === 'active' ? '활성' : '비활성'}
+                      {teacher.status === 'active' ? '활성' : '비활성'}
                     </span>
-                  </td>
-                  <td className="px-6 py-4 text-right font-medium text-gray-900">
-                    {admin.license_total?.toLocaleString() || 0}
-                  </td>
-                  <td className="px-6 py-4 text-center text-gray-500 text-xs">
-                    {admin.license_start ? new Date(admin.license_start).toLocaleDateString() : '-'} <br/>
-                    ~ {admin.license_end ? new Date(admin.license_end).toLocaleDateString() : '-'}
                   </td>
                   <td className="px-6 py-4 text-center">
                     <button
-                      onClick={() => openEditModal(admin)}
+                      onClick={() => openEditModal(teacher)}
                       className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-[#6B4EFE] bg-[#F4F2FF] rounded-lg hover:bg-[#EAE6FF] transition-colors"
                     >
                       <Edit2 className="w-4 h-4" />
@@ -171,10 +151,10 @@ export default function MiddleAdminManagement() {
                   </td>
                 </tr>
               ))}
-              {admins.length === 0 && !loading && (
+              {teachers.length === 0 && !loading && (
                 <tr>
                   <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
-                    등록된 중간관리자가 없습니다.
+                    등록된 선생님이 없습니다.
                   </td>
                 </tr>
               )}
@@ -184,11 +164,11 @@ export default function MiddleAdminManagement() {
       </div>
 
       {/* Edit Modal */}
-      {isModalOpen && selectedAdmin && (
+      {isModalOpen && selectedTeacher && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl w-full max-w-md overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
-              <h3 className="text-lg font-bold text-gray-900">중간관리자 설정</h3>
+              <h3 className="text-lg font-bold text-gray-900">선생님 상태 설정</h3>
               <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600">
                 ✕
               </button>
@@ -199,7 +179,7 @@ export default function MiddleAdminManagement() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">이름</label>
                 <input 
                   type="text" 
-                  value={selectedAdmin.profiles?.name || selectedAdmin.display_name || '이름 없음'} 
+                  value={selectedTeacher.name || '이름 없음'} 
                   disabled 
                   className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-500"
                 />
@@ -209,63 +189,32 @@ export default function MiddleAdminManagement() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">이메일</label>
                 <input 
                   type="text" 
-                  value={selectedAdmin.profiles?.email || '-'} 
+                  value={selectedTeacher.email || '-'} 
+                  disabled 
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-500"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">소속 기관</label>
+                <input 
+                  type="text" 
+                  value={selectedTeacher.organization?.name || '-'} 
                   disabled 
                   className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-500"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">상태</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">상태 (중단/활성)</label>
                 <select 
                   value={status}
                   onChange={(e) => setStatus(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6B4EFE] focus:border-[#6B4EFE]"
                 >
                   <option value="active">활성</option>
-                  <option value="inactive">비활성</option>
+                  <option value="inactive">비활성 (중단)</option>
                 </select>
-              </div>
-
-              <div className="pt-4 border-t border-gray-100">
-                <h4 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-1">
-                  <Ticket className="w-4 h-4 text-[#6B4EFE]" />
-                  이용권 설정
-                </h4>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">배정 수량</label>
-                    <input 
-                      type="number" 
-                      min="0"
-                      value={licenseTotal}
-                      onChange={(e) => setLicenseTotal(Number(e.target.value))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6B4EFE] focus:border-[#6B4EFE]"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">시작일</label>
-                      <input 
-                        type="date" 
-                        required
-                        value={licenseStart}
-                        onChange={(e) => setLicenseStart(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6B4EFE] focus:border-[#6B4EFE]"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">종료일</label>
-                      <input 
-                        type="date" 
-                        required
-                        value={licenseEnd}
-                        onChange={(e) => setLicenseEnd(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6B4EFE] focus:border-[#6B4EFE]"
-                      />
-                    </div>
-                  </div>
-                </div>
               </div>
 
               <div className="pt-4 flex justify-end gap-2">
@@ -293,7 +242,7 @@ export default function MiddleAdminManagement() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl w-full max-w-md overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
-              <h3 className="text-lg font-bold text-gray-900">신규 중간관리자 추가</h3>
+              <h3 className="text-lg font-bold text-gray-900">신규 선생님 추가</h3>
               <button onClick={() => setIsCreateModalOpen(false)} className="text-gray-400 hover:text-gray-600">
                 ✕
               </button>
@@ -307,7 +256,7 @@ export default function MiddleAdminManagement() {
                   value={createName} 
                   onChange={(e) => setCreateName(e.target.value)}
                   required
-                  placeholder="예) 홍길동"
+                  placeholder="예) 김교사"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6B4EFE] focus:border-[#6B4EFE]"
                 />
               </div>
@@ -319,7 +268,7 @@ export default function MiddleAdminManagement() {
                   value={createEmail} 
                   onChange={(e) => setCreateEmail(e.target.value)}
                   required
-                  placeholder="admin@example.com"
+                  placeholder="teacher@example.com"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6B4EFE] focus:border-[#6B4EFE]"
                 />
               </div>
@@ -335,6 +284,23 @@ export default function MiddleAdminManagement() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6B4EFE] focus:border-[#6B4EFE]"
                 />
               </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">소속 기관</label>
+                <select 
+                  value={createOrganizationId}
+                  onChange={(e) => setCreateOrganizationId(e.target.value)}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6B4EFE] focus:border-[#6B4EFE]"
+                >
+                  <option value="">기관을 선택해주세요</option>
+                  {organizations.map((org) => (
+                    <option key={org.id} value={org.id}>
+                      {org.name} {org.profiles?.name ? `(${org.profiles.name})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">상태</label>
@@ -346,47 +312,6 @@ export default function MiddleAdminManagement() {
                   <option value="active">활성</option>
                   <option value="inactive">비활성</option>
                 </select>
-              </div>
-
-              <div className="pt-4 border-t border-gray-100">
-                <h4 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-1">
-                  <Ticket className="w-4 h-4 text-[#6B4EFE]" />
-                  초기 이용권 배정
-                </h4>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">배정 수량</label>
-                    <input 
-                      type="number" 
-                      min="0"
-                      value={createLicenseTotal}
-                      onChange={(e) => setCreateLicenseTotal(Number(e.target.value))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6B4EFE] focus:border-[#6B4EFE]"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">시작일</label>
-                      <input 
-                        type="date" 
-                        required
-                        value={createLicenseStart}
-                        onChange={(e) => setCreateLicenseStart(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6B4EFE] focus:border-[#6B4EFE]"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">종료일</label>
-                      <input 
-                        type="date" 
-                        required
-                        value={createLicenseEnd}
-                        onChange={(e) => setCreateLicenseEnd(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6B4EFE] focus:border-[#6B4EFE]"
-                      />
-                    </div>
-                  </div>
-                </div>
               </div>
 
               <div className="pt-4 flex justify-end gap-2">

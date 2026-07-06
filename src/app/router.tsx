@@ -9,7 +9,7 @@ import MyPage from '../pages/MyPage'
 import SuperAdminLayout from '../modules/admin-super/components/SuperAdminLayout'
 import SuperDashboard from '../modules/admin-super/pages/SuperDashboard'
 import SuperMiddleAdminManagement from '../modules/admin-super/pages/MiddleAdminManagement'
-import SuperUserManagement from '../modules/admin-super/pages/UserManagement'
+import SuperTeacherManagement from '../modules/admin-super/pages/TeacherManagement'
 import SuperOrganizationManagement from '../modules/admin-super/pages/OrganizationManagement'
 import SuperLicenseManagement from '../modules/admin-super/pages/LicenseManagement'
 import SuperNotificationManagement from '../modules/admin-super/pages/NotificationManagement'
@@ -142,7 +142,6 @@ export default function AppRouter() {
         {/* 슈퍼관리자 (super_admin) */}
         <Route path="super/*" element={<Navigate to="/admin/super/dashboard" replace />} />
         <Route path="all-centers" element={<Navigate to="/admin/super/organizations" replace />} />
-        <Route path="all-admins" element={<Navigate to="/admin/super/users" replace />} />
         <Route path="middle-admins" element={<Navigate to="/admin/super/middle-admins" replace />} />
         <Route path="all-licenses" element={<Navigate to="/admin/super/licenses" replace />} />
         <Route path="settings" element={<Navigate to="/admin/super/dashboard" replace />} />
@@ -177,8 +176,8 @@ export default function AppRouter() {
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<SuperDashboard />} />
         <Route path="middle-admins" element={<SuperMiddleAdminManagement />} />
-        <Route path="users" element={<SuperUserManagement />} />
         <Route path="organizations" element={<SuperOrganizationManagement />} />
+        <Route path="teachers" element={<SuperTeacherManagement />} />
         <Route path="licenses" element={<SuperLicenseManagement />} />
         <Route path="notifications" element={<SuperNotificationManagement />} />
         <Route path="resources" element={<SuperResourceManagement />} />

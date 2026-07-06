@@ -31,8 +31,8 @@ export default function SuperAdminLayout() {
   const menuItems = [
     { icon: LayoutDashboard, label: '대시보드', path: '/admin/super/dashboard' },
     { icon: ShieldCheck, label: '중간관리자 관리', path: '/admin/super/middle-admins' },
-    { icon: Users, label: '사용자 승인/권한', path: '/admin/super/users' },
     { icon: Building2, label: '기관 관리', path: '/admin/super/organizations' },
+    { icon: Users, label: '선생님 관리', path: '/admin/super/teachers' },
     { icon: Ticket, label: '이용권 관리', path: '/admin/super/licenses' },
     { icon: Bell, label: '알림 발송', path: '/admin/super/notifications' },
     { icon: FileText, label: '자료실 관리', path: '/admin/super/resources' },

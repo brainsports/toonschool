@@ -1,4 +1,5 @@
 import { supabase } from '../../../shared/lib/supabase'
+import { createClient } from '@supabase/supabase-js'
 
 export interface SuperDashboardStats {
   middle_admins: { total: number; active: number }
@@ -51,6 +52,169 @@ export const superAdminService = {
       p_license_end: end,
       p_status: status
     })
+    if (error) throw error
+    return data
+  },
+
+  async createMiddleAdmin(adminData: any) {
+    const url = import.meta.env.VITE_SUPABASE_URL
+    const key = import.meta.env.VITE_SUPABASE_ANON_KEY
+    if (!url || !key) throw new Error("Supabase 환경 변수가 없습니다.")
+
+    const tempClient = createClient(url, key, {
+      auth: { persistSession: false, autoRefreshToken: false }
+    })
+
+    const { data: authData, error: authError } = await tempClient.auth.signUp({
+      email: adminData.email,
+      password: adminData.password,
+      options: {
+        data: {
+          name: adminData.name,
+          role: 'middle_admin'
+        }
+      }
+    })
+
+    if (authError) throw authError
+    if (!authData.user) throw new Error("계정 생성 실패")
+
+    const userId = authData.user.id
+
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .update({
+        name: adminData.name,
+        role: 'middle_admin',
+        status: adminData.status || 'active'
+      })
+      .eq('id', userId)
+
+    if (profileError) {
+      await supabase.from('profiles').insert({
+        id: userId,
+        email: adminData.email,
+        name: adminData.name,
+        role: 'middle_admin',
+        status: adminData.status || 'active',
+        plan_type: 'free',
+        monthly_quota: 0
+      })
+    }
+
+    await supabase.rpc('update_super_middle_admin', {
+      p_middle_admin_id: userId,
+      p_license_total: adminData.licenseTotal || 0,
+      p_license_start: adminData.licenseStart || new Date().toISOString(),
+      p_license_end: adminData.licenseEnd || new Date().toISOString(),
+      p_status: adminData.status || 'active'
+    })
+  },
+
+  async getTeachers() {
+    const { data: teachers, error } = await supabase
+      .from('profiles')
+      .select('id, name, email, status, organization_id, created_at')
+      .eq('role', 'teacher')
+      .order('created_at', { ascending: false })
+
+    if (error) throw error
+
+    if (!teachers || teachers.length === 0) return []
+
+    const orgIds = teachers.map(t => t.organization_id).filter(id => id)
+    let orgs: any[] = []
+    
+    if (orgIds.length > 0) {
+      const { data: orgData } = await supabase
+        .from('organizations')
+        .select('id, name, middle_admin_id')
+        .in('id', orgIds)
+      
+      orgs = orgData || []
+      
+      const middleAdminIds = orgs.map(o => o.middle_admin_id).filter(id => id)
+      if (middleAdminIds.length > 0) {
+         const { data: adminData } = await supabase
+           .from('profiles')
+           .select('id, name')
+           .in('id', middleAdminIds)
+           
+         const adminMap = new Map(adminData?.map(a => [a.id, a.name]))
+         orgs = orgs.map(o => ({
+           ...o,
+           middle_admin_name: adminMap.get(o.middle_admin_id) || '미정'
+         }))
+      }
+    }
+
+    const orgMap = new Map(orgs.map(o => [o.id, o]))
+
+    return teachers.map(teacher => {
+      const org = teacher.organization_id ? orgMap.get(teacher.organization_id) : null
+      return {
+        ...teacher,
+        organization: org || null
+      }
+    })
+  },
+
+  async createTeacher(teacherData: any) {
+    const url = import.meta.env.VITE_SUPABASE_URL
+    const key = import.meta.env.VITE_SUPABASE_ANON_KEY
+    if (!url || !key) throw new Error("Supabase 환경 변수가 없습니다.")
+
+    const tempClient = createClient(url, key, {
+      auth: { persistSession: false, autoRefreshToken: false }
+    })
+
+    const { data: authData, error: authError } = await tempClient.auth.signUp({
+      email: teacherData.email,
+      password: teacherData.password,
+      options: {
+        data: {
+          name: teacherData.name,
+          role: 'teacher'
+        }
+      }
+    })
+
+    if (authError) throw authError
+    if (!authData.user) throw new Error("계정 생성 실패")
+
+    const userId = authData.user.id
+
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .update({
+        name: teacherData.name,
+        role: 'teacher',
+        status: teacherData.status || 'active',
+        organization_id: teacherData.organization_id
+      })
+      .eq('id', userId)
+
+    if (profileError) {
+      await supabase.from('profiles').insert({
+        id: userId,
+        email: teacherData.email,
+        name: teacherData.name,
+        role: 'teacher',
+        status: teacherData.status || 'active',
+        organization_id: teacherData.organization_id,
+        plan_type: 'free',
+        monthly_quota: 0
+      })
+    }
+  },
+
+  async updateTeacherStatus(teacherId: string, status: string) {
+    const { data, error } = await supabase
+      .from('profiles')
+      .update({ status })
+      .eq('id', teacherId)
+      .select()
+      .single()
     if (error) throw error
     return data
   },
