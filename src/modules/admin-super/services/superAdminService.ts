@@ -361,6 +361,7 @@ export const superAdminService = {
     const { data, error } = await supabase
       .from('organizations')
       .select('*')
+      .neq('status', 'deleted')
       .order('created_at', { ascending: false })
       
     if (error) {
@@ -369,6 +370,29 @@ export const superAdminService = {
     }
     
     if (data && data.length > 0) {
+      // 1. Fetch org_admins
+      const orgIds = data.map(org => org.id);
+      let orgAdminsData: any[] = [];
+      if (orgIds.length > 0) {
+        const { data: oaData, error: oaError } = await supabase
+          .from('profiles')
+          .select('id, name, email, status, organization_id')
+          .eq('role', 'org_admin')
+          .in('organization_id', orgIds);
+          
+        if (oaError) console.error('[SuperAdmin] Fetch org_admins error:', oaError);
+        orgAdminsData = oaData || [];
+      }
+      
+      const orgAdminMap = new Map();
+      orgAdminsData.forEach(admin => {
+        if (!orgAdminMap.has(admin.organization_id)) {
+           orgAdminMap.set(admin.organization_id, admin);
+        } else if (admin.id === null) {
+           console.warn(`[Warning] org_admin found with null organization_id: ${admin.email}`);
+        }
+      });
+
       const adminIds = data.map(org => org.middle_admin_id).filter(id => id);
       if (adminIds.length > 0) {
          const { data: middleAdminsData, error: mError } = await supabase
@@ -398,7 +422,14 @@ export const superAdminService = {
          
          return data.map(org => ({
            ...org,
-           middle_admin: org.middle_admin_id ? middleAdminMap.get(org.middle_admin_id) : null
+           middle_admin: org.middle_admin_id ? middleAdminMap.get(org.middle_admin_id) : null,
+           org_admin: orgAdminMap.get(org.id) || null
+         }));
+      } else {
+        return data.map(org => ({
+           ...org,
+           middle_admin: null,
+           org_admin: orgAdminMap.get(org.id) || null
          }));
       }
     }
@@ -421,6 +452,45 @@ export const superAdminService = {
       throw new Error(data.error)
     }
 
+    return data
+  },
+
+  async updateOrganization(orgData: any) {
+    const { data, error } = await supabase.functions.invoke('manage-organization', {
+      body: { action: 'update', ...orgData }
+    })
+
+    if (error) {
+      const errorMessage = error.context?.error || error.message || '알 수 없는 오류가 발생했습니다.'
+      throw new Error(`기관 수정 중 문제가 발생했습니다: ${errorMessage}`)
+    }
+    if (data?.error) throw new Error(data.error)
+    return data
+  },
+
+  async updateOrganizationStatus(orgId: string, status: string) {
+    const { data, error } = await supabase.functions.invoke('manage-organization', {
+      body: { action: 'updateStatus', orgId, status }
+    })
+
+    if (error) {
+      const errorMessage = error.context?.error || error.message || '알 수 없는 오류가 발생했습니다.'
+      throw new Error(`기관 상태 수정 중 문제가 발생했습니다: ${errorMessage}`)
+    }
+    if (data?.error) throw new Error(data.error)
+    return data
+  },
+
+  async deleteOrganization(orgId: string) {
+    const { data, error } = await supabase.functions.invoke('manage-organization', {
+      body: { action: 'delete', orgId }
+    })
+
+    if (error) {
+      const errorMessage = error.context?.error || error.message || '알 수 없는 오류가 발생했습니다.'
+      throw new Error(`기관 삭제 중 문제가 발생했습니다: ${errorMessage}`)
+    }
+    if (data?.error) throw new Error(data.error)
     return data
   },
 
