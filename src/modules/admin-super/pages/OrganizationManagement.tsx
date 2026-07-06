@@ -106,7 +106,9 @@ export default function OrganizationManagement() {
               {organizations.map((org) => (
                 <tr key={org.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-6 py-4 font-medium text-gray-900">{org.name}</td>
-                  <td className="px-6 py-4 text-gray-500">{org.profiles?.name || '미지정'}</td>
+                  <td className="px-6 py-4 text-gray-500">
+                    {org.middle_admin?.display_name || org.middle_admin?.profile?.name || org.middle_admin?.profile?.email || '미지정'}
+                  </td>
                   <td className="px-6 py-4 text-right font-medium text-gray-900">
                     {org.total_licenses?.toLocaleString() || 0}
                   </td>

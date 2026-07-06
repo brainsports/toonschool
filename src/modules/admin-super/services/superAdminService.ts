@@ -44,56 +44,58 @@ export const superAdminService = {
   async getDashboardStats(): Promise<SuperDashboardStats> {
     try {
       // 1. 중간관리자 (middle_admins)
-      const { data: middleAdmins } = await supabase
+      const { data: middleAdmins, error: middleError } = await supabase
         .from('middle_admins')
-        .select('status')
+        .select('status, license_total')
         .neq('status', 'deleted')
+      
+      if (middleError) console.error('[SuperAdmin] getDashboardStats middleAdmins error:', middleError);
       
       const middleTotal = middleAdmins?.length || 0
       const middleActive = middleAdmins?.filter(a => a.status === 'active').length || 0
+      const totalLicenses = middleAdmins?.reduce((sum, admin) => sum + (admin.license_total || 0), 0) || 0
 
-      // 2. 기관관리자 (organizations)
-      const { data: orgs } = await supabase
-        .from('organizations')
+      // 2. 기관관리자 수 (profiles role = org_admin)
+      const { data: orgAdmins, error: orgAdminsError } = await supabase
+        .from('profiles')
         .select('status')
+        .eq('role', 'org_admin')
         .neq('status', 'deleted')
         
-      const orgTotal = orgs?.length || 0
-      const orgPending = orgs?.filter(a => a.status === 'pending' || a.status === 'inactive').length || 0
+      if (orgAdminsError) console.error('[SuperAdmin] getDashboardStats orgAdmins error:', orgAdminsError);
+        
+      const orgTotal = orgAdmins?.length || 0
+      const orgPending = orgAdmins?.filter(a => a.status === 'pending' || a.status === 'inactive').length || 0
 
       // 3. 선생님 (profiles where role = teacher)
-      const { data: teachers } = await supabase
+      const { data: teachers, error: teachersError } = await supabase
         .from('profiles')
         .select('status')
         .eq('role', 'teacher')
         .neq('status', 'deleted')
         
+      if (teachersError) console.error('[SuperAdmin] getDashboardStats teachers error:', teachersError);
+        
       const teacherTotal = teachers?.length || 0
       const teacherPending = teachers?.filter(a => a.status === 'pending').length || 0
 
-      // 4. 이용권 현황
-      // 중간관리자에게 배정된 총 이용권
-      const { data: middleAdminsLicenses } = await supabase
-        .from('middle_admins')
-        .select('license_total')
-        .neq('status', 'deleted')
-        
-      const totalLicenses = middleAdminsLicenses?.reduce((sum, admin) => sum + (admin.license_total || 0), 0) || 0
-      
-      // 기관에 배정된 총 이용권
-      const { data: orgLicenses } = await supabase
+      // 4. 기관 (organizations)에서 사용된 이용권 총합
+      const { data: orgs, error: orgsError } = await supabase
         .from('organizations')
-        .select('total_licenses')
-        .neq('status', 'deleted')
+        .select('total_licenses, used_licenses')
         
-      const usedLicenses = orgLicenses?.reduce((sum, org) => sum + (org.total_licenses || 0), 0) || 0
+      if (orgsError) console.error('[SuperAdmin] getDashboardStats orgs error:', orgsError);
+        
+      const usedLicenses = orgs?.reduce((sum, org) => sum + (org.total_licenses || 0), 0) || 0
       const remainingLicenses = totalLicenses - usedLicenses
 
       // 5. 등록 자료 수
-      const { count: resourceCount } = await supabase
+      const { count: resourceCount, error: resourceError } = await supabase
         .from('admin_resources')
         .select('*', { count: 'exact', head: true })
         .is('deleted_at', null)
+        
+      if (resourceError) console.error('[SuperAdmin] getDashboardStats admin_resources error:', resourceError);
 
       return {
         middle_admins: { total: middleTotal, active: middleActive },
@@ -104,7 +106,7 @@ export const superAdminService = {
         resources: { total: resourceCount || 0 }
       }
     } catch (error) {
-      console.error('Failed to get dashboard stats:', error)
+      console.error('[SuperAdmin] Failed to get dashboard stats:', error)
       return {
         middle_admins: { total: 0, active: 0 },
         org_admins: { total: 0, pending: 0 },
@@ -124,17 +126,19 @@ export const superAdminService = {
       .order('created_at', { ascending: false })
       
     if (error) {
-      console.error("Fetch middle_admins error:", error);
-      throw error;
+      console.error("[SuperAdmin] Fetch middle_admins error:", error);
+      return [];
     }
     
     if (data && data.length > 0) {
       const profileIds = data.map(admin => admin.profile_id).filter(id => id);
       if (profileIds.length > 0) {
-        const { data: profilesData } = await supabase
+        const { data: profilesData, error: profilesError } = await supabase
           .from('profiles')
           .select('id, name, email')
           .in('id', profileIds);
+          
+        if (profilesError) console.error('[SuperAdmin] Fetch profiles for middle_admins error:', profilesError);
           
         const profileMap = new Map(profilesData?.map(p => [p.id, p]));
         return data.map(admin => ({
@@ -357,26 +361,44 @@ export const superAdminService = {
     const { data, error } = await supabase
       .from('organizations')
       .select('*')
-      .neq('status', 'deleted')
       .order('created_at', { ascending: false })
       
     if (error) {
-      console.error("Fetch organizations error:", error);
-      throw error;
+      console.error("[SuperAdmin] Fetch organizations error:", error);
+      return [];
     }
     
     if (data && data.length > 0) {
       const adminIds = data.map(org => org.middle_admin_id).filter(id => id);
       if (adminIds.length > 0) {
-         const { data: profilesData } = await supabase
-           .from('profiles')
-           .select('id, name, email')
+         const { data: middleAdminsData, error: mError } = await supabase
+           .from('middle_admins')
+           .select('id, profile_id, display_name')
            .in('id', adminIds);
+           
+         if (mError) console.error('[SuperAdmin] Fetch middle_admins for organizations error:', mError);
          
-         const profileMap = new Map(profilesData?.map(p => [p.id, p]));
+         const profileIds = middleAdminsData?.map(m => m.profile_id).filter(id => id) || [];
+         let profilesData: any[] = [];
+         
+         if (profileIds.length > 0) {
+           const { data: pData, error: pError } = await supabase
+             .from('profiles')
+             .select('id, name, email')
+             .in('id', profileIds);
+           if (pError) console.error('[SuperAdmin] Fetch profiles for organizations error:', pError);
+           profilesData = pData || [];
+         }
+         
+         const profileMap = new Map(profilesData.map(p => [p.id, p]));
+         const middleAdminMap = new Map(middleAdminsData?.map(m => [
+           m.id, 
+           { ...m, profile: m.profile_id ? profileMap.get(m.profile_id) : null }
+         ]));
+         
          return data.map(org => ({
            ...org,
-           profiles: org.middle_admin_id ? profileMap.get(org.middle_admin_id) : null
+           middle_admin: org.middle_admin_id ? middleAdminMap.get(org.middle_admin_id) : null
          }));
       }
     }
