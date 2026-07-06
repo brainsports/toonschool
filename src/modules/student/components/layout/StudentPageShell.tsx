@@ -116,6 +116,13 @@ export default function StudentPageShell({
               >
                 🌌 내작품
               </button>
+              <div className="w-px h-4 bg-white/50 mx-2" />
+              <button 
+                onClick={() => navigate('/student/resources')}
+                className="text-[#2d1f35] font-jua text-sm hover:scale-105 transition-transform"
+              >
+                📁 자료실
+              </button>
             </div>
 
             {/* 우측: 재화 및 액션 */}

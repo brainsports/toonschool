@@ -40,6 +40,7 @@ const getMenuItems = (role: string) => {
         { label: '학생관리', path: '/admin/lms/students' },
         { label: '평가관리', path: '/admin/lms/assessments' },
         { label: '관리자정보', path: '/admin/lms/profile' },
+        { label: '자료실', path: '/admin/lms/resources' },
       ];
   }
 }

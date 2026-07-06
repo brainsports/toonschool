@@ -38,6 +38,9 @@ import StudentBackCoverPage from '../modules/student/pages/StudentBackCoverPage'
 import StudentComicViewerPage from '../modules/student/pages/StudentComicViewerPage'
 import SharedComicViewerPage from '../modules/student/pages/SharedComicViewerPage'
 import StudentMyPage from '../modules/student/pages/StudentMyPage'
+import StudentResourcePage from '../modules/student/pages/StudentResourcePage'
+
+import ResourceInbox from '../modules/resources/pages/ResourceInbox'
 
 import AIContentPage from '../pages/AIContentPage'
 import FlippedLearningPage from '../pages/FlippedLearningPage'
@@ -116,6 +119,7 @@ export default function AppRouter() {
       <Route path="/student/comic/read" element={<StudentComicViewerPage />} />
       <Route path="/student/mypage" element={<StudentMyPage />} />
       <Route path="/student/my" element={<Navigate to="/student/mypage" replace />} />
+      <Route path="/student/resources" element={<StudentResourcePage />} />
       <Route path="/book/:slug" element={<SharedComicViewerPage />} />
 
       {/* 관리 LMS 라우트 */}
@@ -127,6 +131,7 @@ export default function AppRouter() {
         <Route path="assessments" element={<AssessmentPage />} />
         <Route path="teachers" element={<TeacherManagementPage />} />
         <Route path="profile" element={<AdminProfilePage />} />
+        <Route path="resources" element={<ResourceInbox />} />
         
         {/* 기관관리자 (org_admin) */}
         <Route path="organization" element={<OrgAdminDashboard />} />
@@ -155,6 +160,7 @@ export default function AppRouter() {
         <Route path="licenses" element={<OrgLicenseManagement />} />
         <Route path="notifications/send" element={<OrgNotificationSender />} />
         <Route path="notifications/sent" element={<OrgSentNotifications />} />
+        <Route path="resources" element={<ResourceInbox />} />
       </Route>
 
       {/* 중간관리자 전용 라우트 */}
@@ -168,6 +174,7 @@ export default function AppRouter() {
         <Route path="teachers" element={<TeacherManagement />} />
         <Route path="students" element={<StudentManagement />} />
         <Route path="notifications/send" element={<NotificationSender />} />
+        <Route path="resources" element={<ResourceInbox />} />
         <Route path="settings" element={<MiddleSettings />} />
       </Route>
 

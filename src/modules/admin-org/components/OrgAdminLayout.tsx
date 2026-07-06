@@ -8,6 +8,7 @@ const MENU_ITEMS = [
   { label: '이용권 관리', path: '/admin/org/licenses' },
   { label: '알림 보내기', path: '/admin/org/notifications/send' },
   { label: '보낸 알림함', path: '/admin/org/notifications/sent' },
+  { label: '자료실', path: '/admin/org/resources' },
 ]
 
 export default function OrgAdminLayout() {
