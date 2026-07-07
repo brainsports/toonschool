@@ -295,7 +295,6 @@ export default function StudentManagementPage() {
     const { data: dbStudents } = await supabase.from('students').select('login_id')
     const existingLoginIds = new Set(dbStudents?.map(s => s.login_id) || [])
 
-    const generateRandomPassword = () => Math.floor(100000 + Math.random() * 900000).toString()
 
     const inserts = validRows.map(row => {
       let loginId = row.학생코드
@@ -314,7 +313,7 @@ export default function StudentManagementPage() {
         login_id: loginId,
         student_code: row.학생코드 || null,
         guardian_phone: row['보호자 연락처'] || null,
-        temp_password: generateRandomPassword(),
+        temp_password: '1234',
         status: 'active'
       }
     })
@@ -387,7 +386,7 @@ export default function StudentManagementPage() {
       </div>
 
       {/* 버튼 영역 */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 10, marginBottom: 8, flexWrap: 'wrap' }}>
         <button style={{ ...btnBase, background: 'linear-gradient(90deg,#ff2778,#ff6baf)', color: 'white', boxShadow: '0 4px 12px rgba(255,39,120,0.3)' }}
           onClick={() => setShowCreate(true)}>+ 학생 생성</button>
         <button style={{ ...btnBase, background: '#eff6ff', color: '#2563eb', border: '1.5px solid #bfdbfe' }}
@@ -402,6 +401,10 @@ export default function StudentManagementPage() {
               onClick={() => setDeleteConfirm(true)}>🗑️ 삭제 ({checkedIds.size})</button>
           </>
         )}
+      </div>
+
+      <div style={{ fontSize: 13, color: '#666', marginBottom: 20 }}>
+        안내: 엑셀 일괄 등록 시 학생의 최초 비밀번호는 <span style={{ fontWeight: 'bold', color: '#ff2778' }}>1234</span>로 설정됩니다.
       </div>
 
       {/* 학생 목록 표 */}
