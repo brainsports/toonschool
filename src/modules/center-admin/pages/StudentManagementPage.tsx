@@ -432,8 +432,8 @@ export default function StudentManagementPage() {
             <span>학생 개별 등록</span>
           </button>
           </div>
-          <p className="text-[10px] text-slate-500">
-            엑셀 일괄 등록 시 학생의 최초 비밀번호는 <span className="font-bold text-slate-200">1234</span>로 설정됩니다.
+          <p className="text-[10px] text-slate-500 mt-1">
+            안내: 엑셀 일괄 등록 시 학생의 최초 비밀번호는 <span className="font-bold text-pink-500">1234</span>로 설정됩니다.
           </p>
         </div>
       </div>
