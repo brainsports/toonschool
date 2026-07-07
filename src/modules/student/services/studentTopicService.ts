@@ -988,7 +988,17 @@ export const saveGeneratedQuestions = async (
     console.error('Failed to save generated questions:', error)
     throw error
   }
-  return data || []
+  return (data || []).map((q: any) => ({
+    ...q,
+    categoryCode: q.category_code,
+    questionText: q.question_text,
+    topicId: q.topic_id,
+    selectedKeyword: q.selected_keyword,
+    questionCategoryId: q.question_category_id,
+    sortOrder: q.sort_order,
+    isSelected: q.is_selected,
+    createdAt: q.created_at
+  }))
 }
 
 export const selectGeneratedQuestion = async (

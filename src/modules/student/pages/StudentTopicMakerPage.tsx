@@ -160,8 +160,15 @@ export default function StudentTopicMakerPage() {
   }
 
   const handleToggleKeyword = (word: string) => {
-    // Single selection for questions
-    setSelectedKeywords([word])
+    setSelectedKeywords(prev => {
+      if (prev.includes(word)) {
+        return prev.filter(k => k !== word)
+      }
+      if (prev.length >= 4) {
+        return prev
+      }
+      return [...prev, word]
+    })
   }
 
   // 2. 질문 생성 실행 함수
