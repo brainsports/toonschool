@@ -31,9 +31,9 @@ export default function AssessmentPage() {
   const [selectedStudent, setSelectedStudent] = useState<AssessmentRecord | null>(null)
 
   useEffect(() => {
-    fetchClasses().then(list => {
+    fetchClasses().then((list: ClassRoom[]) => {
       setAllClasses(list)
-      const grade5 = list.filter(c => c.grade === 5)
+      const grade5 = list.filter((c: ClassRoom) => c.grade === 5)
       if (grade5.length > 0) setSelectedClassId(grade5[0].id)
     })
   }, [])

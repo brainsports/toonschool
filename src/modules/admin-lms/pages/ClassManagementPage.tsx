@@ -4,14 +4,14 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../../shared/contexts/AuthContext'
 import type { ClassRoom, LicenseInfo, UnitSetting } from '../types'
-import { fetchLicenseInfo, updateUnitSetting, deleteClasses } from '../services/classService'
-import { fetchStudentsByCenterAndGrade } from '../services/studentService'
+import { fetchLicenseInfo, updateUnitSetting, deleteClasses, fetchClassesByOrganizationAndGrade, createClassService } from '../services/classService'
 import { CURRICULUM_UNITS } from '../data/mockClasses'
 import LicenseCard from '../components/LicenseCard'
 import UnitSettingModal from '../components/UnitSettingModal'
 import ConfirmModal from '../components/ConfirmModal'
 import TeacherMessageModal from '../components/TeacherMessageModal'
 import NotificationWriteModal from '../components/NotificationWriteModal'
+import CreateClassModal from '../components/CreateClassModal'
 
 const GRADES = [1, 2, 3, 4, 5, 6]
 
@@ -25,6 +25,7 @@ export default function ClassManagementPage() {
   const [messageModalClass, setMessageModalClass] = useState<ClassRoom | null>(null)
   const [notificationModalClass, setNotificationModalClass] = useState<ClassRoom | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState(false)
+  const [showCreateModal, setShowCreateModal] = useState(false)
   const [toast, setToast] = useState('')
 
   useEffect(() => {
@@ -33,18 +34,19 @@ export default function ClassManagementPage() {
     }
   }, [profile?.id, profile?.center_id])
 
+  const loadClasses = () => {
+    if (!profile?.organization_id) return
+    fetchClassesByOrganizationAndGrade(profile.organization_id, selectedGrade)
+      .then(classes => setGradeClasses(classes))
+      .catch(err => {
+        console.error('Failed to load classes:', err)
+        showToast('학급 목록을 불러오는 데 실패했습니다.')
+      })
+  }
+
   useEffect(() => {
-    if (!profile?.center_id) return
-    fetchStudentsByCenterAndGrade(profile.center_id, selectedGrade).then(students => {
-      setGradeClasses([{
-        id: `class-${selectedGrade}`,
-        name: `${selectedGrade}학년 전체`,
-        grade: selectedGrade,
-        studentCount: students.length,
-        teacherName: profile.name || '선생님',
-      }])
-    })
-  }, [profile?.center_id, profile?.name, selectedGrade])
+    loadClasses()
+  }, [profile?.organization_id, selectedGrade])
 
   const showToast = (msg: string) => {
     setToast(msg)
@@ -104,7 +106,13 @@ export default function ClassManagementPage() {
       {/* 상단 버튼 영역 */}
       <div style={{ display: 'flex', gap: 10, marginTop: 20, marginBottom: 24, flexWrap: 'wrap' }}>
         <button style={{ ...btnBase, background: 'linear-gradient(90deg, #ff2778, #ff6baf)', color: 'white', boxShadow: '0 4px 12px rgba(255,39,120,0.3)' }}
-          onClick={() => showToast('학급 생성 기능은 Supabase 연결 후 활성화됩니다.')}>
+          onClick={() => {
+            if (!profile?.organization_id) {
+              alert('소속 기관 정보(organization_id)가 없어 학급을 생성할 수 없습니다.')
+              return
+            }
+            setShowCreateModal(true)
+          }}>
           + 학급 생성
         </button>
         <button style={{ ...btnBase, background: 'white', color: '#555', border: '1.5px solid #e5e7eb' }}
@@ -253,11 +261,23 @@ export default function ClassManagementPage() {
       {deleteConfirm && (
         <ConfirmModal
           title="학급 삭제"
-          message={`선택한 ${checkedIds.size}개의 학급을 삭제하시겠습니까?\n삭제된 학급과 학생 데이터는 복구할 수 없습니다.`}
+          message={`선택한 ${checkedIds.size}개의 학급을 삭제하시겠습니까?\n실제 데이터는 비활성화(inactive) 처리됩니다.`}
           confirmLabel="삭제"
           onConfirm={handleDelete}
           onClose={() => setDeleteConfirm(false)}
           danger
+        />
+      )}
+
+      {/* 학급 생성 모달 */}
+      {showCreateModal && profile?.organization_id && (
+        <CreateClassModal
+          organizationId={profile.organization_id}
+          teacherId={profile.role === 'teacher' ? profile.id : undefined}
+          defaultGrade={selectedGrade}
+          onClose={() => setShowCreateModal(false)}
+          onSuccess={loadClasses}
+          createClassService={createClassService}
         />
       )}
     </div>

@@ -78,7 +78,7 @@ export default function StudentUnitSelectPage() {
       if (!classId) return;
 
       const classes = await fetchClasses();
-      const studentClass = classes.find(c => c.id === classId);
+      const studentClass = classes.find((c: any) => c.id === classId);
       if (studentClass && studentClass.unitSetting) {
         setClassUnitSetting(studentClass.unitSetting);
       }

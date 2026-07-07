@@ -1,18 +1,61 @@
 // ──────────────────────────────────────────────
-// 서비스 - 학급 (현재 mock, 추후 Supabase 연결)
-// TODO: supabase.from('classes') 조회로 교체
+// 서비스 - 학급 (Supabase 연결)
 // ──────────────────────────────────────────────
 import type { ClassRoom, UnitSetting, LicenseInfo } from '../types'
 import { MOCK_CLASSES } from '../data/mockClasses'
-
 import { supabase } from '../../../shared/lib/supabase'
 
 export async function fetchClasses(): Promise<ClassRoom[]> {
   return Promise.resolve([...MOCK_CLASSES])
 }
 
-export async function fetchClassesByGrade(grade: number): Promise<ClassRoom[]> {
-  return Promise.resolve(MOCK_CLASSES.filter(c => c.grade === grade))
+export async function fetchClassesByOrganizationAndGrade(organizationId: string, grade: number): Promise<ClassRoom[]> {
+  const { data, error } = await supabase
+    .from('classes')
+    .select('*, teacher:profiles!classes_teacher_id_fkey(name)')
+    .eq('organization_id', organizationId)
+    .eq('grade', grade)
+    .eq('status', 'active')
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    console.error('Failed to fetch classes:', error)
+    throw error
+  }
+
+  return (data || []).map(cls => ({
+    id: cls.id,
+    grade: cls.grade,
+    name: cls.name,
+    studentCount: cls.student_count || 0,
+    teacherId: cls.teacher_id,
+    // Note: The relationship name might be different depending on schema.
+    // If profiles!classes_teacher_id_fkey fails, we fallback to just teacher_id or fetch names separately.
+    // Assuming profiles!teacher_id(name) or similar based on standard setup.
+    teacherName: cls.teacher?.name || undefined,
+  }))
+}
+
+export async function createClassService(data: {
+  organization_id: string;
+  name: string;
+  grade: number;
+  homeroom?: string | null;
+  teacher_id?: string | null;
+  status?: string;
+}): Promise<any> {
+  const { data: newClass, error } = await supabase
+    .from('classes')
+    .insert([{ ...data, status: data.status || 'active' }])
+    .select()
+    .single()
+
+  if (error) {
+    console.error('Failed to create class:', error)
+    throw error
+  }
+
+  return newClass
 }
 
 export async function fetchLicenseInfo(profileId?: string, centerId?: string): Promise<LicenseInfo | null> {
@@ -71,17 +114,14 @@ export async function updateUnitSetting(classId: string, setting: UnitSetting): 
   if (idx !== -1) MOCK_CLASSES[idx].unitSetting = setting
 }
 
-export async function createClass(data: Omit<ClassRoom, 'id'>): Promise<ClassRoom> {
-  // TODO: supabase.from('classes').insert(...)
-  const newClass: ClassRoom = { ...data, id: `cls-${Date.now()}` }
-  MOCK_CLASSES.push(newClass)
-  return newClass
-}
-
 export async function deleteClasses(ids: string[]): Promise<void> {
-  // TODO: supabase.from('classes').delete().in('id', ids)
-  ids.forEach(id => {
-    const idx = MOCK_CLASSES.findIndex(c => c.id === id)
-    if (idx !== -1) MOCK_CLASSES.splice(idx, 1)
-  })
+  const { error } = await supabase
+    .from('classes')
+    .update({ status: 'inactive' })
+    .in('id', ids)
+
+  if (error) {
+    console.error('Failed to delete classes:', error)
+    throw error
+  }
 }
