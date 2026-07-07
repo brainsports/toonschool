@@ -39,6 +39,9 @@ export default function StudentManagementPage() {
   const [moveTargetClassId, setMoveTargetClassId] = useState('')
   const [toast, setToast] = useState('')
 
+  const [editPasswordStudentId, setEditPasswordStudentId] = useState<string | null>(null)
+  const [newPassword, setNewPassword] = useState('')
+
   const [isExcelModalOpen, setIsExcelModalOpen] = useState(false)
   const [parsedRows, setParsedRows] = useState<ExcelRow[]>([])
   const [isUploading, setIsUploading] = useState(false)
@@ -143,6 +146,43 @@ export default function StudentManagementPage() {
     setCheckedIds(new Set())
     setShowMoveModal(false)
     showToast(`${targetClass.name}(으)로 이동되었습니다.`)
+  }
+
+  const handlePasswordUpdate = async () => {
+    if (!editPasswordStudentId || newPassword.length < 4) {
+      alert('비밀번호는 최소 4자리 이상이어야 합니다.')
+      return
+    }
+    try {
+      const { error } = await supabase
+        .from('students')
+        .update({ temp_password: newPassword })
+        .eq('id', editPasswordStudentId)
+
+      if (error) {
+        console.error('[StudentManagementPage] Failed to update password:', error.message, error.details, error.hint, error.code)
+        alert('비밀번호 수정에 실패했습니다.')
+        return
+      }
+
+      showToast('비밀번호가 수정되었습니다.')
+      setEditPasswordStudentId(null)
+      setNewPassword('')
+
+      // Refresh list
+      if (actualCenterId) {
+        fetchStudentsByCenterAndGrade(actualCenterId, selectedGrade).then(data => {
+          if (selectedClassId) {
+            setStudents(data.filter(s => s.classId === selectedClassId))
+          } else {
+            setStudents(data)
+          }
+        })
+      }
+    } catch (err) {
+      console.error('[StudentManagementPage] Unexpected error updating password:', err)
+      alert('비밀번호 수정에 실패했습니다.')
+    }
   }
 
   const handleDownloadTemplate = () => {
@@ -367,7 +407,7 @@ export default function StudentManagementPage() {
       {/* 학생 목록 표 */}
       <div style={{ background: 'white', borderRadius: 16, boxShadow: '0 2px 12px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
         <div style={{
-          display: 'grid', gridTemplateColumns: '40px 60px 100px 140px 120px',
+          display: 'grid', gridTemplateColumns: '40px 60px 100px 140px 120px 80px',
           padding: '14px 20px', background: '#fafafa',
           borderBottom: '1.5px solid #f0f0f0', fontSize: 13, fontWeight: 700, color: '#666',
         }}>
@@ -376,6 +416,7 @@ export default function StudentManagementPage() {
           <div>이름</div>
           <div>아이디</div>
           <div>비밀번호</div>
+          <div>관리</div>
         </div>
 
         {students.length === 0 ? (
@@ -391,7 +432,7 @@ export default function StudentManagementPage() {
         ) : (
           students.sort((a, b) => a.number - b.number).map((stu, idx) => (
             <div key={stu.id} style={{
-              display: 'grid', gridTemplateColumns: '40px 60px 100px 140px 120px',
+              display: 'grid', gridTemplateColumns: '40px 60px 100px 140px 120px 80px',
               padding: '13px 20px',
               borderBottom: idx < students.length - 1 ? '1px solid #f9f9f9' : 'none',
               alignItems: 'center',
@@ -401,7 +442,17 @@ export default function StudentManagementPage() {
               <div style={{ fontSize: 14, color: '#888' }}>{stu.number}</div>
               <div style={{ fontSize: 15, fontWeight: 700, color: '#1a1a2e' }}>{stu.name}</div>
               <div style={{ fontSize: 13, color: '#555', fontFamily: 'monospace' }}>{stu.loginId}</div>
-              <div style={{ fontSize: 13, color: '#aaa', fontFamily: 'monospace' }}>{stu.password}</div>
+              <div style={{ fontSize: 13, color: '#aaa', fontFamily: 'monospace' }}>******</div>
+              <div>
+                <button onClick={() => {
+                  setEditPasswordStudentId(stu.id)
+                  setNewPassword('')
+                }} style={{
+                  padding: '6px 12px', fontSize: 12, borderRadius: 6,
+                  border: '1px solid #ddd', background: 'white', cursor: 'pointer',
+                  fontWeight: 600, color: '#555'
+                }}>수정</button>
+              </div>
             </div>
           ))
         )}
@@ -547,6 +598,43 @@ export default function StudentManagementPage() {
                 background: parsedRows.filter(r => r._status === 'ready').length > 0 ? '#2563eb' : '#e5e7eb',
                 color: 'white', fontWeight: 700, cursor: parsedRows.filter(r => r._status === 'ready').length > 0 ? 'pointer' : 'not-allowed'
               }}>{isUploading ? '등록 중...' : '엑셀 데이터 일괄 등록'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 학생 비밀번호 수정 모달 */}
+      {editPasswordStudentId && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 300,
+        }} onClick={() => setEditPasswordStudentId(null)}>
+          <div style={{
+            background: 'white', borderRadius: 20, padding: 32, width: '100%', maxWidth: 360,
+            boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
+          }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ fontSize: 18, fontWeight: 800, margin: '0 0 16px' }}>비밀번호 수정</h3>
+            <p style={{ fontSize: 13, color: '#888', marginBottom: 16 }}>새로운 비밀번호를 입력해 주세요. (최소 4자리)</p>
+            <input
+              type="text"
+              placeholder="새 비밀번호 입력"
+              value={newPassword}
+              onChange={e => setNewPassword(e.target.value)}
+              style={{
+                width: '100%', padding: '12px 14px', borderRadius: 10, border: '1.5px solid #e5e7eb',
+                fontSize: 14, boxSizing: 'border-box'
+              }}
+            />
+            <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+              <button onClick={() => setEditPasswordStudentId(null)} style={{
+                flex: 1, padding: '12px', borderRadius: 12, border: '1.5px solid #e5e7eb',
+                background: 'white', color: '#555', fontWeight: 600, cursor: 'pointer',
+              }}>취소</button>
+              <button onClick={handlePasswordUpdate} style={{
+                flex: 1, padding: '12px', borderRadius: 12, border: 'none',
+                background: 'linear-gradient(90deg,#ff2778,#ff6baf)',
+                color: 'white', fontWeight: 700, cursor: 'pointer',
+              }}>저장</button>
             </div>
           </div>
         </div>
