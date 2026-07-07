@@ -25,7 +25,7 @@ interface ExcelRow {
 }
 
 export default function StudentManagementPage() {
-  const { profile } = useAuth()
+  const { profile, user } = useAuth()
   const [students, setStudents] = useState<StudentRecord[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -213,18 +213,20 @@ export default function StudentManagementPage() {
             r._errorMsg = '학년 누락'
             return r
           }
+          if (!studentCode) {
+            r._status = 'error'
+            r._errorMsg = '학생코드 누락'
+            return r
+          }
 
-          // login_id 정책: studentCode 우선. 없으면 검증 패스 (등록 시 자동 생성)
-          if (studentCode) {
-            if (fileLoginIds.has(studentCode)) {
-              r._status = 'duplicate'
-              r._errorMsg = '파일 내 중복'
-            } else if (existingLoginIds.has(studentCode)) {
-              r._status = 'duplicate'
-              r._errorMsg = '기존 아이디 존재'
-            } else {
-              fileLoginIds.add(studentCode)
-            }
+          if (fileLoginIds.has(studentCode)) {
+            r._status = 'duplicate'
+            r._errorMsg = '파일 내 중복'
+          } else if (existingLoginIds.has(studentCode)) {
+            r._status = 'duplicate'
+            r._errorMsg = '기존 아이디 존재'
+          } else {
+            fileLoginIds.add(studentCode)
           }
 
           return r
@@ -258,37 +260,18 @@ export default function StudentManagementPage() {
     setIsUploading(true)
     let successCount = 0
 
-    // Prefix: 기관의 id 앞 4자리 또는 center_id의 앞 4자리. 없으면 'stu'
-    const prefix = profile.organization_id 
-      ? profile.organization_id.substring(0, 4) 
-      : (profile.center_id ? profile.center_id.substring(0, 4) : 'stu')
-
-    // 현재 DB의 login_id 한번 더 조회
-    const { data: dbStudents } = await supabase
-      .from('students')
-      .select('login_id')
-    const existingLoginIds = new Set(dbStudents?.map(s => s.login_id) || [])
-
     const inserts = validRows.map(row => {
-      let loginId = row.학생코드
-      if (!loginId) {
-        // 중복 피하기 위해 루프 안에서 고유한 loginId 생성
-        do {
-          loginId = `${prefix}_${Math.floor(100000 + Math.random() * 900000)}`
-        } while (existingLoginIds.has(loginId))
-        existingLoginIds.add(loginId)
-      }
-
       return {
         center_id: profile.center_id,
         organization_id: profile.organization_id || null,
         name: row.이름,
         grade: row.학년,
-        login_id: loginId,
+        login_id: row.학생코드,
         student_code: row.학생코드 || null,
         guardian_phone: row['보호자 연락처'] || null,
         temp_password: generateRandomPassword(),
-        status: '정상'
+        status: '정상',
+        created_by: user?.id
       }
     })
 
@@ -305,9 +288,10 @@ export default function StudentManagementPage() {
       setIsExcelModalOpen(false)
       setParsedRows([])
       fetchStudents()
-    } catch (err) {
-      console.error(err)
-      alert('일부 또는 전체 데이터 등록에 실패했습니다.')
+    } catch (err: any) {
+      console.error('Bulk upload error details:', err?.message, err?.details, err?.hint, err)
+      console.error('Failed inserts payload:', inserts)
+      alert(`일부 또는 전체 데이터 등록에 실패했습니다.\n사유: ${err?.message || '알 수 없는 오류'}\n상세 내용은 콘솔을 확인해주세요.`)
     } finally {
       setIsUploading(false)
     }
