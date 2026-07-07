@@ -275,7 +275,6 @@ export default function StudentManagementPage() {
         student_code: row.학생코드 || null,
         guardian_phone: row['보호자 연락처'] || null,
         temp_password: generateRandomPassword(),
-        password: generateRandomPassword(),
         status: 'active'
       }
     })
