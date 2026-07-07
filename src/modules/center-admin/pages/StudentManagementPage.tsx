@@ -347,7 +347,7 @@ export default function StudentManagementPage() {
           login_id: row.학생코드,
           student_code: row.학생코드 || null,
           guardian_phone: row['보호자 연락처'] || null,
-          temp_password: generateRandomPassword(),
+          temp_password: '1234',
           status: '정상',
           created_by: user?.id
         }
@@ -405,8 +405,9 @@ export default function StudentManagementPage() {
           </h2>
           <p className="text-[10px] text-slate-500 mt-0.5">클래스에 등록된 소속 학생들의 로그인 아이디와 임시 비밀번호를 관리합니다.</p>
         </div>
-        <div className="flex flex-wrap gap-2.5 w-full sm:w-auto shrink-0 items-center justify-end">
-          <div className="relative w-full sm:w-48">
+        <div className="flex flex-col items-end gap-1.5">
+          <div className="flex flex-wrap gap-2.5 w-full sm:w-auto shrink-0 items-center justify-end">
+            <div className="relative w-full sm:w-48">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-500" />
             <input
               type="text"
@@ -430,6 +431,10 @@ export default function StudentManagementPage() {
             <Plus className="h-4 w-4" />
             <span>학생 개별 등록</span>
           </button>
+          </div>
+          <p className="text-[10px] text-slate-500">
+            엑셀 일괄 등록 시 학생의 최초 비밀번호는 <span className="font-bold text-slate-200">1234</span>로 설정됩니다.
+          </p>
         </div>
       </div>
 
@@ -506,25 +511,30 @@ export default function StudentManagementPage() {
                 <h3 className="font-bold text-slate-200 text-sm">학생 엑셀 대량 등록</h3>
                 <p className="text-[10px] text-slate-500 mt-1">양식에 맞춰 엑셀 파일을 업로드하면 여러 학생을 한 번에 등록할 수 있습니다.</p>
               </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={handleDownloadTemplate}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs border border-slate-700 transition-colors cursor-pointer"
-                >
-                  <Download className="h-3.5 w-3.5" />
-                  <span>양식 다운로드</span>
-                </button>
-                <label className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition-colors cursor-pointer">
-                  <Upload className="h-3.5 w-3.5" />
-                  <span>파일 선택</span>
-                  <input 
-                    type="file" 
-                    accept=".xlsx, .csv" 
-                    className="hidden" 
-                    ref={fileInputRef}
-                    onChange={handleFileUpload} 
-                  />
-                </label>
+              <div className="flex flex-col items-end gap-1.5">
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleDownloadTemplate}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs border border-slate-700 transition-colors cursor-pointer"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    <span>양식 다운로드</span>
+                  </button>
+                  <label className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition-colors cursor-pointer">
+                    <Upload className="h-3.5 w-3.5" />
+                    <span>파일 선택</span>
+                    <input 
+                      type="file" 
+                      accept=".xlsx, .csv" 
+                      className="hidden" 
+                      ref={fileInputRef}
+                      onChange={handleFileUpload} 
+                    />
+                  </label>
+                </div>
+                <p className="text-[10px] text-slate-500">
+                  엑셀 일괄 등록 시 학생의 최초 비밀번호는 <span className="font-bold text-slate-200">1234</span>로 설정됩니다.
+                </p>
               </div>
             </div>
 
