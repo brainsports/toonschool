@@ -151,13 +151,19 @@ function deduplicate(recs: TopicRecommendation[], existing: TopicRecommendation[
 }
 
 const buildPrompt = (request: TopicGenerationRequest, existing: TopicRecommendation[], count: number, extraData: CurriculumContext) => {
-  const { gradeName, subjectName, majorUnitName, middleUnitName, extraRequest, selectedKeywords, previousTitles } = request
+  const { gradeName, subjectName, majorUnitName, middleUnitName, extraRequest, selectedKeywords, selectedQuestion, previousTitles } = request
   const { learningGoal, keyQuestions, contentScope, achievementStandards, unitSummary, unitGoal, subunitSummary } = extraData
 
   const allBannedTitles = [
     ...(previousTitles || []),
     ...existing.map(r => r.title)
   ]
+
+  const questionContext = selectedQuestion ? `
+[중요: 핵심 질문 기반 생성]
+선택된 질문: "${selectedQuestion.questionText}"
+이 질문에 대한 답을 찾아가거나, 이 질문에서 출발한 상황을 핵심 사건으로 다루는 만화 주제를 만들어야 합니다.
+` : '';
 
   return `당신은 초등학생용 교과 학습만화 기획자입니다.
 
@@ -187,12 +193,14 @@ ${unitSummary ? `대단원 요약: ${unitSummary}` : ''}
 ${subunitSummary ? `중단원 요약: ${subunitSummary}` : ''}
 ${contentScope ? `내용 체계: ${contentScope}` : ''}
 ${selectedKeywords?.length ? `선택한 키워드: ${selectedKeywords.join(', ')}` : ''}
+${questionContext}
 ${extraRequest ? `추가 요청: ${extraRequest}` : ''}
 
 [조건]
 1. 한글 기준 8~22자 제목
 2. 설명은 1~2문장 (45~90자)
 3. 10가지 다양한 이야기 유형(everyday_problem 등)을 골고루 배정
+${selectedQuestion ? '4. 생성되는 모든 주제는 반드시 [선택된 질문]의 내용과 직접적으로 연결되어야 합니다.' : ''}
 
 응답은 지정된 JSON 형식으로만 반환하세요.
 {
@@ -814,4 +822,205 @@ export const generateKeywords = async (
     console.error('Failed to generate keywords from AI:', error)
     return getFallbackKeywords(subjectName || '', existingKeywords, middleUnitName || '', majorUnitName || '', curriculumContext).slice(0, count)
   }
+}
+
+export const fetchQuestionCategories = async (): Promise<any[]> => {
+  const { data, error } = await supabase
+    .from('question_categories')
+    .select('*')
+    .eq('is_active', true)
+    .order('sort_order', { ascending: true })
+
+  if (error) {
+    console.error('Failed to fetch question categories:', error)
+    throw error
+  }
+  return data || []
+}
+
+export const generateQuestions = async (
+  request: any
+): Promise<any[]> => {
+  const { gradeName, subjectName, majorUnitName, middleUnitName, keyword, categories, curriculumContext } = request
+
+  const contextText = curriculumContext ? `
+[교과 정보]
+대단원 목표: ${curriculumContext.unitGoal || ''}
+중단원 학습목표: ${curriculumContext.learningGoal || ''}
+성취기준: ${curriculumContext.achievementStandards || ''}
+중단원 설명: ${curriculumContext.subunitSummary || ''}
+` : '';
+
+  const prompt = `
+너는 초등학생을 위한 학습만화 선생님입니다.
+선택된 키워드 '${keyword}'를 중심으로, 각 질문 유형에 맞는 호기심 유발 질문들을 만들어 주세요.
+
+학년: ${gradeName}
+과목: ${subjectName}
+대단원: ${majorUnitName}
+중단원(학습 주제): ${middleUnitName}${contextText}
+선택된 키워드: ${keyword}
+
+[질문 유형]
+${categories.map((c: any) => `- ${c.name} (코드: ${c.code}): ${c.description}`).join('\n')}
+
+[조건]
+1. 위에서 제시된 모든 질문 유형(코드)에 대해 각각 5개씩 질문을 만드세요.
+2. 질문은 초등학생이 흥미를 느낄 수 있는 말투여야 합니다. 너무 어려운 개념어 중심 질문은 피하세요.
+3. 질문은 반드시 물음표(?)로 끝나야 합니다.
+4. 카테고리별 성격이 드러나야 합니다.
+5. 질문 안에 선택 키워드가 자연스럽게 포함되거나 명확히 연결되어야 합니다.
+6. 응답은 지정된 JSON 형식으로만 반환하세요.
+
+응답 형식:
+{
+  "questions": [
+    {
+      "categoryCode": "why",
+      "questionText": "질문 내용 1?"
+    },
+    {
+      "categoryCode": "why",
+      "questionText": "질문 내용 2?"
+    }
+  ]
+}
+`
+  const tryModel = async (model: string): Promise<any[]> => {
+    if (!model) throw new Error('No model provided');
+    const responseText = await Promise.race([
+      geminiClient.generateTextWithModel(prompt, model),
+      new Promise<string>((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), 10000))
+    ]);
+
+    const cleanedText = responseText.replace(/\`\`\`json/gi, '').replace(/\`\`\`/g, '').trim()
+    const parsedData = JSON.parse(cleanedText)
+
+    if (parsedData && Array.isArray(parsedData.questions)) {
+      return parsedData.questions.map((q: any) => ({
+        ...q,
+        keyword
+      }));
+    }
+    throw new Error('Invalid JSON format from AI')
+  }
+
+  try {
+    return await tryModel(TEXT_GENERATION_MODEL);
+  } catch (error) {
+    console.error('Failed to generate questions from AI:', error)
+    throw error;
+  }
+}
+
+export const saveGeneratedQuestions = async (
+  questions: any[],
+  contextData: any
+): Promise<any[]> => {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+
+  const { grade, subject, semester, unit_id, subunit_id } = contextData
+
+  const inserts = questions.map(q => ({
+    user_id: user.id,
+    grade,
+    subject,
+    semester,
+    unit_id,
+    subunit_id,
+    keyword: q.keyword,
+    category_code: q.categoryCode,
+    question_text: q.questionText,
+    is_selected: false
+  }))
+
+  const { data, error } = await supabase
+    .from('generated_questions')
+    .insert(inserts)
+    .select()
+
+  if (error) {
+    console.error('Failed to save generated questions:', error)
+    throw error
+  }
+  return data || []
+}
+
+export const selectGeneratedQuestion = async (
+  questionId: string,
+  contextData: any
+) => {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+
+  // First, set all other questions with same context to false
+  await supabase
+    .from('generated_questions')
+    .update({ is_selected: false })
+    .eq('user_id', user.id)
+    .eq('keyword', contextData.keyword)
+    .eq('subject', contextData.subject || '')
+    .eq('grade', contextData.grade || 0)
+    
+  // Set the selected one to true
+  const { error } = await supabase
+    .from('generated_questions')
+    .update({ is_selected: true })
+    .eq('id', questionId)
+    .eq('user_id', user.id)
+
+  if (error) throw error
+}
+
+export const saveGeneratedTopics = async (
+  topics: any[],
+  questionId: string,
+  batchNo: number = 1
+): Promise<any[]> => {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+
+  const inserts = topics.map(t => ({
+    user_id: user.id,
+    question_id: questionId,
+    topic_text: JSON.stringify(t),
+    batch_no: batchNo,
+    is_selected: false
+  }))
+
+  const { data, error } = await supabase
+    .from('generated_topics')
+    .insert(inserts)
+    .select()
+
+  if (error) {
+    console.error('Failed to save generated topics:', error)
+    throw error
+  }
+  return data || []
+}
+
+export const selectGeneratedTopic = async (
+  topicId: string,
+  questionId: string
+) => {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+
+  // First, set all other topics for this question to false
+  await supabase
+    .from('generated_topics')
+    .update({ is_selected: false })
+    .eq('user_id', user.id)
+    .eq('question_id', questionId)
+    
+  // Set the selected one to true
+  const { error } = await supabase
+    .from('generated_topics')
+    .update({ is_selected: true })
+    .eq('id', topicId)
+    .eq('user_id', user.id)
+
+  if (error) throw error
 }

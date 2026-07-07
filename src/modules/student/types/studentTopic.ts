@@ -49,6 +49,7 @@ export interface TopicGenerationRequest {
   middleUnitName: string;
   extraRequest?: string;
   selectedKeywords?: string[];
+  selectedQuestion?: GeneratedQuestion | null;
   learningTopicId?: string | null;
   previousTitles?: string[];
   previousIncidents?: string[];
@@ -57,4 +58,30 @@ export interface TopicGenerationRequest {
   curriculumContext?: CurriculumContext;
 }
 
+export interface QuestionCategory {
+  code: string;
+  name: string;
+  description: string;
+}
+
+export interface GeneratedQuestion {
+  id?: string;
+  categoryCode: string;
+  categoryName: string;
+  questionText: string;
+  keyword: string;
+  isSelected?: boolean;
+}
+
+export interface QuestionGenerationRequest {
+  gradeName: string;
+  subjectName: string;
+  majorUnitName: string;
+  middleUnitName: string;
+  keyword: string;
+  categories: QuestionCategory[];
+  curriculumContext?: CurriculumContext;
+}
+
 export type TopicGenerationState = 'idle' | 'loading' | 'success' | 'error';
+export type QuestionGenerationState = 'idle' | 'loading' | 'success' | 'error';

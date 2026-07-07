@@ -7,9 +7,10 @@ import StoryInputCard from '../components/topic/StoryInputCard'
 import AiRecommendationCard from '../components/topic/AiRecommendationCard'
 
 import KeywordSelectionCard from '../components/topic/KeywordSelectionCard'
+import QuestionSelectionCard from '../components/topic/QuestionSelectionCard'
 import type { StudentUnitSelection } from '../types/studentCurriculum'
-import type { TopicRecommendation, TopicGenerationState, KeywordItem, CurriculumContext } from '../types/studentTopic'
-import { generateTopicRecommendations, generateKeywords, fetchCurriculumContext } from '../services/studentTopicService'
+import type { TopicRecommendation, TopicGenerationState, QuestionGenerationState, KeywordItem, CurriculumContext, QuestionCategory, GeneratedQuestion } from '../types/studentTopic'
+import { generateTopicRecommendations, generateKeywords, fetchCurriculumContext, fetchQuestionCategories, generateQuestions, saveGeneratedQuestions, selectGeneratedQuestion, saveGeneratedTopics, selectGeneratedTopic } from '../services/studentTopicService'
 import { Sparkles, PenTool, ArrowLeft, Wand2 } from 'lucide-react'
 import { projectStorage } from '../utils/projectStorage'
 import { showToast } from '../utils/toast'
@@ -18,7 +19,8 @@ export default function StudentTopicMakerPage() {
   const navigate = useNavigate()
   const location = useLocation()
   
-  const [creationMode, setCreationMode] = useState<'select' | 'ai' | 'manual'>('select')
+  const [creationMode, setCreationMode] = useState<'ai' | 'manual'>('ai')
+  const [aiStep, setAiStep] = useState<'keyword' | 'question' | 'topic'>('keyword')
   const [projectId] = useState<string>(location.state?.projectId || '')
   const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null)
   const [extraRequest, setExtraRequest] = useState('')
@@ -36,6 +38,12 @@ export default function StudentTopicMakerPage() {
   const [recommendedKeywords, setRecommendedKeywords] = useState<KeywordItem[]>([])
   const [selectedKeywords, setSelectedKeywords] = useState<string[]>([])
   const [isKeywordLoading, setIsKeywordLoading] = useState(false)
+
+  // 질문 추천 관련 상태
+  const [questionCategories, setQuestionCategories] = useState<QuestionCategory[]>([])
+  const [generatedQuestions, setGeneratedQuestions] = useState<GeneratedQuestion[]>([])
+  const [selectedQuestionId, setSelectedQuestionId] = useState<string | null>(null)
+  const [questionGenState, setQuestionGenState] = useState<QuestionGenerationState>('idle')
 
   const isMaxTopicsReached = topics.length >= MAX_RECOMMENDED_TOPICS;
 
@@ -84,24 +92,41 @@ export default function StudentTopicMakerPage() {
       if (savedTopicData) {
         if (savedTopicData.extraRequest) setExtraRequest(savedTopicData.extraRequest);
         if (savedTopicData.selectedKeywords) setSelectedKeywords(savedTopicData.selectedKeywords);
+        if (savedTopicData.selectedQuestion) {
+          setGeneratedQuestions([savedTopicData.selectedQuestion]);
+          setSelectedQuestionId(savedTopicData.selectedQuestion.id);
+        }
         if (savedTopicData.topic) {
           setTopics([savedTopicData.topic]);
           setSelectedTopicId(savedTopicData.topic.id);
-          setCreationMode('ai');
           setGenState('success');
+          
+          if (savedTopicData.selectedQuestion) {
+            setCreationMode('ai');
+            setAiStep('topic');
+          } else {
+            setCreationMode('manual');
+          }
         }
       }
     }
   }, [projectId]);
 
+  // 카테고리 로드
+  useEffect(() => {
+    fetchQuestionCategories()
+      .then(setQuestionCategories)
+      .catch(console.error)
+  }, [])
+
   const canProceed = selectedTopicId !== null
 
   // 처음 AI 모드 진입 시 자동 키워드 생성
   useEffect(() => {
-    if (creationMode === 'ai' && selection && recommendedKeywords.length === 0 && !isKeywordLoading) {
+    if (creationMode === 'ai' && aiStep === 'keyword' && selection && recommendedKeywords.length === 0 && !isKeywordLoading) {
       handleGenerateKeywords()
     }
-  }, [creationMode, selection])
+  }, [creationMode, aiStep, selection])
 
   // 키워드 직접 생성 (수동)
   const handleGenerateKeywords = async () => {
@@ -135,26 +160,119 @@ export default function StudentTopicMakerPage() {
   }
 
   const handleToggleKeyword = (word: string) => {
-    if (selectedKeywords.includes(word)) {
-      setSelectedKeywords(prev => prev.filter(k => k !== word))
-    } else {
-      if (selectedKeywords.length >= 4) {
-        alert('키워드는 최대 4개까지 고를 수 있어요.')
-        return
-      }
-      setSelectedKeywords(prev => [...prev, word])
+    // Single selection for questions
+    setSelectedKeywords([word])
+  }
+
+  // 2. 질문 생성 실행 함수
+  const handleProceedToQuestions = async () => {
+    if (!selection || selectedKeywords.length === 0) return
+    setAiStep('question')
+    setQuestionGenState('loading')
+    setSelectedQuestionId(null)
+    setGeneratedQuestions([])
+
+    const request = {
+      gradeName: selection.gradeName || '',
+      subjectName: selection.subjectName || '',
+      majorUnitName: selection.majorUnitName || '',
+      middleUnitName: selection.middleUnitName || '',
+      keyword: selectedKeywords[0],
+      categories: questionCategories,
+      curriculumContext
+    }
+
+    try {
+      const questions = await generateQuestions(request)
+      const savedQuestions = await saveGeneratedQuestions(questions, {
+        grade: selection.gradeValue || 0,
+        subject: selection.subjectName || '',
+        semester: selection.semesterValue?.toString() || '',
+        unit_id: selection.majorUnitId || null,
+        subunit_id: selection.middleUnitId || null,
+      })
+      setGeneratedQuestions(savedQuestions)
+      setQuestionGenState('success')
+    } catch (error) {
+      console.error('질문 생성 실패:', error)
+      alert('질문을 만들지 못했습니다. 다시 시도해 주세요.')
+      setQuestionGenState('error')
     }
   }
 
-  // 2. AI 추천 실행 함수 (추가 생성)
+  const handleSelectQuestion = async (qId: string) => {
+    setSelectedQuestionId(qId)
+    try {
+      await selectGeneratedQuestion(qId, {
+        keyword: selectedKeywords[0],
+        subject: selection?.subjectName || '',
+        grade: selection?.gradeValue || 0
+      })
+    } catch (e) {
+      console.error('질문 선택 저장 실패:', e)
+    }
+  }
+
+  // 3. 주제 생성 실행 함수 (질문 선택 후)
+  const handleProceedToTopics = async () => {
+    if (!selection || !selectedQuestionId) return
+    setAiStep('topic')
+    setGenState('loading')
+    setSelectedTopicId(null)
+    setTopics([])
+
+    const selectedQuestion = generatedQuestions.find(q => q.id === selectedQuestionId)
+
+    const request = {
+      gradeName: selection.gradeName || '',
+      subjectName: selection.subjectName || '',
+      majorUnitName: selection.majorUnitName || '',
+      middleUnitName: selection.middleUnitName || '',
+      selectedKeywords,
+      selectedQuestion,
+      learningTopicId: selection.middleUnitId || null,
+      previousTitles: [],
+      previousIncidents: [],
+      previousTypes: [],
+      count: 4, // Initially generate 4 topics
+      curriculumContext
+    }
+
+    try {
+      const generatedTopics = await generateTopicRecommendations(request)
+      const savedTopics = await saveGeneratedTopics(generatedTopics, selectedQuestionId, 1)
+      
+      // Parse back the topic objects from saved text
+      const parsedTopics = savedTopics.map(st => {
+        try {
+          const t = JSON.parse(st.topic_text)
+          t.id = st.id // Use DB id
+          return t
+        } catch {
+          return null
+        }
+      }).filter(Boolean)
+      
+      setTopics(parsedTopics)
+      setGenState('success')
+    } catch (error) {
+      console.error('AI 추천 주제 생성 중 오류 발생:', error)
+      alert('추천 주제를 만들지 못했습니다. 다시 시도해 주세요.')
+      setGenState('error')
+    }
+  }
+
+  // 4. AI 추천 실행 함수 (추가 생성)
   const handleGenerateMoreTopics = async () => {
-    if (!selection) return
+    if (!selection || !selectedQuestionId) return
     if (isGeneratingMore || genState === 'loading') return
     if (isMaxTopicsReached) return
 
     const previousTitles = topics.map(t => t.title)
     const previousIncidents = topics.map(t => t.incident).filter(Boolean)
     const previousTypes = topics.map(t => t.storyType).filter(Boolean)
+
+    const selectedQuestion = generatedQuestions.find(q => q.id === selectedQuestionId)
 
     setIsGeneratingMore(true)
 
@@ -165,6 +283,7 @@ export default function StudentTopicMakerPage() {
       middleUnitName: selection.middleUnitName || '',
       extraRequest: extraRequest.trim() || undefined,
       selectedKeywords,
+      selectedQuestion,
       learningTopicId: selection.middleUnitId || null,
       previousTitles,
       previousIncidents,
@@ -175,8 +294,23 @@ export default function StudentTopicMakerPage() {
 
     try {
       const generatedTopics = await generateTopicRecommendations(request)
+      
+      // Find current batch number
+      const currentBatch = Math.floor(topics.length / TOPICS_PER_GENERATION) + 1
+      const savedTopics = await saveGeneratedTopics(generatedTopics, selectedQuestionId, currentBatch)
+      
+      const parsedTopics = savedTopics.map(st => {
+        try {
+          const t = JSON.parse(st.topic_text)
+          t.id = st.id
+          return t
+        } catch {
+          return null
+        }
+      }).filter(Boolean)
+
       setTopics(prev => {
-        const combined = [...prev, ...generatedTopics]
+        const combined = [...prev, ...parsedTopics]
         return combined.slice(0, MAX_RECOMMENDED_TOPICS)
       })
     } catch (error) {
@@ -187,7 +321,7 @@ export default function StudentTopicMakerPage() {
     }
   }
 
-  // 2-1. AI 추천 실행 함수 (다시 받기 / 초기 생성)
+  // 4-1. AI 추천 실행 함수 (다시 받기 / 초기 생성 - manual 모드용)
   const handleRegenerateTopics = async () => {
     if (!selection) return
     if (isGeneratingMore || genState === 'loading') return
@@ -203,6 +337,8 @@ export default function StudentTopicMakerPage() {
     setSelectedTopicId(null)
     setGenState('loading')
 
+    const selectedQuestion = generatedQuestions.find(q => q.id === selectedQuestionId)
+
     const request = {
       gradeName: selection.gradeName || '',
       subjectName: selection.subjectName || '',
@@ -210,22 +346,37 @@ export default function StudentTopicMakerPage() {
       middleUnitName: selection.middleUnitName || '',
       extraRequest: extraRequest.trim() || undefined,
       selectedKeywords,
+      selectedQuestion,
       learningTopicId: selection.middleUnitId || null,
       previousTitles: [],
       previousIncidents: [],
       previousTypes: [],
-      count: TOPICS_PER_GENERATION,
+      count: 4, // 4 at a time
       curriculumContext
     }
 
     try {
       const generatedTopics = await generateTopicRecommendations(request)
-      setTopics(generatedTopics)
+      if (selectedQuestionId) {
+        const savedTopics = await saveGeneratedTopics(generatedTopics, selectedQuestionId, 1)
+        const parsedTopics = savedTopics.map(st => {
+          try {
+            const t = JSON.parse(st.topic_text)
+            t.id = st.id
+            return t
+          } catch {
+            return null
+          }
+        }).filter(Boolean)
+        setTopics(parsedTopics)
+      } else {
+        setTopics(generatedTopics)
+      }
       setGenState('success')
     } catch (error) {
       console.error('AI 추천 주제 생성 중 오류 발생:', error)
       alert('추천 주제를 만들지 못했습니다. 다시 시도해 주세요.')
-      setGenState('idle')
+      setGenState('error')
     }
   }
 
@@ -234,15 +385,29 @@ export default function StudentTopicMakerPage() {
   // 선택한 스토리의 설명 정보 가져오기
   const selectedTopic = topics.find(t => t.id === selectedTopicId)
 
+  const handleSelectTopic = async (tId: string | null) => {
+    setSelectedTopicId(tId)
+    if (tId && selectedQuestionId) {
+      try {
+        await selectGeneratedTopic(tId, selectedQuestionId)
+      } catch (e) {
+        console.error('주제 선택 저장 실패:', e)
+      }
+    }
+  }
+
   // 만화 만들기 클릭 시 이동
   const handleProceedToComic = () => {
     if (!canProceed || !selection || !selectedTopic) return
+
+    const selectedQuestion = generatedQuestions.find(q => q.id === selectedQuestionId)
 
     const fullSelectionData = {
       selection,
       topic: selectedTopic,
       extraRequest,
-      selectedKeywords
+      selectedKeywords,
+      selectedQuestion
     }
 
     const success = projectStorage.saveTopic(projectId, fullSelectionData)
@@ -285,60 +450,30 @@ export default function StudentTopicMakerPage() {
           {/* 단원 정보 배지 */}
         <TopicStepTitle selection={selection} />
 
-        {creationMode === 'select' && (
-          <div className="animate-fade-in">
-
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 mt-4 max-w-[1200px] mx-auto w-full">
-              <button
-                onClick={() => {
-                  setCreationMode('ai')
-                  setExtraRequest('')
-                }}
-                className="card-select-panel p-8 flex flex-col items-center justify-between hover:scale-[1.02] transition-transform text-center h-[22rem] group"
-              >
-                <div className="w-24 h-24 bg-purple-500/10 rounded-full flex items-center justify-center group-hover:bg-purple-500/20 transition-colors shrink-0">
-                  <Sparkles className="w-12 h-12 text-purple-500" />
-                </div>
-                <div className="text-center">
-                  <h3 className="font-jua text-3xl md:text-4xl font-bold text-[#25213b] leading-tight">AI 추천으로 시작하기</h3>
-                </div>
-                <div className="btn-primary-action px-8 py-3 font-jua text-xl w-full max-w-[200px] text-center shrink-0 shadow-md">
-                  AI 추천 받기
-                </div>
-              </button>
-
-              <button
-                onClick={() => {
-                  setCreationMode('manual')
-                  setExtraRequest('')
-                }}
-                className="card-select-panel p-8 flex flex-col items-center justify-between hover:scale-[1.02] transition-transform text-center h-[22rem] group"
-              >
-                <div className="w-24 h-24 bg-blue-500/10 rounded-full flex items-center justify-center group-hover:bg-blue-500/20 transition-colors shrink-0">
-                  <PenTool className="w-12 h-12 text-blue-500" />
-                </div>
-                <div className="text-center">
-                  <h3 className="font-jua text-3xl md:text-4xl font-bold text-[#25213b] leading-tight">내가 직접 만들기</h3>
-                </div>
-                <div className="btn-primary-action px-8 py-3 font-jua text-xl w-full max-w-[200px] text-center shrink-0 shadow-md transition-all">
-                  직접 입력하기
-                </div>
-              </button>
-            </div>
-          </div>
-        )}
-
-        {creationMode !== 'select' && (
-          <div className="animate-fade-in w-full max-w-[1200px] mx-auto flex flex-col gap-6">
+        <div className="animate-fade-in w-full max-w-[1200px] mx-auto flex flex-col gap-6 mt-4">
             <div className="flex justify-start mb-2">
               <button
                 onClick={() => {
-                  setCreationMode('select')
-                  setTopics([])
-                  setGenState('idle')
-                  setSelectedTopicId(null)
-                  setExtraRequest('')
+                  if (creationMode === 'manual') {
+                    setCreationMode('ai')
+                    setAiStep('keyword')
+                    setTopics([])
+                    setGenState('idle')
+                    setSelectedTopicId(null)
+                    setExtraRequest('')
+                  } else if (creationMode === 'ai' && aiStep === 'topic') {
+                    setAiStep('question')
+                    setGenState('idle')
+                    setSelectedTopicId(null)
+                    setTopics([])
+                  } else if (creationMode === 'ai' && aiStep === 'question') {
+                    setAiStep('keyword')
+                    setQuestionGenState('idle')
+                    setSelectedQuestionId(null)
+                    setGeneratedQuestions([])
+                  } else {
+                    navigate('/student/select-unit', { state: { projectId } })
+                  }
                 }}
                 className="flex items-center justify-center font-jua text-lg px-6 py-2.5 shadow-sm rounded-full bg-[#4B5563] hover:bg-[#374151] text-white transition-colors"
               >
@@ -350,20 +485,69 @@ export default function StudentTopicMakerPage() {
             {creationMode === 'ai' && (
               <div className="flex flex-col gap-5">
 
-                <KeywordSelectionCard
-                  keywords={recommendedKeywords}
-                  selectedKeywords={selectedKeywords}
-                  onToggleKeyword={handleToggleKeyword}
-                  isLoading={isKeywordLoading}
-                  onGenerateKeywords={handleGenerateKeywords}
-                />
+                {aiStep === 'keyword' && (
+                  <div className="animate-fade-in flex flex-col gap-5">
+                    <KeywordSelectionCard
+                      keywords={recommendedKeywords}
+                      selectedKeywords={selectedKeywords}
+                      onToggleKeyword={handleToggleKeyword}
+                      isLoading={isKeywordLoading}
+                      onGenerateKeywords={handleGenerateKeywords}
+                    />
+                    <div className="flex justify-center mt-4">
+                      <button
+                        disabled={selectedKeywords.length === 0 || questionGenState === 'loading'}
+                        onClick={handleProceedToQuestions}
+                        className={`btn-primary-action px-8 py-4 font-jua text-xl transition-all shadow-md min-w-[280px] flex justify-center items-center ${
+                          selectedKeywords.length === 0 ? 'opacity-50 cursor-not-allowed bg-gray-300 text-gray-500 shadow-none' : '!bg-[#6366F1] hover:!bg-[#4F46E5] !text-white'
+                        }`}
+                      >
+                        {questionGenState === 'loading' ? (
+                          <>
+                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-3" />
+                            질문을 만들고 있어요...
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="w-6 h-6 mr-2" />
+                            이 키워드로 질문 만들기 ✨
+                          </>
+                        )}
+                      </button>
+                    </div>
+                    <div className="flex justify-center mt-4 border-t border-gray-200 pt-6">
+                      <button
+                        onClick={() => {
+                          setCreationMode('manual')
+                          setExtraRequest('')
+                        }}
+                        className="text-[#626776] hover:text-[#4F46E5] underline font-jua text-lg transition-colors flex items-center"
+                      >
+                        <PenTool className="w-5 h-5 mr-2" />
+                        키워드 선택 없이 직접 내용을 입력해서 만들래요
+                      </button>
+                    </div>
+                  </div>
+                )}
 
-                {(genState === 'loading' || genState === 'success') && (
+                {aiStep === 'question' && (
+                  <QuestionSelectionCard
+                    categories={questionCategories}
+                    questions={generatedQuestions}
+                    selectedQuestionId={selectedQuestionId}
+                    onSelectQuestion={handleSelectQuestion}
+                    onProceed={handleProceedToTopics}
+                    isLoading={questionGenState === 'loading'}
+                    isTopicGenerating={genState === 'loading'}
+                  />
+                )}
+
+                {aiStep === 'topic' && (genState === 'loading' || genState === 'success') && (
                   <div className="card-select-panel p-8 md:p-10 min-h-[240px] animate-fade-in">
                     <AiRecommendationCard
                       visibleTopics={topics}
                       selectedTopicId={selectedTopicId}
-                      onSelectTopic={setSelectedTopicId}
+                      onSelectTopic={handleSelectTopic}
                       genState={genState}
                       isGeneratingMore={isGeneratingMore}
                       totalCount={0}
@@ -389,30 +573,32 @@ export default function StudentTopicMakerPage() {
                   </div>
                 )}
 
-                <div className="flex flex-col items-center gap-2 mt-2">
-                  <button
-                    disabled={genState === 'loading' || isGeneratingMore || !selection || selectedKeywords.length < 2 || isMaxTopicsReached}
-                    onClick={handleRegenerateTopics}
-                    className="btn-primary-action !bg-[#6366F1] hover:!bg-[#4F46E5] !text-white flex items-center justify-center w-full max-w-[320px] min-w-[260px] py-3 md:py-4 text-xl font-jua shadow-md transition-all disabled:opacity-70 disabled:cursor-not-allowed"
-                    style={isMaxTopicsReached ? {
-                      opacity: 0.45,
-                      cursor: 'not-allowed',
-                      boxShadow: 'none'
-                    } : {}}
-                  >
-                    <Wand2 className={`w-6 h-6 mr-3 stroke-[3] ${genState === 'loading' ? 'animate-spin' : 'animate-bounce-gentle'}`} />
-                    <span>
-                      {genState === 'loading' 
-                        ? '추천 주제를 만들고 있어요...' 
-                        : genState === 'idle' 
-                          ? '이야기 추천 ✨' 
-                          : '새로운 이야기로 다시 받기 🔄'}
-                    </span>
-                  </button>
-                  {isMaxTopicsReached && (
-                    <p className="text-sm text-[#626776] font-medium mt-1">추천 주제 10개를 모두 만들었어요. 마음에 드는 주제를 골라 대본 만들기로 넘어가세요.</p>
-                  )}
-                </div>
+                {aiStep === 'topic' && (
+                  <div className="flex flex-col items-center gap-2 mt-2">
+                    <button
+                      disabled={genState === 'loading' || isGeneratingMore || !selection || isMaxTopicsReached}
+                      onClick={handleRegenerateTopics}
+                      className="btn-primary-action !bg-[#6366F1] hover:!bg-[#4F46E5] !text-white flex items-center justify-center w-full max-w-[320px] min-w-[260px] py-3 md:py-4 text-xl font-jua shadow-md transition-all disabled:opacity-70 disabled:cursor-not-allowed"
+                      style={isMaxTopicsReached ? {
+                        opacity: 0.45,
+                        cursor: 'not-allowed',
+                        boxShadow: 'none'
+                      } : {}}
+                    >
+                      <Wand2 className={`w-6 h-6 mr-3 stroke-[3] ${genState === 'loading' ? 'animate-spin' : 'animate-bounce-gentle'}`} />
+                      <span>
+                        {genState === 'loading' 
+                          ? '추천 주제를 만들고 있어요...' 
+                          : genState === 'idle' 
+                            ? '이야기 추천 ✨' 
+                            : '새로운 이야기로 다시 받기 🔄'}
+                      </span>
+                    </button>
+                    {isMaxTopicsReached && (
+                      <p className="text-sm text-[#626776] font-medium mt-1">추천 주제 10개를 모두 만들었어요. 마음에 드는 주제를 골라 대본 만들기로 넘어가세요.</p>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 
@@ -443,7 +629,7 @@ export default function StudentTopicMakerPage() {
                     <AiRecommendationCard
                       visibleTopics={topics}
                       selectedTopicId={selectedTopicId}
-                      onSelectTopic={setSelectedTopicId}
+                      onSelectTopic={handleSelectTopic}
                       genState={genState}
                       isGeneratingMore={isGeneratingMore}
                       totalCount={0}
@@ -472,7 +658,6 @@ export default function StudentTopicMakerPage() {
               </div>
             )}
           </div>
-        )}
       </div>
       </div>
     </StudentWorkspaceLayout>
