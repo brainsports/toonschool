@@ -260,28 +260,116 @@ export default function StudentManagementPage() {
     setIsUploading(true)
     let successCount = 0
 
-    const inserts = validRows.map(row => {
-      return {
-        center_id: profile.center_id,
-        organization_id: profile.organization_id || null,
-        name: row.이름,
-        grade: row.학년,
-        login_id: row.학생코드,
-        student_code: row.학생코드 || null,
-        guardian_phone: row['보호자 연락처'] || null,
-        temp_password: generateRandomPassword(),
-        status: '정상',
-        created_by: user?.id
-      }
-    })
-
     try {
+      const classIdMap = new Map<string, string>()
+
+      // 1. Gather unique classes from Excel
+      const uniqueClasses = new Map<string, { grade: number, name: string }>()
+      for (const row of validRows) {
+        if (row.반) {
+          const gNum = parseInt(row.학년?.replace(/[^0-9]/g, '') || '0')
+          const key = `${gNum}-${row.반}`
+          if (!uniqueClasses.has(key)) {
+            uniqueClasses.set(key, { grade: gNum, name: row.반 })
+          }
+        }
+      }
+
+      // 2. Fetch or Create classes
+      if (profile.organization_id) {
+        for (const [key, cls] of uniqueClasses.entries()) {
+          const { data: existingClass } = await supabase
+            .from('classes')
+            .select('id')
+            .eq('organization_id', profile.organization_id)
+            .eq('grade', cls.grade)
+            .eq('name', cls.name)
+            .maybeSingle()
+
+          if (existingClass?.id) {
+            classIdMap.set(key, existingClass.id)
+          } else {
+            // create new class
+            const classPayload = {
+              organization_id: profile.organization_id,
+              name: cls.name,
+              grade: cls.grade,
+              homeroom: cls.name,
+              teacher_id: profile.id,
+              student_count: 0,
+              status: 'active'
+            }
+            const { data: newClass, error: newErr } = await supabase
+              .from('classes')
+              .insert(classPayload)
+              .select('id')
+              .single()
+
+            if (newClass?.id) {
+              classIdMap.set(key, newClass.id)
+            } else if (newErr) {
+              console.error('학급 생성 실패:', {
+                message: newErr.message,
+                details: newErr.details,
+                hint: newErr.hint,
+                code: newErr.code,
+                payload: classPayload
+              })
+              const e = new Error(`학급 생성 실패: ${newErr.message}`)
+              ;(e as any).stage = '학급 생성 실패'
+              throw e
+            }
+          }
+        }
+      }
+
+      // 3. Build inserts for students
+      const inserts = validRows.map(row => {
+        let class_id = null
+        const gNum = parseInt(row.학년?.replace(/[^0-9]/g, '') || '0')
+        if (row.반) {
+          const key = `${gNum}-${row.반}`
+          class_id = classIdMap.get(key) || null
+        }
+
+        if (!class_id) {
+          const e = new Error(`${row.이름} 학생의 학급 ID를 찾지 못했습니다.`)
+          ;(e as any).stage = '학생 저장 실패'
+          throw e
+        }
+
+        return {
+          center_id: profile.center_id,
+          organization_id: profile.organization_id || null,
+          class_id: class_id,
+          name: row.이름,
+          grade: String(gNum),
+          login_id: row.학생코드,
+          student_code: row.학생코드 || null,
+          guardian_phone: row['보호자 연락처'] || null,
+          temp_password: generateRandomPassword(),
+          status: '정상',
+          created_by: user?.id
+        }
+      })
+
       const { data, error } = await supabase
         .from('students')
         .insert(inserts)
         .select()
 
-      if (error) throw error
+      if (error) {
+        console.error('학생 저장 실패:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code,
+          payloadSample: inserts.slice(0, 2)
+        })
+        const e = new Error(error.message)
+        ;(e as any).stage = error.code === '23505' ? '중복 아이디 실패' : '학생 저장 실패'
+        throw e
+      }
 
       successCount = data?.length || 0
       alert(`업로드 완료! 성공: ${successCount}건, 실패/제외: ${parsedRows.length - successCount}건`)
@@ -289,9 +377,9 @@ export default function StudentManagementPage() {
       setParsedRows([])
       fetchStudents()
     } catch (err: any) {
-      console.error('Bulk upload error details:', err?.message, err?.details, err?.hint, err)
-      console.error('Failed inserts payload:', inserts)
-      alert(`일부 또는 전체 데이터 등록에 실패했습니다.\n사유: ${err?.message || '알 수 없는 오류'}\n상세 내용은 콘솔을 확인해주세요.`)
+      console.error('Bulk upload error details:', err)
+      const stage = err.stage || '알 수 없는 실패'
+      alert(`[${stage}] 대량 등록 중단\n사유: ${err?.message || '알 수 없는 오류'}\n상세 내용은 콘솔을 확인해주세요.`)
     } finally {
       setIsUploading(false)
     }
@@ -459,7 +547,7 @@ export default function StudentManagementPage() {
                   </div>
                   <div className="text-[10px] text-amber-500 px-2 flex items-start gap-1">
                     <AlertCircle className="h-3 w-3 mt-0.5 shrink-0" />
-                    <span>주의: 엑셀의 '반' 정보는 참고용으로만 표시되며, DB에 저장되지 않습니다. 추후 반 배정 기능에서 설정해 주세요.</span>
+                    <span>안내: 엑셀의 '반' 정보는 학급(Class)과 자동 연동됩니다. 학급이 없으면 새로 생성됩니다.</span>
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full text-xs text-left">
@@ -468,7 +556,7 @@ export default function StudentManagementPage() {
                           <th className="py-2 px-2 font-semibold w-12">No</th>
                           <th className="py-2 px-2 font-semibold">이름</th>
                           <th className="py-2 px-2 font-semibold">학년</th>
-                          <th className="py-2 px-2 font-semibold">반 (저장안됨)</th>
+                          <th className="py-2 px-2 font-semibold">반</th>
                           <th className="py-2 px-2 font-semibold">학생코드</th>
                           <th className="py-2 px-2 font-semibold">상태</th>
                         </tr>
