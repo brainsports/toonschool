@@ -200,16 +200,18 @@ export default function StudentTopicMakerPage() {
     }
   }
 
-  const handleSelectQuestion = async (qId: string) => {
+  const handleSelectQuestion = async (qId: string | null) => {
     setSelectedQuestionId(qId)
-    try {
-      await selectGeneratedQuestion(qId, {
-        keyword: selectedKeywords[0],
-        subject: selection?.subjectName || '',
-        grade: selection?.gradeValue || 0
-      })
-    } catch (e) {
-      console.error('질문 선택 저장 실패:', e)
+    if (qId) {
+      try {
+        await selectGeneratedQuestion(qId, {
+          keyword: selectedKeywords[0],
+          subject: selection?.subjectName || '',
+          grade: selection?.gradeValue || 0
+        })
+      } catch (e) {
+        console.error('질문 선택 저장 실패:', e)
+      }
     }
   }
 
@@ -539,6 +541,7 @@ export default function StudentTopicMakerPage() {
                     onProceed={handleProceedToTopics}
                     isLoading={questionGenState === 'loading'}
                     isTopicGenerating={genState === 'loading'}
+                    selectedKeywords={selectedKeywords}
                   />
                 )}
 

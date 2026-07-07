@@ -905,11 +905,55 @@ ${categories.map((c: any) => `- ${c.name} (코드: ${c.code}): ${c.description}`
     throw new Error('Invalid JSON format from AI')
   }
 
+const getFallbackQuestions = (request: any): any[] => {
+  const { keyword, categories, middleUnitName } = request;
+  const questions: any[] = [];
+  const targetWord = keyword || middleUnitName || '이것';
+  
+  categories.forEach((cat: any) => {
+    const qTexts: string[] = [];
+    if (cat.code === 'why' || cat.name.includes('왜')) {
+      qTexts.push(`${targetWord}은(는) 왜 그런 특징을 가질까요?`);
+      qTexts.push(`${targetWord}이(가) 생겨난 진짜 이유는 무엇일까요?`);
+      qTexts.push(`왜 사람들은 ${targetWord}을(를) 중요하게 생각할까요?`);
+    } else if (cat.code === 'what_if' || cat.name.includes('만약')) {
+      qTexts.push(`만약 ${targetWord}이(가) 갑자기 사라진다면 무슨 일이 벌어질까요?`);
+      qTexts.push(`만약 내가 ${targetWord}을(를) 마음대로 바꿀 수 있다면?`);
+      qTexts.push(`만약 ${targetWord}이(가) 말을 할 수 있다면 어떤 이야기를 할까요?`);
+    } else if (cat.code === 'compare' || cat.name.includes('비교')) {
+      qTexts.push(`${targetWord}과(와) 정반대인 것은 무엇이고, 어떤 점이 다를까요?`);
+      qTexts.push(`과거의 ${targetWord}과(와) 미래의 모습은 어떻게 다를까요?`);
+      qTexts.push(`${targetWord}을(를) 다른 나라나 고장의 것과 비교해 보면 어떨까요?`);
+    } else if (cat.code === 'life' || cat.name.includes('생활')) {
+      qTexts.push(`우리 가족의 일상 속에서 ${targetWord}은(는) 어떻게 숨어 있을까요?`);
+      qTexts.push(`${targetWord}을(를) 이용해 내일 당장 해볼 수 있는 일은 무엇일까요?`);
+      qTexts.push(`우리가 모르는 사이에 ${targetWord}이(가) 도와주고 있는 일은 무엇일까요?`);
+    } else if (cat.code === 'experiment' || cat.name.includes('실험')) {
+      qTexts.push(`${targetWord}의 비밀을 밝히기 위해 어떤 재미있는 실험을 해볼까요?`);
+      qTexts.push(`${targetWord}을(를) 직접 만들어보려면 어떤 재료와 방법이 필요할까요?`);
+      qTexts.push(`${targetWord}이(가) 정말 맞는지 확인하기 위한 최고의 방법은?`);
+    } else {
+      qTexts.push(`${targetWord}에 숨겨진 가장 재미있는 비밀은 무엇일까요?`);
+      qTexts.push(`친구들에게 ${targetWord}을(를) 가장 쉽게 설명하는 방법은?`);
+      qTexts.push(`${targetWord}과(와) 관련된 새로운 아이디어는 무엇이 있을까요?`);
+    }
+    
+    qTexts.forEach((qText) => {
+      questions.push({
+        categoryCode: cat.code,
+        questionText: qText,
+        keyword
+      });
+    });
+  });
+  return questions;
+}
+
   try {
     return await tryModel(TEXT_GENERATION_MODEL);
   } catch (error) {
-    console.error('Failed to generate questions from AI:', error)
-    throw error;
+    console.error('Failed to generate questions from AI, using fallback:', error)
+    return getFallbackQuestions(request);
   }
 }
 
