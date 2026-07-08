@@ -423,7 +423,7 @@ const getFallbackTopicRecommendations = (
   existingTitles: string[]
 ): TopicRecommendation[] => {
   const { selectedKeywords = [], selectedQuestion, middleUnitName = '' } = request;
-  const concept = extraData.subunitSummary || extraData.learningGoal || middleUnitName || selectedKeywords[0] || '학습 내용';
+  const concept = extraData.subunitSummary || extraData.learningGoal || middleUnitName || selectedKeywords.join(', ') || '학습 내용';
   
   const recommendations: TopicRecommendation[] = [];
   
@@ -794,14 +794,188 @@ export const fetchQuestionCategories = async (): Promise<any[]> => {
   return data || []
 }
 
+type KeywordRoles = {
+  subject: string
+  setting: string
+  method: string
+  idea: string
+  others: string[]
+}
+
+const BAD_JOSA_PATTERNS = ['은(는)', '이(가)', '을(를)', '를(을)', '와(과)', '과(와)', '로(으로)', '으로(로)']
+const GENERIC_QUESTION_PATTERNS = ['왜 중요', '특징은 무엇', '관련이 있을까요', '쉽게 설명하는 방법']
+
+const getFinalConsonantIndex = (word: string) => {
+  const trimmed = word.trim()
+  if (!trimmed) return 0
+  const charCode = trimmed.charCodeAt(trimmed.length - 1)
+  if (charCode < 0xac00 || charCode > 0xd7a3) return 0
+  return (charCode - 0xac00) % 28
+}
+
+
+const withJosa = (word: string, pair: '은/는' | '이/가' | '을/를' | '와/과' | '으로/로') => {
+  if (!word) return ''
+  const finalIndex = getFinalConsonantIndex(word)
+  const final = finalIndex > 0
+  if (pair === '은/는') return `${word}${final ? '은' : '는'}`
+  if (pair === '이/가') return `${word}${final ? '이' : '가'}`
+  if (pair === '을/를') return `${word}${final ? '을' : '를'}`
+  if (pair === '와/과') return `${word}${final ? '과' : '와'}`
+  if (pair === '으로/로') return `${word}${final && finalIndex !== 8 ? '으로' : '로'}`
+  return word
+}
+
+const pickKeyword = (keywords: string[], includes: string[], excludes: string[] = []) => {
+  return keywords.find(keyword =>
+    includes.some(word => keyword.includes(word)) &&
+    !excludes.some(word => keyword.includes(word))
+  )
+}
+
+const analyzeKeywordRoles = (keywords: string[]): KeywordRoles => {
+  const cleanKeywords = [...new Set(keywords.map(keyword => keyword.trim()).filter(Boolean))]
+  const method = pickKeyword(cleanKeywords, ['실험', '관찰', '조사', '비교', '측정', '확인', '탐구', '만들기']) || ''
+  const setting = pickKeyword(cleanKeywords, ['우주', '학교', '생활', '동네', '시장', '교실', '집', '마을', '바다', '숲', '환경']) || ''
+  const exactIdea = cleanKeywords.find(keyword => ['물', '나눗셈'].includes(keyword)) || ''
+  const idea = exactIdea || pickKeyword(cleanKeywords, ['발명', '발견', '변화', '문제', '해결', '아이디어', '에너지', '원리']) || ''
+  const subject = cleanKeywords.find(keyword => keyword !== method && keyword !== setting && keyword !== idea) || cleanKeywords[0] || '주제'
+
+  return {
+    subject,
+    setting: setting || cleanKeywords.find(keyword => keyword !== subject && keyword !== method && keyword !== idea) || '',
+    method: method || cleanKeywords.find(keyword => keyword !== subject && keyword !== setting && keyword !== idea) || '',
+    idea: idea || cleanKeywords.find(keyword => keyword !== subject && keyword !== setting && keyword !== method) || '',
+    others: cleanKeywords.filter(keyword => ![subject, setting, method, idea].includes(keyword))
+  }
+}
+
+const buildKeywordContext = (keywords: string[], roles: KeywordRoles) => {
+  const { subject, setting, method, idea } = roles
+
+  if (subject === '식물' && keywords.includes('물') && method === '관찰') {
+    return '식물이 물을 어떻게 사용하는지 관찰하는 이야기'
+  }
+
+  if (subject === '분수' && keywords.includes('나눗셈') && keywords.includes('생활')) {
+    return '생활 속 장면에서 분수와 나눗셈을 함께 알아보는 이야기'
+  }
+
+  if (subject && setting && method && idea) {
+    return `${setting}에서 쓰이는 ${subject} ${withJosa(idea, '을/를')} ${withJosa(method, '으로/로')} 알아보는 이야기`
+  }
+
+  if (subject && idea && method) {
+    return `${withJosa(subject, '이/가')} 움직이는 데 필요한 ${withJosa(idea, '을/를')} ${withJosa(method, '으로/로')} 알아보는 이야기`
+  }
+
+  if (subject && method) {
+    return `${withJosa(subject, '을/를')} ${withJosa(method, '으로/로')} 알아보는 이야기`
+  }
+
+  return `${keywords.join(', ')}를 하나의 이야기로 연결해 알아보는 이야기`
+}
+
+const countKeywordMatches = (text: string, keywords: string[]) => {
+  return keywords.filter(keyword => text.includes(keyword)).length
+}
+
+const isSimilarQuestion = (a: string, b: string) => {
+  const normA = normalizeText(a)
+  const normB = normalizeText(b)
+  if (normA === normB) return true
+  const shorter = normA.length < normB.length ? normA : normB
+  const longer = normA.length < normB.length ? normB : normA
+  if (shorter.length < 8) return false
+  return longer.includes(shorter) || shorter.includes(longer)
+}
+
+const isValidQuestionText = (text: string, keywords: string[], existingTexts: string[]) => {
+  const trimmed = text.trim()
+  if (!trimmed.endsWith('?')) return false
+  if (trimmed.length < 12 || trimmed.length > 75) return false
+  if (BAD_JOSA_PATTERNS.some(pattern => trimmed.includes(pattern))) return false
+  if (GENERIC_QUESTION_PATTERNS.some(pattern => trimmed.includes(pattern))) return false
+  if (countKeywordMatches(trimmed, keywords) < Math.min(2, keywords.length)) return false
+  if (existingTexts.some(existing => isSimilarQuestion(existing, trimmed))) return false
+  return true
+}
+
+const categoryCoversAllKeywords = (questions: string[], keywords: string[]) => {
+  const joined = questions.join(' ')
+  return keywords.every(keyword => joined.includes(keyword))
+}
+
+const createFallbackQuestionPool = (categoryCode: string, roles: KeywordRoles, keywords: string[]): string[] => {
+  const { subject, setting, method, idea } = roles
+  const s = subject || keywords[0] || '주제'
+  const scene = setting || (keywords.includes('생활') ? '생활' : '')
+  const action = method || (keywords.includes('관찰') ? '관찰' : '탐구')
+  const result = idea || keywords.find(keyword => keyword !== s && keyword !== scene && keyword !== action) || '아이디어'
+  const actionRo = withJosa(action, '으로/로')
+  let target = scene ? `${scene}에서 쓸 ${s} ${result}` : `${s} ${result}`
+  if (s === '식물' && result === '물' && action === '관찰') target = '식물이 물을 사용하는 모습'
+  if (result === '에너지') target = `${s}에 필요한 에너지`
+  const targetObj = withJosa(target, '을/를')
+  const sceneText = scene || '우리 생활'
+
+  const templates: Record<string, string[]> = {
+    why: [
+      `${targetObj} 알아보려면 왜 ${withJosa(action, '이/가')} 필요할까요?`,
+      `${s} ${result}를 생각할 때 왜 ${actionRo} 먼저 확인해야 할까요?`,
+      `${sceneText}에서 ${withJosa(s, '이/가')} 잘 쓰이려면 왜 ${actionRo} 알아봐야 할까요?`,
+      `${s} ${result}와 ${withJosa(action, '은/는')} 왜 함께 생각해야 할까요?`,
+      `${sceneText} 문제를 풀 때 ${s} ${result}와 ${withJosa(action, '은/는')} 어떻게 이어질까요?`
+    ],
+    what_if: [
+      `${targetObj} ${action}하지 않고 만든다면 어떤 문제가 생길까요?`,
+      `${s} ${result}에 ${withJosa(action, '이/가')} 없다면 ${sceneText}에서 어떤 일이 생길까요?`,
+      `${sceneText}에서 ${withJosa(s, '이/가')} 예상과 다르게 움직이면 어떤 장면이 펼쳐질까요?`,
+      `${withJosa(action, '을/를')} 건너뛰고 ${targetObj} 완성하면 무엇을 놓칠까요?`,
+      `${sceneText} 상황을 모르고 ${s} ${withJosa(result, '을/를')} 다룬다면 누가 불편할까요?`
+    ],
+    experiment: [
+      `${targetObj} 확인하려면 어떤 ${withJosa(action, '을/를')} 해 볼까요?`,
+      `${withJosa(s, '이/가')} ${sceneText}에서 잘 쓰일 수 있는지 어떤 ${actionRo} 알아볼까요?`,
+      `${s} ${result}가 잘 맞는지 ${sceneText} 장면으로 어떻게 ${action}해 볼까요?`,
+      `${sceneText}에 맞는 ${s} ${withJosa(result, '을/를')} 찾으려면 무엇을 먼저 ${action}할까요?`,
+      `${s} ${result}의 문제를 발견하려면 ${actionRo} 무엇을 비교해 볼까요?`
+    ],
+    life: [
+      `우리 생활 속 ${s} ${withJosa(result, '은/는')} ${sceneText} ${withJosa(action, '와/과')} 어떻게 연결될까요?`,
+      `${targetObj} 알아보는 ${withJosa(action, '이/가')} 우리 생활에 어떤 도움을 줄까요?`,
+      `학교나 집에서 ${s} ${withJosa(result, '을/를')} ${actionRo} 알아볼 수 있는 장면은 무엇일까요?`,
+      `우리 주변의 ${s} ${withJosa(result, '은/는')} ${sceneText} 문제를 어떻게 해결할까요?`,
+      `${sceneText} 속 ${s} ${result} 아이디어를 생활 장면으로 바꾸면 어떤 일이 가능할까요?`
+    ],
+    compare: [
+      `${sceneText}에서 ${withJosa(s, '이/가')} 잘 쓰일지 ${actionRo} 확인할 수 있을까요?`,
+      `${s} ${withJosa(result, '은/는')} ${actionRo} 많이 확인할수록 더 좋아질까요?`,
+      `${sceneText} 속 ${s}와 다른 장면의 ${s} ${withJosa(result, '은/는')} 무엇이 다를까요?`,
+      `${action} 전과 후의 ${s} ${result} 모습은 어떻게 달라질까요?`,
+      `${sceneText}에서 필요한 ${s} ${withJosa(result, '은/는')} 정말 ${actionRo} 찾을 수 있을까요?`
+    ],
+    secret: [
+      `${target}에 숨어 있는 ${action}의 비밀은 무엇일까요?`,
+      `${withJosa(s, '이/가')} ${sceneText}에서 쓰이게 하는 ${result}의 비밀은 무엇일까요?`,
+      `${targetObj} 성공시키는 ${action} 속 숨은 단서는 무엇일까요?`,
+      `${s} ${result}가 ${sceneText}에서 특별해지는 비밀을 ${actionRo} 찾을 수 있을까요?`,
+      `${sceneText}와 ${s} ${result} 사이에 숨어 있는 ${action}의 단서는 무엇일까요?`
+    ]
+  }
+
+  return templates[categoryCode] || templates.why
+}
+
 export const generateQuestions = async (
   request: any
 ): Promise<any[]> => {
-  const { gradeName, subjectName, majorUnitName, middleUnitName, keyword, categories, curriculumContext, selectedKeywords } = request
+  const { gradeName, subjectName, majorUnitName, middleUnitName, keyword, categories = [], curriculumContext, selectedKeywords } = request
 
-  // `keyword` fallback for older calls, but now `selectedKeywords` is primary
-  const keywordsToUse = selectedKeywords && selectedKeywords.length > 0 ? selectedKeywords : (keyword ? [keyword] : ['주제']);
-  const keywordString = keywordsToUse.join(', ');
+  const keywordsToUse = selectedKeywords && selectedKeywords.length > 0 ? selectedKeywords : (keyword ? [keyword] : ['주제'])
+  const keywordString = keywordsToUse.join(', ')
+  const keywordRoles = analyzeKeywordRoles(keywordsToUse)
+  const keywordContext = buildKeywordContext(keywordsToUse, keywordRoles)
 
   const contextText = curriculumContext ? `
 [교과 정보]
@@ -809,17 +983,23 @@ export const generateQuestions = async (
 중단원 학습목표: ${curriculumContext.learningGoal || ''}
 성취기준: ${curriculumContext.achievementStandards || ''}
 중단원 설명: ${curriculumContext.subunitSummary || ''}
-` : '';
+` : ''
 
   const prompt = `
-너는 초등학생을 위한 학습만화 선생님입니다.
-학생이 선택한 키워드들([${keywordString}])을 최대한 활용하여, 각 질문 유형에 맞는 호기심 유발 질문들을 만들어 주세요.
+너는 초등학생을 위한 학습만화 질문 설계자입니다.
+학생이 선택한 키워드 전체를 하나의 이야기 맥락으로 연결한 뒤, 질문 유형별로 5개씩 질문을 만들어 주세요.
 
 학년: ${gradeName}
 과목: ${subjectName}
 대단원: ${majorUnitName}
 중단원(학습 주제): ${middleUnitName}${contextText}
-선택된 키워드: ${keywordString}
+선택 키워드: ${keywordString}
+키워드 역할:
+- 중심 대상: ${keywordRoles.subject}
+- 배경/상황: ${keywordRoles.setting || '없음'}
+- 방법/활동: ${keywordRoles.method || '없음'}
+- 결과/아이디어: ${keywordRoles.idea || '없음'}
+내부 연결 문장: ${keywordContext}
 
 [질문 유형별 역할]
 - 왜 그럴까? (why): 이유와 원리를 묻는 질문
@@ -829,184 +1009,163 @@ export const generateQuestions = async (
 - 정말일까? (compare): 오해, 확인, 검증을 묻는 질문
 - 어떤 비밀이 있을까? (secret): 호기심을 자극하는 질문
 
-[질문 생성 원칙]
-1. 첫 번째 키워드만 반복해서 사용하지 마세요.
-2. 각 질문은 선택 키워드 중 최소 2개 이상을 자연스럽게 반영하세요. 문장이 어색하다면 2개만 사용해도 좋습니다.
-3. 초등학교 3~6학년 학생이 쉽게 이해할 수 있는 자연스러운 문장으로 만드세요.
-4. 모든 질문은 반드시 물음표(?)로 끝나야 합니다.
-5. 너무 일반적인 질문(예: "~는 왜 중요할까요?", "~의 특징은 무엇일까요?")은 피하고, 만화의 구체적인 사건(주제)으로 확장될 수 있는 재미있는 질문을 만드세요.
-6. 같은 의미의 질문을 반복하지 마세요.
-7. 위에서 제시된 모든 질문 유형(코드)에 대해 각각 5개씩 질문을 만드세요.
+[반드시 지킬 규칙]
+1. 선택 키워드 전체를 하나의 이야기 맥락으로 연결해서 질문을 만드세요.
+2. 첫 번째 키워드만 반복하지 마세요.
+3. 각 질문은 선택 키워드 중 최소 2개 이상을 자연스럽게 포함하세요.
+4. 유형별 질문 5개 전체에는 선택 키워드가 모두 최소 1번 이상 등장해야 합니다.
+5. 조사 표현을 절대 괄호로 쓰지 마세요.
+6. "은(는)", "이(가)", "을(를)", "와(과)", "로(으로)", "으로(로)" 같은 표현은 금지입니다.
+7. "왜 중요할까요?", "특징은 무엇일까요?", "관련이 있을까요?"처럼 너무 일반적인 질문은 금지입니다.
+8. 질문은 초등학교 3~6학년 학생이 이해할 수 있게 짧고 자연스럽게 쓰세요.
+9. 만화 장면으로 이어질 수 있는 구체적인 질문을 만드세요.
+10. 모든 질문은 반드시 물음표(?)로 끝나야 합니다.
+11. 같은 의미의 질문을 반복하지 마세요.
 
 응답 형식:
 {
   "questions": [
     {
       "categoryCode": "why",
-      "questionText": "로봇이 움직이는 데 필요한 에너지를 어떻게 실험해 볼까요?"
+      "questionText": "우주에서 로봇을 발명하려면 왜 실험이 필요할까요?"
     }
   ]
 }
 `
 
-  const getFallbackQuestionsForCategory = (category: any, keywords: string[], count: number, existingTexts: string[]): string[] => {
-    const fallbacks: string[] = [];
-    const kw1 = keywords[0] || '이것';
-    const kw2 = keywords.length > 1 ? keywords[1] : kw1;
-    
-    const templates: Record<string, string[]> = {
-      'why': [
-        `${kw1}은(는) 왜 ${kw2}와(과) 관련이 있을까요?`,
-        `왜 사람들은 ${kw1}을(를) 중요하게 생각할까요?`,
-        `${kw1}이(가) 생겨난 진짜 이유는 무엇일까요?`,
-        `왜 ${kw1}에는 ${kw2}이(가) 필요할까요?`,
-        `${kw1}과(와) ${kw2}이(가) 만났을 때 생기는 변화는 왜 일어날까요?`
-      ],
-      'what_if': [
-        `만약 ${kw1}이(가) 갑자기 사라진다면 ${kw2}에는 무슨 일이 벌어질까요?`,
-        `만약 내가 ${kw1}을(를) 마음대로 바꿀 수 있다면?`,
-        `만약 ${kw1}과(와) ${kw2}이(가) 반대로 작동한다면 어떨까요?`,
-        `만약 우리 생활에 ${kw1}이(가) 없다면 어떻게 될까요?`,
-        `만약 ${kw1}이(가) 말할 수 있다면 우리에게 무슨 말을 할까요?`
-      ],
-      'compare': [
-        `${kw1}과(와) ${kw2}은(는) 어떤 점이 다르고 또 비슷할까요?`,
-        `과거의 ${kw1}과(와) 미래의 모습은 어떻게 다를까요?`,
-        `우리 고장의 ${kw1}과(와) 다른 곳의 ${kw1}은(는) 어떤 차이가 있을까요?`,
-        `정말 ${kw1}이(가) ${kw2}보다 더 좋은 점이 있을까요?`,
-        `${kw1}을(를) 다른 것과 비교할 때 가장 놀라운 점은 무엇일까요?`
-      ],
-      'life': [
-        `우리 가족의 일상 속에서 ${kw1}은(는) 어떻게 쓰이고 있을까요?`,
-        `${kw1}과(와) ${kw2}을(를) 이용해 내일 당장 해볼 수 있는 일은 무엇일까요?`,
-        `우리가 모르는 사이에 ${kw1}이(가) 도와주고 있는 일은 무엇일까요?`,
-        `학교에서 ${kw1}을(를) 가장 잘 활용할 수 있는 방법은 무엇일까요?`,
-        `우리 동네에서 ${kw1}과(와) 관련된 곳을 찾아본다면 어디가 있을까요?`
-      ],
-      'experiment': [
-        `${kw1}의 비밀을 밝히기 위해 어떤 재미있는 실험을 해볼까요?`,
-        `${kw1}과(와) ${kw2}을(를) 직접 연결해보려면 어떤 방법이 필요할까요?`,
-        `${kw1}이(가) 정말 맞는지 확인하기 위한 최고의 방법은?`,
-        `${kw1}을(를) 관찰할 때 가장 먼저 확인해야 할 점은 무엇일까요?`,
-        `교실에서 ${kw1}과(와) 관련된 어떤 활동을 해볼 수 있을까요?`
-      ],
-      'secret': [
-        `${kw1}에 숨겨진 가장 신기한 비밀은 무엇일까요?`,
-        `${kw1}과(와) ${kw2} 사이에 우리가 몰랐던 비밀이 있을까요?`,
-        `전문가들만 아는 ${kw1}의 특별한 비밀은 무엇일까요?`,
-        `${kw1}을(를) 자세히 살펴보면 발견할 수 있는 놀라운 사실은?`,
-        `${kw1}이(가) 가진 가장 큰 매력은 무엇일까요?`
-      ]
-    };
+  const normalizeCategoryCode = (category: any) => {
+    if (category.code) return category.code
+    if (category.name?.includes('왜')) return 'why'
+    if (category.name?.includes('만약')) return 'what_if'
+    if (category.name?.includes('실험')) return 'experiment'
+    if (category.name?.includes('생활')) return 'life'
+    if (category.name?.includes('정말')) return 'compare'
+    if (category.name?.includes('비밀')) return 'secret'
+    return 'why'
+  }
 
-    const defaultTemplates = [
-      `${kw1}에 숨겨진 가장 재미있는 비밀은 무엇일까요?`,
-      `${kw1}과(와) ${kw2}의 관계를 가장 쉽게 설명하는 방법은?`,
-      `${kw1}과(와) 관련된 새로운 아이디어는 무엇이 있을까요?`,
-      `${kw1}을(를) 더 잘 이해하기 위해 우리는 무엇을 할 수 있을까요?`,
-      `${kw1}이(가) 우리에게 주는 가장 큰 도움은 무엇일까요?`
-    ];
+  const getFallbackQuestionsForCategory = (category: any, count: number, existingTexts: string[]): string[] => {
+    const categoryCode = normalizeCategoryCode(category)
+    const pool = createFallbackQuestionPool(categoryCode, keywordRoles, keywordsToUse)
+    const fallbacks: string[] = []
 
-    let catTemplates = templates[category.code];
-    if (!catTemplates) {
-      for (const key of Object.keys(templates)) {
-        if (category.name && category.name.includes(key)) {
-           catTemplates = templates[key]; break;
-        }
-      }
-    }
-    if (!catTemplates) catTemplates = defaultTemplates;
-
-    for (const t of catTemplates) {
-      if (fallbacks.length >= count) break;
-      if (!existingTexts.includes(t)) {
-        fallbacks.push(t);
+    for (const question of pool) {
+      if (fallbacks.length >= count) break
+      if (isValidQuestionText(question, keywordsToUse, [...existingTexts, ...fallbacks])) {
+        fallbacks.push(question)
       }
     }
 
-    let suffix = 1;
+    let suffix = 0
     while (fallbacks.length < count) {
-      fallbacks.push(`${kw1}에 대한 ${suffix}번째 재미있는 질문은 무엇일까요?`);
-      suffix++;
+      const extra = pool[suffix % pool.length]
+      if (!fallbacks.includes(extra) && !existingTexts.includes(extra)) {
+        fallbacks.push(extra)
+      } else {
+        fallbacks.push(`${keywordContext}에서 더 궁금한 점은 무엇일까요?`)
+      }
+      suffix++
     }
 
-    return fallbacks;
-  };
+    return fallbacks.slice(0, count)
+  }
+
+  const enforceCategoryKeywordCoverage = (category: any, questions: any[]) => {
+    if (categoryCoversAllKeywords(questions.map(q => q.questionText), keywordsToUse)) return questions
+
+    const fallbackPool = getFallbackQuestionsForCategory(category, 5, [])
+    const nextQuestions = [...questions]
+    for (const fallback of fallbackPool) {
+      if (categoryCoversAllKeywords(nextQuestions.map(q => q.questionText), keywordsToUse)) break
+      if (nextQuestions.some(q => q.questionText === fallback)) continue
+      const formatted = {
+        categoryCode: category.code,
+        questionText: fallback,
+        keyword: keywordString
+      }
+      if (nextQuestions.length < 5) {
+        nextQuestions.push(formatted)
+      } else {
+        nextQuestions[nextQuestions.length - 1] = formatted
+      }
+    }
+    return nextQuestions
+  }
+
+  const formatQuestionsByCategory = (rawQuestions: any[]) => {
+    const validQuestions: any[] = []
+    const questionsByCategory: Record<string, any[]> = {}
+
+    categories.forEach((c: any) => {
+      questionsByCategory[c.code] = []
+    })
+
+    for (const q of rawQuestions) {
+      if (!q || !q.questionText || !q.categoryCode) continue
+
+      let text = q.questionText.trim()
+      if (!text.endsWith('?')) text += '?'
+      if (!questionsByCategory[q.categoryCode]) continue
+      if (!isValidQuestionText(text, keywordsToUse, validQuestions.map(vq => vq.questionText))) continue
+
+      const formattedQ = {
+        categoryCode: q.categoryCode,
+        questionText: text,
+        keyword: keywordString
+      }
+      questionsByCategory[q.categoryCode].push(formattedQ)
+      validQuestions.push(formattedQ)
+    }
+
+    const finalQuestions: any[] = []
+    categories.forEach((c: any) => {
+      let catQuestions = questionsByCategory[c.code] || []
+      const missingCount = 5 - catQuestions.length
+      if (missingCount > 0) {
+        const fallbacks = getFallbackQuestionsForCategory(c, missingCount, catQuestions.map(q => q.questionText))
+        catQuestions.push(...fallbacks.map(text => ({
+          categoryCode: c.code,
+          questionText: text,
+          keyword: keywordString
+        })))
+      }
+      catQuestions = enforceCategoryKeywordCoverage(c, catQuestions).slice(0, 5)
+      finalQuestions.push(...catQuestions)
+    })
+
+    return finalQuestions
+  }
 
   const tryModel = async (model: string): Promise<any[]> => {
-    if (!model) throw new Error('No model provided');
+    if (!model) throw new Error('No model provided')
     const responseText = await Promise.race([
       geminiClient.generateTextWithModel(prompt, model),
       new Promise<string>((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), 10000))
-    ]);
+    ])
 
-    const cleanedText = responseText.replace(/\`\`\`json/gi, '').replace(/\`\`\`/g, '').trim()
+    const cleanedText = responseText.replace(/```json/gi, '').replace(/```/g, '').trim()
     const parsedData = JSON.parse(cleanedText)
 
     if (parsedData && Array.isArray(parsedData.questions)) {
-      const validQuestions: any[] = [];
-      const questionsByCategory: Record<string, any[]> = {};
-      
-      categories.forEach((c: any) => {
-        questionsByCategory[c.code] = [];
-      });
-
-      for (const q of parsedData.questions) {
-        if (!q || !q.questionText || !q.categoryCode) continue;
-        
-        let text = q.questionText.trim();
-        if (!text.endsWith('?')) text += '?';
-        
-        const matchCount = keywordsToUse.filter((kw: string) => text.includes(kw)).length;
-        const isValidLength = text.length >= 8 && text.length <= 70;
-        const isDuplicate = validQuestions.some(vq => vq.questionText === text);
-
-        // 검수 조건 만족 (키워드 1개 이상 포함)
-        if (matchCount >= 1 && isValidLength && !isDuplicate && questionsByCategory[q.categoryCode]) {
-          const formattedQ = {
-            categoryCode: q.categoryCode,
-            questionText: text,
-            keyword: keywordString
-          };
-          questionsByCategory[q.categoryCode].push(formattedQ);
-          validQuestions.push(formattedQ);
-        }
-      }
-
-      const finalQuestions: any[] = [];
-      categories.forEach((c: any) => {
-        const catQuestions = questionsByCategory[c.code] || [];
-        const missingCount = 5 - catQuestions.length;
-        if (missingCount > 0) {
-          const fallbacks = getFallbackQuestionsForCategory(c, keywordsToUse, missingCount, catQuestions.map(q => q.questionText));
-          catQuestions.push(...fallbacks.map(text => ({
-            categoryCode: c.code,
-            questionText: text,
-            keyword: keywordString
-          })));
-        }
-        finalQuestions.push(...catQuestions.slice(0, 5));
-      });
-
-      return finalQuestions;
+      return formatQuestionsByCategory(parsedData.questions)
     }
     throw new Error('Invalid JSON format from AI')
   }
 
   try {
-    return await tryModel(TEXT_GENERATION_MODEL);
+    return await tryModel(TEXT_GENERATION_MODEL)
   } catch (error) {
     console.error('Failed to generate questions from AI, using fallback:', error)
-    const fallbackFinal: any[] = [];
+    const fallbackFinal: any[] = []
     categories.forEach((c: any) => {
-      const fallbacks = getFallbackQuestionsForCategory(c, keywordsToUse, 5, []);
+      const fallbacks = getFallbackQuestionsForCategory(c, 5, [])
       fallbackFinal.push(...fallbacks.map(text => ({
         categoryCode: c.code,
         questionText: text,
         keyword: keywordString
-      })));
-    });
-    return fallbackFinal;
+      })))
+    })
+    return fallbackFinal
   }
 }
 

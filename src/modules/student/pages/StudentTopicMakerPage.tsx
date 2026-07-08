@@ -190,7 +190,6 @@ export default function StudentTopicMakerPage() {
       subjectName: selection.subjectName || '',
       majorUnitName: selection.majorUnitName || '',
       middleUnitName: selection.middleUnitName || '',
-      keyword: selectedKeywords[0],
       selectedKeywords,
       categories: questionCategories,
       curriculumContext
