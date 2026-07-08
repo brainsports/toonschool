@@ -1,4 +1,4 @@
-// 주제 추천 카드 컴포넌트 (개별)
+import { CheckCircle2 } from 'lucide-react'
 import type { TopicRecommendation } from '../../types/studentTopic'
 
 interface TopicRecommendationCardProps {
@@ -34,7 +34,10 @@ export default function TopicRecommendationCard({
   const safeDifficulty = topic?.difficulty || '보통'
   const safeStoryType = topic?.storyTypeLabel || '일상 이야기'
   const safeDesc = topic?.summary || ''
+  const safeReason = topic?.connectionReason || ''
   const emoji = getMoodEmoji(safeStoryType)
+  
+  const validation = topic?.validation
 
   return (
     <button
@@ -77,11 +80,49 @@ export default function TopicRecommendationCard({
       </div>
       
       {/* 상세 설명 */}
-      <div className={`w-full text-left rounded-2xl p-4 mt-1 flex-1 transition-colors ${selected ? 'bg-white/60 border border-white' : 'bg-slate-50 border border-slate-100'}`}>
-        <p className="text-base md:text-lg font-bold text-[#68627d] leading-relaxed break-keep line-clamp-3">
+      <div className={`w-full text-left rounded-2xl p-4 mt-1 flex-1 transition-colors flex flex-col gap-3 ${selected ? 'bg-white/60 border border-white' : 'bg-slate-50 border border-slate-100'}`}>
+        {topic.selectedKeywords && topic.selectedKeywords.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            <span className="text-xs font-bold text-[#8f95a6] px-2 py-0.5 bg-[#f3f4f6] rounded-md">선택한 키워드</span>
+            <span className="text-sm font-bold text-[#4B5563]">{topic.selectedKeywords.join(', ')}</span>
+          </div>
+        )}
+        {topic.selectedQuestion && (
+          <div className="flex flex-wrap gap-1">
+            <span className="text-xs font-bold text-[#8f95a6] px-2 py-0.5 bg-[#f3f4f6] rounded-md">선택한 질문</span>
+            <span className="text-sm font-bold text-[#4B5563] break-keep">{topic.selectedQuestion.questionText}</span>
+          </div>
+        )}
+        <p className="text-base md:text-lg font-bold text-[#68627d] leading-relaxed break-keep">
           {safeDesc}
         </p>
+        {safeReason && (
+          <div className="mt-2 p-3 bg-[#f8f9fa] rounded-xl border border-gray-100">
+            <p className="text-sm font-medium text-[#4b5563] leading-relaxed">
+              <span className="font-bold text-[#6366f1] mr-1">💡 연결 이유:</span>
+              {safeReason}
+            </p>
+          </div>
+        )}
       </div>
+
+      {/* 검수 뱃지 영역 */}
+      {validation && (
+        <div className="flex items-center gap-2 mt-2 px-1">
+          <div className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-md ${validation.keywordReflected ? 'text-green-700 bg-green-50 border border-green-200' : 'text-gray-400 bg-gray-50 border border-gray-200'}`}>
+            <CheckCircle2 className={`w-3 h-3 ${validation.keywordReflected ? 'text-green-600' : 'text-gray-400'}`} />
+            키워드 반영
+          </div>
+          <div className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-md ${validation.questionReflected ? 'text-green-700 bg-green-50 border border-green-200' : 'text-gray-400 bg-gray-50 border border-gray-200'}`}>
+            <CheckCircle2 className={`w-3 h-3 ${validation.questionReflected ? 'text-green-600' : 'text-gray-400'}`} />
+            질문 반영
+          </div>
+          <div className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-md ${validation.grammarChecked ? 'text-green-700 bg-green-50 border border-green-200' : 'text-gray-400 bg-gray-50 border border-gray-200'}`}>
+            <CheckCircle2 className={`w-3 h-3 ${validation.grammarChecked ? 'text-green-600' : 'text-gray-400'}`} />
+            문법 확인
+          </div>
+        </div>
+      )}
     </button>
   )
 }

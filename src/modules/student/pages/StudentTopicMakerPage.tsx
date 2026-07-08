@@ -243,7 +243,7 @@ export default function StudentTopicMakerPage() {
       previousTitles: [],
       previousIncidents: [],
       previousTypes: [],
-      count: 4, // Initially generate 4 topics
+      count: 2, // Initially generate 2 topics
       curriculumContext
     }
 
@@ -360,7 +360,7 @@ export default function StudentTopicMakerPage() {
       previousTitles: [],
       previousIncidents: [],
       previousTypes: [],
-      count: 4, // 4 at a time
+      count: 2, // 2 at a time
       curriculumContext
     }
 

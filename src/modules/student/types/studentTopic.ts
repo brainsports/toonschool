@@ -25,6 +25,14 @@ export interface TopicRecommendation {
   tone: string;
   difficulty: '쉬움' | '보통' | '도전';
   learningTopicId?: string | null;
+  connectionReason?: string;
+  selectedQuestion?: GeneratedQuestion;
+  selectedKeywords?: string[];
+  validation?: {
+    keywordReflected: boolean;
+    questionReflected: boolean;
+    grammarChecked: boolean;
+  };
 }
 
 export interface KeywordItem {
