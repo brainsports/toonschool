@@ -1003,6 +1003,9 @@ const getScienceUnitFallbackWords = (majorUnitName: string, middleUnitName: stri
   if (source.includes('식물')) {
     return ['식물', '뿌리', '줄기', '잎', '꽃', '씨', '물', '햇빛', '자람', '양분']
   }
+  if (source.includes('온도') || source.includes('열') || source.includes('기체') || source.includes('대류')) {
+    return ['열', '온도', '기체', '공기', '대류', '이동', '실험', '변화', '흐름', '입자']
+  }
   return []
 }
 export const KEYWORD_GENERATION_RULES = `
@@ -1167,7 +1170,8 @@ const getFallbackKeywords = (
 
 const BANNED_FINAL_KEYWORDS = [
   '질문', '단서', '장면', '미션', '모험', '퀘스트', '게임', '이야기',
-  '주인공', '친구', '해결', '문제', '방법', '이유', '내용', '것'
+  '주인공', '친구', '해결', '문제', '방법', '이유', '내용', '것',
+  '의해', '통해', '위해', '대한', '관한', '때문', '경우', '동안'
 ];
 
 const VERB_ADJ_PATTERNS = /(접촉할|설명할|움직일|알아볼|비교할|관찰할|생각할)/;
@@ -1186,7 +1190,7 @@ export const finalizeKeywords = (keywords: string[]): string[] => {
     if (BANNED_FINAL_KEYWORDS.some(b => raw.includes(b))) continue;
 
     const normalizedParts = parts.map(part => {
-      return part.replace(/(에서|으로|로|은|는|이|가|을|를|의|와|과)$/, '');
+      return part.replace(/(에서|에게|에는|부터|까지|으로|에|로|은|는|이|가|을|를|의|와|과|도|만)$/, '');
     });
 
     const w = normalizedParts.join(' ').trim();
