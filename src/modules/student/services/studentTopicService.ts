@@ -797,7 +797,11 @@ export const fetchQuestionCategories = async (): Promise<any[]> => {
 export const generateQuestions = async (
   request: any
 ): Promise<any[]> => {
-  const { gradeName, subjectName, majorUnitName, middleUnitName, keyword, categories, curriculumContext } = request
+  const { gradeName, subjectName, majorUnitName, middleUnitName, keyword, categories, curriculumContext, selectedKeywords } = request
+
+  // `keyword` fallback for older calls, but now `selectedKeywords` is primary
+  const keywordsToUse = selectedKeywords && selectedKeywords.length > 0 ? selectedKeywords : (keyword ? [keyword] : ['주제']);
+  const keywordString = keywordsToUse.join(', ');
 
   const contextText = curriculumContext ? `
 [교과 정보]
@@ -809,39 +813,126 @@ export const generateQuestions = async (
 
   const prompt = `
 너는 초등학생을 위한 학습만화 선생님입니다.
-선택된 키워드 '${keyword}'를 중심으로, 각 질문 유형에 맞는 호기심 유발 질문들을 만들어 주세요.
+학생이 선택한 키워드들([${keywordString}])을 최대한 활용하여, 각 질문 유형에 맞는 호기심 유발 질문들을 만들어 주세요.
 
 학년: ${gradeName}
 과목: ${subjectName}
 대단원: ${majorUnitName}
 중단원(학습 주제): ${middleUnitName}${contextText}
-선택된 키워드: ${keyword}
+선택된 키워드: ${keywordString}
 
-[질문 유형]
-${categories.map((c: any) => `- ${c.name} (코드: ${c.code}): ${c.description}`).join('\n')}
+[질문 유형별 역할]
+- 왜 그럴까? (why): 이유와 원리를 묻는 질문
+- 만약 없다면? (what_if): 상상과 변화를 묻는 질문
+- 실험해 보면? (experiment): 직접 확인하거나 탐구할 수 있는 질문
+- 우리 생활에서는? (life): 생활 속 사례와 연결하는 질문
+- 정말일까? (compare): 오해, 확인, 검증을 묻는 질문
+- 어떤 비밀이 있을까? (secret): 호기심을 자극하는 질문
 
-[조건]
-1. 위에서 제시된 모든 질문 유형(코드)에 대해 각각 5개씩 질문을 만드세요.
-2. 질문은 초등학생이 흥미를 느낄 수 있는 말투여야 합니다. 너무 어려운 개념어 중심 질문은 피하세요.
-3. 질문은 반드시 물음표(?)로 끝나야 합니다.
-4. 카테고리별 성격이 드러나야 합니다.
-5. 질문 안에 선택 키워드가 자연스럽게 포함되거나 명확히 연결되어야 합니다.
-6. 응답은 지정된 JSON 형식으로만 반환하세요.
+[질문 생성 원칙]
+1. 첫 번째 키워드만 반복해서 사용하지 마세요.
+2. 각 질문은 선택 키워드 중 최소 2개 이상을 자연스럽게 반영하세요. 문장이 어색하다면 2개만 사용해도 좋습니다.
+3. 초등학교 3~6학년 학생이 쉽게 이해할 수 있는 자연스러운 문장으로 만드세요.
+4. 모든 질문은 반드시 물음표(?)로 끝나야 합니다.
+5. 너무 일반적인 질문(예: "~는 왜 중요할까요?", "~의 특징은 무엇일까요?")은 피하고, 만화의 구체적인 사건(주제)으로 확장될 수 있는 재미있는 질문을 만드세요.
+6. 같은 의미의 질문을 반복하지 마세요.
+7. 위에서 제시된 모든 질문 유형(코드)에 대해 각각 5개씩 질문을 만드세요.
 
 응답 형식:
 {
   "questions": [
     {
       "categoryCode": "why",
-      "questionText": "질문 내용 1?"
-    },
-    {
-      "categoryCode": "why",
-      "questionText": "질문 내용 2?"
+      "questionText": "로봇이 움직이는 데 필요한 에너지를 어떻게 실험해 볼까요?"
     }
   ]
 }
 `
+
+  const getFallbackQuestionsForCategory = (category: any, keywords: string[], count: number, existingTexts: string[]): string[] => {
+    const fallbacks: string[] = [];
+    const kw1 = keywords[0] || '이것';
+    const kw2 = keywords.length > 1 ? keywords[1] : kw1;
+    
+    const templates: Record<string, string[]> = {
+      'why': [
+        `${kw1}은(는) 왜 ${kw2}와(과) 관련이 있을까요?`,
+        `왜 사람들은 ${kw1}을(를) 중요하게 생각할까요?`,
+        `${kw1}이(가) 생겨난 진짜 이유는 무엇일까요?`,
+        `왜 ${kw1}에는 ${kw2}이(가) 필요할까요?`,
+        `${kw1}과(와) ${kw2}이(가) 만났을 때 생기는 변화는 왜 일어날까요?`
+      ],
+      'what_if': [
+        `만약 ${kw1}이(가) 갑자기 사라진다면 ${kw2}에는 무슨 일이 벌어질까요?`,
+        `만약 내가 ${kw1}을(를) 마음대로 바꿀 수 있다면?`,
+        `만약 ${kw1}과(와) ${kw2}이(가) 반대로 작동한다면 어떨까요?`,
+        `만약 우리 생활에 ${kw1}이(가) 없다면 어떻게 될까요?`,
+        `만약 ${kw1}이(가) 말할 수 있다면 우리에게 무슨 말을 할까요?`
+      ],
+      'compare': [
+        `${kw1}과(와) ${kw2}은(는) 어떤 점이 다르고 또 비슷할까요?`,
+        `과거의 ${kw1}과(와) 미래의 모습은 어떻게 다를까요?`,
+        `우리 고장의 ${kw1}과(와) 다른 곳의 ${kw1}은(는) 어떤 차이가 있을까요?`,
+        `정말 ${kw1}이(가) ${kw2}보다 더 좋은 점이 있을까요?`,
+        `${kw1}을(를) 다른 것과 비교할 때 가장 놀라운 점은 무엇일까요?`
+      ],
+      'life': [
+        `우리 가족의 일상 속에서 ${kw1}은(는) 어떻게 쓰이고 있을까요?`,
+        `${kw1}과(와) ${kw2}을(를) 이용해 내일 당장 해볼 수 있는 일은 무엇일까요?`,
+        `우리가 모르는 사이에 ${kw1}이(가) 도와주고 있는 일은 무엇일까요?`,
+        `학교에서 ${kw1}을(를) 가장 잘 활용할 수 있는 방법은 무엇일까요?`,
+        `우리 동네에서 ${kw1}과(와) 관련된 곳을 찾아본다면 어디가 있을까요?`
+      ],
+      'experiment': [
+        `${kw1}의 비밀을 밝히기 위해 어떤 재미있는 실험을 해볼까요?`,
+        `${kw1}과(와) ${kw2}을(를) 직접 연결해보려면 어떤 방법이 필요할까요?`,
+        `${kw1}이(가) 정말 맞는지 확인하기 위한 최고의 방법은?`,
+        `${kw1}을(를) 관찰할 때 가장 먼저 확인해야 할 점은 무엇일까요?`,
+        `교실에서 ${kw1}과(와) 관련된 어떤 활동을 해볼 수 있을까요?`
+      ],
+      'secret': [
+        `${kw1}에 숨겨진 가장 신기한 비밀은 무엇일까요?`,
+        `${kw1}과(와) ${kw2} 사이에 우리가 몰랐던 비밀이 있을까요?`,
+        `전문가들만 아는 ${kw1}의 특별한 비밀은 무엇일까요?`,
+        `${kw1}을(를) 자세히 살펴보면 발견할 수 있는 놀라운 사실은?`,
+        `${kw1}이(가) 가진 가장 큰 매력은 무엇일까요?`
+      ]
+    };
+
+    const defaultTemplates = [
+      `${kw1}에 숨겨진 가장 재미있는 비밀은 무엇일까요?`,
+      `${kw1}과(와) ${kw2}의 관계를 가장 쉽게 설명하는 방법은?`,
+      `${kw1}과(와) 관련된 새로운 아이디어는 무엇이 있을까요?`,
+      `${kw1}을(를) 더 잘 이해하기 위해 우리는 무엇을 할 수 있을까요?`,
+      `${kw1}이(가) 우리에게 주는 가장 큰 도움은 무엇일까요?`
+    ];
+
+    let catTemplates = templates[category.code];
+    if (!catTemplates) {
+      for (const key of Object.keys(templates)) {
+        if (category.name && category.name.includes(key)) {
+           catTemplates = templates[key]; break;
+        }
+      }
+    }
+    if (!catTemplates) catTemplates = defaultTemplates;
+
+    for (const t of catTemplates) {
+      if (fallbacks.length >= count) break;
+      if (!existingTexts.includes(t)) {
+        fallbacks.push(t);
+      }
+    }
+
+    let suffix = 1;
+    while (fallbacks.length < count) {
+      fallbacks.push(`${kw1}에 대한 ${suffix}번째 재미있는 질문은 무엇일까요?`);
+      suffix++;
+    }
+
+    return fallbacks;
+  };
+
   const tryModel = async (model: string): Promise<any[]> => {
     if (!model) throw new Error('No model provided');
     const responseText = await Promise.race([
@@ -853,63 +944,69 @@ ${categories.map((c: any) => `- ${c.name} (코드: ${c.code}): ${c.description}`
     const parsedData = JSON.parse(cleanedText)
 
     if (parsedData && Array.isArray(parsedData.questions)) {
-      return parsedData.questions.map((q: any) => ({
-        ...q,
-        keyword
-      }));
+      const validQuestions: any[] = [];
+      const questionsByCategory: Record<string, any[]> = {};
+      
+      categories.forEach((c: any) => {
+        questionsByCategory[c.code] = [];
+      });
+
+      for (const q of parsedData.questions) {
+        if (!q || !q.questionText || !q.categoryCode) continue;
+        
+        let text = q.questionText.trim();
+        if (!text.endsWith('?')) text += '?';
+        
+        const matchCount = keywordsToUse.filter((kw: string) => text.includes(kw)).length;
+        const isValidLength = text.length >= 8 && text.length <= 70;
+        const isDuplicate = validQuestions.some(vq => vq.questionText === text);
+
+        // 검수 조건 만족 (키워드 1개 이상 포함)
+        if (matchCount >= 1 && isValidLength && !isDuplicate && questionsByCategory[q.categoryCode]) {
+          const formattedQ = {
+            categoryCode: q.categoryCode,
+            questionText: text,
+            keyword: keywordString
+          };
+          questionsByCategory[q.categoryCode].push(formattedQ);
+          validQuestions.push(formattedQ);
+        }
+      }
+
+      const finalQuestions: any[] = [];
+      categories.forEach((c: any) => {
+        const catQuestions = questionsByCategory[c.code] || [];
+        const missingCount = 5 - catQuestions.length;
+        if (missingCount > 0) {
+          const fallbacks = getFallbackQuestionsForCategory(c, keywordsToUse, missingCount, catQuestions.map(q => q.questionText));
+          catQuestions.push(...fallbacks.map(text => ({
+            categoryCode: c.code,
+            questionText: text,
+            keyword: keywordString
+          })));
+        }
+        finalQuestions.push(...catQuestions.slice(0, 5));
+      });
+
+      return finalQuestions;
     }
     throw new Error('Invalid JSON format from AI')
   }
-
-const getFallbackQuestions = (request: any): any[] => {
-  const { keyword, categories, middleUnitName } = request;
-  const questions: any[] = [];
-  const targetWord = keyword || middleUnitName || '이것';
-  
-  categories.forEach((cat: any) => {
-    const qTexts: string[] = [];
-    if (cat.code === 'why' || cat.name.includes('왜')) {
-      qTexts.push(`${targetWord}은(는) 왜 그런 특징을 가질까요?`);
-      qTexts.push(`${targetWord}이(가) 생겨난 진짜 이유는 무엇일까요?`);
-      qTexts.push(`왜 사람들은 ${targetWord}을(를) 중요하게 생각할까요?`);
-    } else if (cat.code === 'what_if' || cat.name.includes('만약')) {
-      qTexts.push(`만약 ${targetWord}이(가) 갑자기 사라진다면 무슨 일이 벌어질까요?`);
-      qTexts.push(`만약 내가 ${targetWord}을(를) 마음대로 바꿀 수 있다면?`);
-      qTexts.push(`만약 ${targetWord}이(가) 말을 할 수 있다면 어떤 이야기를 할까요?`);
-    } else if (cat.code === 'compare' || cat.name.includes('비교')) {
-      qTexts.push(`${targetWord}과(와) 정반대인 것은 무엇이고, 어떤 점이 다를까요?`);
-      qTexts.push(`과거의 ${targetWord}과(와) 미래의 모습은 어떻게 다를까요?`);
-      qTexts.push(`${targetWord}을(를) 다른 나라나 고장의 것과 비교해 보면 어떨까요?`);
-    } else if (cat.code === 'life' || cat.name.includes('생활')) {
-      qTexts.push(`우리 가족의 일상 속에서 ${targetWord}은(는) 어떻게 숨어 있을까요?`);
-      qTexts.push(`${targetWord}을(를) 이용해 내일 당장 해볼 수 있는 일은 무엇일까요?`);
-      qTexts.push(`우리가 모르는 사이에 ${targetWord}이(가) 도와주고 있는 일은 무엇일까요?`);
-    } else if (cat.code === 'experiment' || cat.name.includes('실험')) {
-      qTexts.push(`${targetWord}의 비밀을 밝히기 위해 어떤 재미있는 실험을 해볼까요?`);
-      qTexts.push(`${targetWord}을(를) 직접 만들어보려면 어떤 재료와 방법이 필요할까요?`);
-      qTexts.push(`${targetWord}이(가) 정말 맞는지 확인하기 위한 최고의 방법은?`);
-    } else {
-      qTexts.push(`${targetWord}에 숨겨진 가장 재미있는 비밀은 무엇일까요?`);
-      qTexts.push(`친구들에게 ${targetWord}을(를) 가장 쉽게 설명하는 방법은?`);
-      qTexts.push(`${targetWord}과(와) 관련된 새로운 아이디어는 무엇이 있을까요?`);
-    }
-    
-    qTexts.forEach((qText) => {
-      questions.push({
-        categoryCode: cat.code,
-        questionText: qText,
-        keyword
-      });
-    });
-  });
-  return questions;
-}
 
   try {
     return await tryModel(TEXT_GENERATION_MODEL);
   } catch (error) {
     console.error('Failed to generate questions from AI, using fallback:', error)
-    return getFallbackQuestions(request);
+    const fallbackFinal: any[] = [];
+    categories.forEach((c: any) => {
+      const fallbacks = getFallbackQuestionsForCategory(c, keywordsToUse, 5, []);
+      fallbackFinal.push(...fallbacks.map(text => ({
+        categoryCode: c.code,
+        questionText: text,
+        keyword: keywordString
+      })));
+    });
+    return fallbackFinal;
   }
 }
 

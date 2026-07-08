@@ -191,6 +191,7 @@ export default function StudentTopicMakerPage() {
       majorUnitName: selection.majorUnitName || '',
       middleUnitName: selection.middleUnitName || '',
       keyword: selectedKeywords[0],
+      selectedKeywords,
       categories: questionCategories,
       curriculumContext
     }
@@ -218,7 +219,7 @@ export default function StudentTopicMakerPage() {
     if (qId) {
       try {
         await selectGeneratedQuestion(qId, {
-          keyword: selectedKeywords[0],
+          keyword: selectedKeywords.join(', '),
           subject: selection?.subjectName || '',
           grade: selection?.gradeValue || 0
         })
