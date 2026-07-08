@@ -994,6 +994,13 @@ const isBadKeyword = (word: string, subjectName = '') => {
 
 const getScienceUnitFallbackWords = (majorUnitName: string, middleUnitName: string, context?: CurriculumContext) => {
   const source = [majorUnitName, middleUnitName, context?.unitGoal, context?.learningGoal, context?.unitSummary, context?.subunitSummary, context?.contentScope, context?.keyQuestions].filter(Boolean).join(' ')
+
+  if (source.includes('태양계') || source.includes('태양') || source.includes('별')) {
+    return ['태양', '지구', '빛', '열', '별', '태양계', '낮', '밤', '그림자', '온도', '에너지', '생명', '식물', '계절']
+  }
+  if (source.includes('온도') || source.includes('열') || source.includes('기체') || source.includes('대류')) {
+    return ['열', '온도', '기체', '공기', '대류', '이동', '실험', '변화', '흐름', '입자']
+  }
   if (source.includes('용해') || source.includes('용액') || source.includes('녹')) {
     return ['용해', '용액', '용질', '용매', '물', '가루', '녹기', '진하기', '섞임', '눈']
   }
@@ -1001,10 +1008,7 @@ const getScienceUnitFallbackWords = (majorUnitName: string, middleUnitName: stri
     return ['동물', '서식지', '먹이', '생김새', '보호색', '사막', '북극', '날개', '다리', '몸']
   }
   if (source.includes('식물')) {
-    return ['식물', '뿌리', '줄기', '잎', '꽃', '씨', '물', '햇빛', '자람', '양분']
-  }
-  if (source.includes('온도') || source.includes('열') || source.includes('기체') || source.includes('대류')) {
-    return ['열', '온도', '기체', '공기', '대류', '이동', '실험', '변화', '흐름', '입자']
+    return ['식물', '뿌리', '줄기', '잎', '꽃', '열매', '물', '햇빛', '바람', '양분']
   }
   return []
 }
@@ -1168,92 +1172,121 @@ const getFallbackKeywords = (
   }))
 }
 
+const FINAL_JOSA_ENDINGS = ['에서', '에게', '에는', '으로', '부터', '까지', '로', '은', '는', '이', '가', '을', '를', '의', '와', '과', '에', '도', '만']
+
 const BANNED_FINAL_KEYWORDS = [
+  '의해', '통해', '위해', '대한', '관한', '때문에', '경우', '동안',
   '질문', '단서', '장면', '미션', '모험', '퀘스트', '게임', '이야기',
-  '주인공', '친구', '해결', '문제', '방법', '이유', '내용', '것',
-  '의해', '통해', '위해', '대한', '관한', '때문', '경우', '동안'
-];
+  '주인공', '친구', '해결', '문제', '방법', '이유', '내용', '것'
+]
 
-const VERB_ADJ_PATTERNS = /(접촉할|설명할|움직일|알아볼|비교할|관찰할|생각할)/;
+const SCIENCE_DEFAULT_SAFE_KEYWORDS = ['관찰', '실험', '변화', '비교', '현상', '원리', '자연', '물질', '에너지', '생명']
 
-export const finalizeKeywords = (keywords: string[]): string[] => {
-  const result: string[] = [];
-  const seen = new Set<string>();
+const normalizeKeywordWord = (word: string) => {
+  let normalized = (word || '')
+    .replace(/[!?,.()[\]{}<>"'“”‘’]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
 
-  for (const raw of keywords) {
-    if (!raw) continue;
-    
-    const parts = raw.trim().split(/\s+/).filter(Boolean);
-    if (parts.length === 0 || parts.length > 3) continue;
-
-    if (VERB_ADJ_PATTERNS.test(raw)) continue;
-    if (BANNED_FINAL_KEYWORDS.some(b => raw.includes(b))) continue;
-
-    const normalizedParts = parts.map(part => {
-      return part.replace(/(에서|에게|에는|부터|까지|으로|에|로|은|는|이|가|을|를|의|와|과|도|만)$/, '');
-    });
-
-    const w = normalizedParts.join(' ').trim();
-    
-    if (w.length < 2) continue;
-    if (BANNED_FINAL_KEYWORDS.some(b => w.includes(b))) continue;
-
-    if (!seen.has(w)) {
-      seen.add(w);
-      result.push(w);
+  let changed = true
+  while (changed && normalized.length > 1) {
+    changed = false
+    for (const ending of FINAL_JOSA_ENDINGS) {
+      if (normalized.length > ending.length + 1 && normalized.endsWith(ending)) {
+        normalized = normalized.slice(0, -ending.length).trim()
+        changed = true
+        break
+      }
     }
   }
 
-  return result;
+  return normalized.replace(/\s+/g, ' ').trim()
+}
+
+export const finalizeKeywords = (keywords: string[]): string[] => {
+  const result: string[] = []
+  const seen = new Set<string>()
+
+  for (const raw of keywords) {
+    const normalized = normalizeKeywordWord(raw)
+    if (!normalized) continue
+
+    const parts = normalized.split(/\s+/).filter(Boolean)
+    if (parts.length < 1 || parts.length > 3) continue
+    if (normalized.length < 1) continue
+    if (BANNED_FINAL_KEYWORDS.some(banned => normalized.includes(banned))) continue
+    if (REQUIRED_TRAILING_VERBS.test(normalized) || REQUIRED_EXPLANATION_WORDS.test(normalized)) continue
+    if (parts.some(part => REQUIRED_BAD_KEYWORD_TERMS.has(part))) continue
+
+    if (!seen.has(normalized)) {
+      seen.add(normalized)
+      result.push(normalized)
+    }
+  }
+
+  return result
+}
+
+const getSafeKeywordPool = (request: TopicGenerationRequest & { count?: number; existingKeywords?: string[] }) => {
+  const subjectName = request.subjectName || ''
+  const pool = [
+    ...getScienceUnitFallbackWords(request.majorUnitName || '', request.middleUnitName || '', request.curriculumContext),
+    ...(request.middleUnitName?.match(/[가-힣]{1,6}/g) || []),
+    ...(request.majorUnitName?.match(/[가-힣]{1,6}/g) || [])
+  ]
+
+  if (subjectName === '과학' || subjectName === '怨쇳븰') {
+    pool.push(...SCIENCE_DEFAULT_SAFE_KEYWORDS)
+  }
+
+  return pool
 }
 
 const supplementKeywordsToCount = (
   candidates: KeywordItem[],
   request: TopicGenerationRequest & { count?: number; existingKeywords?: string[] }
 ) => {
-  const targetCount = request.count || 10
+  const targetCount = Math.min(Math.max(request.count || 2, 1), 10)
   const result: KeywordItem[] = []
-  const seen = new Set<string>(request.existingKeywords || [])
-  const addItems = (items: KeywordItem[]) => {
-    for (const item of items) {
-      if (!item?.word) continue
-      const finalized = finalizeKeywords([item.word]);
-      if (finalized.length === 0) continue;
-      const fWord = finalized[0];
+  const seen = new Set(finalizeKeywords(request.existingKeywords || []))
 
-      if (seen.has(fWord)) continue
-      result.push({ ...item, word: fWord })
-      seen.add(fWord)
+  const addItems = (items: KeywordItem[]) => {
+    const validated = validateGeneratedKeywords(items, request.majorUnitName || '', request.middleUnitName || '', request.subjectName || '')
+    for (const item of validated) {
+      if (!item?.word) continue
+      const finalized = finalizeKeywords([item.word])
+      if (finalized.length === 0) continue
+      const word = finalized[0]
+      if (seen.has(word)) continue
+      result.push({ ...item, word })
+      seen.add(word)
       if (result.length >= targetCount) break
     }
   }
 
-  addItems(validateGeneratedKeywords(candidates, request.majorUnitName || '', request.middleUnitName || '', request.subjectName || ''))
+  addItems(candidates)
 
   let guard = 0
-  while (result.length < targetCount && guard < 5) {
+  while (result.length < targetCount && guard < 10) {
     const fallback = getFallbackKeywords(
       request.subjectName || '',
-      [...(request.existingKeywords || []), ...result.map(item => item.word)],
+      [...seen],
       request.middleUnitName || '',
       request.majorUnitName || '',
       request.curriculumContext
     )
-    const validatedFallback = validateGeneratedKeywords(fallback, request.majorUnitName || '', request.middleUnitName || '', request.subjectName || '')
     const before = result.length
-    addItems(validatedFallback)
-    if (result.length === before) break
+    addItems(fallback)
     guard++
+    if (result.length === before) break
   }
 
-  const forcedWords = [
-    ...getScienceUnitFallbackWords(request.majorUnitName || '', request.middleUnitName || '', request.curriculumContext),
-    ...(request.middleUnitName?.match(/[가-힣]{2,6}/g) || []),
-    ...(request.majorUnitName?.match(/[가-힣]{2,6}/g) || [])
-  ]
-  addItems(forcedWords
-    .filter(word => !isBadKeyword(word, request.subjectName || ''))
-    .map(word => ({ word, reason: '단원 내용에 맞춰 보충한 키워드입니다.' })))
+  if (result.length < targetCount) {
+    addItems(getSafeKeywordPool(request).map(word => ({
+      word,
+      reason: '단원 내용에 맞춰 보충한 안전 키워드입니다.'
+    })))
+  }
 
   return result.slice(0, targetCount)
 }
@@ -1302,42 +1335,58 @@ ${KEYWORD_GENERATION_RULES}
 
   console.debug('[키워드 생성 요청]', { unitKey, gradeName, subjectName, majorUnitName, middleUnitName })
 
+  const KEYWORD_GENERATION_TIMEOUT_MS = 12000
+  const KEYWORD_GENERATION_RETRY_COUNT = 1
+
   const tryModel = async (model: string): Promise<KeywordItem[]> => {
-    if (!model) throw new Error('No model provided');
-    
-    // 5초 타임아웃
-    const responseText = await Promise.race([
-      geminiClient.generateTextWithModel(prompt, model),
-      new Promise<string>((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), 5000))
-    ]);
+    if (!model) throw new Error('No model provided')
 
-    const cleanedText = responseText.replace(/\`\`\`json/gi, '').replace(/\`\`\`/g, '').trim()
-    const parsedData = JSON.parse(cleanedText)
+    let lastError: unknown = null
+    for (let attempt = 0; attempt <= KEYWORD_GENERATION_RETRY_COUNT; attempt++) {
+      try {
+        const responseText = await Promise.race([
+          geminiClient.generateTextWithModel(prompt, model),
+          new Promise<string>((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), KEYWORD_GENERATION_TIMEOUT_MS))
+        ])
 
-    if (parsedData && Array.isArray(parsedData.keywords) && parsedData.keywords.length > 0) {
-      const parsedKeywords = parsedData.keywords.map((k: any) => ({
-        word: k.word, reason: k.reason || ''
-      }));
+        const cleanedText = responseText.replace(/\`\`\`json/gi, '').replace(/\`\`\`/g, '').trim()
+        const parsedData = JSON.parse(cleanedText)
 
-      const result = supplementKeywordsToCount(parsedKeywords, request)
-      console.debug('[keyword generation complete]', {
-        unitKey,
-        aiCount: parsedKeywords.length,
-        finalCount: result.length,
-        keywords: result.map(k => k.word)
-      })
-      if (result.length >= count) return result
+        if (parsedData && Array.isArray(parsedData.keywords) && parsedData.keywords.length > 0) {
+          const parsedKeywords = parsedData.keywords.map((k: any) => ({
+            word: k.word,
+            reason: k.reason || ''
+          }))
+
+          const result = supplementKeywordsToCount(parsedKeywords, request)
+          console.debug('[keyword generation complete]', {
+            unitKey,
+            aiCount: parsedKeywords.length,
+            finalCount: result.length,
+            keywords: result.map(k => k.word)
+          })
+          if (result.length >= count) return result
+        }
+
+        throw new Error('Invalid JSON format from AI or all keywords were filtered out')
+      } catch (error) {
+        lastError = error
+        if (attempt < KEYWORD_GENERATION_RETRY_COUNT) {
+          console.warn(`[키워드 생성] ${model} 실패, 1회 재시도:`, error instanceof Error ? error.message : error)
+          continue
+        }
+      }
     }
-    
-    throw new Error('Invalid JSON format from AI or all keywords were filtered out')
+
+    throw lastError instanceof Error ? lastError : new Error('Failed to generate keywords')
   }
 
   try {
     try {
-      return await tryModel(TEXT_GENERATION_MODEL);
+      return await tryModel(TEXT_GENERATION_MODEL)
     } catch (err: any) {
-      console.warn(`[키워드 생성] ${TEXT_GENERATION_MODEL} 실패 → fallback 사용:`, err.message);
-      throw err;
+      console.warn(`[키워드 생성] ${TEXT_GENERATION_MODEL} 최종 실패 → fallback 사용:`, err.message)
+      throw err
     }
   } catch (error) {
     console.error('Failed to generate keywords from AI:', error)
