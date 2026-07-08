@@ -38,6 +38,7 @@ export default function StudentTopicMakerPage() {
   const [recommendedKeywords, setRecommendedKeywords] = useState<KeywordItem[]>([])
   const [selectedKeywords, setSelectedKeywords] = useState<string[]>([])
   const [isKeywordLoading, setIsKeywordLoading] = useState(false)
+  const [visibleKeywordCount, setVisibleKeywordCount] = useState(2)
 
   // 질문 추천 관련 상태
   const [questionCategories, setQuestionCategories] = useState<QuestionCategory[]>([])
@@ -138,7 +139,7 @@ export default function StudentTopicMakerPage() {
       majorUnitName: selection.majorUnitName || '',
       middleUnitName: selection.middleUnitName || '',
       existingKeywords: recommendedKeywords.map(k => k.word),
-      count: 2,
+      count: 10,
       curriculumContext
     }
     try {
@@ -152,11 +153,16 @@ export default function StudentTopicMakerPage() {
         )
         return unique.slice(0, 10)
       })
+      setVisibleKeywordCount(prev => prev === 0 ? 2 : prev)
     } catch (error) {
       console.error('키워드 생성 실패:', error)
     } finally {
       setIsKeywordLoading(false)
     }
+  }
+
+  const handleShowMoreKeywords = () => {
+    setVisibleKeywordCount(prev => Math.min(prev + 2, recommendedKeywords.length))
   }
 
   const handleToggleKeyword = (word: string) => {
@@ -497,11 +503,12 @@ export default function StudentTopicMakerPage() {
                 {aiStep === 'keyword' && (
                   <div className="animate-fade-in flex flex-col gap-5">
                     <KeywordSelectionCard
-                      keywords={recommendedKeywords}
+                      keywords={recommendedKeywords.slice(0, visibleKeywordCount)}
+                      totalKeywords={recommendedKeywords.length}
                       selectedKeywords={selectedKeywords}
                       onToggleKeyword={handleToggleKeyword}
                       isLoading={isKeywordLoading}
-                      onGenerateKeywords={handleGenerateKeywords}
+                      onGenerateKeywords={handleShowMoreKeywords}
                     />
                     <div className="flex justify-center mt-4">
                       <button

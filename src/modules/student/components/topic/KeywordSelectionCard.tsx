@@ -7,6 +7,7 @@ interface KeywordSelectionCardProps {
   onToggleKeyword: (word: string) => void
   isLoading: boolean
   onGenerateKeywords?: () => void
+  totalKeywords?: number
 }
 
 export default function KeywordSelectionCard({
@@ -14,7 +15,8 @@ export default function KeywordSelectionCard({
   selectedKeywords,
   onToggleKeyword,
   isLoading,
-  onGenerateKeywords
+  onGenerateKeywords,
+  totalKeywords
 }: KeywordSelectionCardProps) {
   return (
     <div className="card-select-panel p-8 md:p-10 mb-8 animate-fade-in text-center">
@@ -66,7 +68,7 @@ export default function KeywordSelectionCard({
             </div>
           )}
 
-          {keywords.length < 10 && onGenerateKeywords && (
+          {(keywords.length === 0 || keywords.length < (totalKeywords ?? 10)) && onGenerateKeywords && (
             <button
               onClick={onGenerateKeywords}
               disabled={isLoading}
@@ -78,7 +80,7 @@ export default function KeywordSelectionCard({
                   ? '키워드 만드는 중...' 
                   : keywords.length === 0 
                     ? '키워드 추천 ✨' 
-                    : '키워드 2개 더 만들기 ✨'}
+                    : '키워드 2개 더 보기 ✨'}
               </span>
             </button>
           )}

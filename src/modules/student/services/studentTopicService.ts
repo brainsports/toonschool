@@ -7,120 +7,6 @@ function normalizeText(text: string) {
   return text.replace(/[\s\d.,!?]/g, '').toLowerCase()
 }
 
-// 형용사형 금지어 목록 (완전 일치 시 삭제)
-const BANNED_ADJECTIVES = new Set([
-  '다양한', '새로운', '중요한', '알맞은', '바른', '올바른', '여러', '다른', '같은',
-  '많은', '적은', '높은', '낮은', '넓은', '좁은', '빠른', '느린', '좋은', '나쁜',
-  '쉬운', '어려운', '큰', '작은', '깊은', '얕은', '긴', '짧은'
-]);
-
-// 동사 어간 → 구체 명사 변환 맵 (순서 중요: 긴 패턴 먼저)
-const VERB_STEM_TRANSFORMS: Array<[RegExp, string]> = [
-  [/살펴보$/, '탐험'],
-  [/알아보$/, '관찰'],
-  [/바탕으$/, '바탕'],
-  [/생각하$/, '생각'],
-  [/대화하$/, '대화'],
-  [/비교하$/, '비교'],
-  [/설명하$/, '설명'],
-  [/찾아보$/, '탐험'],
-  [/이해하$/, '이해'],
-  [/공부하$/, '공부'],
-];
-
-// 절대 금지어 목록 (정확히 일치하면 삭제)
-const BANNED_EXACT_WORDS = new Set([
-  // 추상 분석어
-  '분포', '영향', '요소', '내용', '활동',
-  // 포괄적 학습 용어
-  '학습', '단원', '주제', '수업', '평가', '목표', '성취', '기준', '이해',
-  // 기타 너무 광범위한 단어
-  '우리', '학생', '사람들', '경우', '위치', '설명', '과정', '의미', '종류',
-  '이유', '까닭', '모습', '방식', '결과', '효과', '특성',
-]);
-
-// 단독 사용은 금지되나 구체 명사구(2어절 이상)로는 허용하는 단어
-const BANNED_STANDALONE_WORDS = new Set([
-  '특징', '관계', '변화', '자료', '방법',
-]);
-
-function filterAndCleanKeyword(word: string): string | null {
-  if (!word) return null;
-  
-  let cleaned = word.trim();
-  if (cleaned.length <= 1) return null;
-
-  // [Step 1] 형용사형 완전 일치 → 즉시 삭제
-  if (BANNED_ADJECTIVES.has(cleaned)) return null;
-
-  // [Step 2] 문장형 금지어 포함 여부 검사
-  const bannedContains = [
-    '설명할', '알다', '있다', '없다', '말하다', '비교하다', '할수',
-    '대해', '대하여', '알수', '알아보기', '살펴보기', '배우기', '이해하기',
-    '알아보며', '살펴보며', '조사하기', '정리하기', '발표하기'
-  ];
-  for (const ban of bannedContains) {
-    if (cleaned.includes(ban)) return null;
-  }
-  
-  // [Step 3] 종결어미 패턴 (문장형 표현 제거)
-  if (/[다요까죠](?:\s|$)/.test(cleaned)) return null;
-
-  // [Step 4] 동사 어간 변환 (살펴보 → 탐험 등)
-  for (const [pattern, replacement] of VERB_STEM_TRANSFORMS) {
-    if (pattern.test(cleaned)) {
-      cleaned = cleaned.replace(pattern, replacement);
-      break;
-    }
-  }
-
-  // [Step 5] 어미 및 조사 제거 (반복적으로 제거)
-  const suffixList = [
-    '하며', '하고', '하는', '하기', '되며', '되고', '하다', '하', 
-    '으로', '에서', '에게', '보다', '처럼', '위해', '대한',
-    '을', '를', '이', '가', '은', '는', '와', '과', '의', '에', '로', '부터', '까지', '과함께', '와함께'
-  ];
-  
-  let stripped = false;
-  do {
-    stripped = false;
-    if (!cleaned.includes(' ')) {
-      for (const suffix of suffixList) {
-        if (cleaned.endsWith(suffix) && cleaned.length - suffix.length >= 2) {
-          cleaned = cleaned.slice(0, -suffix.length);
-          stripped = true;
-          break;
-        }
-      }
-    } else {
-      const parts = cleaned.split(' ');
-      const lastPart = parts[parts.length - 1];
-      for (const suffix of suffixList) {
-        if (lastPart.endsWith(suffix) && lastPart.length - suffix.length >= 2) {
-          parts[parts.length - 1] = lastPart.slice(0, -suffix.length);
-          cleaned = parts.join(' ');
-          stripped = true;
-          break;
-        }
-      }
-    }
-  } while (stripped);
-
-  // [Step 6] 어간 변환 후 다시 형용사 체크
-  if (BANNED_ADJECTIVES.has(cleaned)) return null;
-
-  // [Step 7] 절대 금지어 정확 일치
-  if (BANNED_EXACT_WORDS.has(cleaned)) return null;
-
-  // [Step 8] 단독 사용 금지어 (2어절 이상 명사구이면 허용)
-  if (BANNED_STANDALONE_WORDS.has(cleaned) && !cleaned.includes(' ')) return null;
-
-  if (cleaned.length <= 1) return null;
-
-  return cleaned;
-}
-
-
 
 const buildPrompt = (request: TopicGenerationRequest, existing: TopicRecommendation[], count: number, extraData: CurriculumContext) => {
   const { gradeName, subjectName, majorUnitName, middleUnitName, extraRequest, selectedKeywords, selectedQuestion, previousTitles } = request
@@ -683,25 +569,69 @@ export const generateTopicRecommendations = async (
   }))
 }
 
+export const validateGeneratedKeywords = (
+  candidates: KeywordItem[],
+  majorUnitName: string,
+  middleUnitName: string
+): KeywordItem[] => {
+  const bannedExact = new Set([
+    '탐구야', '즐겁게', '놀자', '놀자!', '해보자', '하기', '되기', '알기',
+    '우리', '학생', '사람들', '경우', '위치', '설명', '과정', '의미', '종류',
+    '이유', '까닭', '모습', '방식', '결과', '효과', '특성',
+    '이해', '학습', '평가', '목표', '성취', '기준'
+  ]);
+
+  const punctuationRegex = /[!?,.()\[\]<>"']/
+  const spaceRegex = /\s/
+  const bannedEndings = /[다요까죠며고은는이가을를와과에로의]$/ 
+  const verbAdjectiveStem = /(하|되|알|배우|살펴보|알아보|이해하|생각하|비교하|설명하|찾아보|공부하|다양한|새로운|중요한|알맞은|바른|올바른|여러|다른|같은|많은|적은|높은|낮은|넓은|좁은|빠른|느린|좋은|나쁜|쉬운|어려운|큰|작은|깊은|얕은|긴|짧은)$/ 
+
+  const chapterWords = new Set([
+    ...(majorUnitName || '').split(/\s+/),
+    ...(middleUnitName || '').split(/\s+/)
+  ].map(w => w.replace(punctuationRegex, '')));
+
+  const validated: KeywordItem[] = [];
+  const seen = new Set<string>();
+
+  for (const item of candidates) {
+    if (!item || !item.word) continue;
+    let w = item.word.trim();
+
+    if (bannedExact.has(w)) continue;
+    if (punctuationRegex.test(w)) continue;
+    if (spaceRegex.test(w)) continue;
+    if (bannedEndings.test(w)) continue;
+    if (verbAdjectiveStem.test(w)) continue;
+    if (chapterWords.has(w)) continue;
+
+    if (!seen.has(w)) {
+      seen.add(w);
+      validated.push({ ...item, word: w });
+    }
+  }
+
+  return validated;
+}
+
 const getFallbackKeywords = (
   subjectName: string, 
   existingKeywords: string[] = [], 
   middleUnitName: string = '', 
   majorUnitName: string = '', 
-  context?: CurriculumContext
+  _context?: CurriculumContext
 ): KeywordItem[] => {
-  // ✅ 구체적이고 장면화 가능한 명사/명사구로만 구성 (추상어 제거)
   const specificMap: Record<string, string[]> = {
-    '산지': ['산맥', '백두대간', '태백산맥', '지리산', '설악산', '산골 마을', '국토', '고원'],
-    '하천': ['강', '강줄기', '상류와 하류', '강가 마을', '댐', '나루터', '국토', '강변'],
-    '강': ['강', '강줄기', '상류와 하류', '강가 마을', '댐', '나루터', '국토', '강변'],
-    '평야': ['평야', '논', '밭', '농사', '곡창 지대', '들판', '강변 마을', '국토'],
-    '해안': ['해안', '바다', '갯벌', '섬', '해수욕장', '항구', '어촌', '국토'],
-    '섬': ['섬', '제주도', '울릉도', '독도', '화산섬', '항구', '어촌', '바다'],
-    '도시': ['도시', '빌딩', '아파트', '공장', '교통', '버스', '지하철', '시장'],
-    '촌락': ['농촌', '어촌', '산지촌', '논밭', '마을', '전통 마을', '국토', '고장'],
-    '지형': ['산', '강', '평야', '해안', '섬', '국토', '고장', '지형도'],
-    '국토': ['우리나라', '국토', '고장', '지도', '산', '강', '바다', '섬']
+    '산지': ['산맥', '백두대간', '태백산맥', '지리산', '설악산', '국토', '고원'],
+    '하천': ['강줄기', '상류', '하류', '나루터', '국토', '강변'],
+    '강': ['강줄기', '상류', '하류', '나루터', '국토', '강변'],
+    '평야': ['농사', '들판', '국토'],
+    '해안': ['바다', '갯벌', '해수욕장', '항구', '어촌', '국토'],
+    '섬': ['제주도', '울릉도', '독도', '화산섬', '항구', '어촌', '바다'],
+    '도시': ['빌딩', '아파트', '공장', '교통', '버스', '지하철', '시장'],
+    '촌락': ['농촌', '어촌', '산지촌', '논밭', '마을', '국토', '고장'],
+    '지형': ['평야', '해안', '국토', '고장', '지형도'],
+    '국토': ['우리나라', '국토', '고장', '지도', '바다']
   }
 
   let fallbackWords: string[] = []
@@ -715,43 +645,24 @@ const getFallbackKeywords = (
     }
   }
 
-  const extractNouns = (text: string) => {
-    if (!text) return [];
-    const words = text.split(/[\s,()<>\[\]"']+/);
-    return words.map(filterAndCleanKeyword).filter((w): w is string => !!w);
-  }
-
-  const contextWords: string[] = [];
-  
-  if (context) {
-    const coreText = `${context.subunitSummary || ''} ${context.achievementStandards || ''}`;
-    contextWords.push(...extractNouns(coreText));
-    
-    const goalText = `${context.learningGoal || ''} ${context.unitGoal || ''}`;
-    contextWords.push(...extractNouns(goalText));
-  }
-
-  fallbackWords = [...fallbackWords, ...extractNouns(combinedName), ...contextWords];
-
   if (fallbackWords.length === 0) {
     const defaultWords: Record<string, string[]> = {
       '국어': ['인물', '마음', '대화', '장면', '표현', '상상', '친구', '사건', '감정', '이야기'],
-      '영어': ['친구', '학교', '여행', '음식', '동물', '길찾기', '대화', '게임', '파티', '미션'],
-      '수학': ['문제해결', '규칙', '숫자', '도형', '분수', '계산', '게임', '미션', '퍼즐', '나누기'],
+      '영어': ['친구', '학교', '여행', '음식', '동물', '대화', '게임', '파티', '미션'],
+      '수학': ['규칙', '숫자', '도형', '분수', '계산', '게임', '미션', '퍼즐'],
       '사회': ['지형', '국토', '기후', '산업', '교통', '도시', '농촌', '바다', '고장', '지도'],
       '과학': ['실험', '관찰', '생물', '동물', '식물', '에너지', '로봇', '우주', '발명', '날씨']
     }
     fallbackWords = defaultWords[subjectName] || defaultWords['국어']
   }
 
-  fallbackWords = fallbackWords.map(filterAndCleanKeyword).filter((w): w is string => !!w);
   fallbackWords = [...new Set(fallbackWords)]
 
   if (existingKeywords.length > 0) {
     fallbackWords = fallbackWords.filter(w => !existingKeywords.includes(w))
   }
 
-  return fallbackWords.slice(0, 10).map(word => ({
+  return fallbackWords.map(word => ({
     word,
     reason: '학습 주제와 관련된 추천 키워드입니다.'
   }))
@@ -816,16 +727,20 @@ export const generateKeywords = async (
     const parsedData = JSON.parse(cleanedText)
 
     if (parsedData && Array.isArray(parsedData.keywords) && parsedData.keywords.length > 0) {
-      const validKeywords = parsedData.keywords.filter((k: any) => {
-        if (!k || typeof k !== 'object' || !k.word) return false;
-        const cleaned = filterAndCleanKeyword(k.word);
-        if (!cleaned) return false;
-        k.word = cleaned;
-        return true;
-      });
+      const parsedKeywords = parsedData.keywords.map((k: any) => ({
+        word: k.word, reason: k.reason || ''
+      }));
+
+      let validated = validateGeneratedKeywords(parsedKeywords, majorUnitName || '', middleUnitName || '');
       
-      if (validKeywords.length > 0) {
-        return validKeywords.slice(0, count);
+      if (validated.length < count) {
+        const fallback = getFallbackKeywords(subjectName || '', [...existingKeywords, ...validated.map(v => v.word)], middleUnitName || '', majorUnitName || '', curriculumContext);
+        const validatedFallback = validateGeneratedKeywords(fallback, majorUnitName || '', middleUnitName || '');
+        validated = [...validated, ...validatedFallback];
+      }
+      
+      if (validated.length > 0) {
+        return validated.slice(0, count);
       }
     }
     
@@ -841,7 +756,9 @@ export const generateKeywords = async (
     }
   } catch (error) {
     console.error('Failed to generate keywords from AI:', error)
-    return getFallbackKeywords(subjectName || '', existingKeywords, middleUnitName || '', majorUnitName || '', curriculumContext).slice(0, count)
+    const fallbacks = getFallbackKeywords(subjectName || '', existingKeywords, middleUnitName || '', majorUnitName || '', curriculumContext);
+    const validatedFallbacks = validateGeneratedKeywords(fallbacks, majorUnitName || '', middleUnitName || '');
+    return validatedFallbacks.slice(0, count);
   }
 }
 
