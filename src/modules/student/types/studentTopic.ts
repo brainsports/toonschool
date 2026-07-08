@@ -14,6 +14,13 @@ export interface TopicRecommendation {
   id: string;
   title: string;
   summary: string;
+  question?: string;
+  angle?: string;
+  perspective?: string;
+  storyHint?: string;
+  learningPoint?: string;
+  openingLine?: string;
+  tags?: string[];
   storyType: StoryType;
   storyTypeLabel: string;
   setting: string;

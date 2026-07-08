@@ -32,10 +32,15 @@ export default function TopicRecommendationCard({
 }: TopicRecommendationCardProps) {
   const safeTitle = topic?.title || '추천 이야기'
   const safeDifficulty = topic?.difficulty || '보통'
-  const safeStoryType = topic?.storyTypeLabel || '일상 이야기'
-  const safeDesc = topic?.summary || ''
+  const safeStoryType = topic?.storyTypeLabel || topic?.perspective || topic?.angle || '일상 이야기'
+  const safeAngle = topic?.perspective || topic?.angle || topic?.tags?.[0] || safeStoryType
+  const safeQuestion = topic?.question || topic?.selectedQuestion?.questionText || ''
+  const safeDesc = topic?.storyHint || topic?.summary || ''
+  const safeLearningPoint = topic?.learningPoint || topic?.learningConnection || topic?.summary || ''
+  const safeOpeningLine = topic?.openingLine || `"${safeTitle}에서 무슨 일이 생긴 걸까?"`
   const safeReason = topic?.connectionReason || ''
-  const emoji = getMoodEmoji(safeStoryType)
+  const safeTags = [...new Set([...(topic?.tags || []), ...(topic?.keywords || [])])].slice(0, 6)
+  const emoji = getMoodEmoji(`${safeStoryType} ${safeAngle}`)
   
   const validation = topic?.validation
 
@@ -81,25 +86,42 @@ export default function TopicRecommendationCard({
       
       {/* 상세 설명 */}
       <div className={`w-full text-left rounded-2xl p-4 mt-1 flex-1 transition-colors flex flex-col gap-3 ${selected ? 'bg-white/60 border border-white' : 'bg-slate-50 border border-slate-100'}`}>
-        {topic.selectedKeywords && topic.selectedKeywords.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            <span className="text-xs font-bold text-[#8f95a6] px-2 py-0.5 bg-[#f3f4f6] rounded-md">선택한 키워드</span>
-            <span className="text-sm font-bold text-[#4B5563]">{topic.selectedKeywords.join(', ')}</span>
+        <div className="flex flex-wrap gap-2">
+          <span className="text-xs font-bold text-purple-700 px-2 py-1 bg-purple-50 border border-purple-100 rounded-md">{safeAngle}</span>
+          {safeTags.map(tag => (
+            <span key={tag} className="text-xs font-bold text-[#4B5563] px-2 py-1 bg-white border border-slate-100 rounded-md">
+              #{tag}
+            </span>
+          ))}
+        </div>
+
+        {safeQuestion && (
+          <div className="rounded-xl bg-white/80 border border-indigo-100 p-3">
+            <p className="text-xs font-bold text-[#6366f1] mb-1">연결 질문</p>
+            <p className="text-sm md:text-base font-bold text-[#3f4354] leading-relaxed break-keep">{safeQuestion}</p>
           </div>
         )}
-        {topic.selectedQuestion && (
-          <div className="flex flex-wrap gap-1">
-            <span className="text-xs font-bold text-[#8f95a6] px-2 py-0.5 bg-[#f3f4f6] rounded-md">선택한 질문</span>
-            <span className="text-sm font-bold text-[#4B5563] break-keep">{topic.selectedQuestion.questionText}</span>
+
+        <div className="rounded-xl bg-white/80 border border-slate-100 p-3">
+          <p className="text-xs font-bold text-[#8f95a6] mb-1">이야기 힌트</p>
+          <p className="text-base md:text-lg font-bold text-[#68627d] leading-relaxed break-keep">{safeDesc}</p>
+        </div>
+
+        <div className="grid grid-cols-1 gap-3">
+          <div className="rounded-xl bg-[#f8f9fa] border border-gray-100 p-3">
+            <p className="text-xs font-bold text-[#6366f1] mb-1">배울 내용</p>
+            <p className="text-sm font-medium text-[#4b5563] leading-relaxed break-keep">{safeLearningPoint}</p>
           </div>
-        )}
-        <p className="text-base md:text-lg font-bold text-[#68627d] leading-relaxed break-keep">
-          {safeDesc}
-        </p>
+          <div className="rounded-xl bg-[#fffaf0] border border-amber-100 p-3">
+            <p className="text-xs font-bold text-amber-700 mb-1">첫 장면 대사</p>
+            <p className="text-sm font-bold text-[#4b5563] leading-relaxed break-keep">{safeOpeningLine}</p>
+          </div>
+        </div>
+
         {safeReason && (
-          <div className="mt-2 p-3 bg-[#f8f9fa] rounded-xl border border-gray-100">
-            <p className="text-sm font-medium text-[#4b5563] leading-relaxed">
-              <span className="font-bold text-[#6366f1] mr-1">💡 연결 이유:</span>
+          <div className="mt-1 p-3 bg-[#f8f9fa] rounded-xl border border-gray-100">
+            <p className="text-sm font-medium text-[#4b5563] leading-relaxed break-keep">
+              <span className="font-bold text-[#6366f1] mr-1">연결 이유:</span>
               {safeReason}
             </p>
           </div>

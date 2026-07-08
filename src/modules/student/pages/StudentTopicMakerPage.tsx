@@ -27,7 +27,7 @@ export default function StudentTopicMakerPage() {
   const [selection, setSelection] = useState<StudentUnitSelection | null>(null)
 
   const MAX_RECOMMENDED_TOPICS = 10
-  const TOPICS_PER_GENERATION = 2
+  const TOPICS_PER_GENERATION = 10
 
   const [topics, setTopics] = useState<TopicRecommendation[]>([])
   const [genState, setGenState] = useState<TopicGenerationState>('idle')
@@ -249,7 +249,7 @@ export default function StudentTopicMakerPage() {
       previousTitles: [],
       previousIncidents: [],
       previousTypes: [],
-      count: 2, // Initially generate 2 topics
+      count: MAX_RECOMMENDED_TOPICS,
       curriculumContext
     }
 
@@ -366,7 +366,7 @@ export default function StudentTopicMakerPage() {
       previousTitles: [],
       previousIncidents: [],
       previousTypes: [],
-      count: 2, // 2 at a time
+      count: MAX_RECOMMENDED_TOPICS,
       curriculumContext
     }
 
@@ -578,7 +578,7 @@ export default function StudentTopicMakerPage() {
                           disabled={isGeneratingMore || genState === 'loading'}
                           className={`btn-primary-action px-8 py-4 font-jua text-base md:text-lg min-h-[56px] transition-all ${isGeneratingMore || genState === 'loading' ? 'opacity-70 cursor-not-allowed bg-[#e5e7eb] text-[#8f95a6]' : ''}`}
                         >
-                          <span>{isGeneratingMore ? '새로운 주제 2개를 만들고 있어요...' : '추천 주제 2개 더 만들기 ✨'}</span>
+                          <span>{isGeneratingMore ? '새로운 주제를 만들고 있어요...' : '추천 주제 더 만들기 ✨'}</span>
                         </button>
                       </div>
                     )}
@@ -660,7 +660,7 @@ export default function StudentTopicMakerPage() {
                           disabled={isGeneratingMore || genState === 'loading'}
                           className={`btn-primary-action px-8 py-4 font-jua text-base md:text-lg min-h-[56px] transition-all ${isGeneratingMore || genState === 'loading' ? 'opacity-70 cursor-not-allowed bg-[#e5e7eb] text-[#8f95a6]' : ''}`}
                         >
-                          <span>{isGeneratingMore ? '새로운 주제 2개를 만들고 있어요...' : '추천 주제 2개 더 만들기 ✨'}</span>
+                          <span>{isGeneratingMore ? '새로운 주제를 만들고 있어요...' : '추천 주제 더 만들기 ✨'}</span>
                         </button>
                       </div>
                     )}
