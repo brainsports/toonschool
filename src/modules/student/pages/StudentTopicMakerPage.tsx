@@ -10,7 +10,7 @@ import KeywordSelectionCard from '../components/topic/KeywordSelectionCard'
 
 import type { StudentUnitSelection } from '../types/studentCurriculum'
 import type { TopicRecommendation, TopicGenerationState, KeywordItem, CurriculumContext } from '../types/studentTopic'
-import { generateTopicRecommendations, generateKeywords, fetchCurriculumContext, saveGeneratedTopics, selectGeneratedTopic } from '../services/studentTopicService'
+import { generateTopicRecommendations, generateKeywords, fetchCurriculumContext, saveGeneratedTopics, selectGeneratedTopic, finalizeKeywords } from '../services/studentTopicService'
 import { Sparkles, PenTool, ArrowLeft, Wand2 } from 'lucide-react'
 import { projectStorage } from '../utils/projectStorage'
 import { showToast } from '../utils/toast'
@@ -34,8 +34,7 @@ export default function StudentTopicMakerPage() {
   const MAX_KEYWORD_OPTIONS = 10
 
   const [topics, setTopics] = useState<TopicRecommendation[]>([])
-  const [visibleTopicCount, setVisibleTopicCount] = useState(INITIAL_TOPIC_VISIBLE_COUNT)
-  const [genState, setGenState] = useState<TopicGenerationState>('idle')
+    const [genState, setGenState] = useState<TopicGenerationState>('idle')
   const [isGeneratingMore, setIsGeneratingMore] = useState(false)
   const [curriculumContext, setCurriculumContext] = useState<CurriculumContext | undefined>()
 
@@ -47,9 +46,9 @@ export default function StudentTopicMakerPage() {
 
 
 
-  const displayedTopics = topics.slice(0, visibleTopicCount)
+
   const isMaxTopicsReached = topics.length >= MAX_RECOMMENDED_TOPICS
-  const isAllTopicsVisible = topics.length > 0 && visibleTopicCount >= Math.min(topics.length, MAX_RECOMMENDED_TOPICS)
+  const isAllTopicsVisible = topics.length >= MAX_RECOMMENDED_TOPICS
   const currentUnitKey = useMemo(() => {
     if (!selection) return ''
     return [
@@ -128,15 +127,26 @@ export default function StudentTopicMakerPage() {
           return
         }
         if (savedTopicData.extraRequest) setExtraRequest(savedTopicData.extraRequest);
-        if (savedTopicData.selectedKeywords) setSelectedKeywords(savedTopicData.selectedKeywords);
+        let validatedSelected = [];
+        if (savedTopicData.selectedKeywords) {
+          validatedSelected = finalizeKeywords(savedTopicData.selectedKeywords);
+          setSelectedKeywords(validatedSelected);
+        }
         if (savedTopicData.topic) {
           setTopics([savedTopicData.topic]);
           setSelectedTopicId(savedTopicData.topic.id);
           setGenState('success');
           
-          if (savedTopicData.selectedKeywords && savedTopicData.selectedKeywords.length > 0) {
+          if (validatedSelected.length > 0) {
             setCreationMode('ai');
             setAiStep('topic');
+          } else if (savedTopicData.selectedKeywords && savedTopicData.selectedKeywords.length > 0) {
+            // keywords existed but were all filtered out (bad keywords)
+            setCreationMode('ai');
+            setAiStep('keyword');
+            setTopics([]);
+            setGenState('idle');
+            setSelectedTopicId(null);
           } else {
             setCreationMode('manual');
           }
@@ -159,8 +169,7 @@ export default function StudentTopicMakerPage() {
     setVisibleKeywordCount(INITIAL_KEYWORD_VISIBLE_COUNT)
 
     setTopics([])
-    setVisibleTopicCount(INITIAL_TOPIC_VISIBLE_COUNT)
-    setSelectedTopicId(null)
+        setSelectedTopicId(null)
     setGenState('idle')
     setIsGeneratingMore(false)
     setAiStep('keyword')
@@ -243,8 +252,7 @@ export default function StudentTopicMakerPage() {
     setGenState('loading')
     setSelectedTopicId(null)
     setTopics([])
-    setVisibleTopicCount(INITIAL_TOPIC_VISIBLE_COUNT)
-
+    
     const request = {
       gradeName: selection.gradeName || '',
       subjectName: selection.subjectName || '',
@@ -277,8 +285,7 @@ export default function StudentTopicMakerPage() {
       
       console.debug('[topic save after]', { savedCount: savedTopics.length, parsedCount: parsedTopics.length, unitKey: currentUnitKey })
       setTopics(parsedTopics)
-      setVisibleTopicCount(parsedTopics.length)
-      console.debug('[추천 주제 표시 상태]', { total: parsedTopics.length, initialVisible: INITIAL_TOPIC_VISIBLE_COUNT, currentVisible: INITIAL_TOPIC_VISIBLE_COUNT })
+            console.debug('[추천 주제 표시 상태]', { total: parsedTopics.length, initialVisible: INITIAL_TOPIC_VISIBLE_COUNT, currentVisible: INITIAL_TOPIC_VISIBLE_COUNT })
       setGenState('success')
     } catch (error) {
       console.error('AI 추천 주제 생성 중 오류 발생:', error)
@@ -327,8 +334,7 @@ export default function StudentTopicMakerPage() {
         const existingTitles = new Set(prev.map(topic => topic.title))
         const uniqueNewTopics = parsedTopics.filter(topic => !existingTitles.has(topic.title))
         const nextTopics = [...prev, ...uniqueNewTopics].slice(0, MAX_RECOMMENDED_TOPICS)
-        setVisibleTopicCount(nextTopics.length)
-        return nextTopics
+                return nextTopics
       })
     } catch (error) {
       console.error('AI 추천 주제 추가 생성 중 오류 발생:', error)
@@ -384,11 +390,9 @@ export default function StudentTopicMakerPage() {
         }).filter(Boolean)
         console.debug('[topic save after]', { savedCount: savedTopics.length, parsedCount: parsedTopics.length, unitKey: currentUnitKey, regenerate: true })
         setTopics(parsedTopics)
-        setVisibleTopicCount(parsedTopics.length)
-      } else {
+              } else {
         setTopics(generatedTopics)
-        setVisibleTopicCount(generatedTopics.length)
-      }
+              }
       setGenState('success')
     } catch (error) {
       console.error('AI 추천 주제 생성 중 오류 발생:', error)
@@ -548,7 +552,7 @@ export default function StudentTopicMakerPage() {
                       마음에 드는 만화 주제를 골라 주세요.
                     </h3>
                     <AiRecommendationCard
-                      visibleTopics={displayedTopics}
+                      visibleTopics={topics}
                       selectedTopicId={selectedTopicId}
                       onSelectTopic={handleSelectTopic}
                       genState={genState}
@@ -556,7 +560,7 @@ export default function StudentTopicMakerPage() {
                       totalCount={0}
                       onLoadMore={() => {}}
                     />
-                    {topics.length > 0 && !isAllTopicsVisible && (
+                    {topics.length > 0 && topics.length < MAX_RECOMMENDED_TOPICS && (
                       <div className="text-center pt-8">
                         <button
                           type="button"
@@ -634,7 +638,7 @@ export default function StudentTopicMakerPage() {
                       마음에 드는 만화 주제를 골라 주세요.
                     </h3>
                     <AiRecommendationCard
-                      visibleTopics={displayedTopics}
+                      visibleTopics={topics}
                       selectedTopicId={selectedTopicId}
                       onSelectTopic={handleSelectTopic}
                       genState={genState}
@@ -642,7 +646,7 @@ export default function StudentTopicMakerPage() {
                       totalCount={0}
                       onLoadMore={() => {}}
                     />
-                    {topics.length > 0 && !isAllTopicsVisible && (
+                    {topics.length > 0 && topics.length < MAX_RECOMMENDED_TOPICS && (
                       <div className="text-center pt-8">
                         <button
                           type="button"

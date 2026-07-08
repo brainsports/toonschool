@@ -79,13 +79,13 @@ const DYNAMIC_PERSPECTIVE_POOL: DynamicPerspective[] = [
 ]
 
 const FALLBACK_TITLE_TEMPLATES = [
-  '우리 반에서 찾은 {keyword}의 단서', '하루 동안 {keyword}이 사라진다면?', '{keyword} 때문에 생긴 이상한 사건', '{keyword}을 찾아 떠나는 탐사', '미래 도시의 {keyword} 발명 대회',
-  '{keyword}을 둘러싼 친구들의 토론', '사라진 {keyword}을 되찾아라', '초대장 속에 숨은 {keyword} 단서', '{keyword} 연구원이 된 하루', '{keyword}이 말을 걸어온다면?',
-  '옛날 사람들은 {keyword}을 어떻게 썼을까?', '{keyword}로 지구를 지키는 방법', '{keyword} 오해를 풀어라', '{keyword}이 바꾼 우리 동네', '{keyword} 실험이 실패한 이유',
-  '친구에게 {keyword}을 설명하는 쉬운 방법', '{keyword} 게임 속 미션 해결', '도서관에서 발견한 {keyword} 지도', '{keyword}을 비교해 보는 탐정단', '미래의 나에게 필요한 {keyword}',
-  '급식실에서 시작된 {keyword} 질문', '운동장에서 발견한 {keyword} 규칙', '{keyword} 발표를 망칠 뻔한 날', '{keyword} 때문에 열린 긴급 회의', '{keyword} 사용 설명서를 만들어라',
-  '로봇에게 알려 주는 {keyword}', '{keyword}을 지키는 작은 영웅', '{keyword} 때문에 달라진 하루', '{keyword}을 확인하는 세 가지 방법', '{keyword}의 진짜 모습을 찾아라',
-  '{keyword}을 두고 갈라진 우리 모둠', '{keyword} 문제를 해결한 첫 장면', '{keyword}을 발견한 쉬는 시간', '{keyword}이 필요한 이유를 찾아라', '{keyword}으로 만든 우리 팀 작전'
+  '우리 반에서 찾은 {keyword}의 비밀', '하루 동안 {keyword}이 사라진다면?', '{keyword} 때문에 생긴 이상한 사건', '{keyword}을 찾아 떠나는 탐사', '미래 도시의 {keyword} 발명 대회',
+  '{keyword}을 둘러싼 친구들의 토론', '사라진 {keyword}을 되찾아라', '초대장 속에 숨은 {keyword} 힌트', '{keyword} 연구원이 된 하루', '{keyword}이 말을 걸어온다면?',
+  '옛날 사람들은 {keyword}을 어떻게 썼을까?', '{keyword}로 지구를 지키는 영웅', '{keyword} 오해를 풀어라', '{keyword}이 바꾼 우리 동네', '{keyword} 실험이 끝난 뒤',
+  '친구에게 {keyword}을 설명하는 날', '{keyword} 탐험대 출동', '도서관에서 발견한 {keyword} 지도', '{keyword}을 비교해 보는 탐정단', '미래의 나에게 필요한 {keyword}',
+  '급식실에서 시작된 {keyword} 이야기', '운동장에서 발견한 {keyword} 규칙', '{keyword} 발표를 망칠 뻔한 날', '{keyword} 때문에 열린 긴급 회의', '{keyword} 사용 설명서를 만들어라',
+  '로봇에게 알려 주는 {keyword}', '{keyword}을 지키는 작은 영웅', '{keyword} 때문에 달라진 하루', '{keyword}을 확인하는 세 가지 비밀', '{keyword}의 진짜 모습을 찾아라',
+  '{keyword}을 두고 갈라진 우리 모둠', '{keyword} 위기를 넘긴 교실', '{keyword}을 발견한 쉬는 시간', '{keyword}이 필요한 때를 찾아라', '{keyword}으로 만든 우리 팀 작전'
 ]
 
 const FALLBACK_STORY_HINT_TEMPLATES = [
@@ -940,6 +940,9 @@ const isValidRequiredTopic = (topic: TopicRecommendation, request: TopicGenerati
   if (REQUIRED_TOPIC_BAD_TERMS.some(term => [title, topic.storyHint, topic.summary, ...(topic.keywords || [])].join(' ').includes(term))) return false
   if (hasAwkwardRepeatedWord(title)) return false
   if (existingTitles.some(existing => normalizeTopicTitle(existing) === normalizeTopicTitle(title))) return false
+  
+  const badTitleWords = ['질문', '단서', '미션', '장면', '문제'];
+  if (badTitleWords.some(w => title.includes(w))) return false;
 
   const selectedKeywords = request.selectedKeywords || []
   const searchable = [title, topic.storyHint, topic.summary, topic.learningPoint, topic.learningConnection, ...(topic.keywords || [])].join(' ')
@@ -1136,9 +1139,9 @@ const getFallbackKeywords = (
 
   if (fallbackWords.length === 0) {
     const defaultWords: Record<string, string[]> = {
-      '국어': ['인물', '마음', '대화', '장면', '표현', '상상', '친구', '사건', '감정', '이야기'],
-      '영어': ['친구', '학교', '여행', '음식', '동물', '대화', '게임', '파티', '미션'],
-      '수학': ['규칙', '숫자', '도형', '분수', '계산', '게임', '미션', '퍼즐'],
+      '국어': ['인물', '마음', '대화', '표현', '상상', '사건', '감정', '글', '단어'],
+      '영어': ['학교', '여행', '음식', '동물', '대화', '파티', '단어', '문장', '인사'],
+      '수학': ['규칙', '숫자', '도형', '분수', '계산', '퍼즐', '크기', '모양', '길이'],
       '사회': ['지형', '국토', '기후', '산업', '교통', '도시', '농촌', '바다', '고장', '지도'],
       '과학': ['생물', '동물', '식물', '날씨', '공기', '물', '흙', '소리', '빛', '자석']
     }
@@ -1162,6 +1165,44 @@ const getFallbackKeywords = (
   }))
 }
 
+const BANNED_FINAL_KEYWORDS = [
+  '질문', '단서', '장면', '미션', '모험', '퀘스트', '게임', '이야기',
+  '주인공', '친구', '해결', '문제', '방법', '이유', '내용', '것'
+];
+
+const VERB_ADJ_PATTERNS = /(접촉할|설명할|움직일|알아볼|비교할|관찰할|생각할)/;
+
+export const finalizeKeywords = (keywords: string[]): string[] => {
+  const result: string[] = [];
+  const seen = new Set<string>();
+
+  for (const raw of keywords) {
+    if (!raw) continue;
+    
+    const parts = raw.trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0 || parts.length > 3) continue;
+
+    if (VERB_ADJ_PATTERNS.test(raw)) continue;
+    if (BANNED_FINAL_KEYWORDS.some(b => raw.includes(b))) continue;
+
+    const normalizedParts = parts.map(part => {
+      return part.replace(/(에서|으로|로|은|는|이|가|을|를|의|와|과)$/, '');
+    });
+
+    const w = normalizedParts.join(' ').trim();
+    
+    if (w.length < 2) continue;
+    if (BANNED_FINAL_KEYWORDS.some(b => w.includes(b))) continue;
+
+    if (!seen.has(w)) {
+      seen.add(w);
+      result.push(w);
+    }
+  }
+
+  return result;
+}
+
 const supplementKeywordsToCount = (
   candidates: KeywordItem[],
   request: TopicGenerationRequest & { count?: number; existingKeywords?: string[] }
@@ -1172,10 +1213,13 @@ const supplementKeywordsToCount = (
   const addItems = (items: KeywordItem[]) => {
     for (const item of items) {
       if (!item?.word) continue
-      const word = item.word.trim()
-      if (seen.has(word)) continue
-      result.push({ ...item, word })
-      seen.add(word)
+      const finalized = finalizeKeywords([item.word]);
+      if (finalized.length === 0) continue;
+      const fWord = finalized[0];
+
+      if (seen.has(fWord)) continue
+      result.push({ ...item, word: fWord })
+      seen.add(fWord)
       if (result.length >= targetCount) break
     }
   }
@@ -1201,8 +1245,7 @@ const supplementKeywordsToCount = (
   const forcedWords = [
     ...getScienceUnitFallbackWords(request.majorUnitName || '', request.middleUnitName || '', request.curriculumContext),
     ...(request.middleUnitName?.match(/[가-힣]{2,6}/g) || []),
-    ...(request.majorUnitName?.match(/[가-힣]{2,6}/g) || []),
-    '질문', '단서', '장면', '미션'
+    ...(request.majorUnitName?.match(/[가-힣]{2,6}/g) || [])
   ]
   addItems(forcedWords
     .filter(word => !isBadKeyword(word, request.subjectName || ''))
