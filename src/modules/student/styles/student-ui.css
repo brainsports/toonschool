@@ -5,7 +5,7 @@
 */
 @font-face {
   font-family: 'SeoulAlim';
-  src: url('/fonts/seoul-alim/SeoulAlim-Medium.otf') format('opentype');
+  src: url('/fonts/seoul-alim/SeoulAlrim-Medium.otf') format('opentype');
   font-weight: 500;
   font-style: normal;
   font-display: swap;
@@ -13,7 +13,7 @@
 
 @font-face {
   font-family: 'SeoulAlim';
-  src: url('/fonts/seoul-alim/SeoulAlim-Bold.otf') format('opentype');
+  src: url('/fonts/seoul-alim/SeoulAlrim-Bold.otf') format('opentype');
   font-weight: 700;
   font-style: normal;
   font-display: swap;
@@ -21,7 +21,7 @@
 
 @font-face {
   font-family: 'SeoulAlim';
-  src: url('/fonts/seoul-alim/SeoulAlim-ExtraBold.otf') format('opentype');
+  src: url('/fonts/seoul-alim/SeoulAlrim-ExtraBold.otf') format('opentype');
   font-weight: 800;
   font-style: normal;
   font-display: swap;
@@ -29,7 +29,7 @@
 
 @font-face {
   font-family: 'SeoulAlim';
-  src: url('/fonts/seoul-alim/SeoulAlim-Heavy.otf') format('opentype');
+  src: url('/fonts/seoul-alim/SeoulAlrim-Heavy.otf') format('opentype');
   font-weight: 900;
   font-style: normal;
   font-display: swap;
@@ -37,7 +37,7 @@
 
 :root {
   /* 학생 UI 전역 공통 폰트 변수 */
-  --student-font-main: 'SeoulAlim', 'Pretendard', 'NanumSquareRound', sans-serif;
+  --student-font-main: 'SeoulAlim', 'Pretendard', 'Noto Sans KR', sans-serif;
   
   /* 게임형 친근한 폰트 설정 */
   --font-game-title: var(--student-font-main);
