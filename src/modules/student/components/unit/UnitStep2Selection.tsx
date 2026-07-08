@@ -1,11 +1,11 @@
 import { Loader2 } from 'lucide-react'
-import type { 
-  StudentGradeOption, 
+import type {
+  StudentGradeOption,
   StudentSemesterOption,
-  StudentSubjectOption, 
-  StudentMajorUnitOption, 
-  StudentMiddleUnitOption, 
-  CurriculumLoadState 
+  StudentSubjectOption,
+  StudentMajorUnitOption,
+  StudentMiddleUnitOption,
+  CurriculumLoadState,
 } from '../../types/studentCurriculum'
 import StudentWideCard from '../layout/StudentWideCard'
 import StudentInnerPanel from '../layout/StudentInnerPanel'
@@ -45,30 +45,33 @@ export default function UnitStep2Selection({
   classUnitSetting,
   onSubjectSelect,
   onMajorUnitSelect,
-  onMiddleUnitSelect
+  onMiddleUnitSelect,
 }: UnitStep2SelectionProps) {
   return (
     <div className="relative w-full max-w-[1200px] mx-auto space-y-6 animate-fade-in pb-8">
 
-      {/* 단원 선택 */}
       <StudentWideCard className="!gap-8">
-        <div className="flex items-center gap-3 bg-[#f4f1ff] p-4 rounded-2xl border border-purple-200">
+
+        {/* 선택 요약 배지 */}
+        <div className="flex items-center gap-3 bg-pink-50 border border-pink-200 p-4 rounded-2xl">
           <span className="text-2xl">{gradeEmojis[selectedGrade?.label || ''] || '🎒'}</span>
-          <span className="font-jua text-lg text-[#3f4350]">{selectedGrade?.label}</span>
-          <span className="text-[#8b909e]">/</span>
+          <span className="font-jua text-lg text-[#1f2937]">{selectedGrade?.label}</span>
+          <span className="text-pink-300 font-bold">/</span>
           <span className="text-2xl">{selectedSemester?.value === 1 ? '🌸' : '🍁'}</span>
-          <span className="font-jua text-lg text-[#3f4350]">{selectedSemester?.label}</span>
+          <span className="font-jua text-lg text-[#1f2937]">{selectedSemester?.label}</span>
         </div>
 
-        {/* 과목 선택 */}
+        {/* ③ 과목 선택 */}
         <div className="space-y-4">
-          <h3 className="font-jua text-xl text-[#303442] flex items-center gap-2">
-            <span className="w-6 h-6 rounded-full bg-[#f1ebff] border border-purple-200 flex items-center justify-center text-sm text-purple-600">3</span>
+          <h3 className="font-jua text-xl text-[#1f2937] flex items-center gap-2">
+            <span className="w-7 h-7 rounded-full bg-pink-100 border border-pink-300 flex items-center justify-center text-sm text-pink-600 font-bold">
+              3
+            </span>
             과목을 골라주세요
           </h3>
-          
+
           {subjects.length === 0 && subjectLoadState === 'loading' ? (
-            <div className="py-8 flex justify-center text-sky-300">
+            <div className="py-8 flex justify-center text-pink-300">
               <Loader2 className="animate-spin w-10 h-10" />
             </div>
           ) : subjects.length === 0 ? (
@@ -77,19 +80,32 @@ export default function UnitStep2Selection({
             <div className="flex flex-wrap justify-center gap-4 md:gap-6 lg:gap-8">
               {subjects.map((s) => {
                 const isSelected = selectedSubject?.id === s.id
-                const isAllowed = !classUnitSetting || classUnitSetting.subjects.includes('전체') || classUnitSetting.subjects.includes(s.name)
+                const isAllowed  =
+                  !classUnitSetting ||
+                  classUnitSetting.subjects.includes('전체') ||
+                  classUnitSetting.subjects.includes(s.name)
                 return (
                   <button
                     key={s.id}
                     onClick={() => isAllowed && onSubjectSelect(s)}
                     disabled={!isAllowed}
-                    title={!isAllowed ? "선생님이 아직 열어두지 않은 과목이에요" : ""}
-                    className={`btn-select-item flex-col w-[100px] h-[110px] md:w-[120px] md:h-[130px] py-2 px-2 gap-2 transition-all
-                      ${isSelected ? 'btn-select-item-active scale-105 shadow-md' : ''}
-                      ${!isAllowed ? 'opacity-50 grayscale border-gray-300 cursor-not-allowed bg-gray-50' : ''}`}
+                    title={!isAllowed ? '선생님이 아직 열어두지 않은 과목이에요' : ''}
+                    className={[
+                      'btn-select-item flex-col w-[96px] h-[106px] md:w-[116px] md:h-[126px] py-2 px-2 gap-2 transition-all',
+                      isSelected ? 'btn-select-item-active' : '',
+                      !isAllowed ? 'opacity-40 grayscale cursor-not-allowed border-gray-200 bg-gray-50 shadow-none' : '',
+                    ].join(' ')}
                   >
-                    <span className="text-4xl md:text-5xl select-none mb-1">{subjectEmojis[s.name] || '📚'}</span>
-                    <span className={`font-jua text-base md:text-xl ${isSelected ? 'text-white' : !isAllowed ? 'text-gray-400' : 'text-[#3f4350]'}`}>{s.name}</span>
+                    <span className="text-4xl md:text-5xl select-none mb-1">
+                      {subjectEmojis[s.name] || '📚'}
+                    </span>
+                    <span className={[
+                      'font-jua text-base md:text-xl',
+                      isSelected ? 'text-white' : '',
+                      !isAllowed ? 'text-gray-400' : 'text-[#1f2937]',
+                    ].join(' ')}>
+                      {s.name}
+                    </span>
                   </button>
                 )
               })}
@@ -97,14 +113,17 @@ export default function UnitStep2Selection({
           )}
         </div>
 
+        {/* ④ 대단원 선택 */}
         {selectedSubject && (
           <div className="space-y-4 animate-fade-in">
-            <h3 className="font-jua text-xl text-[#303442] flex items-center gap-2">
-              <span className="w-6 h-6 rounded-full bg-[#f1ebff] border border-purple-200 flex items-center justify-center text-sm text-purple-600">4</span>
+            <h3 className="font-jua text-xl text-[#1f2937] flex items-center gap-2">
+              <span className="w-7 h-7 rounded-full bg-pink-100 border border-pink-300 flex items-center justify-center text-sm text-pink-600 font-bold">
+                4
+              </span>
               대단원을 골라요
             </h3>
             {majorUnits.length === 0 && loadState === 'loading' ? (
-              <div className="py-4 flex justify-center text-purple-300">
+              <div className="py-4 flex justify-center text-pink-300">
                 <Loader2 className="animate-spin w-8 h-8" />
               </div>
             ) : majorUnits.length === 0 ? (
@@ -117,10 +136,14 @@ export default function UnitStep2Selection({
               >
                 <option value="">대단원을 선택해주세요</option>
                 {majorUnits.map((mu) => {
-                  const isAllowed = !classUnitSetting || classUnitSetting.subjects.includes('전체') || (mu.unitNumber >= classUnitSetting.fromUnit && mu.unitNumber <= classUnitSetting.toUnit)
+                  const isAllowed =
+                    !classUnitSetting ||
+                    classUnitSetting.subjects.includes('전체') ||
+                    (mu.unitNumber >= classUnitSetting.fromUnit &&
+                      mu.unitNumber <= classUnitSetting.toUnit)
                   return (
                     <option key={mu.id} value={mu.id} disabled={!isAllowed} className={!isAllowed ? 'text-gray-400' : ''}>
-                      {mu.unitNumber}단원. {mu.unitName} {!isAllowed ? '(선생님이 아직 열어두지 않은 단원이에요)' : ''}
+                      {mu.unitNumber}단원. {mu.unitName}{!isAllowed ? ' (선생님이 아직 열어두지 않은 단원이에요)' : ''}
                     </option>
                   )
                 })}
@@ -129,14 +152,17 @@ export default function UnitStep2Selection({
           </div>
         )}
 
+        {/* ⑤ 중단원 선택 */}
         {selectedMajorUnit && (
           <div className="space-y-4 animate-fade-in">
-            <h3 className="font-jua text-xl text-[#303442] flex items-center gap-2">
-              <span className="w-6 h-6 rounded-full bg-[#f1ebff] border border-purple-200 flex items-center justify-center text-sm text-purple-600">5</span>
+            <h3 className="font-jua text-xl text-[#1f2937] flex items-center gap-2">
+              <span className="w-7 h-7 rounded-full bg-pink-100 border border-pink-300 flex items-center justify-center text-sm text-pink-600 font-bold">
+                5
+              </span>
               중단원을 골라요
             </h3>
             {middleUnits.length === 0 && loadState === 'loading' ? (
-              <div className="py-4 flex justify-center text-sky-300">
+              <div className="py-4 flex justify-center text-pink-300">
                 <Loader2 className="animate-spin w-8 h-8" />
               </div>
             ) : middleUnits.length === 0 ? (
@@ -157,8 +183,8 @@ export default function UnitStep2Selection({
             )}
           </div>
         )}
-      </StudentWideCard>
 
+      </StudentWideCard>
     </div>
   )
 }

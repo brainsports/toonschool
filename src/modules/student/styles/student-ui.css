@@ -1,8 +1,8 @@
-/* 툰스쿨 학생 UI 런처형 테마 스타일 */
+/* 툰스쿨 학생 UI — 디자인 시스템 v2 (2026-07-08 개선) */
 
-/* 
-  서울알림체 폰트 등록 
-*/
+/* ===================================================
+   서울알림체 폰트 등록
+   =================================================== */
 @font-face {
   font-family: 'SeoulAlim';
   src: url('/fonts/seoul-alim/SeoulAlrim-Medium.otf') format('opentype');
@@ -35,71 +35,114 @@
   font-display: swap;
 }
 
+/* ===================================================
+   디자인 토큰 (CSS Variables)
+   =================================================== */
 :root {
-  /* 학생 UI 전역 공통 폰트 변수 */
+  /* 폰트 */
   --student-font-main: 'SeoulAlim', 'Pretendard', 'Noto Sans KR', sans-serif;
-  
-  /* 게임형 친근한 폰트 설정 */
   --font-game-title: var(--student-font-main);
   --font-game: var(--student-font-main);
 
-  /* 기존 메인 브랜드 파스텔 컬러 */
-  --game-primary: #a78bfa; 
-  --game-primary-soft: #ede9fe;
+  /* ─── 핵심 색상 팔레트 (통일) ─── */
+  /* 앱 전체 배경 */
+  --student-color-app-bg: #f3f4f7;
+
+  /* 상단 헤더 */
+  --student-color-header-bg: #f19cdb;
+
+  /* 주요 액션 버튼 (핑크) */
+  --student-color-primary: #ff2778;
+  --student-color-primary-hover: #e91e68;
+  --student-color-primary-active: #d7185d;
+  --student-color-primary-glow: rgba(255, 39, 120, 0.28);
+
+  /* 보조 색상 */
+  --student-color-purple: #8b3dff;
+  --student-color-lavender: #c4b5fd;       /* 완료 단계 배경 */
+  --student-color-lavender-soft: #ede9fe;  /* 완료 단계 배경(연) */
+  --student-color-mint: #6ee7b7;
+  --student-color-sky: #7dd3fc;
+
+  /* 비활성 */
+  --student-color-disabled-bg: #e5e7eb;
+  --student-color-disabled-text: #9ca3af;
+
+  /* 텍스트 */
+  --student-color-text-main: #1f2937;
+  --student-color-text-muted: #6b7280;
+
+  /* 테두리 */
+  --student-color-border: #d9deea;
+
+  /* 카드 */
+  --student-color-card-bg: #ffffff;
+  --student-color-canvas-bg: #ffffff;
+  --student-color-tool-panel-bg: #f8f9fc;
+
+  /* 성공 */
+  --student-color-success: #00c48c;
+
+  /* ─── 레이아웃 크기 ─── */
+  --student-layout-sidebar-width: 200px;
+  --student-layout-tool-panel-width: 320px;
+  --student-layout-header-height: 72px;
+
+  /* ─── 게임 파스텔 (레거시 호환) ─── */
+  --game-primary: #ff2778;
+  --game-primary-soft: #fce7f3;
   --game-secondary: #7dd3fc;
   --game-mint: #6ee7b7;
   --game-yellow: #fde047;
   --game-pink: #f9a8d4;
   --game-coral: #fda4af;
-
-  /* 밝은 배경색 */
-  --game-bg-space: linear-gradient(135deg, #eff6ff 0%, #e0e7ff 50%, #faf5ff 100%);
+  --game-bg-space: linear-gradient(135deg, #fdf4ff 0%, #f0e6ff 50%, #fdf4ff 100%);
   --game-card-bg: rgba(255, 255, 255, 0.95);
 
-  /* 새 우주 테마 (Glassmorphism) 변수 추가 */
+  /* ─── 글래스모피즘 (dark space — 레거시 호환) ─── */
   --student-space-bg: linear-gradient(135deg, #0f172a 0%, #2e1065 50%, #1e1b4b 100%);
   --student-card-glass: rgba(255, 255, 255, 0.05);
-  --student-card-glass-hover: rgba(255, 255, 255, 0.1);
+  --student-card-glass-hover: rgba(255, 255, 255, 0.10);
   --student-card-border: rgba(255, 255, 255, 0.15);
   --student-primary-neon: #a78bfa;
   --student-primary-glow: 0 0 15px rgba(167, 139, 250, 0.6);
   --student-text-main: #ffffff;
   --student-text-muted: #cbd5e1;
-  
-  /* 파스텔 테마용 */
+
+  /* ─── 파스텔 텍스트 (레거시 호환) ─── */
   --student-pastel-bg: #f3f4f7;
   --student-pastel-text: #25213b;
-  
-  /* 신규 일관성 통합 디자인 토큰 */
-  --student-color-app-bg: #f3f4f7;
-  --student-color-header-bg: #f19cdb;
-  --student-color-primary: #ff2778;
-  --student-color-purple: #8b3dff;
-  --student-color-sidebar-bg: #090911;
-  --student-color-tool-panel-bg: #f8f9fc;
-  --student-color-canvas-bg: #ffffff;
-  --student-color-text-main: #1f2433;
-  --student-color-text-muted: #7b8190;
-  --student-color-border: #d9deea;
-  --student-color-success: #00c48c;
-  
-  /* 공통 레이아웃 간격/사이즈 토큰 */
-  --student-layout-sidebar-width: 200px;
-  --student-layout-tool-panel-width: 320px;
-  --student-layout-header-height: 72px;
 }
 
-/* 베이스 백그라운드 */
+/* ===================================================
+   공통 배경 클래스
+   =================================================== */
+
+/* 기본 밝은 배경 (메인 학생 화면용) */
 .student-space-bg {
   min-height: 100vh;
   background: var(--game-bg-space);
-  color: #1e1b4b;
+  color: var(--student-color-text-main);
   font-family: var(--font-game);
   overflow-x: hidden;
   position: relative;
 }
 
-/* 어두운 우주 테마 (글래스모피즘용) 메인 배경 */
+/* 아주 은은한 도트 패턴 (opacity 6% — 눈에 거슬리지 않게) */
+.student-space-bg::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-image:
+    radial-gradient(circle, rgba(196, 181, 253, 0.06) 12%, transparent 12.5%),
+    radial-gradient(circle, rgba(125, 211, 252, 0.06) 12%, transparent 12.5%);
+  background-size: 80px 80px;
+  background-position: 0 0, 40px 40px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* 어두운 우주 테마 (글래스모피즘 — 레거시) */
 .student-dark-space-bg {
   min-height: 100vh;
   background: var(--student-space-bg);
@@ -109,7 +152,6 @@
   position: relative;
 }
 
-/* 은은한 우주 텍스처(별/성운/로켓 등) 장식용 배경 (가상 요소로 처리해 콘텐츠를 가리지 않음) */
 .student-dark-space-bg::before {
   content: '';
   position: absolute;
@@ -117,28 +159,25 @@
   pointer-events: none;
   z-index: 0;
   opacity: 0.4;
-  /* 우주 은하수/점 패턴 & 별빛 성운 효과 복합 배경 */
-  background-image: 
+  background-image:
     radial-gradient(circle at 15% 30%, rgba(167, 139, 250, 0.15) 0%, transparent 40%),
-    radial-gradient(circle at 85% 70%, rgba(125, 211, 252, 0.1) 0%, transparent 50%),
-    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.05) 0%, transparent 60%),
-    url('data:image/svg+xml;utf8,<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><circle cx="10" cy="10" r="1.5" fill="%23ffffff" opacity="0.4"/><circle cx="50" cy="50" r="1" fill="%23a78bfa" opacity="0.3"/><circle cx="80" cy="20" r="2" fill="%237dd3fc" opacity="0.2"/><path d="M70,80 L75,70 L80,80 Z" fill="none" stroke="%23ffffff" stroke-width="1" opacity="0.1"/></svg>');
-  background-size: 100% 100%, 100% 100%, 100% 100%, 200px 200px;
-  background-position: center, center, center, top left;
-  background-repeat: no-repeat, no-repeat, no-repeat, repeat;
+    radial-gradient(circle at 85% 70%, rgba(125, 211, 252, 0.10) 0%, transparent 50%),
+    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.05) 0%, transparent 60%);
+  background-size: 100% 100%;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
-/* 모든 콘텐츠는 이 배경 위(z-index >= 1)에 위치해야 함 */
 .student-dark-space-bg > * {
   position: relative;
   z-index: 10;
 }
 
-/* 파스텔 배경 (새로운 UI 개선) */
+/* 파스텔 배경 */
 .student-pastel-bg {
   min-height: 100vh;
-  background-color: #f3f4f7;
-  color: #3f4350;
+  background-color: var(--student-color-app-bg);
+  color: var(--student-color-text-main);
   font-family: var(--font-game);
   overflow-x: hidden;
   position: relative;
@@ -149,9 +188,131 @@
   z-index: 10;
 }
 
-/* 주요 실행 버튼 (승인된 색상) */
+/* 모든 배경 콘텐츠 z-index */
+.student-space-bg > * {
+  position: relative;
+  z-index: 10;
+}
+
+/* ===================================================
+   공통 버튼 시스템
+   =================================================== */
+
+/* ─── 기본 구조 (btn-student) ─── */
+.btn-student {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  font-family: var(--font-game-title);
+  font-weight: 500;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  user-select: none;
+  gap: 0.5rem;
+  border: none;
+}
+.btn-student:disabled,
+.btn-student.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+.btn-student-sm  { height: 40px; padding: 0 1.25rem; font-size: 1rem;   }
+.btn-student-md  { height: 48px; padding: 0 1.5rem;  font-size: 1.125rem; }
+.btn-student-lg  { height: 56px; padding: 0 2rem;    font-size: 1.25rem;  }
+
+/* 주요 버튼 — 핑크 pill */
+.btn-student-primary {
+  background-color: var(--student-color-primary);
+  color: #ffffff;
+  box-shadow: 0 4px 14px var(--student-color-primary-glow);
+}
+.btn-student-primary:hover:not(:disabled) {
+  background-color: var(--student-color-primary-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px var(--student-color-primary-glow);
+}
+.btn-student-primary:active:not(:disabled) {
+  background-color: var(--student-color-primary-active);
+  transform: translateY(1px);
+  box-shadow: 0 2px 8px var(--student-color-primary-glow);
+}
+
+/* 보조 버튼 — 흰 배경 + 핑크 테두리 */
+.btn-student-outline {
+  background-color: #ffffff;
+  color: var(--student-color-primary);
+  border: 2px solid var(--student-color-primary);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+.btn-student-outline:hover:not(:disabled) {
+  background-color: #fff0f6;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px var(--student-color-primary-glow);
+}
+.btn-student-outline:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+/* 보조 버튼 — 보라 계열 (레거시) */
+.btn-student-secondary {
+  background-color: #ffffff;
+  color: var(--student-color-purple);
+  border: 2px solid var(--student-color-purple);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+.btn-student-secondary:hover:not(:disabled) {
+  background-color: #fcfaff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(139, 61, 255, 0.18);
+}
+.btn-student-secondary:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+/* 보라 계열 채움 버튼 */
+.btn-student-purple {
+  background-color: var(--student-color-purple);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(139, 61, 255, 0.3);
+}
+.btn-student-purple:hover:not(:disabled) {
+  background-color: #7a35e0;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(139, 61, 255, 0.4);
+}
+.btn-student-purple:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+/* 다크 버튼 */
+.btn-student-dark {
+  background-color: #3f4350;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+.btn-student-dark:hover:not(:disabled) {
+  background-color: #2c2f3a;
+  transform: translateY(-2px);
+}
+.btn-student-dark:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+/* 고스트 버튼 */
+.btn-student-ghost {
+  background-color: transparent;
+  color: var(--student-color-text-main);
+  border: 2px solid transparent;
+}
+.btn-student-ghost:hover:not(:disabled) {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* ─── 주요 실행 버튼 (btn-primary-action — 레거시 호환) ─── */
 .btn-primary-action {
-  background-color: #ff2778;
+  background-color: var(--student-color-primary);
   color: #ffffff;
   border-radius: 9999px;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
@@ -162,100 +323,71 @@
   cursor: pointer;
 }
 .btn-primary-action:hover:not(:disabled) {
-  background-color: #e91e68;
+  background-color: var(--student-color-primary-hover);
 }
 .btn-primary-action:active:not(:disabled) {
-  background-color: #d7185d;
+  background-color: var(--student-color-primary-active);
 }
 .btn-primary-action:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(255, 39, 120, 0.30);
+  box-shadow: 0 0 0 3px var(--student-color-primary-glow);
 }
 .btn-primary-action:disabled {
-  background-color: #ff2778 !important;
+  background-color: var(--student-color-primary) !important;
   color: #ffffff !important;
   opacity: 0.45;
   cursor: not-allowed !important;
-  pointer-events: auto; /* To allow cursor: not-allowed to show */
+  pointer-events: auto;
 }
 
-/* 학년/과목 등 선택 버튼 */
+/* ─── 선택형 버튼 (학년/과목 등) ─── */
 .btn-select-item {
   background-color: #ffffff;
-  color: #38314f;
-  border: 1px solid #d9dce5;
-  border-radius: 1.5rem;
+  color: var(--student-color-text-main);
+  border: 2px solid var(--student-color-border);
+  border-radius: 20px;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
-.btn-select-item:hover:not(.btn-select-item-active) {
+.btn-select-item:hover:not(.btn-select-item-active):not(:disabled) {
   background-color: #fff0f6;
-  border-color: #ff2778;
+  border-color: var(--student-color-primary);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(255, 39, 120, 0.14);
 }
 .btn-select-item-active {
-  background-color: #ff2778;
-  color: #ffffff;
-  border-color: #ff2778;
+  background-color: var(--student-color-primary) !important;
+  color: #ffffff !important;
+  border-color: var(--student-color-primary) !important;
+  box-shadow: 0 0 0 3px var(--student-color-primary-glow),
+              0 6px 18px rgba(255, 39, 120, 0.3) !important;
+  transform: translateY(-1px) scale(1.03);
 }
 
-/* 새 선택 카드 스타일 */
-.card-select-panel {
-  background-color: #ffffff;
-  border: 1px solid #dfe2ea;
-  border-radius: 2rem;
-  box-shadow: 0 6px 18px rgba(38, 42, 58, 0.10);
-  color: #3f4350;
-  position: relative;
-}
-
-/* 제목 폰트 적용 클래스 (유틸리티) */
-.font-jua {
-  font-family: var(--font-game-title);
-  letter-spacing: 0.02em;
-}
-
-/* 은은한 둥근 도형 및 은하 별 패턴 */
-.student-space-bg::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-image: 
-    radial-gradient(circle, rgba(167, 139, 250, 0.08) 12%, transparent 12.5%),
-    radial-gradient(circle, rgba(125, 211, 252, 0.08) 12%, transparent 12.5%);
-  background-size: 100px 100px;
-  background-position: 0 0, 50px 50px;
-  opacity: 0.8;
-  pointer-events: none;
-}
-
-/* 3D 부드러운 버튼 (런처형 큰 버튼) */
+/* ─── 3D 게임 버튼 (레거시 호환) ─── */
 .btn-game-3d {
   position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-weight: 400; /* Jua 폰트는 볼드가 없어도 두껍게 보임 */
-  border-radius: 1.5rem; /* 더 말랑하게 */
-  border: 3px solid rgba(255, 255, 255, 0.5); /* 반투명 흰색 테두리로 부드럽게 */
+  font-weight: 400;
+  border-radius: 1.5rem;
+  border: 3px solid rgba(255, 255, 255, 0.5);
   transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
   user-select: none;
-  font-family: var(--font-game-title); /* 버튼은 타이틀 폰트 */
+  font-family: var(--font-game-title);
   font-size: 1.125rem;
 }
 
-/* 보라색 버튼 (Primary) */
 .btn-game-purple {
   background: linear-gradient(180deg, #c4b5fd 0%, #a78bfa 100%);
   color: white;
   box-shadow: 0 6px 0 #7c3aed, 0 8px 16px rgba(139, 92, 246, 0.3);
-  text-shadow: 0 2px 4px rgba(124, 58, 237, 0.4);
 }
 .btn-game-purple:hover {
   background: linear-gradient(180deg, #ddd6fe 0%, #a78bfa 100%);
@@ -264,10 +396,9 @@
 }
 .btn-game-purple:active {
   transform: translateY(6px);
-  box-shadow: 0 0 0 #7c3aed, 0 2px 4px rgba(139, 92, 246, 0.2);
+  box-shadow: 0 0 0 #7c3aed;
 }
 
-/* 하늘색/파란색 버튼 (Secondary) */
 .btn-game-blue {
   background: linear-gradient(180deg, #bae6fd 0%, #7dd3fc 100%);
   color: #0c4a6e;
@@ -280,10 +411,9 @@
 }
 .btn-game-blue:active {
   transform: translateY(6px);
-  box-shadow: 0 0 0 #0284c7, 0 2px 4px rgba(14, 165, 233, 0.15);
+  box-shadow: 0 0 0 #0284c7;
 }
 
-/* 노란색 버튼 (Warning/Point) */
 .btn-game-yellow {
   background: linear-gradient(180deg, #fef08a 0%, #fde047 100%);
   color: #713f12;
@@ -296,10 +426,9 @@
 }
 .btn-game-yellow:active {
   transform: translateY(6px);
-  box-shadow: 0 0 0 #ca8a04, 0 2px 4px rgba(234, 179, 8, 0.15);
+  box-shadow: 0 0 0 #ca8a04;
 }
 
-/* 녹색 버튼 (Success) */
 .btn-game-green {
   background: linear-gradient(180deg, #a7f3d0 0%, #6ee7b7 100%);
   color: #064e3b;
@@ -312,10 +441,9 @@
 }
 .btn-game-green:active {
   transform: translateY(6px);
-  box-shadow: 0 0 0 #059669, 0 2px 4px rgba(16, 185, 129, 0.15);
+  box-shadow: 0 0 0 #059669;
 }
 
-/* 핑크 버튼 (Special) */
 .btn-game-pink {
   background: linear-gradient(180deg, #fbcfe8 0%, #f9a8d4 100%);
   color: #831843;
@@ -328,10 +456,9 @@
 }
 .btn-game-pink:active {
   transform: translateY(6px);
-  box-shadow: 0 0 0 #db2777, 0 2px 4px rgba(244, 114, 182, 0.15);
+  box-shadow: 0 0 0 #db2777;
 }
 
-/* 흰색 라운드 버튼 (Neutral) */
 .btn-game-white {
   background: #ffffff;
   color: #475569;
@@ -345,10 +472,9 @@
 }
 .btn-game-white:active {
   transform: translateY(6px);
-  box-shadow: 0 0 0 #cbd5e1, 0 2px 4px rgba(148, 163, 184, 0.1);
+  box-shadow: 0 0 0 #cbd5e1;
 }
 
-/* 비활성화 버튼 */
 .btn-game-disabled {
   background: #f1f5f9 !important;
   color: #94a3b8 !important;
@@ -360,38 +486,81 @@
   transform: translateY(0) !important;
 }
 
-/* 게임형 패널/카드 (말랑하고 귀여운 스타일) */
+/* 네온 버튼 (dark space 전용 레거시) */
+.btn-neon-purple {
+  background: rgba(167, 139, 250, 0.2);
+  border: 2px solid var(--student-primary-neon);
+  color: #fff;
+  border-radius: 9999px;
+  box-shadow: var(--student-primary-glow);
+  transition: all 0.2s;
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+}
+.btn-neon-purple:hover:not(:disabled) {
+  background: rgba(167, 139, 250, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 0 25px rgba(167, 139, 250, 0.8);
+}
+.btn-neon-purple:active:not(:disabled) {
+  transform: translateY(1px);
+}
+.btn-neon-disabled {
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.3);
+  border-radius: 9999px;
+  cursor: not-allowed;
+}
+
+/* ===================================================
+   공통 카드 시스템
+   =================================================== */
+
+/* ─── 표준 선택 카드 패널 ─── */
+.card-select-panel {
+  background-color: var(--student-color-card-bg);
+  border: 1.5px solid var(--student-color-border);
+  border-radius: 22px;
+  box-shadow: 0 4px 16px rgba(38, 42, 58, 0.07);
+  color: var(--student-color-text-main);
+  position: relative;
+}
+
+/* ─── 게임형 카드 ─── */
 .card-game {
   background: rgba(255, 255, 255, 0.98);
-  border: 4px solid #ffffff;
-  border-radius: 2rem;
-  box-shadow: 0 12px 24px rgba(139, 92, 246, 0.08), 0 4px 8px rgba(139, 92, 246, 0.04);
-  color: #312e81;
+  border: 2px solid #f3f4f6;
+  border-radius: 22px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.07), 0 1px 4px rgba(0, 0, 0, 0.04);
+  color: var(--student-color-text-main);
   position: relative;
-  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .card-game-interactive {
   cursor: pointer;
 }
 .card-game-interactive:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 20px 32px rgba(139, 92, 246, 0.12), 0 8px 16px rgba(139, 92, 246, 0.06);
-  border-color: #ede9fe;
+  transform: translateY(-4px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.1), 0 4px 8px rgba(0, 0, 0, 0.05);
+  border-color: #fce7f3;
 }
 .card-game-interactive:active {
-  transform: translateY(2px);
-  box-shadow: 0 8px 16px rgba(139, 92, 246, 0.06);
+  transform: translateY(1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
-/* 선택된 라운드 카드 */
+/* 선택된 카드 — 핑크 테두리 + 글로우 */
 .card-game-selected {
-  border-color: #a78bfa !important;
-  background: linear-gradient(135deg, #ffffff 0%, #faf5ff 100%) !important;
-  box-shadow: 0 0 0 4px rgba(167, 139, 250, 0.2), 0 12px 24px rgba(139, 92, 246, 0.1) !important;
+  border-color: var(--student-color-primary) !important;
+  background: linear-gradient(135deg, #ffffff 0%, #fff0f6 100%) !important;
+  box-shadow:
+    0 0 0 3px var(--student-color-primary-glow),
+    0 8px 20px rgba(255, 39, 120, 0.14) !important;
 }
 
-/* 글래스모피즘 카드 (새로운 다크 스페이스 테마용) */
+/* 글래스 카드 (dark space 레거시) */
 .card-glass {
   background: var(--student-card-glass);
   backdrop-filter: blur(16px);
@@ -402,51 +571,115 @@
   color: var(--student-text-main);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
-
-.card-glass-interactive {
-  cursor: pointer;
-}
+.card-glass-interactive { cursor: pointer; }
 .card-glass-interactive:hover {
   background: var(--student-card-glass-hover);
   border-color: rgba(255, 255, 255, 0.3);
   transform: translateY(-4px);
   box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
 }
-
 .card-glass-active {
   background: rgba(167, 139, 250, 0.15) !important;
   border-color: var(--student-primary-neon) !important;
   box-shadow: var(--student-primary-glow) !important;
 }
 
-/* 네온 글로우 버튼 */
-.btn-neon-purple {
-  background: rgba(167, 139, 250, 0.2);
-  border: 2px solid var(--student-primary-neon);
-  color: #fff;
-  border-radius: 9999px; /* 알약형 */
-  box-shadow: var(--student-primary-glow);
-  transition: all 0.2s;
-  text-shadow: 0 0 8px rgba(255,255,255,0.5);
+/* ===================================================
+   사이드바 단계 노드 (stage-node)
+   =================================================== */
+.stage-node {
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 1rem;
+  border: 2px solid #e5e7eb;
+  background: #f9fafb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  font-weight: 400;
+  font-family: var(--font-game-title);
+  font-size: 1.5rem;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  color: var(--student-color-disabled-text);
 }
-.btn-neon-purple:hover:not(:disabled) {
-  background: rgba(167, 139, 250, 0.3);
-  transform: translateY(-2px);
-  box-shadow: 0 0 25px rgba(167, 139, 250, 0.8);
-}
-.btn-neon-purple:active:not(:disabled) {
-  transform: translateY(1px);
-  box-shadow: 0 0 10px rgba(167, 139, 250, 0.4);
-}
-.btn-neon-disabled {
-  background: rgba(255,255,255,0.05);
-  border: 2px solid rgba(255,255,255,0.1);
-  color: rgba(255,255,255,0.3);
-  border-radius: 9999px;
-  cursor: not-allowed;
+.stage-node:hover {
+  transform: scale(1.04) translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-/* 글래스모피즘 둥근 셀렉트 및 입력 (Input/Textarea) */
+/* 현재 단계 — 핑크 */
+.stage-node-active {
+  background: linear-gradient(135deg, #ff4f91 0%, #ff2778 100%);
+  color: white;
+  border-color: #ff2778;
+  box-shadow:
+    0 0 0 3px rgba(255, 39, 120, 0.22),
+    0 6px 16px rgba(255, 39, 120, 0.35);
+  transform: scale(1.08);
+}
+.stage-node-active:hover {
+  transform: scale(1.12) translateY(-1px);
+}
+
+/* 완료 단계 — 연보라 */
+.stage-node-completed {
+  background: linear-gradient(135deg, #e9e3ff 0%, #d8b4fe 100%);
+  border-color: #c4b5fd;
+  color: #6d28d9;
+  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.2);
+}
+
+/* ===================================================
+   사이드바 단계 pill (flow-step)
+   =================================================== */
+
+/* 현재 단계 pill */
+.flow-step-current {
+  background: linear-gradient(135deg, #ff4f91 0%, #ff2778 100%);
+  color: #ffffff;
+  border: none;
+  box-shadow:
+    0 0 0 3px rgba(255, 39, 120, 0.18),
+    0 4px 14px rgba(255, 39, 120, 0.3);
+}
+
+/* 완료 단계 pill */
+.flow-step-completed {
+  background-color: var(--student-color-lavender-soft);
+  color: #5b21b6;
+  border: 1.5px solid var(--student-color-lavender);
+}
+
+/* 미완료(잠금) 단계 pill */
+.flow-step-upcoming {
+  background-color: #f3f4f6;
+  color: var(--student-color-disabled-text);
+  border: 1.5px solid #e5e7eb;
+}
+
+/* ===================================================
+   입력 (Input / Textarea / Select)
+   =================================================== */
+.input-game-soft {
+  border: 2px solid var(--student-color-border);
+  border-radius: 1.25rem;
+  background-color: #ffffff;
+  color: var(--student-color-text-main);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: 0.875rem 1.25rem;
+  font-size: 1rem;
+  font-family: var(--font-game);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+.input-game-soft:focus {
+  border-color: var(--student-color-primary);
+  box-shadow: 0 0 0 4px var(--student-color-primary-glow);
+  outline: none;
+}
+
+/* 글래스 인풋 (dark 레거시) */
 .input-glass-soft {
   background: rgba(255, 255, 255, 0.1);
   border: 2px solid rgba(255, 255, 255, 0.2);
@@ -455,7 +688,7 @@
   padding: 1rem 1.5rem;
   font-size: 1rem;
   transition: all 0.2s;
-  box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 .input-glass-soft:focus {
   outline: none;
@@ -464,20 +697,24 @@
   background: rgba(255, 255, 255, 0.15);
 }
 .input-glass-soft option {
-  background: #1e1b4b; /* 네이티브 select 옵션창 배경은 불투명하게 */
+  background: #1e1b4b;
   color: #fff;
 }
 
-/* 게임형 HUD 프레임 */
+/* ===================================================
+   HUD (헤더 패널)
+   =================================================== */
 .hud-panel {
   background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(12px);
   border-bottom: 3px solid rgba(255, 255, 255, 0.6);
-  box-shadow: 0 8px 24px rgba(139, 92, 246, 0.06);
-  border-radius: 0 0 2rem 2rem;
+  box-shadow: 0 4px 16px rgba(241, 156, 219, 0.15);
+  border-radius: 0 0 1.5rem 1.5rem;
 }
 
-/* 아바타 서클 프레임 */
+/* ===================================================
+   아바타 & 뱃지
+   =================================================== */
 .avatar-frame {
   width: 4rem;
   height: 4rem;
@@ -492,60 +729,19 @@
   font-size: 2rem;
 }
 
-/* 행성형 스테이지 아이콘 (사이드바용) */
-.stage-node {
-  width: 3.5rem;
-  height: 3.5rem;
-  border-radius: 1rem; /* 앱 아이콘처럼 둥근 사각형 */
-  border: 3px solid #ffffff;
-  background: #f1f5f9;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  font-weight: 400;
-  font-family: var(--font-game-title);
-  font-size: 1.5rem;
-  box-shadow: 0 4px 8px rgba(148, 163, 184, 0.15);
-  color: #94a3b8;
-}
-
-.stage-node:hover {
-  transform: scale(1.05) translateY(-2px);
-  box-shadow: 0 8px 16px rgba(148, 163, 184, 0.2);
-}
-
-.stage-node-active {
-  background: linear-gradient(135deg, #c4b5fd 0%, #a78bfa 100%);
-  color: white;
-  border-color: #ffffff;
-  box-shadow: 0 0 0 4px rgba(167, 139, 250, 0.3), 0 8px 16px rgba(139, 92, 246, 0.4);
-  transform: scale(1.1);
-}
-.stage-node-active:hover {
-  transform: scale(1.15) translateY(-2px);
-}
-
-.stage-node-completed {
-  background: linear-gradient(135deg, #a7f3d0 0%, #6ee7b7 100%);
-  border-color: #ffffff;
-  color: #064e3b;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
-}
-
-/* 2D 게임형 말풍선 (모서리를 아주 둥글게) */
+/* ===================================================
+   게임 말풍선
+   =================================================== */
 .game-bubble {
   position: relative;
   background: white;
-  border: 4px solid #ede9fe;
-  border-radius: 2rem;
+  border: 3px solid #fce7f3;
+  border-radius: 1.75rem;
   padding: 1rem 1.5rem;
-  color: #312e81;
+  color: var(--student-color-text-main);
   font-weight: 700;
-  box-shadow: 0 8px 16px rgba(139, 92, 246, 0.08);
+  box-shadow: 0 4px 16px rgba(255, 39, 120, 0.07);
 }
-
 .game-bubble::after {
   content: '';
   position: absolute;
@@ -553,11 +749,10 @@
   left: 32px;
   border-width: 14px 14px 0;
   border-style: solid;
-  border-color: #ede9fe transparent;
+  border-color: #fce7f3 transparent;
   display: block;
   width: 0;
 }
-
 .game-bubble::before {
   content: '';
   position: absolute;
@@ -571,168 +766,48 @@
   z-index: 1;
 }
 
-/* 애니메이션 */
+/* ===================================================
+   애니메이션
+   =================================================== */
 @keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 0 0px rgba(167, 139, 250, 0.4); }
-  50% { box-shadow: 0 0 0 12px rgba(167, 139, 250, 0); }
+  0%, 100% { box-shadow: 0 0 0 0px rgba(255, 39, 120, 0.4); }
+  50%       { box-shadow: 0 0 0 10px rgba(255, 39, 120, 0); }
 }
 
 @keyframes float-gentle {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-8px); }
-}
-
-.animate-float {
-  animation: float-gentle 4s ease-in-out infinite;
+  50%       { transform: translateY(-8px); }
 }
 
 @keyframes bounce-gentle {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-5px); }
+  50%       { transform: translateY(-5px); }
 }
 
-.animate-bounce-gentle {
-  animation: bounce-gentle 2s ease-in-out infinite;
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
-/* 어린이용 소프트 보더 적용 인풋 */
-.input-game-soft {
-  border: 4px solid #f1f5f9;
-  border-radius: 1.5rem;
-  background-color: #ffffff;
-  color: #1e1b4b;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  padding: 1rem 1.5rem;
-  font-size: 1rem;
-}
-.input-game-soft:focus {
-  border-color: #ddd6fe;
-  box-shadow: 0 0 0 6px rgba(167, 139, 250, 0.15);
-  outline: none;
-}
+.animate-float         { animation: float-gentle 4s ease-in-out infinite; }
+.animate-bounce-gentle { animation: bounce-gentle 2s ease-in-out infinite; }
+.animate-fade-in       { animation: fade-in 0.35s ease-out both; }
 
-/* ========================================================= */
-/* 신규 학생 UI 공통 컴포넌트 클래스 (일관성 정리 작업) */
-/* ========================================================= */
-
-/* 1. 공통 버튼 체계 */
-.btn-student {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 1.5rem;
+/* ===================================================
+   공통 유틸리티
+   =================================================== */
+.font-jua {
   font-family: var(--font-game-title);
-  font-weight: 500;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  cursor: pointer;
-  user-select: none;
-  gap: 0.5rem;
-  border: none;
-}
-.btn-student:disabled, .btn-student.disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  pointer-events: none;
-}
-.btn-student-md {
-  height: 48px;
-  padding: 0 1.5rem;
-  font-size: 1.125rem;
-}
-.btn-student-sm {
-  height: 40px;
-  padding: 0 1.25rem;
-  font-size: 1rem;
-}
-.btn-student-lg {
-  height: 56px;
-  padding: 0 2rem;
-  font-size: 1.25rem;
+  letter-spacing: 0.02em;
 }
 
-.btn-student-primary {
-  background-color: var(--student-color-primary);
-  color: #ffffff;
-  box-shadow: 0 4px 12px rgba(255, 39, 120, 0.3);
-}
-.btn-student-primary:hover:not(:disabled) {
-  background-color: #e91e68;
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(255, 39, 120, 0.4);
-}
-.btn-student-primary:active:not(:disabled) {
-  transform: translateY(2px);
-  box-shadow: 0 2px 8px rgba(255, 39, 120, 0.2);
-}
-
-.btn-student-purple {
-  background-color: var(--student-color-purple);
-  color: #ffffff;
-  box-shadow: 0 4px 12px rgba(139, 61, 255, 0.3);
-}
-.btn-student-purple:hover:not(:disabled) {
-  background-color: #7a35e0;
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(139, 61, 255, 0.4);
-}
-.btn-student-purple:active:not(:disabled) {
-  transform: translateY(2px);
-  box-shadow: 0 2px 8px rgba(139, 61, 255, 0.2);
-}
-
-.btn-student-secondary {
-  background-color: #ffffff;
-  color: var(--student-color-purple);
-  border: 2px solid var(--student-color-purple);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-}
-.btn-student-secondary:hover:not(:disabled) {
-  background-color: #fcfaff;
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(139, 61, 255, 0.15);
-}
-.btn-student-secondary:active:not(:disabled) {
-  transform: translateY(2px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
-
-.btn-student-dark {
-  background-color: #3f4350;
-  color: #ffffff;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-.btn-student-dark:hover:not(:disabled) {
-  background-color: #2c2f3a;
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
-}
-.btn-student-dark:active:not(:disabled) {
-  transform: translateY(2px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.btn-student-ghost {
-  background-color: transparent;
-  color: var(--student-color-text-main);
-  border: 2px solid transparent;
-}
-.btn-student-ghost:hover:not(:disabled) {
-  background-color: rgba(0,0,0,0.05);
-}
-
-/* 2. 공통 스크롤바 */
-.student-scrollbar::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-.student-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
-}
-.student-scrollbar::-webkit-scrollbar-thumb {
+/* 공통 스크롤바 */
+.student-scrollbar::-webkit-scrollbar        { width: 6px; height: 6px; }
+.student-scrollbar::-webkit-scrollbar-track  { background: transparent; }
+.student-scrollbar::-webkit-scrollbar-thumb  {
   background-color: var(--student-color-border);
   border-radius: 3px;
 }
 .student-scrollbar::-webkit-scrollbar-thumb:hover {
   background-color: var(--student-color-text-muted);
 }
-

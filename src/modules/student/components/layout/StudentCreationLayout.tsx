@@ -22,7 +22,7 @@ export default function StudentCreationLayout({
     <StudentPageShell bgVariant={bgVariant} maxWidth={maxWidth}>
       <div className={`flex w-full items-stretch relative ${isFull ? 'flex-1 pt-0 overflow-hidden min-h-0' : 'min-h-[80vh] pt-6 md:pt-12 max-w-6xl mx-auto'}`}>
         {/* 사이드바 */}
-        <div className={`hidden md:block shrink-0 bg-[#05030A]/95 z-30 overflow-y-auto ${isFull ? 'w-[180px] pl-2 pt-2 relative h-full' : 'w-[200px] pl-4 pt-2 fixed left-0 top-24 bottom-0'}`}>
+        <div className={`hidden md:block shrink-0 bg-white/95 backdrop-blur-sm border-r border-pink-100 shadow-[2px_0_12px_rgba(255,39,120,0.06)] z-30 overflow-y-auto ${isFull ? 'w-[180px] pl-2 pt-2 relative h-full' : 'w-[200px] pl-4 pt-2 fixed left-0 top-24 bottom-0'}`}>
           <StudentFlowSidebar 
             currentStep={currentStep} 
             completedSteps={completedSteps} 
