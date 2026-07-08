@@ -361,8 +361,9 @@ const validateAndRepairTopicRecommendations = (
     const duplicate = titleTaken || repaired.some(item => isSimilarTopic(item, topic)) || repaired.some(item => (item.perspective || item.angle) === (topic.perspective || topic.angle))
     const hasKeyword = keywords.length === 0 || keywords.some(keyword => [topic.title, topic.summary, topic.storyHint, topic.learningPoint, ...(topic.keywords || [])].join(' ').includes(keyword))
     const weakStory = isWeakStoryHint(topic)
+    const passesRequiredReview = isValidRequiredTopic(topic, request, [...existingTitles, ...repaired.map(item => item.title)])
 
-    if (duplicate || !hasKeyword || weakStory) {
+    if (duplicate || !hasKeyword || weakStory || !passesRequiredReview) {
       removedDuplicateCount++
       return
     }
@@ -378,7 +379,7 @@ const validateAndRepairTopicRecommendations = (
     const fallback = createFallbackTopicRecommendation(request, perspective, repaired.length + fallbackGuard, [...existingTitles, ...repaired.map(item => item.title)])
     fallbackCount++
     fallbackGuard++
-    if (!repaired.some(item => isSimilarTopic(item, fallback))) {
+    if (!repaired.some(item => isSimilarTopic(item, fallback)) && isValidRequiredTopic(fallback, request, [...existingTitles, ...repaired.map(item => item.title)])) {
       repaired.push(fallback)
     }
   }
@@ -389,7 +390,7 @@ const validateAndRepairTopicRecommendations = (
     const fallback = createFallbackTopicRecommendation(request, perspective, repaired.length + forceIndex + 100, [...existingTitles, ...repaired.map(item => item.title)])
     const normalizedTitle = normalizeTopicTitle(fallback.title)
     const titleTaken = repaired.some(item => normalizeTopicTitle(item.title) === normalizedTitle)
-    if (!titleTaken) {
+    if (!titleTaken && isValidRequiredTopic(fallback, request, [...existingTitles, ...repaired.map(item => item.title)])) {
       repaired.push({
         ...fallback,
         title: normalizedTitle,
@@ -401,7 +402,7 @@ const validateAndRepairTopicRecommendations = (
     fallbackCount++
     if (forceIndex > count * 20) {
       const keyword = request.selectedKeywords?.[repaired.length % Math.max(request.selectedKeywords.length, 1)] || request.middleUnitName || '주제'
-      const forcedTitleSeeds = ['비밀 단서', '교실 사건', '생활 미션', '탐정 작전', '발명 대회', '토론 장면', '미래 도시', '도서관 지도', '실패한 실험', '우리 동네 문제']
+      const forcedTitleSeeds = ['비밀 단서', '교실 사건', '생활 발견', '원인 추적', '발명 생각', '비교 장면', '미래 상상', '자료 지도', '실험 확인', '우리 동네 문제']
       repaired.push({
         ...fallback,
         id: `topic-force-${Date.now()}-${repaired.length}`,
@@ -413,11 +414,11 @@ const validateAndRepairTopicRecommendations = (
       })
     }
   }
-  const finalTopics = repaired.slice(0, count).map((topic, index) => ({
+  const finalTopics = repaired.slice(0, count).map((topic, index) => applyRequiredTopicDiversity({
     ...topic,
     id: topic.id || `topic-${Date.now()}-${index}`,
     learningTopicId: request.learningTopicId
-  }))
+  }, index, request))
 
   const diversityLog: TopicDiversityLog = {
     generatedCount: finalTopics.length,
@@ -439,7 +440,7 @@ const buildPrompt = (
   extraData: CurriculumContext,
   perspectives: DynamicPerspective[]
 ) => {
-  const { gradeName, subjectName, majorUnitName, middleUnitName, extraRequest, selectedKeywords, selectedQuestion, previousTitles } = request
+  const { gradeName, subjectName, majorUnitName, middleUnitName, extraRequest, selectedKeywords, previousTitles } = request
   const { learningGoal, keyQuestions, contentScope, achievementStandards, unitSummary, unitGoal, subunitSummary } = extraData
 
   const allBannedTitles = [
@@ -451,11 +452,7 @@ const buildPrompt = (
     `${index + 1}. ${perspective.name} / 장소 힌트: ${perspective.scene} / 이야기 장치: ${perspective.device}`
   )).join('\n')
 
-  const questionContext = selectedQuestion ? `
-[중요: 핵심 질문 기반 생성]
-선택된 질문: "${selectedQuestion.questionText}"
-이 질문에 대한 답을 찾아가거나, 이 질문에서 출발한 상황을 핵심 사건으로 다루는 만화 주제를 만들어야 합니다.
-` : ''
+  const questionContext = ''
 
   return `당신은 초등학생용 교과 학습만화 기획자입니다.
 
@@ -480,6 +477,7 @@ ${subunitSummary ? `중단원 요약: ${subunitSummary}` : ''}
 ${contentScope ? `내용 체계: ${contentScope}` : ''}
 ${selectedKeywords?.length ? `선택한 키워드: ${selectedKeywords.join(', ')}` : ''}
 ${questionContext}
+질문 생성 결과는 사용하지 마세요. 선택된 키워드와 단원 정보만으로 주제를 만드세요.
 ${extraRequest ? `추가 요청: ${extraRequest}` : ''}
 ${allBannedTitles.length > 0 ? `이미 사용한 제목은 절대 반복하지 마세요: ${allBannedTitles.join(', ')}\n` : ''}
 
@@ -815,10 +813,22 @@ export const generateTopicRecommendations = async (
     extraData = await fetchCurriculumContext(null, request.learningTopicId)
   }
 
-  const countToGenerate = request.count || 10
-  const existingTitles = request.previousTitles || []
-  const selectedPerspectives = selectDiversePerspectives(request, countToGenerate, [])
-  const prompt = buildPrompt(request, [], countToGenerate, extraData, selectedPerspectives)
+  const safeSelectedKeywords = validateGeneratedKeywords(
+    (request.selectedKeywords || []).map(word => ({ word, reason: '' })),
+    request.majorUnitName || '',
+    request.middleUnitName || '',
+    request.subjectName || ''
+  ).map(item => item.word)
+  const topicRequest: TopicGenerationRequest = {
+    ...request,
+    selectedQuestion: null,
+    selectedKeywords: safeSelectedKeywords.length > 0 ? safeSelectedKeywords : request.selectedKeywords
+  }
+
+  const countToGenerate = Math.min(topicRequest.count || 2, 10)
+  const existingTitles = topicRequest.previousTitles || []
+  const selectedPerspectives = selectDiversePerspectives(topicRequest, countToGenerate, [])
+  const prompt = buildPrompt(topicRequest, [], countToGenerate, extraData, selectedPerspectives)
 
   const tryModel = async (model: string): Promise<string> => {
     if (!model) throw new Error('No model provided')
@@ -844,7 +854,7 @@ export const generateTopicRecommendations = async (
 
   const { topics } = validateAndRepairTopicRecommendations(
     rawRecommendations,
-    request,
+    topicRequest,
     selectedPerspectives,
     countToGenerate,
     existingTitles
@@ -879,6 +889,85 @@ const SCIENCE_CONCEPT_ALLOWLIST = new Set([
 
 const SCIENCE_LOW_VALUE_TERMS = new Set(['풍경', '장면', '모습', '생각', '확인', '결과', '탐구', '활동'])
 
+
+const REQUIRED_BAD_KEYWORD_TERMS = new Set([
+  '있다', '없다', '된다', '하다', '필요하다', '움직이다', '설명하다',
+  '설명함', '알아보기', '생각하기', '비교하기', '관찰하기',
+  '미션', '모험', '탐정', '비밀기지', '퀘스트', '게임',
+  '것', '내용', '문제', '방법', '이유'
+])
+
+const REQUIRED_TOPIC_TYPE_LABELS = [
+  '생활 발견형', '실험 관찰형', '비밀 추적형', '문제 해결형', '비교 대결형',
+  '오해 해결형', '안전 상황형', '미래 상상형', '직업 체험형', '친구 설명형'
+]
+
+const REQUIRED_TOPIC_BAD_TERMS = ['미션', '퀘스트', '비밀기지', '게임', '용액 풍경', '이동 미션']
+const REQUIRED_JOSA_ENDINGS = ['에서', '으로', '로', '은', '는', '이', '가', '을', '를', '의', '와', '과']
+const REQUIRED_TRAILING_VERBS = /(있다|없다|된다|하다|필요하다|움직이다|설명하다)$/
+const REQUIRED_EXPLANATION_WORDS = /(설명함|알아보기|생각하기|비교하기|관찰하기)$/
+
+const normalizeRequiredKeyword = (word: string) => {
+  return (word || '')
+    .replace(/[!?,.()[\]{}<>"'“”‘’]/g, ' ')
+    .replace(/\s+(에서|으로|로|은|는|이|가|을|를|의|와|과)\s+/g, ' ')
+    .replace(/(\S+)(에서|으로|로|은|는|이|가|을|를|의|와|과)\s+/g, '$1 ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+const isRequiredBadKeyword = (word: string) => {
+  const parts = word.split(/\s+/).filter(Boolean)
+  if (parts.length < 1 || parts.length > 3) return true
+  if (parts.some(part => REQUIRED_BAD_KEYWORD_TERMS.has(part))) return true
+  if (REQUIRED_BAD_KEYWORD_TERMS.has(word)) return true
+  if (REQUIRED_TRAILING_VERBS.test(word) || REQUIRED_EXPLANATION_WORDS.test(word)) return true
+  return REQUIRED_JOSA_ENDINGS.some(josa => word.endsWith(josa))
+}
+
+const normalizeRequiredTopicTitle = (title: string) => normalizeTopicTitle(title).replace(/[?？]/g, '').trim()
+
+const hasAwkwardRepeatedWord = (title: string) => {
+  const words = title.split(/\s+/).filter(word => word.length > 1)
+  return words.some((word, index) => words.indexOf(word) !== index)
+}
+
+const isValidRequiredTopic = (topic: TopicRecommendation, request: TopicGenerationRequest, existingTitles: string[]) => {
+  const title = normalizeRequiredTopicTitle(topic.title || '')
+  if (title.length < 4 || title.length > 28) return false
+  if (title !== topic.title) return false
+  if (title.includes('?')) return false
+  if (REQUIRED_TOPIC_BAD_TERMS.some(term => [title, topic.storyHint, topic.summary, ...(topic.keywords || [])].join(' ').includes(term))) return false
+  if (hasAwkwardRepeatedWord(title)) return false
+  if (existingTitles.some(existing => normalizeTopicTitle(existing) === normalizeTopicTitle(title))) return false
+
+  const selectedKeywords = request.selectedKeywords || []
+  const searchable = [title, topic.storyHint, topic.summary, topic.learningPoint, topic.learningConnection, ...(topic.keywords || [])].join(' ')
+  if (selectedKeywords.length > 0 && !selectedKeywords.some(keyword => searchable.includes(keyword))) return false
+
+  const unitWords = [request.subjectName, request.majorUnitName, request.middleUnitName].filter(Boolean)
+  if (unitWords.length > 0 && !unitWords.some(word => searchable.includes(word)) && selectedKeywords.length === 0) return false
+  return true
+}
+
+const applyRequiredTopicDiversity = (topic: TopicRecommendation, index: number, request: TopicGenerationRequest): TopicRecommendation => {
+  const typeLabel = REQUIRED_TOPIC_TYPE_LABELS[index % REQUIRED_TOPIC_TYPE_LABELS.length]
+  const keywords = request.selectedKeywords?.length ? request.selectedKeywords : topic.keywords || []
+  return {
+    ...topic,
+    title: normalizeRequiredTopicTitle(topic.title),
+    question: undefined,
+    storyTypeLabel: typeLabel,
+    perspective: typeLabel,
+    angle: typeLabel,
+    keywords: [...new Set([...(topic.keywords || []), ...keywords])].slice(0, 4),
+    validation: {
+      keywordReflected: true,
+      questionReflected: false,
+      grammarChecked: true
+    }
+  }
+}
 const isActivityKeyword = (word: string) => {
   if (SCIENCE_CONCEPT_ALLOWLIST.has(word)) return false
   if (BAD_KEYWORD_TERMS.has(word)) return true
@@ -938,9 +1027,7 @@ export const validateGeneratedKeywords = (
   middleUnitName: string,
   subjectName = ''
 ): KeywordItem[] => {
-  const punctuationRegex = /[!?,.()\[\]<>"']/
-  const spaceRegex = /\s/
-  const bannedEndings = /[요까죠며고은는이가을를와과에로의]$/
+  const punctuationRegex = /[!?,.()\[\]{}<>]/
   const chapterWords = new Set([
     (majorUnitName || '').replace(/\s/g, ''),
     (middleUnitName || '').replace(/\s/g, '')
@@ -951,17 +1038,18 @@ export const validateGeneratedKeywords = (
 
   for (const item of candidates) {
     if (!item || !item.word) continue
-    const w = item.word.trim()
+    const original = item.word.trim()
+    const w = normalizeRequiredKeyword(original)
     let reason = ''
 
-    if (BANNED_KEYWORD_TERMS.has(w) || isBadKeyword(w, subjectName)) reason = 'banned-or-activity'
+    if (!w) reason = 'empty'
     else if (punctuationRegex.test(w)) reason = 'punctuation'
-    else if (spaceRegex.test(w)) reason = 'space'
-    else if (bannedEndings.test(w) && !SCIENCE_CONCEPT_ALLOWLIST.has(w)) reason = 'josa-ending'
+    else if (isRequiredBadKeyword(w)) reason = 'required-filter'
+    else if (BANNED_KEYWORD_TERMS.has(w) || isBadKeyword(w, subjectName)) reason = 'banned-or-activity'
     else if (chapterWords.has(w.replace(/\s/g, ''))) reason = 'whole-unit-title'
 
     if (reason) {
-      removed.push({ word: w, reason })
+      removed.push({ word: original, reason })
       continue
     }
 

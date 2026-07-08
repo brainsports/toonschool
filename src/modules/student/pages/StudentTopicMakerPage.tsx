@@ -27,8 +27,8 @@ export default function StudentTopicMakerPage() {
   const [selection, setSelection] = useState<StudentUnitSelection | null>(null)
 
   const INITIAL_TOPIC_VISIBLE_COUNT = 2
-  const TOPIC_VISIBLE_INCREMENT = 2
   const MAX_RECOMMENDED_TOPICS = 10
+  const TOPIC_BATCH_SIZE = 2
   const INITIAL_KEYWORD_VISIBLE_COUNT = 2
   const KEYWORD_VISIBLE_INCREMENT = 2
   const MAX_KEYWORD_OPTIONS = 10
@@ -251,12 +251,11 @@ export default function StudentTopicMakerPage() {
       majorUnitName: selection.majorUnitName || '',
       middleUnitName: selection.middleUnitName || '',
       selectedKeywords,
-      selectedQuestion: undefined,
       learningTopicId: selection.middleUnitId || null,
       previousTitles: [],
       previousIncidents: [],
       previousTypes: [],
-      count: MAX_RECOMMENDED_TOPICS,
+      count: TOPIC_BATCH_SIZE,
       curriculumContext
     }
 
@@ -278,7 +277,7 @@ export default function StudentTopicMakerPage() {
       
       console.debug('[topic save after]', { savedCount: savedTopics.length, parsedCount: parsedTopics.length, unitKey: currentUnitKey })
       setTopics(parsedTopics)
-      setVisibleTopicCount(INITIAL_TOPIC_VISIBLE_COUNT)
+      setVisibleTopicCount(parsedTopics.length)
       console.debug('[추천 주제 표시 상태]', { total: parsedTopics.length, initialVisible: INITIAL_TOPIC_VISIBLE_COUNT, currentVisible: INITIAL_TOPIC_VISIBLE_COUNT })
       setGenState('success')
     } catch (error) {
@@ -288,15 +287,56 @@ export default function StudentTopicMakerPage() {
     }
   }
 
-  // 4. 추천 주제 더 보기: 이미 준비된 10개 중 2개씩 추가 표시
-  const handleShowMoreTopics = () => {
-    setVisibleTopicCount(prev => {
-      const next = Math.min(prev + TOPIC_VISIBLE_INCREMENT, MAX_RECOMMENDED_TOPICS, topics.length)
-      console.debug('[추천 주제 표시 상태]', { total: topics.length, initialVisible: INITIAL_TOPIC_VISIBLE_COUNT, currentVisible: next })
-      return next
-    })
-  }
+  // 4. 추천 주제 더 보기: 2개씩 추가 생성
+  const handleShowMoreTopics = async () => {
+    if (!selection || isGeneratingMore || genState === 'loading' || isMaxTopicsReached) return
 
+    const nextCount = Math.min(TOPIC_BATCH_SIZE, MAX_RECOMMENDED_TOPICS - topics.length)
+    if (nextCount <= 0) return
+
+    setIsGeneratingMore(true)
+    const request = {
+      gradeName: selection.gradeName || '',
+      subjectName: selection.subjectName || '',
+      majorUnitName: selection.majorUnitName || '',
+      middleUnitName: selection.middleUnitName || '',
+      extraRequest: extraRequest.trim() || undefined,
+      selectedKeywords,
+      learningTopicId: selection.middleUnitId || null,
+      previousTitles: topics.map(topic => topic.title),
+      previousIncidents: topics.map(topic => topic.incident).filter(Boolean),
+      previousTypes: topics.map(topic => topic.storyType).filter(Boolean),
+      count: nextCount,
+      curriculumContext
+    }
+
+    try {
+      const generatedTopics = await generateTopicRecommendations(request)
+      const savedTopics = await saveGeneratedTopics(generatedTopics, null, Math.floor(topics.length / TOPIC_BATCH_SIZE) + 1)
+      const parsedTopics = savedTopics.map(st => {
+        try {
+          const t = JSON.parse(st.topic_text)
+          t.id = st.id
+          return t
+        } catch {
+          return null
+        }
+      }).filter(Boolean) as TopicRecommendation[]
+
+      setTopics(prev => {
+        const existingTitles = new Set(prev.map(topic => topic.title))
+        const uniqueNewTopics = parsedTopics.filter(topic => !existingTitles.has(topic.title))
+        const nextTopics = [...prev, ...uniqueNewTopics].slice(0, MAX_RECOMMENDED_TOPICS)
+        setVisibleTopicCount(nextTopics.length)
+        return nextTopics
+      })
+    } catch (error) {
+      console.error('AI 추천 주제 추가 생성 중 오류 발생:', error)
+      alert('추천 주제를 더 만들지 못했어요. 다시 시도해 주세요.')
+    } finally {
+      setIsGeneratingMore(false)
+    }
+  }
   // 4-1. AI 추천 실행 함수 (다시 받기 / 초기 생성 - manual 모드용)
   const handleRegenerateTopics = async () => {
     if (!selection) return
@@ -320,12 +360,11 @@ export default function StudentTopicMakerPage() {
       middleUnitName: selection.middleUnitName || '',
       extraRequest: extraRequest.trim() || undefined,
       selectedKeywords,
-      selectedQuestion: undefined,
       learningTopicId: selection.middleUnitId || null,
       previousTitles: [],
       previousIncidents: [],
       previousTypes: [],
-      count: MAX_RECOMMENDED_TOPICS,
+      count: TOPIC_BATCH_SIZE,
       curriculumContext
     }
 
@@ -345,10 +384,10 @@ export default function StudentTopicMakerPage() {
         }).filter(Boolean)
         console.debug('[topic save after]', { savedCount: savedTopics.length, parsedCount: parsedTopics.length, unitKey: currentUnitKey, regenerate: true })
         setTopics(parsedTopics)
-        setVisibleTopicCount(INITIAL_TOPIC_VISIBLE_COUNT)
+        setVisibleTopicCount(parsedTopics.length)
       } else {
         setTopics(generatedTopics)
-        setVisibleTopicCount(INITIAL_TOPIC_VISIBLE_COUNT)
+        setVisibleTopicCount(generatedTopics.length)
       }
       setGenState('success')
     } catch (error) {
@@ -504,6 +543,10 @@ export default function StudentTopicMakerPage() {
 
                 {aiStep === 'topic' && (genState === 'loading' || genState === 'success') && (
                   <div className="card-select-panel p-8 md:p-10 min-h-[240px] animate-fade-in">
+                    <h3 className="text-xl font-jua text-[#303442] mb-6 flex items-center">
+                      <Sparkles className="w-6 h-6 mr-2 text-purple-500" />
+                      마음에 드는 만화 주제를 골라 주세요.
+                    </h3>
                     <AiRecommendationCard
                       visibleTopics={displayedTopics}
                       selectedTopicId={selectedTopicId}
@@ -521,7 +564,7 @@ export default function StudentTopicMakerPage() {
                           disabled={isGeneratingMore || genState === 'loading' || isAllTopicsVisible}
                           className={`btn-primary-action px-8 py-4 font-jua text-base md:text-lg min-h-[56px] transition-all ${isGeneratingMore || genState === 'loading' ? 'opacity-70 cursor-not-allowed bg-[#e5e7eb] text-[#8f95a6]' : ''}`}
                         >
-                          <span>{`추천 주제 ${Math.min(visibleTopicCount + TOPIC_VISIBLE_INCREMENT, topics.length, MAX_RECOMMENDED_TOPICS)}개까지 보기 ✨`}</span>
+                          <span>{isGeneratingMore ? '주제를 더 만들고 있어요...' : '+2개 더 보기'}</span>
                         </button>
                       </div>
                     )}
@@ -586,6 +629,10 @@ export default function StudentTopicMakerPage() {
                         입력한 내용으로 만들어진 이야기예요! 하나를 선택해주세요.
                       </h3>
                     )}
+                    <h3 className="text-xl font-jua text-[#303442] mb-6 flex items-center">
+                      <Sparkles className="w-6 h-6 mr-2 text-purple-500" />
+                      마음에 드는 만화 주제를 골라 주세요.
+                    </h3>
                     <AiRecommendationCard
                       visibleTopics={displayedTopics}
                       selectedTopicId={selectedTopicId}
@@ -603,7 +650,7 @@ export default function StudentTopicMakerPage() {
                           disabled={isGeneratingMore || genState === 'loading' || isAllTopicsVisible}
                           className={`btn-primary-action px-8 py-4 font-jua text-base md:text-lg min-h-[56px] transition-all ${isGeneratingMore || genState === 'loading' ? 'opacity-70 cursor-not-allowed bg-[#e5e7eb] text-[#8f95a6]' : ''}`}
                         >
-                          <span>{`추천 주제 ${Math.min(visibleTopicCount + TOPIC_VISIBLE_INCREMENT, topics.length, MAX_RECOMMENDED_TOPICS)}개까지 보기 ✨`}</span>
+                          <span>{isGeneratingMore ? '주제를 더 만들고 있어요...' : '+2개 더 보기'}</span>
                         </button>
                       </div>
                     )}
