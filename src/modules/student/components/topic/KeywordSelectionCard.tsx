@@ -6,7 +6,7 @@ interface KeywordSelectionCardProps {
   selectedKeywords: string[]
   onToggleKeyword: (word: string) => void
   isLoading: boolean
-  onGenerateKeywords?: () => void
+  onGenerateKeywords?: () => void | Promise<void>
   totalKeywords?: number
 }
 

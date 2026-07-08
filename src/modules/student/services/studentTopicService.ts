@@ -372,18 +372,47 @@ const validateAndRepairTopicRecommendations = (
 
   const usedPerspectives = repaired.map(topic => topic.perspective || topic.angle || '').filter(Boolean)
   const fallbackPerspectives = selectDiversePerspectives(request, count, usedPerspectives)
-  while (repaired.length < count) {
-    const perspective = fallbackPerspectives[(repaired.length + fallbackCount) % fallbackPerspectives.length] || DYNAMIC_PERSPECTIVE_POOL[(repaired.length + fallbackCount) % DYNAMIC_PERSPECTIVE_POOL.length]
-    const fallback = createFallbackTopicRecommendation(request, perspective, repaired.length + fallbackCount, [...existingTitles, ...repaired.map(item => item.title)])
+  let fallbackGuard = 0
+  while (repaired.length < count && fallbackGuard < count * 10) {
+    const perspective = fallbackPerspectives[(repaired.length + fallbackGuard) % fallbackPerspectives.length] || DYNAMIC_PERSPECTIVE_POOL[(repaired.length + fallbackGuard) % DYNAMIC_PERSPECTIVE_POOL.length]
+    const fallback = createFallbackTopicRecommendation(request, perspective, repaired.length + fallbackGuard, [...existingTitles, ...repaired.map(item => item.title)])
+    fallbackCount++
+    fallbackGuard++
     if (!repaired.some(item => isSimilarTopic(item, fallback))) {
       repaired.push(fallback)
-      fallbackCount++
-    } else {
-      fallbackCount++
-      if (fallbackCount > count * 3) break
     }
   }
 
+  let forceIndex = 0
+  while (repaired.length < count) {
+    const perspective = DYNAMIC_PERSPECTIVE_POOL[(repaired.length + forceIndex) % DYNAMIC_PERSPECTIVE_POOL.length]
+    const fallback = createFallbackTopicRecommendation(request, perspective, repaired.length + forceIndex + 100, [...existingTitles, ...repaired.map(item => item.title)])
+    const normalizedTitle = normalizeTopicTitle(fallback.title)
+    const titleTaken = repaired.some(item => normalizeTopicTitle(item.title) === normalizedTitle)
+    if (!titleTaken) {
+      repaired.push({
+        ...fallback,
+        title: normalizedTitle,
+        storyHint: fallback.storyHint || fallback.summary || `${request.middleUnitName || '주제'}를 다른 장소와 사건으로 풀어 보는 이야기입니다.`,
+        openingLine: fallback.openingLine || `"이번에는 다른 단서부터 찾아보자."`
+      })
+    }
+    forceIndex++
+    fallbackCount++
+    if (forceIndex > count * 20) {
+      const keyword = request.selectedKeywords?.[repaired.length % Math.max(request.selectedKeywords.length, 1)] || request.middleUnitName || '주제'
+      const forcedTitleSeeds = ['비밀 단서', '교실 사건', '생활 미션', '탐정 작전', '발명 대회', '토론 장면', '미래 도시', '도서관 지도', '실패한 실험', '우리 동네 문제']
+      repaired.push({
+        ...fallback,
+        id: `topic-force-${Date.now()}-${repaired.length}`,
+        title: `${keyword} ${forcedTitleSeeds[repaired.length % forcedTitleSeeds.length]}`,
+        storyHint: `${keyword} 때문에 서로 다른 생각이 부딪히는 장면에서 시작해, 직접 단서를 찾아 해결 방향을 정합니다.`,
+        learningPoint: `${keyword}가 단원 내용과 어떻게 연결되는지 이야기 속 사건으로 배웁니다.`,
+        openingLine: `"잠깐, 이번 단서는 앞의 이야기와 달라."`,
+        keywords: [keyword]
+      })
+    }
+  }
   const finalTopics = repaired.slice(0, count).map((topic, index) => ({
     ...topic,
     id: topic.id || `topic-${Date.now()}-${index}`,
@@ -811,6 +840,8 @@ export const generateTopicRecommendations = async (
     console.warn('[AI 추천 생성] 실패 또는 응답 검수 불가 → 동적 fallback 사용:', error)
   }
 
+  console.debug('[topic generation parsed]', { requestedCount: countToGenerate, parsedCount: rawRecommendations.length })
+
   const { topics } = validateAndRepairTopicRecommendations(
     rawRecommendations,
     request,
@@ -819,6 +850,7 @@ export const generateTopicRecommendations = async (
     existingTitles
   )
 
+  console.debug('[topic generation final]', { requestedCount: countToGenerate, finalCount: topics.length })
   return topics
 }
 
@@ -832,6 +864,55 @@ export const BANNED_KEYWORD_TERMS = new Set([
   '관찰', '실험', '탐구', '비교', '변화', '결과', '활동', '기록', '확인', '정리'
 ]);
 
+const BAD_KEYWORD_TERMS = new Set([
+  '만들기', '내리', '내리는', '그리기', '꾸미기', '하기', '보기', '알아보기',
+  '확인하기', '생각하기', '비교하기', '관찰하기', '실험하기', '탐구하기',
+  '정리하기', '설명하기', '생각', '확인', '결과', '탐구', '활동'
+])
+
+const SCIENCE_CONCEPT_ALLOWLIST = new Set([
+  '용해', '용액', '용질', '용매', '물', '가루', '녹기', '진하기', '섞임', '눈',
+  '동물', '서식지', '먹이', '생김새', '보호색', '사막', '북극', '날개',
+  '식물', '뿌리', '줄기', '잎', '꽃', '씨', '햇빛', '양분',
+  '공기', '온도', '자석', '전기', '소리', '그림자', '지층', '화석'
+])
+
+const SCIENCE_LOW_VALUE_TERMS = new Set(['풍경', '장면', '모습', '생각', '확인', '결과', '탐구', '활동'])
+
+const isActivityKeyword = (word: string) => {
+  if (SCIENCE_CONCEPT_ALLOWLIST.has(word)) return false
+  if (BAD_KEYWORD_TERMS.has(word)) return true
+  if (/(하기|보기|만들기|그리기|꾸미기|알아보기|확인하기|생각하기|비교하기|관찰하기|실험하기|탐구하기|정리하기|설명하기)$/.test(word)) return true
+  return /기$/.test(word) && !SCIENCE_CONCEPT_ALLOWLIST.has(word)
+}
+
+const isVerbStemKeyword = (word: string) => {
+  return ['내리', '만들', '그리', '꾸미', '하', '보', '알아보', '확인하', '생각하', '비교하', '관찰하', '실험하', '탐구하', '정리하', '설명하'].includes(word)
+}
+
+const isBadKeyword = (word: string, subjectName = '') => {
+  const cleaned = word.trim()
+  if (!cleaned) return true
+  if (BAD_KEYWORD_TERMS.has(cleaned)) return true
+  if (isActivityKeyword(cleaned)) return true
+  if (isVerbStemKeyword(cleaned)) return true
+  if (subjectName === '과학' && SCIENCE_LOW_VALUE_TERMS.has(cleaned) && !SCIENCE_CONCEPT_ALLOWLIST.has(cleaned)) return true
+  return false
+}
+
+const getScienceUnitFallbackWords = (majorUnitName: string, middleUnitName: string, context?: CurriculumContext) => {
+  const source = [majorUnitName, middleUnitName, context?.unitGoal, context?.learningGoal, context?.unitSummary, context?.subunitSummary, context?.contentScope, context?.keyQuestions].filter(Boolean).join(' ')
+  if (source.includes('용해') || source.includes('용액') || source.includes('녹')) {
+    return ['용해', '용액', '용질', '용매', '물', '가루', '녹기', '진하기', '섞임', '눈']
+  }
+  if (source.includes('동물') || source.includes('서식지')) {
+    return ['동물', '서식지', '먹이', '생김새', '보호색', '사막', '북극', '날개', '다리', '몸']
+  }
+  if (source.includes('식물')) {
+    return ['식물', '뿌리', '줄기', '잎', '꽃', '씨', '물', '햇빛', '자람', '양분']
+  }
+  return []
+}
 export const KEYWORD_GENERATION_RULES = `
 [중요 조건]
 1. 키워드는 반드시 초등학생이 만화 이야기 소재로 바로 사용할 수 있는 '명사' 또는 '교과 핵심 개념어'여야 합니다.
@@ -854,70 +935,83 @@ export const KEYWORD_GENERATION_RULES = `
 export const validateGeneratedKeywords = (
   candidates: KeywordItem[],
   majorUnitName: string,
-  middleUnitName: string
+  middleUnitName: string,
+  subjectName = ''
 ): KeywordItem[] => {
   const punctuationRegex = /[!?,.()\[\]<>"']/
   const spaceRegex = /\s/
-  const bannedEndings = /[다요까죠며고은는이가을를와과에로의]$/ 
-  const verbAdjectiveStem = /(하|되|알|배우|살펴보|알아보|이해하|생각하|비교하|설명하|찾아보|공부하|다양한|새로운|중요한|알맞은|바른|올바른|여러|다른|같은|많은|적은|높은|낮은|넓은|좁은|빠른|느린|좋은|나쁜|쉬운|어려운|큰|작은|깊은|얕은|긴|짧은)$/ 
-
+  const bannedEndings = /[요까죠며고은는이가을를와과에로의]$/
   const chapterWords = new Set([
     (majorUnitName || '').replace(/\s/g, ''),
     (middleUnitName || '').replace(/\s/g, '')
-  ]);
-
-  const validated: KeywordItem[] = [];
-  const seen = new Set<string>();
+  ])
+  const validated: KeywordItem[] = []
+  const seen = new Set<string>()
+  const removed: Array<{ word: string; reason: string }> = []
 
   for (const item of candidates) {
-    if (!item || !item.word) continue;
-    let w = item.word.trim();
+    if (!item || !item.word) continue
+    const w = item.word.trim()
+    let reason = ''
 
-    if (BANNED_KEYWORD_TERMS.has(w)) continue;
-    if (punctuationRegex.test(w)) continue;
-    if (spaceRegex.test(w)) continue;
-    if (bannedEndings.test(w)) continue;
-    if (verbAdjectiveStem.test(w)) continue;
-    if (chapterWords.has(w.replace(/\s/g, ''))) continue;
+    if (BANNED_KEYWORD_TERMS.has(w) || isBadKeyword(w, subjectName)) reason = 'banned-or-activity'
+    else if (punctuationRegex.test(w)) reason = 'punctuation'
+    else if (spaceRegex.test(w)) reason = 'space'
+    else if (bannedEndings.test(w) && !SCIENCE_CONCEPT_ALLOWLIST.has(w)) reason = 'josa-ending'
+    else if (chapterWords.has(w.replace(/\s/g, ''))) reason = 'whole-unit-title'
+
+    if (reason) {
+      removed.push({ word: w, reason })
+      continue
+    }
 
     if (!seen.has(w)) {
-      seen.add(w);
-      validated.push({ ...item, word: w });
+      seen.add(w)
+      validated.push({ ...item, word: w })
     }
   }
 
-  return validated.slice(0, 10);
+  if (removed.length > 0) console.debug('[keyword validation removed]', removed)
+  return validated.slice(0, 10)
 }
-
 const SCIENCE_GENERIC_KEYWORDS = new Set(['관찰', '실험', '탐구', '비교', '변화', '결과', '활동', '확인', '기록', '정리', '에너지'])
 
 const extractUnitKeywordCandidates = (
   majorUnitName: string,
   middleUnitName: string,
-  context?: CurriculumContext
+  context?: CurriculumContext,
+  subjectName = ''
 ) => {
-  const source = [
-    majorUnitName,
-    middleUnitName,
-    context?.unitGoal,
-    context?.learningGoal,
-    context?.unitSummary,
-    context?.subunitSummary,
-    context?.contentScope,
-    context?.achievementStandards,
-    context?.keyQuestions
-  ].filter(Boolean).join(' ')
+  const scored = new Map<string, number>()
+  const addWord = (word: string, score: number) => {
+    const cleaned = word.trim()
+    if (cleaned.length < 2 || cleaned.length > 5) return
+    if (SCIENCE_GENERIC_KEYWORDS.has(cleaned)) return
+    if (isBadKeyword(cleaned, subjectName)) return
+    scored.set(cleaned, (scored.get(cleaned) || 0) + score)
+  }
+  const addFromText = (text: string | undefined, score: number) => {
+    if (!text) return
+    const candidates = text.match(/[가-힣]{2,6}/g) || []
+    candidates.forEach(word => addWord(word, score))
+  }
 
-  const banned = new Set([...BANNED_KEYWORD_TERMS, ...SCIENCE_GENERIC_KEYWORDS, '단원', '학년', '학습', '내용', '특징', '방법'])
-  const candidates = source.match(/[가-힣]{2,6}/g) || []
-  const splitWords = candidates.flatMap(word => word.split(/과|와|의|을|를|이|가|은|는|에서|으로|로/).filter(Boolean))
-  return [...new Set([...candidates, ...splitWords])]
-    .map(word => word.trim())
-    .filter(word => word.length >= 2 && word.length <= 5)
-    .filter(word => !banned.has(word))
-    .filter(word => !/(하다|된다|있는|없는|알아|살펴|비교|탐구|관찰|실험|결과)$/.test(word))
+  getScienceUnitFallbackWords(majorUnitName, middleUnitName, context).forEach(word => addWord(word, 8))
+  addFromText(middleUnitName, 5)
+  addFromText(majorUnitName, 4)
+  addFromText(context?.learningGoal, 4)
+  addFromText(context?.subunitSummary, 3)
+  addFromText(context?.unitGoal, 3)
+  addFromText(context?.unitSummary, 2)
+  addFromText(context?.contentScope, 2)
+  addFromText(context?.achievementStandards, 2)
+  addFromText(context?.keyQuestions, 2)
+
+  return [...scored.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([word]) => word)
+    .slice(0, 10)
 }
-
 const getFallbackKeywords = (
   subjectName: string, 
   existingKeywords: string[] = [], 
@@ -940,8 +1034,9 @@ const getFallbackKeywords = (
 
   let fallbackWords: string[] = []
   const combinedName = `${majorUnitName} ${middleUnitName}`
-  const unitCandidates = extractUnitKeywordCandidates(majorUnitName, middleUnitName, context)
-  fallbackWords = [...fallbackWords, ...unitCandidates]
+  const scienceFallbackWords = (subjectName === '과학' || subjectName === '怨쇳븰') ? getScienceUnitFallbackWords(majorUnitName, middleUnitName, context) : []
+  const unitCandidates = extractUnitKeywordCandidates(majorUnitName, middleUnitName, context, subjectName)
+  fallbackWords = [...fallbackWords, ...scienceFallbackWords, ...unitCandidates]
 
   if (combinedName) {
     for (const [key, words] of Object.entries(specificMap)) {
@@ -967,6 +1062,8 @@ const getFallbackKeywords = (
     fallbackWords = fallbackWords.filter(word => !SCIENCE_GENERIC_KEYWORDS.has(word))
   }
 
+  fallbackWords = fallbackWords.filter(word => !isBadKeyword(word, subjectName))
+
   if (existingKeywords.length > 0) {
     fallbackWords = fallbackWords.filter(w => !existingKeywords.includes(w))
   }
@@ -977,6 +1074,54 @@ const getFallbackKeywords = (
   }))
 }
 
+const supplementKeywordsToCount = (
+  candidates: KeywordItem[],
+  request: TopicGenerationRequest & { count?: number; existingKeywords?: string[] }
+) => {
+  const targetCount = request.count || 10
+  const result: KeywordItem[] = []
+  const seen = new Set<string>(request.existingKeywords || [])
+  const addItems = (items: KeywordItem[]) => {
+    for (const item of items) {
+      if (!item?.word) continue
+      const word = item.word.trim()
+      if (seen.has(word)) continue
+      result.push({ ...item, word })
+      seen.add(word)
+      if (result.length >= targetCount) break
+    }
+  }
+
+  addItems(validateGeneratedKeywords(candidates, request.majorUnitName || '', request.middleUnitName || '', request.subjectName || ''))
+
+  let guard = 0
+  while (result.length < targetCount && guard < 5) {
+    const fallback = getFallbackKeywords(
+      request.subjectName || '',
+      [...(request.existingKeywords || []), ...result.map(item => item.word)],
+      request.middleUnitName || '',
+      request.majorUnitName || '',
+      request.curriculumContext
+    )
+    const validatedFallback = validateGeneratedKeywords(fallback, request.majorUnitName || '', request.middleUnitName || '', request.subjectName || '')
+    const before = result.length
+    addItems(validatedFallback)
+    if (result.length === before) break
+    guard++
+  }
+
+  const forcedWords = [
+    ...getScienceUnitFallbackWords(request.majorUnitName || '', request.middleUnitName || '', request.curriculumContext),
+    ...(request.middleUnitName?.match(/[가-힣]{2,6}/g) || []),
+    ...(request.majorUnitName?.match(/[가-힣]{2,6}/g) || []),
+    '질문', '단서', '장면', '미션'
+  ]
+  addItems(forcedWords
+    .filter(word => !isBadKeyword(word, request.subjectName || ''))
+    .map(word => ({ word, reason: '단원 내용에 맞춰 보충한 키워드입니다.' })))
+
+  return result.slice(0, targetCount)
+}
 export const generateKeywords = async (
   request: TopicGenerationRequest & { count?: number; existingKeywords?: string[] }
 ): Promise<KeywordItem[]> => {
@@ -1039,27 +1184,14 @@ ${KEYWORD_GENERATION_RULES}
         word: k.word, reason: k.reason || ''
       }));
 
-      let validated = validateGeneratedKeywords(parsedKeywords, majorUnitName || '', middleUnitName || '');
-      
-      if (validated.length < count) {
-        const fallback = getFallbackKeywords(subjectName || '', [...existingKeywords, ...validated.map(v => v.word)], middleUnitName || '', majorUnitName || '', curriculumContext);
-        const validatedFallback = validateGeneratedKeywords(fallback, majorUnitName || '', middleUnitName || '');
-        validated = [...validated, ...validatedFallback];
-        
-        // Ensure uniqueness again after fallback merge
-        const seen = new Set<string>();
-        validated = validated.filter(v => {
-          if (seen.has(v.word)) return false;
-          seen.add(v.word);
-          return true;
-        });
-      }
-      
-      if (validated.length > 0) {
-        const result = validated.slice(0, count);
-        console.debug('[키워드 생성 완료]', { unitKey, keywords: result.map(k => k.word) });
-        return result;
-      }
+      const result = supplementKeywordsToCount(parsedKeywords, request)
+      console.debug('[keyword generation complete]', {
+        unitKey,
+        aiCount: parsedKeywords.length,
+        finalCount: result.length,
+        keywords: result.map(k => k.word)
+      })
+      if (result.length >= count) return result
     }
     
     throw new Error('Invalid JSON format from AI or all keywords were filtered out')
@@ -1075,10 +1207,9 @@ ${KEYWORD_GENERATION_RULES}
   } catch (error) {
     console.error('Failed to generate keywords from AI:', error)
     const fallbacks = getFallbackKeywords(subjectName || '', existingKeywords, middleUnitName || '', majorUnitName || '', curriculumContext);
-    const validatedFallbacks = validateGeneratedKeywords(fallbacks, majorUnitName || '', middleUnitName || '');
-    const result = validatedFallbacks.slice(0, count);
-    console.debug('[키워드 fallback 완료]', { unitKey, keywords: result.map(k => k.word) });
-    return result;
+    const result = supplementKeywordsToCount(fallbacks, request)
+    console.debug('[keyword fallback complete]', { unitKey, fallbackCount: fallbacks.length, finalCount: result.length, keywords: result.map(k => k.word) });
+    return result
   }
 }
 
@@ -1178,6 +1309,38 @@ const buildKeywordContext = (keywords: string[], roles: KeywordRoles) => {
   return `${keywords.join(', ')}를 하나의 이야기로 연결해 알아보는 이야기`
 }
 
+const sanitizeQuestionKeywords = (
+  keywords: string[],
+  subjectName = '',
+  majorUnitName = '',
+  middleUnitName = '',
+  context?: CurriculumContext
+) => {
+  const cleaned = validateGeneratedKeywords(
+    keywords.map(word => ({ word, reason: '' })),
+    majorUnitName,
+    middleUnitName,
+    subjectName
+  ).map(item => item.word)
+
+  if (cleaned.length > 0) return cleaned
+
+  const fallback = getFallbackKeywords(subjectName, [], middleUnitName, majorUnitName, context)
+  return validateGeneratedKeywords(fallback, majorUnitName, middleUnitName, subjectName).map(item => item.word).slice(0, 4)
+}
+
+const BAD_QUESTION_REGEXES = [
+  /용액\s*풍경/,
+  /만들기로\s*먼저\s*확인/,
+  /내리로\s*확인/,
+  /풍경\s*만들기\s*왜/,
+  /.+\s.+을\s*생각할\s*때\s*왜\s*.+로\s*먼저\s*확인해야\s*할까요\?$/
+]
+
+const hasBadQuestionKeywordUse = (text: string) => {
+  if (BAD_QUESTION_REGEXES.some(pattern => pattern.test(text))) return true
+  return [...BAD_KEYWORD_TERMS].some(term => new RegExp(`${term}(으로|로|을|를|이|가|은|는)`).test(text))
+}
 const countKeywordMatches = (text: string, keywords: string[]) => {
   return keywords.filter(keyword => text.includes(keyword)).length
 }
@@ -1198,6 +1361,7 @@ const isValidQuestionText = (text: string, keywords: string[], existingTexts: st
   if (trimmed.length < 12 || trimmed.length > 75) return false
   if (BAD_JOSA_PATTERNS.some(pattern => trimmed.includes(pattern))) return false
   if (GENERIC_QUESTION_PATTERNS.some(pattern => trimmed.includes(pattern))) return false
+  if (hasBadQuestionKeywordUse(trimmed)) return false
   if (countKeywordMatches(trimmed, keywords) < Math.min(2, keywords.length)) return false
   if (existingTexts.some(existing => isSimilarQuestion(existing, trimmed))) return false
   return true
@@ -1274,7 +1438,10 @@ export const generateQuestions = async (
 ): Promise<any[]> => {
   const { gradeName, subjectName, majorUnitName, middleUnitName, keyword, categories = [], curriculumContext, selectedKeywords } = request
 
-  const keywordsToUse = selectedKeywords && selectedKeywords.length > 0 ? selectedKeywords : (keyword ? [keyword] : ['주제'])
+  const rawKeywords = selectedKeywords && selectedKeywords.length > 0 ? selectedKeywords : (keyword ? [keyword] : ['주제'])
+  const keywordsToUse = sanitizeQuestionKeywords(rawKeywords, subjectName || '', majorUnitName || '', middleUnitName || '', curriculumContext).slice(0, 4)
+  if (keywordsToUse.length === 0) keywordsToUse.push(middleUnitName || majorUnitName || '주제')
+  console.debug('[question keyword validation]', { selectedKeywords: rawKeywords, finalKeywords: keywordsToUse })
   const keywordString = keywordsToUse.join(', ')
   const keywordRoles = analyzeKeywordRoles(keywordsToUse)
   const keywordContext = buildKeywordContext(keywordsToUse, keywordRoles)
@@ -1362,16 +1529,22 @@ export const generateQuestions = async (
     }
 
     let suffix = 0
-    while (fallbacks.length < count) {
-      const extra = pool[suffix % pool.length]
-      if (!fallbacks.includes(extra) && !existingTexts.includes(extra)) {
+    while (fallbacks.length < count && suffix < count * 8) {
+      const main = keywordsToUse[suffix % keywordsToUse.length] || middleUnitName || '주제'
+      const pair = keywordsToUse[(suffix + 1) % keywordsToUse.length] || main
+      const safePool = [
+        `${main}은 어떻게 달라질까요?`,
+        `${main}과 ${pair}은 어떤 관계일까요?`,
+        `${main}을 알아보려면 무엇을 살펴볼까요?`,
+        `${main}과 ${pair}을 생활 속 어디에서 볼 수 있을까요?`,
+        `${main}에 숨어 있는 중요한 단서는 무엇일까요?`
+      ]
+      const extra = safePool[suffix % safePool.length]
+      if (isValidQuestionText(extra, keywordsToUse, [...existingTexts, ...fallbacks])) {
         fallbacks.push(extra)
-      } else {
-        fallbacks.push(`${keywordContext}에서 더 궁금한 점은 무엇일까요?`)
       }
       suffix++
     }
-
     return fallbacks.slice(0, count)
   }
 

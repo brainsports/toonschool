@@ -29,6 +29,9 @@ export default function StudentTopicMakerPage() {
   const INITIAL_TOPIC_VISIBLE_COUNT = 2
   const TOPIC_VISIBLE_INCREMENT = 2
   const MAX_RECOMMENDED_TOPICS = 10
+  const INITIAL_KEYWORD_VISIBLE_COUNT = 2
+  const KEYWORD_VISIBLE_INCREMENT = 2
+  const MAX_KEYWORD_OPTIONS = 10
 
   const [topics, setTopics] = useState<TopicRecommendation[]>([])
   const [visibleTopicCount, setVisibleTopicCount] = useState(INITIAL_TOPIC_VISIBLE_COUNT)
@@ -40,7 +43,7 @@ export default function StudentTopicMakerPage() {
   const [recommendedKeywords, setRecommendedKeywords] = useState<KeywordItem[]>([])
   const [selectedKeywords, setSelectedKeywords] = useState<string[]>([])
   const [isKeywordLoading, setIsKeywordLoading] = useState(false)
-  const [visibleKeywordCount, setVisibleKeywordCount] = useState(2)
+  const [visibleKeywordCount, setVisibleKeywordCount] = useState(INITIAL_KEYWORD_VISIBLE_COUNT)
 
   // 질문 추천 관련 상태
   const [questionCategories, setQuestionCategories] = useState<QuestionCategory[]>([])
@@ -63,6 +66,19 @@ export default function StudentTopicMakerPage() {
       selection.middleUnitName || ''
     ].join('|')
   }, [selection])
+
+  const buildSelectionUnitKey = (unit?: StudentUnitSelection | null) => {
+    if (!unit) return ''
+    return [
+      unit.gradeValue || '',
+      unit.subjectId || unit.subjectName || '',
+      unit.semesterValue || '',
+      unit.majorUnitId || '',
+      unit.middleUnitId || '',
+      unit.majorUnitName || '',
+      unit.middleUnitName || ''
+    ].join('|')
+  }
   const previousUnitKeyRef = useRef('')
 
   // 1. 단원 선택 정보 가져오기 (projectStorage 우선, 그다음 location.state, 마지막 localStorage)
@@ -108,6 +124,13 @@ export default function StudentTopicMakerPage() {
     if (projectId && topics.length === 0) {
       const savedTopicData = projectStorage.loadTopic<any>(projectId);
       if (savedTopicData) {
+        const savedUnitKey = buildSelectionUnitKey(savedTopicData.selection)
+        const activeUnitKey = buildSelectionUnitKey(selection)
+        if (savedUnitKey && !activeUnitKey) return
+        if (savedUnitKey && activeUnitKey && savedUnitKey !== activeUnitKey) {
+          console.debug('[topic restore skipped]', { savedUnitKey, activeUnitKey })
+          return
+        }
         if (savedTopicData.extraRequest) setExtraRequest(savedTopicData.extraRequest);
         if (savedTopicData.selectedKeywords) setSelectedKeywords(savedTopicData.selectedKeywords);
         if (savedTopicData.selectedQuestion) {
@@ -128,7 +151,7 @@ export default function StudentTopicMakerPage() {
         }
       }
     }
-  }, [projectId]);
+  }, [projectId, selection]);
 
   // 카테고리 로드
   useEffect(() => {
@@ -148,7 +171,7 @@ export default function StudentTopicMakerPage() {
     previousUnitKeyRef.current = currentUnitKey
     setRecommendedKeywords([])
     setSelectedKeywords([])
-    setVisibleKeywordCount(2)
+    setVisibleKeywordCount(INITIAL_KEYWORD_VISIBLE_COUNT)
     setGeneratedQuestions([])
     setSelectedQuestionId(null)
     setQuestionGenState('idle')
@@ -203,8 +226,17 @@ export default function StudentTopicMakerPage() {
     }
   }
 
-  const handleShowMoreKeywords = () => {
-    setVisibleKeywordCount(prev => Math.min(prev + 2, recommendedKeywords.length))
+  const handleShowMoreKeywords = async () => {
+    const nextVisible = Math.min(visibleKeywordCount + KEYWORD_VISIBLE_INCREMENT, MAX_KEYWORD_OPTIONS)
+    if (recommendedKeywords.length < nextVisible && !isKeywordLoading) {
+      await handleGenerateKeywords()
+    }
+    setVisibleKeywordCount(nextVisible)
+    console.debug('[keyword display state]', {
+      unitKey: currentUnitKey,
+      preparedCount: Math.max(recommendedKeywords.length, nextVisible),
+      currentVisible: nextVisible
+    })
   }
 
   const handleToggleKeyword = (word: string) => {
@@ -298,6 +330,7 @@ export default function StudentTopicMakerPage() {
 
     try {
       const generatedTopics = await generateTopicRecommendations(request)
+      console.debug('[topic save before]', { count: generatedTopics.length, unitKey: currentUnitKey })
       const savedTopics = await saveGeneratedTopics(generatedTopics, selectedQuestionId, 1)
       
       // Parse back the topic objects from saved text
@@ -311,6 +344,7 @@ export default function StudentTopicMakerPage() {
         }
       }).filter(Boolean)
       
+      console.debug('[topic save after]', { savedCount: savedTopics.length, parsedCount: parsedTopics.length, unitKey: currentUnitKey })
       setTopics(parsedTopics)
       setVisibleTopicCount(INITIAL_TOPIC_VISIBLE_COUNT)
       console.debug('[추천 주제 표시 상태]', { total: parsedTopics.length, initialVisible: INITIAL_TOPIC_VISIBLE_COUNT, currentVisible: INITIAL_TOPIC_VISIBLE_COUNT })
@@ -367,6 +401,7 @@ export default function StudentTopicMakerPage() {
 
     try {
       const generatedTopics = await generateTopicRecommendations(request)
+      console.debug('[topic save before]', { count: generatedTopics.length, unitKey: currentUnitKey, regenerate: true })
       if (selectedQuestionId) {
         const savedTopics = await saveGeneratedTopics(generatedTopics, selectedQuestionId, 1)
         const parsedTopics = savedTopics.map(st => {
@@ -378,6 +413,7 @@ export default function StudentTopicMakerPage() {
             return null
           }
         }).filter(Boolean)
+        console.debug('[topic save after]', { savedCount: savedTopics.length, parsedCount: parsedTopics.length, unitKey: currentUnitKey, regenerate: true })
         setTopics(parsedTopics)
         setVisibleTopicCount(INITIAL_TOPIC_VISIBLE_COUNT)
       } else {
@@ -501,7 +537,7 @@ export default function StudentTopicMakerPage() {
                   <div className="animate-fade-in flex flex-col gap-5">
                     <KeywordSelectionCard
                       keywords={recommendedKeywords.slice(0, visibleKeywordCount)}
-                      totalKeywords={recommendedKeywords.length}
+                      totalKeywords={MAX_KEYWORD_OPTIONS}
                       selectedKeywords={selectedKeywords}
                       onToggleKeyword={handleToggleKeyword}
                       isLoading={isKeywordLoading}
