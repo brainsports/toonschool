@@ -569,27 +569,45 @@ export const generateTopicRecommendations = async (
   }))
 }
 
+export const BANNED_KEYWORD_TERMS = new Set([
+  '탐구야', '즐겁게', '놀자', '놀자!', '해보자', '하기', '되기', '알기',
+  '생각', '이야기', '활동', '재미', '공부', '학습',
+  '우리', '학생', '사람들', '경우', '위치', '설명', '과정', '의미', '종류',
+  '이유', '까닭', '모습', '방식', '결과', '효과', '특성',
+  '이해', '평가', '목표', '성취', '기준'
+]);
+
+export const KEYWORD_GENERATION_RULES = `
+[중요 조건]
+1. 키워드는 반드시 초등학생이 만화 이야기 소재로 바로 사용할 수 있는 '명사' 또는 '교과 핵심 개념어'여야 합니다.
+2. 한 키워드는 공백 없는 짧은 단어여야 합니다.
+3. 문장형 표현은 절대 금지합니다.
+4. 형용사, 부사, 동사형 표현은 금지합니다.
+5. '하기', '알기', '되기', '해보자', '놀자', '탐구야', '즐겁게' 같은 활동형 표현은 금지합니다.
+6. 조사나 어미가 붙은 단어는 제외하고 원형만 추출하세요.
+7. 특수문자, 느낌표, 물음표, 쉼표, 마침표가 포함되지 않게 하세요.
+8. 단원명이나 중단원명을 단순히 띄어쓰기만 해서 만든 단어는 제외합니다.
+9. '생각', '이야기', '활동', '재미', '공부', '학습' 등 너무 넓고 애매한 단어는 제외하세요.
+10. 학생이 만화 장면으로 바로 떠올릴 수 있는 구체적인 사물, 인물, 장소, 사건 중심의 명사를 우선하세요.
+11. 가장 우선순위가 높은 것은 '중단원(학습 주제)'의 핵심 개념입니다.
+12. 서로 비슷하지 않은 단어들로 최대 10개까지 추천해 주세요.
+13. 결과는 JSON 형태로만 반환합니다. 마크다운 코드블록은 쓰지 않습니다.
+`;
+
 export const validateGeneratedKeywords = (
   candidates: KeywordItem[],
   majorUnitName: string,
   middleUnitName: string
 ): KeywordItem[] => {
-  const bannedExact = new Set([
-    '탐구야', '즐겁게', '놀자', '놀자!', '해보자', '하기', '되기', '알기',
-    '우리', '학생', '사람들', '경우', '위치', '설명', '과정', '의미', '종류',
-    '이유', '까닭', '모습', '방식', '결과', '효과', '특성',
-    '이해', '학습', '평가', '목표', '성취', '기준'
-  ]);
-
   const punctuationRegex = /[!?,.()\[\]<>"']/
   const spaceRegex = /\s/
   const bannedEndings = /[다요까죠며고은는이가을를와과에로의]$/ 
   const verbAdjectiveStem = /(하|되|알|배우|살펴보|알아보|이해하|생각하|비교하|설명하|찾아보|공부하|다양한|새로운|중요한|알맞은|바른|올바른|여러|다른|같은|많은|적은|높은|낮은|넓은|좁은|빠른|느린|좋은|나쁜|쉬운|어려운|큰|작은|깊은|얕은|긴|짧은)$/ 
 
   const chapterWords = new Set([
-    ...(majorUnitName || '').split(/\s+/),
-    ...(middleUnitName || '').split(/\s+/)
-  ].map(w => w.replace(punctuationRegex, '')));
+    (majorUnitName || '').replace(/\s/g, ''),
+    (middleUnitName || '').replace(/\s/g, '')
+  ]);
 
   const validated: KeywordItem[] = [];
   const seen = new Set<string>();
@@ -598,12 +616,12 @@ export const validateGeneratedKeywords = (
     if (!item || !item.word) continue;
     let w = item.word.trim();
 
-    if (bannedExact.has(w)) continue;
+    if (BANNED_KEYWORD_TERMS.has(w)) continue;
     if (punctuationRegex.test(w)) continue;
     if (spaceRegex.test(w)) continue;
     if (bannedEndings.test(w)) continue;
     if (verbAdjectiveStem.test(w)) continue;
-    if (chapterWords.has(w)) continue;
+    if (chapterWords.has(w.replace(/\s/g, ''))) continue;
 
     if (!seen.has(w)) {
       seen.add(w);
@@ -611,7 +629,7 @@ export const validateGeneratedKeywords = (
     }
   }
 
-  return validated;
+  return validated.slice(0, 10);
 }
 
 const getFallbackKeywords = (
@@ -693,15 +711,7 @@ export const generateKeywords = async (
 과목: ${subjectName}
 대단원: ${majorUnitName}
 중단원(학습 주제): ${middleUnitName}${contextText}${existingKeywordsText}
-
-[중요 조건]
-1. 키워드는 초등학생이 만화 이야기 소재로 바로 사용할 수 있는 쉬운 명사 또는 명사구로만 작성한다. 형용사, 동사 어간, 어미가 붙은 말, 조사로 끝나는 말, 추상적인 분석어는 금지한다. '다양한, 살펴보, 분포, 특징, 관계, 영향, 변화, 요소, 자료, 활동, 내용' 같은 단어는 그대로 쓰지 않는다. 필요하면 지도, 여행, 산, 강, 도시, 마을, 친구, 대화처럼 장면으로 그릴 수 있는 구체적인 말로 바꾼다.
-2. 학생이 만화 장면으로 바로 떠올릴 수 있어야 한다. 만화 속 인물·장소·사건·물건·행동 주제로 바꾸기 쉬운 구체적인 말이어야 한다.
-3. 가장 우선순위가 높은 것은 '중단원(학습 주제)'입니다. 중단원명에서 직접 뽑을 수 있는 핵심 개념을 최우선으로 생성하세요.
-4. 중단원명 다음으로는 대단원명과 관련된 개념을 고려하세요.
-5. 초등학생이 바로 이해할 수 있는 쉬운 명사로 만들고, 2~8글자 정도의 단어를 우선합니다. 필요하면 2어절 명사구까지 허용합니다.
-6. ${count}개 키워드는 서로 너무 비슷하면 안 됩니다.
-7. 결과는 JSON 형태로만 반환합니다. 마크다운 코드블록은 쓰지 않습니다.
+${KEYWORD_GENERATION_RULES}
 
 반환 형식:
 {
@@ -737,6 +747,14 @@ export const generateKeywords = async (
         const fallback = getFallbackKeywords(subjectName || '', [...existingKeywords, ...validated.map(v => v.word)], middleUnitName || '', majorUnitName || '', curriculumContext);
         const validatedFallback = validateGeneratedKeywords(fallback, majorUnitName || '', middleUnitName || '');
         validated = [...validated, ...validatedFallback];
+        
+        // Ensure uniqueness again after fallback merge
+        const seen = new Set<string>();
+        validated = validated.filter(v => {
+          if (seen.has(v.word)) return false;
+          seen.add(v.word);
+          return true;
+        });
       }
       
       if (validated.length > 0) {
