@@ -4,7 +4,7 @@ import { supabase } from '../../../shared/lib/supabase'
 import type { TopicRecommendation, TopicGenerationRequest, KeywordItem, CurriculumContext, StoryType } from '../types/studentTopic'
 
 function normalizeText(text: string) {
-  return text.replace(/[\s\d.,!?]/g, '').toLowerCase()
+  return text.replace(/[\s\d.,!?~"'“”‘’()[\]{}:;·…]/g, '').toLowerCase()
 }
 
 
@@ -88,6 +88,52 @@ const FALLBACK_TITLE_TEMPLATES = [
   '{keyword}을 두고 갈라진 우리 모둠', '{keyword} 문제를 해결한 첫 장면', '{keyword}을 발견한 쉬는 시간', '{keyword}이 필요한 이유를 찾아라', '{keyword}으로 만든 우리 팀 작전'
 ]
 
+const FALLBACK_STORY_HINT_TEMPLATES = [
+  '{scene}에서 {keyword} 때문에 발표 순서가 멈춘다. 주인공은 {pairKeyword} 단서를 찾아 친구들의 다른 주장을 비교한다.',
+  '{scene}에 놓인 기록장에 {keyword} 숫자가 맞지 않는다. 아이들은 {device}를 하며 실수의 위치를 찾아낸다.',
+  '{scene}에서 {pairKeyword}를 쓰려던 순간 {keyword} 문제가 튀어나온다. 모둠은 역할을 나누어 첫 단서를 확인한다.',
+  '{scene}의 안내판이 {keyword}를 잘못 설명하고 있다. 주인공은 친구에게 보여 줄 쉬운 장면을 직접 만든다.',
+  '{scene}에서 {keyword}를 둘러싼 찬반 의견이 갈린다. 아이들은 {pairKeyword} 예시를 모아 어느 쪽이 맞는지 따져 본다.',
+  '{scene}에 도착한 초대장에는 {keyword}와 {pairKeyword}만 적혀 있다. 주인공은 다음 장소로 가는 조건을 찾아야 한다.',
+  '{scene}에서 만든 작은 발명품이 {keyword} 때문에 멈춘다. 아이들은 {device}로 원인을 하나씩 줄여 간다.',
+  '{scene}의 게임판에서 {keyword} 칸만 통과할 수 없다. 모둠은 {pairKeyword} 규칙을 써서 새 길을 만든다.',
+  '{scene}에서 친구가 {keyword}를 반대로 이해한다. 주인공은 한 장면 실험으로 오해를 풀 방법을 찾는다.',
+  '{scene}의 뉴스 취재 중 {keyword}가 핵심 단서로 떠오른다. 아이들은 {pairKeyword}와 연결되는 현장을 찾아간다.',
+  '{scene}에서 {keyword}를 나누는 방법을 두고 팀이 갈라진다. 주인공은 모두가 납득할 기준을 제안한다.',
+  '{scene}에 숨겨진 지도는 {keyword} 표시만 흐릿하다. 아이들은 {pairKeyword} 힌트로 다음 칸을 추리한다.',
+  '{scene}에서 로봇 역할을 맡은 친구가 {keyword}를 잘못 적용한다. 모둠은 작동 조건을 다시 세운다.',
+  '{scene}에서 {keyword} 관찰표가 두 가지 결과를 보여 준다. 아이들은 어느 조건이 달랐는지 따져 본다.',
+  '{scene}의 구조 요청에는 {keyword}와 관련된 제한 시간이 있다. 주인공은 {pairKeyword}를 활용해 먼저 할 일을 고른다.',
+  '{scene}에서 가족이 {keyword}를 서로 다르게 설명한다. 아이는 생활 장면을 골라 가장 쉬운 예를 만든다.',
+  '{scene}의 박물관 전시물이 {keyword} 사용법을 묻는다. 주인공은 과거와 지금의 {pairKeyword} 차이를 찾는다.',
+  '{scene}에서 {keyword}를 지키는 규칙이 사라진다. 아이들은 불편해진 장면을 보고 규칙을 다시 만든다.',
+  '{scene}에서 {keyword} 카드가 섞여 순서가 꼬인다. 모둠은 {pairKeyword} 기준으로 카드를 다시 분류한다.',
+  '{scene}의 미래 도시 안내 로봇이 {keyword}를 모른다. 주인공은 짧은 설명서와 첫 예시를 만들어 준다.',
+  '{scene}에서 {keyword} 실험값이 예상과 다르게 나온다. 아이들은 실패 장면을 버리지 않고 새 단서로 삼는다.',
+  '{scene}에서 {pairKeyword}를 찾던 중 {keyword}가 문제 해결 열쇠가 된다. 친구들은 각자 본 장면을 맞춰 본다.',
+  '{scene}의 토론 발표에서 {keyword} 근거가 부족하다. 주인공은 직접 확인한 장면으로 주장을 고친다.',
+  '{scene}에서 {keyword}를 쓰면 안 된다는 규칙이 생긴다. 아이들은 대체 방법을 찾으며 개념의 필요성을 깨닫는다.',
+  '{scene}의 작은 영웅은 {keyword}를 이용해 친구를 도우려 한다. 하지만 {pairKeyword} 조건을 먼저 해결해야 한다.',
+  '{scene}에서 {keyword} 설명을 들은 동생이 엉뚱하게 따라 한다. 주인공은 그림과 행동으로 다시 알려 준다.',
+  '{scene}에서 {keyword}와 관련된 물건이 말을 걸어온다. 아이들은 그 물건이 겪은 문제를 듣고 원인을 찾는다.',
+  '{scene}의 운동장 기록이 {keyword} 때문에 엇갈린다. 친구들은 공평한 비교 방법을 정한다.',
+  '{scene}에서 {keyword} 발표 자료가 사라진다. 남은 {pairKeyword} 단서로 발표를 다시 구성한다.',
+  '{scene}에서 {keyword}가 필요한 순간을 세 장면으로 나눈다. 모둠은 가장 설득력 있는 장면을 골라 대본을 시작한다.'
+]
+
+const FALLBACK_OPENING_LINE_TEMPLATES = [
+  '"잠깐, {keyword}가 여기서 왜 이렇게 된 거야?"', '"우리 이 장면을 그냥 지나치면 안 될 것 같아."', '"{pairKeyword}랑 {keyword}가 연결된 단서를 찾았어!"',
+  '"내 생각은 달라. 직접 확인해 보자."', '"이 문제는 {keyword}부터 정리해야 풀릴 것 같아."', '"선생님, 이 결과가 이상해요!"',
+  '"우리 모둠만의 방법으로 설명해 볼래?"', '"이 카드에 적힌 {keyword}, 무슨 뜻일까?"', '"아까 본 장면이 힌트였어."',
+  '"먼저 장소를 나눠서 살펴보자."', '"왜 내 답이랑 네 답이 다르지?"', '"{keyword}를 빼면 이야기가 완전히 달라져."',
+  '"이건 발표가 아니라 사건 해결이야."', '"누가 이 표시를 잘못 붙였을까?"', '"우리 생활에서 같은 장면을 본 적 있어."',
+  '"기록을 다시 보면 답이 보일지도 몰라."', '"규칙을 찾으면 다음 장면으로 갈 수 있어."', '"이 발명품이 멈춘 이유부터 찾아보자."',
+  '"반대로 생각하면 더 쉬울 수도 있어."', '"친구에게 설명하려면 어떤 예가 좋을까?"', '"이건 실수가 아니라 단서일지도 몰라."',
+  '"우리가 직접 기준을 정해 보자."', '"{pairKeyword} 조건을 먼저 확인해야 해."', '"지도에서 빠진 칸이 하나 있어."',
+  '"이 장면을 첫 컷으로 그리면 어때?"', '"답보다 과정이 더 중요해 보여."', '"다른 팀은 왜 다르게 생각했을까?"',
+  '"지금부터 작은 연구소를 열겠습니다."', '"우리 동네에서도 이 문제를 찾을 수 있어."', '"마지막 단서는 {keyword}였어!"'
+]
+
 const getSeededValue = (seed: string) => {
   let hash = 0
   for (let i = 0; i < seed.length; i++) {
@@ -110,12 +156,43 @@ const seededShuffle = <T,>(items: T[], seed: string) => {
 const normalizeTopicTitle = (title: string) => {
   return (title || '')
     .replace(/\s*\((?:\d+|버전\s*\d+|두 번째|세 번째)\)\s*$/g, '')
-    .replace(/\s*(?:버전|두 번째|세 번째)\s*$/g, '')
+    .replace(/\s*(?:버전|두 번째|세 번째|두번째|세번째|[0-9]+탄)\s*$/g, '')
+    .replace(/\s+/g, ' ')
     .trim()
 }
 
 const getTitleStructure = (title: string) => {
   return normalizeTopicTitle(title).replace(/[가-힣A-Za-z0-9]+/g, '□')
+}
+
+const normalizeKoreanText = (text: string) => normalizeText(text).replace(/(입니다|합니다|해요|된다|한다|있다|없다|찾는다|본다|된다)$/g, '')
+
+const getTextSimilarity = (a: string, b: string) => {
+  const normA = normalizeKoreanText(a)
+  const normB = normalizeKoreanText(b)
+  if (!normA || !normB) return 0
+  const short = normA.length < normB.length ? normA : normB
+  const long = normA.length < normB.length ? normB : normA
+  if (long.includes(short) && short.length >= 8) return 1
+  const tokensA = new Set(normA.match(/[가-힣A-Za-z0-9]{2,}/g) || [])
+  const tokensB = new Set(normB.match(/[가-힣A-Za-z0-9]{2,}/g) || [])
+  if (tokensA.size === 0 || tokensB.size === 0) return 0
+  const overlap = [...tokensA].filter(token => tokensB.has(token)).length
+  return overlap / Math.min(tokensA.size, tokensB.size)
+}
+
+const WEAK_STORY_PHRASES = ['사건이 시작된다', '새로운 생각을 찾아본다', '다른 생각을 발견한다', '궁금증을 해결한다', '친구들과 알아본다', '작은 사건이 시작된다', '서로 다른 생각을 맞춰 간다']
+
+const isWeakStoryHint = (topic: TopicRecommendation) => {
+  const combined = [topic.storyHint, topic.learningPoint, topic.openingLine, topic.incident, topic.problem].join(' ')
+  const weakHitCount = WEAK_STORY_PHRASES.filter(phrase => combined.includes(phrase)).length
+  return weakHitCount > 0 || normalizeKoreanText(topic.storyHint || topic.summary || '').length < 24 || normalizeKoreanText(topic.openingLine || '').length < 8
+}
+
+const getTopicCoreKey = (topic: TopicRecommendation) => {
+  return [topic.setting, topic.incident, topic.problem, topic.resolutionDirection]
+    .map(value => normalizeKoreanText(value || '').slice(0, 12))
+    .join('|')
 }
 
 const getKeywordDistribution = (topics: TopicRecommendation[], keywords: string[]) => {
@@ -151,9 +228,13 @@ const isSimilarTopic = (a: TopicRecommendation, b: TopicRecommendation) => {
   const titleB = normalizeText(normalizeTopicTitle(b.title || ''))
   if (titleA && titleA === titleB) return true
   if (getTitleStructure(a.title || '') === getTitleStructure(b.title || '')) return true
-  const hintA = normalizeText(a.storyHint || a.summary || '')
-  const hintB = normalizeText(b.storyHint || b.summary || '')
-  return hintA.length > 10 && hintB.length > 10 && (hintA.includes(hintB.slice(0, 12)) || hintB.includes(hintA.slice(0, 12)))
+  if (getTextSimilarity(a.storyHint || a.summary || '', b.storyHint || b.summary || '') >= 0.55) return true
+  if (getTextSimilarity(a.learningPoint || a.learningConnection || '', b.learningPoint || b.learningConnection || '') >= 0.7) return true
+  if (getTextSimilarity(a.openingLine || '', b.openingLine || '') >= 0.65) return true
+  if (getTopicCoreKey(a) === getTopicCoreKey(b)) return true
+  const aMainKeyword = a.keywords?.[0]
+  const bMainKeyword = b.keywords?.[0]
+  return Boolean(aMainKeyword && bMainKeyword && aMainKeyword === bMainKeyword && (a.setting === b.setting || a.incident === b.incident))
 }
 
 const repairWeakTopicRecommendation = (
@@ -208,6 +289,10 @@ const repairWeakTopicRecommendation = (
   }
 }
 
+const fillTopicTemplate = (template: string, values: Record<string, string>) => {
+  return Object.entries(values).reduce((result, [key, value]) => result.replaceAll(`{${key}}`, value), template)
+}
+
 const createFallbackTopicRecommendation = (
   request: TopicGenerationRequest,
   perspective: DynamicPerspective,
@@ -217,24 +302,42 @@ const createFallbackTopicRecommendation = (
   const keywords = request.selectedKeywords?.length ? request.selectedKeywords : [request.middleUnitName || '주제']
   const keyword = keywords[index % keywords.length]
   const pairKeyword = keywords[(index + 1) % keywords.length] || keyword
-  const templateSeed = `${perspective.name}-${keyword}-${index}-${Date.now()}`
-  const template = seededShuffle(FALLBACK_TITLE_TEMPLATES, templateSeed)[0]
-  let title = normalizeTopicTitle(template.replace('{keyword}', keyword))
-  if (existingTitles.some(existing => normalizeTopicTitle(existing) === title)) {
-    title = normalizeTopicTitle(seededShuffle(FALLBACK_TITLE_TEMPLATES, `${templateSeed}-retry`)[1].replace('{keyword}', pairKeyword))
+  const unitKeyword = request.middleUnitName || request.majorUnitName || keyword
+  const templateSeed = `${perspective.name}-${keyword}-${pairKeyword}-${unitKeyword}-${index}-${Date.now()}`
+  const titleTemplates = seededShuffle(FALLBACK_TITLE_TEMPLATES, templateSeed)
+  const storyTemplates = seededShuffle(FALLBACK_STORY_HINT_TEMPLATES, `${templateSeed}-story`)
+  const openingTemplates = seededShuffle(FALLBACK_OPENING_LINE_TEMPLATES, `${templateSeed}-opening`)
+  const templateValues = {
+    keyword,
+    pairKeyword,
+    unit: unitKeyword,
+    scene: perspective.scene,
+    device: perspective.device
   }
+
+  let title = normalizeTopicTitle(fillTopicTemplate(titleTemplates[0], templateValues))
+  for (const candidate of titleTemplates) {
+    const nextTitle = normalizeTopicTitle(fillTopicTemplate(candidate, templateValues))
+    if (!existingTitles.some(existing => normalizeTopicTitle(existing) === nextTitle)) {
+      title = nextTitle
+      break
+    }
+  }
+
+  const storyHint = fillTopicTemplate(storyTemplates[0], templateValues)
+  const openingLine = fillTopicTemplate(openingTemplates[0], templateValues)
 
   return repairWeakTopicRecommendation({
     title,
-    question: request.selectedQuestion?.questionText || `${keyword}와 ${pairKeyword}는 어떤 장면에서 연결될까요?`,
-    storyHint: `${perspective.scene}에서 ${keyword}와 ${pairKeyword} 때문에 작은 사건이 시작된다. 아이들은 ${perspective.device}를 해 보며 서로 다른 생각을 맞춰 간다.`,
-    learningPoint: `${keyword}와 ${pairKeyword}를 실제 장면 속 문제 해결에 연결해 배운다.`,
-    openingLine: `"이건 그냥 ${keyword} 문제가 아니야. 우리 이야기로 만들어 보자!"`,
+    question: request.selectedQuestion?.questionText || `${unitKeyword}에서 ${keyword}와 ${pairKeyword}는 어떤 장면으로 이어질까요?`,
+    storyHint,
+    learningPoint: `${unitKeyword} 단원에서 ${keyword}와 ${pairKeyword}가 실제 문제 장면에 어떻게 쓰이는지 배운다.`,
+    openingLine,
     setting: perspective.scene,
-    incident: `${keyword}와 관련된 뜻밖의 사건이 벌어진다`,
-    problem: `${pairKeyword}를 어떻게 써야 할지 친구들의 생각이 갈린다`,
-    resolutionDirection: `${perspective.device}를 통해 단서를 모으고 해결 방법을 찾는다`,
-    keywords: [keyword, pairKeyword]
+    incident: `${keyword} 단서가 ${perspective.scene}의 흐름을 바꾼다`,
+    problem: `${pairKeyword}를 적용하는 기준을 두고 모둠 의견이 갈린다`,
+    resolutionDirection: `${perspective.device}로 장면을 확인하고 기준을 정한다`,
+    keywords: [keyword, pairKeyword, unitKeyword].filter(Boolean)
   }, request, perspective, index)
 }
 
@@ -257,8 +360,9 @@ const validateAndRepairTopicRecommendations = (
     const titleTaken = [...existingTitles, ...repaired.map(item => item.title)].some(title => normalizeTopicTitle(title) === normalizedTitle)
     const duplicate = titleTaken || repaired.some(item => isSimilarTopic(item, topic)) || repaired.some(item => (item.perspective || item.angle) === (topic.perspective || topic.angle))
     const hasKeyword = keywords.length === 0 || keywords.some(keyword => [topic.title, topic.summary, topic.storyHint, topic.learningPoint, ...(topic.keywords || [])].join(' ').includes(keyword))
+    const weakStory = isWeakStoryHint(topic)
 
-    if (duplicate || !hasKeyword) {
+    if (duplicate || !hasKeyword || weakStory) {
       removedDuplicateCount++
       return
     }
@@ -724,7 +828,8 @@ export const BANNED_KEYWORD_TERMS = new Set([
   '생각', '이야기', '활동', '재미', '공부', '학습',
   '우리', '학생', '사람들', '경우', '위치', '설명', '과정', '의미', '종류',
   '이유', '까닭', '모습', '방식', '결과', '효과', '특성',
-  '이해', '평가', '목표', '성취', '기준'
+  '이해', '평가', '목표', '성취', '기준',
+  '관찰', '실험', '탐구', '비교', '변화', '결과', '활동', '기록', '확인', '정리'
 ]);
 
 export const KEYWORD_GENERATION_RULES = `
@@ -742,6 +847,8 @@ export const KEYWORD_GENERATION_RULES = `
 11. 가장 우선순위가 높은 것은 '중단원(학습 주제)'의 핵심 개념입니다.
 12. 서로 비슷하지 않은 단어들로 최대 10개까지 추천해 주세요.
 13. 결과는 JSON 형태로만 반환합니다. 마크다운 코드블록은 쓰지 않습니다.
+14. 과학 과목에서는 '관찰', '실험', '탐구', '결과', '비교', '변화' 같은 공통 활동어만 반복하지 마세요.
+15. 대단원명, 중단원명, 학습목표, 단원 설명에 들어 있는 구체 명사(예: 동물, 사막, 북극, 서식지, 보호색, 먹이, 생김새, 날개, 뿌리, 줄기)를 우선하세요. 단, 단원과 맞을 때만 사용하세요.
 `;
 
 export const validateGeneratedKeywords = (
@@ -782,12 +889,41 @@ export const validateGeneratedKeywords = (
   return validated.slice(0, 10);
 }
 
+const SCIENCE_GENERIC_KEYWORDS = new Set(['관찰', '실험', '탐구', '비교', '변화', '결과', '활동', '확인', '기록', '정리', '에너지'])
+
+const extractUnitKeywordCandidates = (
+  majorUnitName: string,
+  middleUnitName: string,
+  context?: CurriculumContext
+) => {
+  const source = [
+    majorUnitName,
+    middleUnitName,
+    context?.unitGoal,
+    context?.learningGoal,
+    context?.unitSummary,
+    context?.subunitSummary,
+    context?.contentScope,
+    context?.achievementStandards,
+    context?.keyQuestions
+  ].filter(Boolean).join(' ')
+
+  const banned = new Set([...BANNED_KEYWORD_TERMS, ...SCIENCE_GENERIC_KEYWORDS, '단원', '학년', '학습', '내용', '특징', '방법'])
+  const candidates = source.match(/[가-힣]{2,6}/g) || []
+  const splitWords = candidates.flatMap(word => word.split(/과|와|의|을|를|이|가|은|는|에서|으로|로/).filter(Boolean))
+  return [...new Set([...candidates, ...splitWords])]
+    .map(word => word.trim())
+    .filter(word => word.length >= 2 && word.length <= 5)
+    .filter(word => !banned.has(word))
+    .filter(word => !/(하다|된다|있는|없는|알아|살펴|비교|탐구|관찰|실험|결과)$/.test(word))
+}
+
 const getFallbackKeywords = (
   subjectName: string, 
   existingKeywords: string[] = [], 
   middleUnitName: string = '', 
   majorUnitName: string = '', 
-  _context?: CurriculumContext
+  context?: CurriculumContext
 ): KeywordItem[] => {
   const specificMap: Record<string, string[]> = {
     '산지': ['산맥', '백두대간', '태백산맥', '지리산', '설악산', '국토', '고원'],
@@ -804,6 +940,8 @@ const getFallbackKeywords = (
 
   let fallbackWords: string[] = []
   const combinedName = `${majorUnitName} ${middleUnitName}`
+  const unitCandidates = extractUnitKeywordCandidates(majorUnitName, middleUnitName, context)
+  fallbackWords = [...fallbackWords, ...unitCandidates]
 
   if (combinedName) {
     for (const [key, words] of Object.entries(specificMap)) {
@@ -819,12 +957,15 @@ const getFallbackKeywords = (
       '영어': ['친구', '학교', '여행', '음식', '동물', '대화', '게임', '파티', '미션'],
       '수학': ['규칙', '숫자', '도형', '분수', '계산', '게임', '미션', '퍼즐'],
       '사회': ['지형', '국토', '기후', '산업', '교통', '도시', '농촌', '바다', '고장', '지도'],
-      '과학': ['실험', '관찰', '생물', '동물', '식물', '에너지', '로봇', '우주', '발명', '날씨']
+      '과학': ['생물', '동물', '식물', '날씨', '공기', '물', '흙', '소리', '빛', '자석']
     }
     fallbackWords = defaultWords[subjectName] || defaultWords['국어']
   }
 
   fallbackWords = [...new Set(fallbackWords)]
+  if (subjectName === '과학') {
+    fallbackWords = fallbackWords.filter(word => !SCIENCE_GENERIC_KEYWORDS.has(word))
+  }
 
   if (existingKeywords.length > 0) {
     fallbackWords = fallbackWords.filter(w => !existingKeywords.includes(w))
@@ -850,8 +991,13 @@ export const generateKeywords = async (
 대단원 목표: ${curriculumContext.unitGoal || ''}
 중단원 학습목표: ${curriculumContext.learningGoal || ''}
 성취기준: ${curriculumContext.achievementStandards || ''}
+대단원 설명: ${curriculumContext.unitSummary || ''}
 중단원 설명: ${curriculumContext.subunitSummary || ''}
+내용 체계: ${curriculumContext.contentScope || ''}
+핵심 질문: ${curriculumContext.keyQuestions || ''}
 ` : '';
+
+  const unitKey = [gradeName, subjectName, majorUnitName, middleUnitName, curriculumContext?.unitGoal, curriculumContext?.learningGoal, curriculumContext?.subunitSummary].filter(Boolean).join('|')
 
   const prompt = `
 너는 초등학생을 위한 학습만화 선생님입니다.
@@ -873,6 +1019,8 @@ ${KEYWORD_GENERATION_RULES}
   ]
 }
 `
+
+  console.debug('[키워드 생성 요청]', { unitKey, gradeName, subjectName, majorUnitName, middleUnitName })
 
   const tryModel = async (model: string): Promise<KeywordItem[]> => {
     if (!model) throw new Error('No model provided');
@@ -908,7 +1056,9 @@ ${KEYWORD_GENERATION_RULES}
       }
       
       if (validated.length > 0) {
-        return validated.slice(0, count);
+        const result = validated.slice(0, count);
+        console.debug('[키워드 생성 완료]', { unitKey, keywords: result.map(k => k.word) });
+        return result;
       }
     }
     
@@ -926,7 +1076,9 @@ ${KEYWORD_GENERATION_RULES}
     console.error('Failed to generate keywords from AI:', error)
     const fallbacks = getFallbackKeywords(subjectName || '', existingKeywords, middleUnitName || '', majorUnitName || '', curriculumContext);
     const validatedFallbacks = validateGeneratedKeywords(fallbacks, majorUnitName || '', middleUnitName || '');
-    return validatedFallbacks.slice(0, count);
+    const result = validatedFallbacks.slice(0, count);
+    console.debug('[키워드 fallback 완료]', { unitKey, keywords: result.map(k => k.word) });
+    return result;
   }
 }
 
@@ -1132,7 +1284,10 @@ export const generateQuestions = async (
 대단원 목표: ${curriculumContext.unitGoal || ''}
 중단원 학습목표: ${curriculumContext.learningGoal || ''}
 성취기준: ${curriculumContext.achievementStandards || ''}
+대단원 설명: ${curriculumContext.unitSummary || ''}
 중단원 설명: ${curriculumContext.subunitSummary || ''}
+내용 체계: ${curriculumContext.contentScope || ''}
+핵심 질문: ${curriculumContext.keyQuestions || ''}
 ` : ''
 
   const prompt = `

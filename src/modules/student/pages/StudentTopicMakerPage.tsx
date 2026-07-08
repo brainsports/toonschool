@@ -1,5 +1,5 @@
 // 주제 만들기 페이지 - 태블릿 좌우 배치 & AI 추천 연동
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import StudentWorkspaceLayout from '../components/layout/StudentWorkspaceLayout'
 import TopicStepTitle from '../components/topic/TopicStepTitle'
@@ -26,10 +26,12 @@ export default function StudentTopicMakerPage() {
   const [extraRequest, setExtraRequest] = useState('')
   const [selection, setSelection] = useState<StudentUnitSelection | null>(null)
 
+  const INITIAL_TOPIC_VISIBLE_COUNT = 2
+  const TOPIC_VISIBLE_INCREMENT = 2
   const MAX_RECOMMENDED_TOPICS = 10
-  const TOPICS_PER_GENERATION = 10
 
   const [topics, setTopics] = useState<TopicRecommendation[]>([])
+  const [visibleTopicCount, setVisibleTopicCount] = useState(INITIAL_TOPIC_VISIBLE_COUNT)
   const [genState, setGenState] = useState<TopicGenerationState>('idle')
   const [isGeneratingMore, setIsGeneratingMore] = useState(false)
   const [curriculumContext, setCurriculumContext] = useState<CurriculumContext | undefined>()
@@ -46,7 +48,22 @@ export default function StudentTopicMakerPage() {
   const [selectedQuestionId, setSelectedQuestionId] = useState<string | null>(null)
   const [questionGenState, setQuestionGenState] = useState<QuestionGenerationState>('idle')
 
-  const isMaxTopicsReached = topics.length >= MAX_RECOMMENDED_TOPICS;
+  const displayedTopics = topics.slice(0, visibleTopicCount)
+  const isMaxTopicsReached = topics.length >= MAX_RECOMMENDED_TOPICS
+  const isAllTopicsVisible = topics.length > 0 && visibleTopicCount >= Math.min(topics.length, MAX_RECOMMENDED_TOPICS)
+  const currentUnitKey = useMemo(() => {
+    if (!selection) return ''
+    return [
+      selection.gradeValue || '',
+      selection.subjectId || selection.subjectName || '',
+      selection.semesterValue || '',
+      selection.majorUnitId || '',
+      selection.middleUnitId || '',
+      selection.majorUnitName || '',
+      selection.middleUnitName || ''
+    ].join('|')
+  }, [selection])
+  const previousUnitKeyRef = useRef('')
 
   // 1. 단원 선택 정보 가져오기 (projectStorage 우선, 그다음 location.state, 마지막 localStorage)
   useEffect(() => {
@@ -120,6 +137,30 @@ export default function StudentTopicMakerPage() {
       .catch(console.error)
   }, [])
 
+  useEffect(() => {
+    if (!currentUnitKey) return
+    if (!previousUnitKeyRef.current) {
+      previousUnitKeyRef.current = currentUnitKey
+      return
+    }
+    if (previousUnitKeyRef.current === currentUnitKey) return
+
+    previousUnitKeyRef.current = currentUnitKey
+    setRecommendedKeywords([])
+    setSelectedKeywords([])
+    setVisibleKeywordCount(2)
+    setGeneratedQuestions([])
+    setSelectedQuestionId(null)
+    setQuestionGenState('idle')
+    setTopics([])
+    setVisibleTopicCount(INITIAL_TOPIC_VISIBLE_COUNT)
+    setSelectedTopicId(null)
+    setGenState('idle')
+    setIsGeneratingMore(false)
+    setAiStep('keyword')
+    console.debug('[주제 만들기 단원 변경 초기화]', { currentUnitKey })
+  }, [currentUnitKey])
+
   const canProceed = selectedTopicId !== null
 
   // 처음 AI 모드 진입 시 자동 키워드 생성
@@ -144,6 +185,7 @@ export default function StudentTopicMakerPage() {
     }
     try {
       const keywords = await generateKeywords(request)
+      console.debug('[키워드 생성 결과]', { unitKey: currentUnitKey, keywords: keywords.map(k => k.word) })
       
       setRecommendedKeywords(prev => {
         // 중복 제거 및 최대 10개 유지
@@ -235,6 +277,7 @@ export default function StudentTopicMakerPage() {
     setGenState('loading')
     setSelectedTopicId(null)
     setTopics([])
+    setVisibleTopicCount(INITIAL_TOPIC_VISIBLE_COUNT)
 
     const selectedQuestion = generatedQuestions.find(q => q.id === selectedQuestionId)
 
@@ -269,6 +312,8 @@ export default function StudentTopicMakerPage() {
       }).filter(Boolean)
       
       setTopics(parsedTopics)
+      setVisibleTopicCount(INITIAL_TOPIC_VISIBLE_COUNT)
+      console.debug('[추천 주제 표시 상태]', { total: parsedTopics.length, initialVisible: INITIAL_TOPIC_VISIBLE_COUNT, currentVisible: INITIAL_TOPIC_VISIBLE_COUNT })
       setGenState('success')
     } catch (error) {
       console.error('AI 추천 주제 생성 중 오류 발생:', error)
@@ -277,63 +322,13 @@ export default function StudentTopicMakerPage() {
     }
   }
 
-  // 4. AI 추천 실행 함수 (추가 생성)
-  const handleGenerateMoreTopics = async () => {
-    if (!selection || !selectedQuestionId) return
-    if (isGeneratingMore || genState === 'loading') return
-    if (isMaxTopicsReached) return
-
-    const previousTitles = topics.map(t => t.title)
-    const previousIncidents = topics.map(t => t.incident).filter(Boolean)
-    const previousTypes = topics.map(t => t.storyType).filter(Boolean)
-
-    const selectedQuestion = generatedQuestions.find(q => q.id === selectedQuestionId)
-
-    setIsGeneratingMore(true)
-
-    const request = {
-      gradeName: selection.gradeName || '',
-      subjectName: selection.subjectName || '',
-      majorUnitName: selection.majorUnitName || '',
-      middleUnitName: selection.middleUnitName || '',
-      extraRequest: extraRequest.trim() || undefined,
-      selectedKeywords,
-      selectedQuestion,
-      learningTopicId: selection.middleUnitId || null,
-      previousTitles,
-      previousIncidents,
-      previousTypes,
-      count: TOPICS_PER_GENERATION,
-      curriculumContext
-    }
-
-    try {
-      const generatedTopics = await generateTopicRecommendations(request)
-      
-      // Find current batch number
-      const currentBatch = Math.floor(topics.length / TOPICS_PER_GENERATION) + 1
-      const savedTopics = await saveGeneratedTopics(generatedTopics, selectedQuestionId, currentBatch)
-      
-      const parsedTopics = savedTopics.map(st => {
-        try {
-          const t = JSON.parse(st.topic_text)
-          t.id = st.id
-          return t
-        } catch {
-          return null
-        }
-      }).filter(Boolean)
-
-      setTopics(prev => {
-        const combined = [...prev, ...parsedTopics]
-        return combined.slice(0, MAX_RECOMMENDED_TOPICS)
-      })
-    } catch (error) {
-      console.error('AI 추천 주제 추가 생성 중 오류 발생:', error)
-      alert('새로운 추천 주제를 만들지 못했습니다. 다시 시도해 주세요.')
-    } finally {
-      setIsGeneratingMore(false)
-    }
+  // 4. 추천 주제 더 보기: 이미 준비된 10개 중 2개씩 추가 표시
+  const handleShowMoreTopics = () => {
+    setVisibleTopicCount(prev => {
+      const next = Math.min(prev + TOPIC_VISIBLE_INCREMENT, MAX_RECOMMENDED_TOPICS, topics.length)
+      console.debug('[추천 주제 표시 상태]', { total: topics.length, initialVisible: INITIAL_TOPIC_VISIBLE_COUNT, currentVisible: next })
+      return next
+    })
   }
 
   // 4-1. AI 추천 실행 함수 (다시 받기 / 초기 생성 - manual 모드용)
@@ -384,8 +379,10 @@ export default function StudentTopicMakerPage() {
           }
         }).filter(Boolean)
         setTopics(parsedTopics)
+        setVisibleTopicCount(INITIAL_TOPIC_VISIBLE_COUNT)
       } else {
         setTopics(generatedTopics)
+        setVisibleTopicCount(INITIAL_TOPIC_VISIBLE_COUNT)
       }
       setGenState('success')
     } catch (error) {
@@ -562,7 +559,7 @@ export default function StudentTopicMakerPage() {
                 {aiStep === 'topic' && (genState === 'loading' || genState === 'success') && (
                   <div className="card-select-panel p-8 md:p-10 min-h-[240px] animate-fade-in">
                     <AiRecommendationCard
-                      visibleTopics={topics}
+                      visibleTopics={displayedTopics}
                       selectedTopicId={selectedTopicId}
                       onSelectTopic={handleSelectTopic}
                       genState={genState}
@@ -570,19 +567,19 @@ export default function StudentTopicMakerPage() {
                       totalCount={0}
                       onLoadMore={() => {}}
                     />
-                    {topics.length > 0 && !isMaxTopicsReached && (
+                    {topics.length > 0 && !isAllTopicsVisible && (
                       <div className="text-center pt-8">
                         <button
                           type="button"
-                          onClick={handleGenerateMoreTopics}
-                          disabled={isGeneratingMore || genState === 'loading'}
+                          onClick={handleShowMoreTopics}
+                          disabled={isGeneratingMore || genState === 'loading' || isAllTopicsVisible}
                           className={`btn-primary-action px-8 py-4 font-jua text-base md:text-lg min-h-[56px] transition-all ${isGeneratingMore || genState === 'loading' ? 'opacity-70 cursor-not-allowed bg-[#e5e7eb] text-[#8f95a6]' : ''}`}
                         >
-                          <span>{isGeneratingMore ? '새로운 주제를 만들고 있어요...' : '추천 주제 더 만들기 ✨'}</span>
+                          <span>{`추천 주제 ${Math.min(visibleTopicCount + TOPIC_VISIBLE_INCREMENT, topics.length, MAX_RECOMMENDED_TOPICS)}개까지 보기 ✨`}</span>
                         </button>
                       </div>
                     )}
-                    {isMaxTopicsReached && (
+                    {isAllTopicsVisible && topics.length >= MAX_RECOMMENDED_TOPICS && (
                       <div className="text-center pt-8">
                         <p className="text-[#626776] font-jua text-lg">추천 주제 10개를 모두 만들었어요</p>
                       </div>
@@ -611,7 +608,7 @@ export default function StudentTopicMakerPage() {
                             : '새로운 이야기로 다시 받기 🔄'}
                       </span>
                     </button>
-                    {isMaxTopicsReached && (
+                    {isAllTopicsVisible && topics.length >= MAX_RECOMMENDED_TOPICS && (
                       <p className="text-sm text-[#626776] font-medium mt-1">추천 주제 10개를 모두 만들었어요. 마음에 드는 주제를 골라 대본 만들기로 넘어가세요.</p>
                     )}
                   </div>
@@ -644,7 +641,7 @@ export default function StudentTopicMakerPage() {
                       </h3>
                     )}
                     <AiRecommendationCard
-                      visibleTopics={topics}
+                      visibleTopics={displayedTopics}
                       selectedTopicId={selectedTopicId}
                       onSelectTopic={handleSelectTopic}
                       genState={genState}
@@ -652,19 +649,19 @@ export default function StudentTopicMakerPage() {
                       totalCount={0}
                       onLoadMore={() => {}}
                     />
-                    {topics.length > 0 && !isMaxTopicsReached && (
+                    {topics.length > 0 && !isAllTopicsVisible && (
                       <div className="text-center pt-8">
                         <button
                           type="button"
-                          onClick={handleGenerateMoreTopics}
-                          disabled={isGeneratingMore || genState === 'loading'}
+                          onClick={handleShowMoreTopics}
+                          disabled={isGeneratingMore || genState === 'loading' || isAllTopicsVisible}
                           className={`btn-primary-action px-8 py-4 font-jua text-base md:text-lg min-h-[56px] transition-all ${isGeneratingMore || genState === 'loading' ? 'opacity-70 cursor-not-allowed bg-[#e5e7eb] text-[#8f95a6]' : ''}`}
                         >
-                          <span>{isGeneratingMore ? '새로운 주제를 만들고 있어요...' : '추천 주제 더 만들기 ✨'}</span>
+                          <span>{`추천 주제 ${Math.min(visibleTopicCount + TOPIC_VISIBLE_INCREMENT, topics.length, MAX_RECOMMENDED_TOPICS)}개까지 보기 ✨`}</span>
                         </button>
                       </div>
                     )}
-                    {isMaxTopicsReached && (
+                    {isAllTopicsVisible && topics.length >= MAX_RECOMMENDED_TOPICS && (
                       <div className="text-center pt-8">
                         <p className="text-[#626776] font-jua text-lg">추천 주제 10개를 모두 만들었어요</p>
                         <p className="text-sm text-[#626776] font-medium mt-2">마음에 드는 주제를 골라 대본 만들기로 넘어가세요.</p>
