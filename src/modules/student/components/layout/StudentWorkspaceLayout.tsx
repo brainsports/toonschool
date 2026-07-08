@@ -40,9 +40,9 @@ export default function StudentWorkspaceLayout({
 
   return (
     <StudentPageShell bgVariant={bgVariant} maxWidth="full">
-      <div className="flex w-full h-full flex-1 overflow-hidden">
+      <div className="student-editor-workspace">
         {/* Left Sidebar */}
-        <div className="shrink-0 w-[var(--student-layout-sidebar-width,200px)] h-full bg-[var(--student-color-sidebar-bg,#090911)] overflow-y-auto z-30">
+        <div className="shrink-0 w-[var(--student-layout-sidebar-width,200px)] h-full bg-white/95 backdrop-blur-sm border-r border-pink-100 overflow-y-auto z-30">
           <StudentFlowSidebar 
             currentStep={currentStep} 
             completedSteps={completedSteps} 
@@ -53,13 +53,13 @@ export default function StudentWorkspaceLayout({
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col h-full relative overflow-hidden bg-[var(--student-color-app-bg,#f3f4f7)]">
           {/* Top Header Bar */}
-          <div className="flex items-center justify-between px-6 py-4 shrink-0 bg-white border-b border-[#d9deea] shadow-[0_2px_8px_rgba(15,23,42,0.06)] min-h-[76px] relative z-20 w-full flex-wrap gap-4">
+          <div className="student-editor-header">
             {/* Left Title Area */}
             <div className="flex items-center gap-[16px] min-w-0">
               {showBackButton ? (
                 <button 
                   onClick={onBack ? onBack : () => navigate(-1)}
-                  className="btn-student btn-student-dark w-10 h-10 !p-0 !rounded-xl shadow-sm shrink-0 flex items-center justify-center"
+                  className="btn-editor-prev !p-2 !rounded-xl"
                   title="이전으로"
                 >
                   <ChevronLeft className="w-6 h-6" />

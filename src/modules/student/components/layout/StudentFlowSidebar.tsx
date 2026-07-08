@@ -33,9 +33,9 @@ export default function StudentFlowSidebar({ currentStep, completedSteps = [] }:
   const currentIndex = steps.findIndex(s => s.key === currentStep)
 
   return (
-    <div className="flex flex-col gap-0 w-full h-full py-4 px-2 bg-transparent">
+    <div className="flex flex-col gap-0 w-full h-full pt-3 pb-2 px-2 bg-transparent">
       {/* 헤더 */}
-      <div className="flex items-center gap-1.5 mb-4 px-2">
+      <div className="flex items-center gap-1.5 mb-3 px-2">
         <span className="w-2 h-2 rounded-full bg-pink-400 animate-pulse" />
         <h3 className="text-xs font-jua tracking-wider text-pink-500">
           작품 제작 흐름
