@@ -1719,7 +1719,7 @@ export const selectGeneratedQuestion = async (
 
 export const saveGeneratedTopics = async (
   topics: any[],
-  questionId: string,
+  questionId: string | null,
   batchNo: number = 1
 ): Promise<any[]> => {
   const { data: { user } } = await supabase.auth.getUser()
@@ -1747,17 +1747,19 @@ export const saveGeneratedTopics = async (
 
 export const selectGeneratedTopic = async (
   topicId: string,
-  questionId: string
+  questionId: string | null
 ) => {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')
 
-  // First, set all other topics for this question to false
-  await supabase
-    .from('generated_topics')
-    .update({ is_selected: false })
-    .eq('user_id', user.id)
-    .eq('question_id', questionId)
+  if (questionId) {
+    // First, set all other topics for this question to false
+    await supabase
+      .from('generated_topics')
+      .update({ is_selected: false })
+      .eq('user_id', user.id)
+      .eq('question_id', questionId)
+  }
     
   // Set the selected one to true
   const { error } = await supabase

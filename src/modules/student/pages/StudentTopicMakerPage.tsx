@@ -7,10 +7,10 @@ import StoryInputCard from '../components/topic/StoryInputCard'
 import AiRecommendationCard from '../components/topic/AiRecommendationCard'
 
 import KeywordSelectionCard from '../components/topic/KeywordSelectionCard'
-import QuestionSelectionCard from '../components/topic/QuestionSelectionCard'
+
 import type { StudentUnitSelection } from '../types/studentCurriculum'
-import type { TopicRecommendation, TopicGenerationState, QuestionGenerationState, KeywordItem, CurriculumContext, QuestionCategory, GeneratedQuestion } from '../types/studentTopic'
-import { generateTopicRecommendations, generateKeywords, fetchCurriculumContext, fetchQuestionCategories, generateQuestions, saveGeneratedQuestions, selectGeneratedQuestion, saveGeneratedTopics, selectGeneratedTopic } from '../services/studentTopicService'
+import type { TopicRecommendation, TopicGenerationState, KeywordItem, CurriculumContext } from '../types/studentTopic'
+import { generateTopicRecommendations, generateKeywords, fetchCurriculumContext, saveGeneratedTopics, selectGeneratedTopic } from '../services/studentTopicService'
 import { Sparkles, PenTool, ArrowLeft, Wand2 } from 'lucide-react'
 import { projectStorage } from '../utils/projectStorage'
 import { showToast } from '../utils/toast'
@@ -20,7 +20,7 @@ export default function StudentTopicMakerPage() {
   const location = useLocation()
   
   const [creationMode, setCreationMode] = useState<'ai' | 'manual'>('ai')
-  const [aiStep, setAiStep] = useState<'keyword' | 'question' | 'topic'>('keyword')
+  const [aiStep, setAiStep] = useState<'keyword' | 'topic'>('keyword')
   const [projectId] = useState<string>(location.state?.projectId || '')
   const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null)
   const [extraRequest, setExtraRequest] = useState('')
@@ -45,11 +45,7 @@ export default function StudentTopicMakerPage() {
   const [isKeywordLoading, setIsKeywordLoading] = useState(false)
   const [visibleKeywordCount, setVisibleKeywordCount] = useState(INITIAL_KEYWORD_VISIBLE_COUNT)
 
-  // 질문 추천 관련 상태
-  const [questionCategories, setQuestionCategories] = useState<QuestionCategory[]>([])
-  const [generatedQuestions, setGeneratedQuestions] = useState<GeneratedQuestion[]>([])
-  const [selectedQuestionId, setSelectedQuestionId] = useState<string | null>(null)
-  const [questionGenState, setQuestionGenState] = useState<QuestionGenerationState>('idle')
+
 
   const displayedTopics = topics.slice(0, visibleTopicCount)
   const isMaxTopicsReached = topics.length >= MAX_RECOMMENDED_TOPICS
@@ -133,16 +129,12 @@ export default function StudentTopicMakerPage() {
         }
         if (savedTopicData.extraRequest) setExtraRequest(savedTopicData.extraRequest);
         if (savedTopicData.selectedKeywords) setSelectedKeywords(savedTopicData.selectedKeywords);
-        if (savedTopicData.selectedQuestion) {
-          setGeneratedQuestions([savedTopicData.selectedQuestion]);
-          setSelectedQuestionId(savedTopicData.selectedQuestion.id);
-        }
         if (savedTopicData.topic) {
           setTopics([savedTopicData.topic]);
           setSelectedTopicId(savedTopicData.topic.id);
           setGenState('success');
           
-          if (savedTopicData.selectedQuestion) {
+          if (savedTopicData.selectedKeywords && savedTopicData.selectedKeywords.length > 0) {
             setCreationMode('ai');
             setAiStep('topic');
           } else {
@@ -152,13 +144,6 @@ export default function StudentTopicMakerPage() {
       }
     }
   }, [projectId, selection]);
-
-  // 카테고리 로드
-  useEffect(() => {
-    fetchQuestionCategories()
-      .then(setQuestionCategories)
-      .catch(console.error)
-  }, [])
 
   useEffect(() => {
     if (!currentUnitKey) return
@@ -172,9 +157,7 @@ export default function StudentTopicMakerPage() {
     setRecommendedKeywords([])
     setSelectedKeywords([])
     setVisibleKeywordCount(INITIAL_KEYWORD_VISIBLE_COUNT)
-    setGeneratedQuestions([])
-    setSelectedQuestionId(null)
-    setQuestionGenState('idle')
+
     setTopics([])
     setVisibleTopicCount(INITIAL_TOPIC_VISIBLE_COUNT)
     setSelectedTopicId(null)
@@ -251,75 +234,24 @@ export default function StudentTopicMakerPage() {
     })
   }
 
-  // 2. 질문 생성 실행 함수
-  const handleProceedToQuestions = async () => {
-    if (!selection || selectedKeywords.length === 0) return
-    setAiStep('question')
-    setQuestionGenState('loading')
-    setSelectedQuestionId(null)
-    setGeneratedQuestions([])
 
-    const request = {
-      gradeName: selection.gradeName || '',
-      subjectName: selection.subjectName || '',
-      majorUnitName: selection.majorUnitName || '',
-      middleUnitName: selection.middleUnitName || '',
-      selectedKeywords,
-      categories: questionCategories,
-      curriculumContext
-    }
 
-    try {
-      const questions = await generateQuestions(request)
-      const savedQuestions = await saveGeneratedQuestions(questions, {
-        grade: selection.gradeValue || 0,
-        subject: selection.subjectName || '',
-        semester: selection.semesterValue?.toString() || '',
-        unit_id: selection.majorUnitId || null,
-        subunit_id: selection.middleUnitId || null,
-      })
-      setGeneratedQuestions(savedQuestions)
-      setQuestionGenState('success')
-    } catch (error) {
-      console.error('질문 생성 실패:', error)
-      alert('질문을 만들지 못했습니다. 다시 시도해 주세요.')
-      setQuestionGenState('error')
-    }
-  }
-
-  const handleSelectQuestion = async (qId: string | null) => {
-    setSelectedQuestionId(qId)
-    if (qId) {
-      try {
-        await selectGeneratedQuestion(qId, {
-          keyword: selectedKeywords.join(', '),
-          subject: selection?.subjectName || '',
-          grade: selection?.gradeValue || 0
-        })
-      } catch (e) {
-        console.error('질문 선택 저장 실패:', e)
-      }
-    }
-  }
-
-  // 3. 주제 생성 실행 함수 (질문 선택 후)
+  // 3. 주제 생성 실행 함수 (키워드 선택 후)
   const handleProceedToTopics = async () => {
-    if (!selection || !selectedQuestionId) return
+    if (!selection || selectedKeywords.length === 0) return
     setAiStep('topic')
     setGenState('loading')
     setSelectedTopicId(null)
     setTopics([])
     setVisibleTopicCount(INITIAL_TOPIC_VISIBLE_COUNT)
 
-    const selectedQuestion = generatedQuestions.find(q => q.id === selectedQuestionId)
-
     const request = {
       gradeName: selection.gradeName || '',
       subjectName: selection.subjectName || '',
       majorUnitName: selection.majorUnitName || '',
       middleUnitName: selection.middleUnitName || '',
       selectedKeywords,
-      selectedQuestion,
+      selectedQuestion: undefined,
       learningTopicId: selection.middleUnitId || null,
       previousTitles: [],
       previousIncidents: [],
@@ -331,7 +263,7 @@ export default function StudentTopicMakerPage() {
     try {
       const generatedTopics = await generateTopicRecommendations(request)
       console.debug('[topic save before]', { count: generatedTopics.length, unitKey: currentUnitKey })
-      const savedTopics = await saveGeneratedTopics(generatedTopics, selectedQuestionId, 1)
+      const savedTopics = await saveGeneratedTopics(generatedTopics, null, 1)
       
       // Parse back the topic objects from saved text
       const parsedTopics = savedTopics.map(st => {
@@ -381,8 +313,6 @@ export default function StudentTopicMakerPage() {
     setSelectedTopicId(null)
     setGenState('loading')
 
-    const selectedQuestion = generatedQuestions.find(q => q.id === selectedQuestionId)
-
     const request = {
       gradeName: selection.gradeName || '',
       subjectName: selection.subjectName || '',
@@ -390,7 +320,7 @@ export default function StudentTopicMakerPage() {
       middleUnitName: selection.middleUnitName || '',
       extraRequest: extraRequest.trim() || undefined,
       selectedKeywords,
-      selectedQuestion,
+      selectedQuestion: undefined,
       learningTopicId: selection.middleUnitId || null,
       previousTitles: [],
       previousIncidents: [],
@@ -402,8 +332,8 @@ export default function StudentTopicMakerPage() {
     try {
       const generatedTopics = await generateTopicRecommendations(request)
       console.debug('[topic save before]', { count: generatedTopics.length, unitKey: currentUnitKey, regenerate: true })
-      if (selectedQuestionId) {
-        const savedTopics = await saveGeneratedTopics(generatedTopics, selectedQuestionId, 1)
+      if (true) {
+        const savedTopics = await saveGeneratedTopics(generatedTopics, null, 1)
         const parsedTopics = savedTopics.map(st => {
           try {
             const t = JSON.parse(st.topic_text)
@@ -435,27 +365,23 @@ export default function StudentTopicMakerPage() {
 
   const handleSelectTopic = async (tId: string | null) => {
     setSelectedTopicId(tId)
-    if (tId && selectedQuestionId) {
+    if (tId) {
       try {
-        await selectGeneratedTopic(tId, selectedQuestionId)
+        await selectGeneratedTopic(tId, '')
       } catch (e) {
         console.error('주제 선택 저장 실패:', e)
       }
     }
   }
 
-  // 만화 만들기 클릭 시 이동
   const handleProceedToComic = () => {
     if (!canProceed || !selection || !selectedTopic) return
-
-    const selectedQuestion = generatedQuestions.find(q => q.id === selectedQuestionId)
 
     const fullSelectionData = {
       selection,
       topic: selectedTopic,
       extraRequest,
-      selectedKeywords,
-      selectedQuestion
+      selectedKeywords
     }
 
     const success = projectStorage.saveTopic(projectId, fullSelectionData)
@@ -510,15 +436,10 @@ export default function StudentTopicMakerPage() {
                     setSelectedTopicId(null)
                     setExtraRequest('')
                   } else if (creationMode === 'ai' && aiStep === 'topic') {
-                    setAiStep('question')
+                    setAiStep('keyword')
                     setGenState('idle')
                     setSelectedTopicId(null)
                     setTopics([])
-                  } else if (creationMode === 'ai' && aiStep === 'question') {
-                    setAiStep('keyword')
-                    setQuestionGenState('idle')
-                    setSelectedQuestionId(null)
-                    setGeneratedQuestions([])
                   } else {
                     navigate('/student/select-unit', { state: { projectId } })
                   }
@@ -545,21 +466,21 @@ export default function StudentTopicMakerPage() {
                     />
                     <div className="flex justify-center mt-4">
                       <button
-                        disabled={selectedKeywords.length === 0 || questionGenState === 'loading'}
-                        onClick={handleProceedToQuestions}
+                        disabled={selectedKeywords.length === 0 || genState === 'loading'}
+                        onClick={handleProceedToTopics}
                         className={`btn-primary-action px-8 py-4 font-jua text-xl transition-all shadow-md min-w-[280px] flex justify-center items-center ${
                           selectedKeywords.length === 0 ? 'opacity-50 cursor-not-allowed bg-gray-300 text-gray-500 shadow-none' : '!bg-[#6366F1] hover:!bg-[#4F46E5] !text-white'
                         }`}
                       >
-                        {questionGenState === 'loading' ? (
+                        {genState === 'loading' ? (
                           <>
                             <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-3" />
-                            질문을 만들고 있어요...
+                            이야기를 만들고 있어요...
                           </>
                         ) : (
                           <>
                             <Sparkles className="w-6 h-6 mr-2" />
-                            이 키워드로 질문 만들기 ✨
+                            이 키워드로 주제 만들기 ✨
                           </>
                         )}
                       </button>
@@ -579,18 +500,7 @@ export default function StudentTopicMakerPage() {
                   </div>
                 )}
 
-                {aiStep === 'question' && (
-                  <QuestionSelectionCard
-                    categories={questionCategories}
-                    questions={generatedQuestions}
-                    selectedQuestionId={selectedQuestionId}
-                    onSelectQuestion={handleSelectQuestion}
-                    onProceed={handleProceedToTopics}
-                    isLoading={questionGenState === 'loading'}
-                    isTopicGenerating={genState === 'loading'}
-                    selectedKeywords={selectedKeywords}
-                  />
-                )}
+
 
                 {aiStep === 'topic' && (genState === 'loading' || genState === 'success') && (
                   <div className="card-select-panel p-8 md:p-10 min-h-[240px] animate-fade-in">
