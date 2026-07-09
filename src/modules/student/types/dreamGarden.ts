@@ -2,6 +2,7 @@ export type RewardType =
   | 'attendance'
   | 'comic_complete'
   | 'lucky_reward'
+  | 'hidden_encounter'
   | 'teacher_reward'
   | 'event'
 
