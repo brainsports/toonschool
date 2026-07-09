@@ -104,7 +104,7 @@ export async function getActiveItems(): Promise<DreamGardenItem[]> {
   return (data ?? []) as DreamGardenItem[]
 }
 
-export async function getOrCreateStudentGarden(studentId: string): Promise<StudentGarden> {
+export async function getStudentGarden(studentId: string): Promise<StudentGarden | null> {
   const { data: existing, error: selectError } = await supabase
     .from('student_gardens')
     .select('*')
@@ -112,8 +112,10 @@ export async function getOrCreateStudentGarden(studentId: string): Promise<Stude
     .maybeSingle()
 
   if (selectError) throw selectError
-  if (existing) return existing as StudentGarden
+  return (existing ?? null) as StudentGarden | null
+}
 
+export async function createDefaultGarden(studentId: string): Promise<StudentGarden> {
   const { data, error } = await supabase
     .from('student_gardens')
     .insert({
@@ -124,8 +126,20 @@ export async function getOrCreateStudentGarden(studentId: string): Promise<Stude
     .select('*')
     .single()
 
-  if (error) throw error
+  if (error) {
+    if (error.code === '23505') {
+      const existing = await getStudentGarden(studentId)
+      if (existing) return existing
+    }
+    throw error
+  }
   return data as StudentGarden
+}
+
+export async function getOrCreateStudentGarden(studentId: string): Promise<StudentGarden> {
+  const existing = await getStudentGarden(studentId)
+  if (existing) return existing
+  return createDefaultGarden(studentId)
 }
 
 export async function getStudentItems(studentId: string): Promise<StudentItem[]> {
