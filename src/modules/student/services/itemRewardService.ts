@@ -1,6 +1,6 @@
 import { supabase } from '../../../shared/lib/supabase'
 import type { DreamGardenItem, RewardResult, StudentItem } from '../types/dreamGarden'
-import { getActiveItems, saveGardenPlacement } from './dreamGardenService'
+import { getActiveItems, getAutoGardenPlacement, saveGardenPlacement } from './dreamGardenService'
 
 function pickRandomItem(items: DreamGardenItem[]) {
   return items[Math.floor(Math.random() * items.length)]
@@ -83,10 +83,7 @@ export async function grantHiddenEncounterReward(
     studentId,
     studentItemId: grantedStudentItem.id,
     itemId: grantedStudentItem.item_id,
-    x: 76,
-    y: 72,
-    scale: 0.9,
-    zIndex: 9,
+    ...getAutoGardenPlacement(grantedStudentItem.item ?? item),
   })
 
   return {

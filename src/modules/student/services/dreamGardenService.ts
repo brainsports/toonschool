@@ -49,6 +49,90 @@ function getRewardCandidateItems(items: DreamGardenItem[], rewardType: RewardTyp
   return placeableItems
 }
 
+type AutoPlacementZone = Pick<SaveGardenPlacementInput, 'x' | 'y' | 'scale' | 'zIndex'>
+
+const flowerGardenZones: AutoPlacementZone[] = [
+  { x: 20, y: 61, scale: 0.9, zIndex: 8 },
+  { x: 38, y: 76, scale: 0.85, zIndex: 9 },
+  { x: 49, y: 60, scale: 0.85, zIndex: 8 },
+  { x: 63, y: 80, scale: 0.85, zIndex: 9 },
+]
+
+const grassGardenZones: AutoPlacementZone[] = [
+  { x: 34, y: 70, scale: 0.85, zIndex: 8 },
+  { x: 45, y: 68, scale: 0.85, zIndex: 8 },
+  { x: 60, y: 78, scale: 0.85, zIndex: 9 },
+]
+
+const pondGardenZones: AutoPlacementZone[] = [
+  { x: 73, y: 39, scale: 0.9, zIndex: 5 },
+  { x: 78, y: 45, scale: 0.85, zIndex: 6 },
+]
+
+const skyGardenZones: AutoPlacementZone[] = [
+  { x: 73, y: 15, scale: 0.85, zIndex: 7 },
+  { x: 58, y: 18, scale: 0.8, zIndex: 7 },
+  { x: 28, y: 18, scale: 0.8, zIndex: 7 },
+]
+
+const flyingGardenZones: AutoPlacementZone[] = [
+  { x: 28, y: 45, scale: 0.82, zIndex: 8 },
+  { x: 52, y: 42, scale: 0.82, zIndex: 8 },
+  { x: 68, y: 52, scale: 0.82, zIndex: 8 },
+]
+
+const animalGardenZones: AutoPlacementZone[] = [
+  { x: 82, y: 66, scale: 0.9, zIndex: 8 },
+  { x: 58, y: 72, scale: 0.88, zIndex: 9 },
+]
+
+const decorGardenZones: AutoPlacementZone[] = [
+  { x: 49, y: 54, scale: 0.9, zIndex: 8 },
+  { x: 38, y: 76, scale: 0.86, zIndex: 9 },
+  { x: 63, y: 80, scale: 0.9, zIndex: 9 },
+]
+
+function pickAutoPlacementZone(zones: AutoPlacementZone[], seed: string) {
+  const index = [...seed].reduce((sum, char) => sum + char.charCodeAt(0), 0) % zones.length
+  return zones[index]
+}
+
+export function getAutoGardenPlacement(item?: DreamGardenItem | null): AutoPlacementZone {
+  const code = item?.code?.toLowerCase() ?? ''
+  const name = item?.name?.toLowerCase() ?? ''
+  const category = (item?.category ?? '') as string
+  const seed = code || name || category || 'default'
+
+  const isWaterItem =
+    category === 'water' ||
+    ['pond', 'lotus', 'water_lily', 'water_drop', 'duck', 'swan', 'fish'].some((keyword) => code.includes(keyword) || name.includes(keyword)) ||
+    ['연못', '연꽃', '수련', '물방울', '물고기', '오리', '백조'].some((keyword) => name.includes(keyword))
+
+  if (isWaterItem) return pickAutoPlacementZone(pondGardenZones, seed)
+
+  const isFlowerItem =
+    ['flower', 'flower_seed', 'mushroom'].some((keyword) => code.includes(keyword)) ||
+    ['꽃', '꽃씨', '버섯'].some((keyword) => name.includes(keyword))
+  if (isFlowerItem) return pickAutoPlacementZone(flowerGardenZones, seed)
+
+  const isGrassItem = code.includes('grass') || name.includes('풀') || name.includes('잔디')
+  if (isGrassItem) return pickAutoPlacementZone(grassGardenZones, seed)
+
+  if (category === 'sky' || code.includes('cloud') || name.includes('구름')) {
+    return pickAutoPlacementZone(skyGardenZones, seed)
+  }
+
+  if (code.includes('firefly') || code.includes('butterfly') || name.includes('반딧불') || name.includes('나비')) {
+    return pickAutoPlacementZone(flyingGardenZones, seed)
+  }
+
+  if (category === 'animal') return pickAutoPlacementZone(animalGardenZones, seed)
+  if (category === 'decor' || category === 'spirit' || category === 'legend') return pickAutoPlacementZone(decorGardenZones, seed)
+  if (category === 'nature') return pickAutoPlacementZone(grassGardenZones, seed)
+
+  return pickAutoPlacementZone(decorGardenZones, seed)
+}
+
 async function getExistingRewardLog(studentId: string, rewardType: RewardType, sourceId?: string) {
   let query = supabase
     .from('reward_logs')
@@ -288,10 +372,7 @@ export async function grantAttendanceReward(studentId: string): Promise<RewardRe
           studentId,
           studentItemId: result.studentItem.id,
           itemId: result.studentItem.item_id,
-          x: 74,
-          y: 70,
-          scale: 0.9,
-          zIndex: 8,
+          ...getAutoGardenPlacement(result.studentItem.item ?? result.item),
         })
       } catch (error) {
         console.error('[dreamGardenService] auto place attendance reward failed:', error)
