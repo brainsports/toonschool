@@ -1,5 +1,5 @@
 // 학생 UI 전체 페이지를 감싸는 공통 레이아웃 컴포넌트
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { LogOut, Home, Star, Trophy, Calendar, Sprout } from 'lucide-react'
 import { mockStudentProfile } from '../../data/studentMockData'
@@ -7,6 +7,9 @@ import StudentSpaceBackground from './StudentSpaceBackground'
 import '../../styles/student-ui.css'
 import { useAuth } from '../../../../shared/contexts/AuthContext'
 import { supabase } from '../../../../shared/lib/supabase'
+import AllWorksModal from '../mypage/AllWorksModal'
+import type { MyWork } from '../mypage/WorkCard'
+import { getStudentWorks } from '../../services/studentWorkService'
 
 interface StudentPageShellProps {
   children: React.ReactNode
@@ -43,8 +46,11 @@ export default function StudentPageShell({
   className = '',
 }: StudentPageShellProps) {
   const navigate = useNavigate()
-  const { user, profile: authProfile } = useAuth()
+  const { user, profile: authProfile, signOut } = useAuth()
   const [studentData, setStudentData] = useState<any>(null)
+  const [isAllWorksModalOpen, setIsAllWorksModalOpen] = useState(false)
+  const [myWorks, setMyWorks] = useState<MyWork[]>([])
+  const [hasLoadedWorks, setHasLoadedWorks] = useState(false)
 
   useEffect(() => {
     if (user?.id && authProfile?.role === 'student') {
@@ -55,6 +61,28 @@ export default function StudentPageShell({
       })
     }
   }, [user?.id, authProfile?.role])
+
+  const handleOpenAllWorksModal = useCallback(async () => {
+    setIsAllWorksModalOpen(true)
+
+    if (hasLoadedWorks || !user?.id) {
+      return
+    }
+
+    const works = await getStudentWorks({
+      profileId: authProfile?.id ?? user.id,
+      authUserId: user.id,
+      profileName: authProfile?.name,
+    })
+
+    setMyWorks(works)
+    setHasLoadedWorks(true)
+  }, [authProfile?.id, authProfile?.name, hasLoadedWorks, user?.id])
+
+  const handleLogout = useCallback(async () => {
+    await signOut()
+    navigate('/', { replace: true })
+  }, [navigate, signOut])
 
   const currentProfile = user && authProfile?.role === 'student' ? {
     ...mockStudentProfile,
@@ -103,7 +131,7 @@ export default function StudentPageShell({
             {/* 중앙: 툰스쿨 마크 & 숏컷 */}
             <div className="hidden md:flex items-center gap-2 bg-white/40 px-5 py-2 rounded-2xl border border-white/30 shadow-sm">
               <button 
-                onClick={() => { window.location.href = 'https://toonschool.kr/'; }}
+                onClick={() => navigate('/student/mypage')}
                 className="flex items-center gap-1 text-[#2d1f35] font-jua text-sm hover:scale-105 transition-transform"
               >
                 <Home className="w-4 h-4" />
@@ -111,7 +139,7 @@ export default function StudentPageShell({
               </button>
               <div className="w-px h-4 bg-white/50 mx-2" />
               <button 
-                onClick={() => navigate('/student/mypage')}
+                onClick={handleOpenAllWorksModal}
                 className="text-[#2d1f35] font-jua text-sm hover:scale-105 transition-transform"
               >
                 🌌 내작품
@@ -136,16 +164,28 @@ export default function StudentPageShell({
             {/* 우측: 재화 및 액션 */}
             <div className="flex items-center gap-3">
               {/* 별 개수 */}
-              <div className="flex items-center gap-1.5 bg-yellow-50 border-2 border-yellow-200 px-3 py-1.5 rounded-full text-yellow-700 font-jua text-sm shadow-sm">
+              <button
+                type="button"
+                onClick={() => navigate('/student/dream-garden')}
+                className="flex items-center gap-1.5 bg-yellow-50 border-2 border-yellow-200 px-3 py-1.5 rounded-full text-yellow-700 font-jua text-sm shadow-sm hover:scale-105 transition-transform"
+                title="획득한 아이템 보기"
+                aria-label="획득한 아이템 보기"
+              >
                 <Star className="w-5 h-5 fill-yellow-400 stroke-yellow-500 stroke-2" />
                 <span className="tracking-wide mt-0.5">{profile.totalStars}</span>
-              </div>
+              </button>
 
               {/* 배지/트로피 개수 */}
-              <div className="flex items-center gap-1.5 bg-pink-50 border-2 border-pink-200 px-3 py-1.5 rounded-full text-pink-700 font-jua text-sm shadow-sm">
+              <button
+                type="button"
+                onClick={() => navigate('/student/dream-garden')}
+                className="flex items-center gap-1.5 bg-pink-50 border-2 border-pink-200 px-3 py-1.5 rounded-full text-pink-700 font-jua text-sm shadow-sm hover:scale-105 transition-transform"
+                title="획득한 아이템 보기"
+                aria-label="획득한 아이템 보기"
+              >
                 <Trophy className="w-5 h-5 fill-pink-400 stroke-pink-500 stroke-2" />
                 <span className="tracking-wide mt-0.5">{profile.totalBadges}</span>
-              </div>
+              </button>
 
               {/* 연속 출석 */}
               <div className="flex items-center gap-1.5 bg-sky-50 border-2 border-sky-200 px-3 py-1.5 rounded-full text-sky-700 font-jua text-sm shadow-sm">
@@ -155,7 +195,7 @@ export default function StudentPageShell({
 
               {/* 로그아웃 버튼 */}
               <button
-                onClick={() => navigate('/student/login')}
+                onClick={handleLogout}
                 className="w-10 h-10 rounded-2xl bg-slate-100 border-2 border-slate-200 flex items-center justify-center text-slate-500 hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-colors shadow-sm active:translate-y-[2px]"
                 title="로그아웃"
               >
@@ -171,6 +211,12 @@ export default function StudentPageShell({
       <main className={`flex-1 flex flex-col mx-auto ${isFull ? 'px-0 overflow-hidden' : 'px-4'} w-full relative z-10 ${maxWidths[maxWidth]} ${className}`}>
         {children}
       </main>
+
+      <AllWorksModal
+        isOpen={isAllWorksModalOpen}
+        onClose={() => setIsAllWorksModalOpen(false)}
+        works={myWorks}
+      />
     </div>
   )
 }
