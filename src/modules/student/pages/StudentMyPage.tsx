@@ -17,6 +17,8 @@ import { getStudentWorks } from '../services/studentWorkService'
 import { getLatestTeacherMessageForClass, getTeacherMessagesForClass, resolveStudentClassKey, type TeacherMessage } from '../services/teacherMessageService'
 import { getNotificationsForTarget, type StudentNotification } from '../services/notificationService'
 import { ensureTodayAttendance, getCurrentAttendanceMonth, getMonthlyAttendance } from '../services/studentAttendanceService'
+import { getStudentGrowthDashboard } from '../services/studentGrowthService'
+import type { StudentGrowthDashboardData } from '../types/studentGrowth'
 
 
 
@@ -35,6 +37,8 @@ export default function StudentMyPage() {
   const [notifications, setNotifications] = useState<StudentNotification[]>([]);
   const [isAllNotificationsModalOpen, setIsAllNotificationsModalOpen] = useState(false);
   const [attendanceDates, setAttendanceDates] = useState<string[]>([]);
+  const [growthData, setGrowthData] = useState<StudentGrowthDashboardData | null>(null);
+  const [isLoadingGrowth, setIsLoadingGrowth] = useState(true);
   const attendanceMonth = useMemo(() => getCurrentAttendanceMonth(), []);
   const daysOfWeek = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -109,9 +113,23 @@ export default function StudentMyPage() {
       }
     }
 
+    async function loadGrowthData() {
+      if (!user?.id) return;
+      setIsLoadingGrowth(true);
+      try {
+        const data = await getStudentGrowthDashboard(user.id);
+        setGrowthData(data);
+      } catch (err) {
+        console.error('[StudentMyPage] 성장기록 조회 실패:', err);
+      } finally {
+        setIsLoadingGrowth(false);
+      }
+    }
+
     loadWorks();
     loadTeacherMessageAndNotifications();
     loadAttendance();
+    loadGrowthData();
   }, [user, profile]);
 
   const refreshMessagesAndNotifications = async () => {
@@ -132,16 +150,6 @@ export default function StudentMyPage() {
     const msgs = await getTeacherMessagesForClass(classKey, user?.id);
     setAllMessages(msgs);
   };
-
-  // Evaluation areas data
-  const growthAreas = [
-    { label: '단원 이해력', score: 19, maxScore: 20, color: 'bg-pink-500', bg: 'bg-pink-50' },
-    { label: '요약·정리력', score: 18, maxScore: 20, color: 'bg-purple-500', bg: 'bg-purple-50' },
-    { label: '이야기 표현력', score: 17, maxScore: 20, color: 'bg-blue-500', bg: 'bg-blue-50' },
-    { label: '문제해결·퀴즈 활용력', score: 19, maxScore: 20, color: 'bg-emerald-500', bg: 'bg-emerald-50' },
-    { label: '성장·공유 태도', score: 20, maxScore: 20, color: 'bg-yellow-400', bg: 'bg-yellow-50' },
-  ];
-  const growthScoreTotal = growthAreas.reduce((sum, area) => sum + area.score, 0);
 
   const completedWorksCount = myWorks.filter(work => work.status === 'completed' || work.status === 'shared').length;
 
@@ -205,31 +213,81 @@ export default function StudentMyPage() {
                     <CheckCircle2 className="w-5 h-5" />
                   </div>
                   <span className="text-xs font-bold text-slate-500">성장 점수</span>
-                  <span className="text-2xl font-black text-emerald-500">{growthScoreTotal}점</span>
+                  <span className="text-2xl font-black text-emerald-500">{growthData?.latest?.total_score || 0}점</span>
                 </div>
               </div>
 
               {/* Chart Column */}
               <div className="bg-white rounded-[1.5rem] p-6 border border-slate-100 shadow-sm flex flex-col justify-between min-h-[160px]">
-                <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center justify-between mb-4">
                   <h3 className="font-bold text-slate-800">성장 기록</h3>
+                  <div className="text-xs font-bold px-2 py-1 bg-emerald-50 text-emerald-600 rounded-md">
+                    {growthData?.latest ? `최근 작품 점수 ${growthData.latest.total_score}점` : '기록 없음'}
+                  </div>
                 </div>
-                <div className="w-full flex flex-col gap-3 mt-1">
-                  {growthAreas.map((area, idx) => (
-                    <div key={idx} className="flex flex-col gap-1.5">
-                      <div className="flex items-center justify-between text-xs font-bold">
-                        <span className="text-slate-700">{area.label}</span>
-                        <span className="text-slate-700">{area.score}<span className="text-slate-400 font-medium"> / {area.maxScore}</span></span>
+
+                {isLoadingGrowth ? (
+                   <div className="flex-1 flex items-center justify-center">
+                     <span className="text-slate-400 text-sm font-medium">불러오는 중...</span>
+                   </div>
+                ) : !growthData?.latest ? (
+                   <div className="flex-1 flex flex-col items-center justify-center text-center px-4 py-6 bg-slate-50 rounded-xl border border-slate-100 border-dashed">
+                     <span className="text-2xl mb-2">🌱</span>
+                     <p className="text-slate-600 font-bold text-sm mb-1">아직 성장기록이 없어요.</p>
+                     <p className="text-slate-400 text-xs break-keep mt-1">만화를 완성하면 AI 선생님이 작품을 보고 성장 피드백을 남겨 줄게요.</p>
+                   </div>
+                ) : (
+                  <>
+                    <div className="mb-4 text-[13px] font-bold text-slate-600 flex items-center gap-1.5 bg-slate-50 px-3 py-2 rounded-lg">
+                      <span className="text-lg">{growthData.delta && growthData.delta > 0 ? '🚀' : growthData.delta !== null ? '💪' : '🌟'}</span>
+                      {growthData.delta !== null ? (
+                        growthData.delta > 0 
+                          ? `지난 작품보다 +${growthData.delta}점 성장했어요!` 
+                          : `이번에는 지난 작품보다 ${Math.abs(growthData.delta)}점 낮지만, 다시 좋아질 수 있어요!`
+                      ) : (
+                        '첫 성장기록이에요. 다음 작품에서 얼마나 자랄지 기대돼요!'
+                      )}
+                    </div>
+                    
+                    <div className="w-full flex flex-col gap-3">
+                      {[
+                        { label: '배운 내용 이해', score: growthData.latest.understanding_score, maxScore: 20, color: 'bg-pink-500', bg: 'bg-pink-50' },
+                        { label: '핵심 정리', score: growthData.latest.summary_score, maxScore: 20, color: 'bg-purple-500', bg: 'bg-purple-50' },
+                        { label: '만화 표현', score: growthData.latest.expression_score, maxScore: 20, color: 'bg-blue-500', bg: 'bg-blue-50' },
+                        { label: '생각 확장', score: growthData.latest.thinking_score, maxScore: 20, color: 'bg-emerald-500', bg: 'bg-emerald-50' },
+                        { label: '완성 태도', score: growthData.latest.completion_score, maxScore: 20, color: 'bg-yellow-400', bg: 'bg-yellow-50' },
+                      ].map((area, idx) => (
+                        <div key={idx} className="flex flex-col gap-1.5">
+                          <div className="flex items-center justify-between text-xs font-bold">
+                            <span className="text-slate-700">{area.label}</span>
+                            <span className="text-slate-700">{area.score}<span className="text-slate-400 font-medium"> / {area.maxScore}</span></span>
+                          </div>
+                          <div className={`w-full h-2.5 rounded-full ${area.bg}`}>
+                            <div 
+                              className={`h-full rounded-full ${area.color}`} 
+                              style={{ width: `${(area.score / area.maxScore) * 100}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="mt-5 flex flex-col gap-3">
+                      <div className="bg-sky-50 rounded-xl p-3 border border-sky-100">
+                        <div className="text-xs font-black text-sky-600 mb-1">이번 작품에서 잘한 점</div>
+                        <p className="text-[13px] text-slate-700 font-medium break-keep">
+                          {growthData.latest.strength_feedback}
+                        </p>
                       </div>
-                      <div className={`w-full h-2.5 rounded-full ${area.bg}`}>
-                        <div 
-                          className={`h-full rounded-full ${area.color}`} 
-                          style={{ width: `${(area.score / area.maxScore) * 100}%` }}
-                        ></div>
+                      <div className="bg-pink-50 rounded-xl p-3 border border-pink-100">
+                        <div className="text-xs font-black text-pink-600 mb-1">다음에 더 좋아질 점</div>
+                        <p className="text-[13px] text-slate-700 font-medium break-keep">
+                          {growthData.latest.improvement_feedback}
+                        </p>
                       </div>
                     </div>
-                  ))}
-                </div>
+                  </>
+                )}
               </div>
             </div>
 

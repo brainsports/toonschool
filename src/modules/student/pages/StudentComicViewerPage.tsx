@@ -13,6 +13,8 @@ import type { WorldStory, OXQuestion } from '../services/studentUnitSummaryServi
 import { supabase } from '../../../shared/lib/supabase'
 import html2canvas from 'html2canvas'
 import { jsPDF } from 'jspdf'
+import { useAuth } from '../../../shared/contexts/AuthContext'
+import { createGrowthEvaluationForSharedComic } from '../services/studentGrowthService'
 const BGM_PATH = '/audio/viewer/if-i-had-a-chicken.mp3';
 
 function hexToRgba(hex: string, opacity: number) {
@@ -266,6 +268,7 @@ const createShareUrl = (slug: string) => {
 export default function StudentComicViewerPage() {
   const navigate = useNavigate()
   const location = useLocation()
+  const { user } = useAuth()
   
   const [pages, setPages] = useState<ViewerPage[]>([])
   const [currentSpreadIndex, setCurrentSpreadIndex] = useState(0)
@@ -1108,6 +1111,14 @@ export default function StudentComicViewerPage() {
         });
 
       if (insertError) throw insertError;
+
+      if (user?.id) {
+        try {
+          await createGrowthEvaluationForSharedComic(currentProjectId, user.id);
+        } catch (evalError) {
+          console.error('[StudentComicViewerPage] 성장기록 생성 실패', evalError);
+        }
+      }
 
       setShareModalData({ url: createShareUrl(slug) });
     } catch (error) {
