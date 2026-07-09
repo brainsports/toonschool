@@ -39,6 +39,7 @@ import StudentComicViewerPage from '../modules/student/pages/StudentComicViewerP
 import SharedComicViewerPage from '../modules/student/pages/SharedComicViewerPage'
 import StudentMyPage from '../modules/student/pages/StudentMyPage'
 import StudentResourcePage from '../modules/student/pages/StudentResourcePage'
+import StudentDreamGardenPage from '../modules/student/pages/StudentDreamGardenPage'
 
 import ResourceInbox from '../modules/resources/pages/ResourceInbox'
 
@@ -120,6 +121,7 @@ export default function AppRouter() {
       <Route path="/student/mypage" element={<StudentMyPage />} />
       <Route path="/student/my" element={<Navigate to="/student/mypage" replace />} />
       <Route path="/student/resources" element={<StudentResourcePage />} />
+      <Route path="/student/dream-garden" element={<StudentDreamGardenPage />} />
       <Route path="/book/:slug" element={<SharedComicViewerPage />} />
 
       {/* 관리 LMS 라우트 */}

@@ -1,7 +1,7 @@
 // 학생 UI 전체 페이지를 감싸는 공통 레이아웃 컴포넌트
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { LogOut, Home, Star, Trophy, Calendar } from 'lucide-react'
+import { LogOut, Home, Star, Trophy, Calendar, Sprout } from 'lucide-react'
 import { mockStudentProfile } from '../../data/studentMockData'
 import StudentSpaceBackground from './StudentSpaceBackground'
 import '../../styles/student-ui.css'
@@ -122,6 +122,14 @@ export default function StudentPageShell({
                 className="text-[#2d1f35] font-jua text-sm hover:scale-105 transition-transform"
               >
                 📁 자료실
+              </button>
+              <div className="w-px h-4 bg-white/50 mx-2" />
+              <button
+                onClick={() => navigate('/student/dream-garden')}
+                className="flex items-center gap-1 text-[#2d1f35] font-jua text-sm hover:scale-105 transition-transform"
+              >
+                <Sprout className="w-4 h-4" />
+                <span>{'\uafc8\uc758 \uc815\uc6d0'}</span>
               </button>
             </div>
 
