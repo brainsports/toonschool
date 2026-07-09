@@ -316,7 +316,7 @@ export default function StudentMyPage() {
                     onClick={() => setIsAllWorksModalOpen(true)}
                     className="text-xs font-bold text-pink-500 hover:bg-pink-50 px-3 py-1.5 rounded-full flex items-center gap-1 transition-colors"
                   >
-                    만드는 중 <ChevronRight className="w-3 h-3" />
+                    모두보기 <ChevronRight className="w-3 h-3" />
                   </button>
                 )}
               </div>
