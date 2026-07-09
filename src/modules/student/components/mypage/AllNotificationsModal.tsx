@@ -2,7 +2,7 @@ import { Bell, Trophy, MessageSquare, Star, Info, X, Trash2 } from 'lucide-react
 import type { StudentNotification } from '../../services/notificationService';
 import { hideOrgNotification } from '../../services/notificationService';
 import { useAuth } from '../../../../shared/contexts/AuthContext';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 interface Props {
   isOpen: boolean;
@@ -14,6 +14,11 @@ interface Props {
 export default function AllNotificationsModal({ isOpen, onClose, notifications, onDeleted }: Props) {
   const { user } = useAuth();
   const [isDeleting, setIsDeleting] = useState(false);
+  const [visibleNotifications, setVisibleNotifications] = useState<StudentNotification[]>(notifications);
+
+  useEffect(() => {
+    setVisibleNotifications(notifications);
+  }, [notifications]);
 
   if (!isOpen) return null;
 
@@ -61,16 +66,19 @@ export default function AllNotificationsModal({ isOpen, onClose, notifications, 
   };
 
   const handleDelete = async (notificationId: string) => {
+    if (!window.confirm('이 알림을 내 알림함에서 삭제할까요?')) return;
+
+    setVisibleNotifications((current) => current.filter((noti) => noti.id !== notificationId));
+
     if (!user) return;
-    if (window.confirm("이 알림을 삭제하시겠습니까?")) {
-      setIsDeleting(true);
-      const success = await hideOrgNotification(user.id, notificationId);
-      setIsDeleting(false);
-      if (success && onDeleted) {
-        onDeleted();
-      } else if (!success) {
-        alert("알림 삭제에 실패했습니다.");
-      }
+
+    setIsDeleting(true);
+    const success = await hideOrgNotification(user.id, notificationId);
+    setIsDeleting(false);
+
+    // TODO: student_notifications 원본 알림도 학생별 숨김 테이블이 생기면 DB 숨김 처리로 교체합니다.
+    if (success && onDeleted) {
+      onDeleted();
     }
   };
 
@@ -99,9 +107,9 @@ export default function AllNotificationsModal({ isOpen, onClose, notifications, 
         </div>
 
         <div className="p-6 overflow-y-auto flex-1">
-          {notifications.length > 0 ? (
+          {visibleNotifications.length > 0 ? (
             <div className="flex flex-col gap-4">
-              {notifications.map((noti) => (
+              {visibleNotifications.map((noti) => (
                 <div key={noti.id} className="flex gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:shadow-sm transition-all relative group">
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${getCategoryBg(noti.category)}`}>
                     {getCategoryIcon(noti.category)}

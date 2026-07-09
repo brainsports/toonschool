@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { 
   BookOpen, Star, Trophy, Calendar, 
@@ -16,119 +16,9 @@ import { useAuth } from '../../../shared/contexts/AuthContext'
 import { getStudentWorks } from '../services/studentWorkService'
 import { getLatestTeacherMessageForClass, getTeacherMessagesForClass, resolveStudentClassKey, type TeacherMessage } from '../services/teacherMessageService'
 import { getNotificationsForTarget, type StudentNotification } from '../services/notificationService'
+import { ensureTodayAttendance, getCurrentAttendanceMonth, getMonthlyAttendance } from '../services/studentAttendanceService'
 
 
-
-type RecommendationSource = 'teacher-assigned' | 'in-progress' | 'rotation' | 'default';
-
-interface RecommendedLearning {
-  subject: string;
-  unitTitle: string;
-  description: string;
-  source: RecommendationSource;
-}
-
-/**
- * 오늘의 추천 학습 로직
- * 
- * 추천 우선순위:
- * A. 교사 지정 과제가 있으면 최우선
- * B. 미완성 작품이 있으면 이어서 추천
- * C. 과목 순환 추천 (국어 → 영어 → 수학 → 사회 → 과학 → 다시 국어)
- * D. 해당 과목에서 다음 중단원 추천
- * E. 해당 과목 기록이 없으면 첫 중단원 추천
- * F. 해당 과목의 모든 중단원을 완료했다면 다음 과목으로 넘어가기
- * G. 모든 데이터가 없을 때 기본 추천
- */
-const getTodayRecommendedLearning = (): RecommendedLearning => {
-  // TODO: 실제 Supabase 학습 기록 데이터와 연동 (studentMockData 등 활용 가능)
-  const mockTeacherAssignedTask: any = null; // ex: { subject: '국어', unitTitle: '...', description: '...' }
-  const mockInProgressWork: any = null;      // ex: { subject: '과학', unitTitle: '...', description: '...' }
-  const mockLastWorkedSubject = '과학';        // 순환 테스트를 위해 '과학'으로 임시 설정 (다음은 '국어')
-
-  // A. 교사 지정 과제가 있으면 최우선
-  if (mockTeacherAssignedTask) {
-    return {
-      subject: mockTeacherAssignedTask.subject || '국어',
-      unitTitle: mockTeacherAssignedTask.unitTitle || '과제 단원',
-      description: mockTeacherAssignedTask.description || '선생님이 지정하신 과제를 시작하세요.',
-      source: 'teacher-assigned',
-    };
-  }
-
-  // B. 미완성 작품이 있으면 이어서 추천
-  if (mockInProgressWork) {
-    return {
-      subject: mockInProgressWork.subject || '국어',
-      unitTitle: mockInProgressWork.unitTitle || '미완성 단원',
-      description: mockInProgressWork.description || '만들던 작품을 이어서 완성해보세요.',
-      source: 'in-progress',
-    };
-  }
-
-  // C. 과목 순환 추천 기준
-  const subjectRotation = ['국어', '영어', '수학', '사회', '과학'];
-  let startIndex = subjectRotation.indexOf(mockLastWorkedSubject);
-  if (startIndex === -1) startIndex = -1;
-
-  // 과목별 학습 기록 Mock (실제로는 API 연동)
-  const mockRecords: Record<string, { lastCompletedUnit: number; totalUnits: number }> = {
-    '국어': { lastCompletedUnit: 3, totalUnits: 10 },
-    '영어': { lastCompletedUnit: 0, totalUnits: 10 },
-    '수학': { lastCompletedUnit: 5, totalUnits: 10 },
-    '사회': { lastCompletedUnit: 2, totalUnits: 10 },
-    '과학': { lastCompletedUnit: 4, totalUnits: 10 },
-  };
-
-  // 최대 5과목을 순환하며 (F)
-  for (let i = 1; i <= subjectRotation.length; i++) {
-    const nextIndex = (startIndex + i) % subjectRotation.length;
-    const subject = subjectRotation[nextIndex];
-    const record = mockRecords[subject];
-
-    // E. 기록이 아예 없는 경우
-    if (!record) {
-      return {
-        subject,
-        unitTitle: '1단원',
-        description: '새로운 과목의 학습을 시작해보세요.',
-        source: 'rotation',
-      };
-    }
-
-    // D. 다음 중단원 추천
-    if (record.lastCompletedUnit < record.totalUnits) {
-      const nextUnit = record.lastCompletedUnit + 1;
-      
-      let description = '다음 단원을 학습해보세요.';
-      // 기존 예시 화면과 비슷한 출력을 위해 하드코딩된 예외 처리
-      if (subject === '국어' && nextUnit === 4) {
-        description = '만화로 마음 표현하기';
-        return {
-          subject,
-          unitTitle: `${nextUnit}단원. 마음을 전해요`,
-          description,
-          source: 'rotation',
-        };
-      }
-
-      return {
-        subject,
-        unitTitle: `${nextUnit}단원`,
-        description,
-        source: 'rotation',
-      };
-    }
-  }
-
-  // G. 기본 추천
-  return {
-    subject: '국어',
-    unitTitle: '1단원. 마음을 전해요',
-    description: '만화로 마음 표현하기',
-    source: 'default',
-  };
-};
 
 export default function StudentMyPage() {
   const navigate = useNavigate()
@@ -144,22 +34,30 @@ export default function StudentMyPage() {
 
   const [notifications, setNotifications] = useState<StudentNotification[]>([]);
   const [isAllNotificationsModalOpen, setIsAllNotificationsModalOpen] = useState(false);
-
-  // Mock data for attendance
+  const [attendanceDates, setAttendanceDates] = useState<string[]>([]);
+  const attendanceMonth = useMemo(() => getCurrentAttendanceMonth(), []);
   const daysOfWeek = ['일', '월', '화', '수', '목', '금', '토'];
-  // 2026년 7월 1일은 수요일(인덱스 3), 총 31일.
-  const monthlyAttendance = Array.from({ length: 35 }, (_, i) => {
-    const date = i - 2; // i=3일 때 date=1
-    if (date > 0 && date <= 31) {
-      return { 
-        date, 
-        attended: [1, 2, 3].includes(date),
-        isToday: date === 3
+
+  const monthlyAttendance = useMemo(() => {
+    const attendedSet = new Set(attendanceDates);
+    const firstDay = new Date(attendanceMonth.year, attendanceMonth.month - 1, 1).getDay();
+    const lastDate = new Date(attendanceMonth.year, attendanceMonth.month, 0).getDate();
+    const cellCount = Math.ceil((firstDay + lastDate) / 7) * 7;
+
+    return Array.from({ length: cellCount }, (_, index) => {
+      const date = index - firstDay + 1;
+      if (date < 1 || date > lastDate) return null;
+
+      const dateKey = `${attendanceMonth.year}-${String(attendanceMonth.month).padStart(2, '0')}-${String(date).padStart(2, '0')}`;
+      return {
+        date,
+        attended: attendedSet.has(dateKey),
+        isToday: dateKey === attendanceMonth.today,
       };
-    }
-    return null;
-  });
-  const attendedDaysCount = 3;
+    });
+  }, [attendanceDates, attendanceMonth]);
+
+  const attendedDaysCount = attendanceDates.length;
 
   useEffect(() => {
     async function loadWorks() {
@@ -199,8 +97,21 @@ export default function StudentMyPage() {
       setNotifications(notis);
     }
 
+    async function loadAttendance() {
+      if (!user?.id) return;
+
+      try {
+        await ensureTodayAttendance(user.id);
+        const records = await getMonthlyAttendance(user.id);
+        setAttendanceDates(records.map((record) => record.reward_date));
+      } catch (err) {
+        console.error('[StudentMyPage] 출석 기록 조회 실패:', err);
+      }
+    }
+
     loadWorks();
     loadTeacherMessageAndNotifications();
+    loadAttendance();
   }, [user, profile]);
 
   const refreshNotifications = async () => {
@@ -217,7 +128,6 @@ export default function StudentMyPage() {
     setAllMessages(msgs);
   };
 
-  const recommendedLearning = getTodayRecommendedLearning()
   // Evaluation areas data
   const growthAreas = [
     { label: '단원 이해력', score: 19, maxScore: 20, color: 'bg-pink-500', bg: 'bg-pink-50' },
@@ -237,28 +147,24 @@ export default function StudentMyPage() {
           {/* Left Column (8/12) */}
           <div className="lg:col-span-8 flex flex-col gap-6">
             
-            {/* 오늘의 학습 Main Card */}
-            <div className="bg-gradient-to-r from-pink-50 to-pink-100/50 rounded-[2rem] p-8 flex items-center justify-between border border-pink-100 relative overflow-hidden min-h-[260px] shadow-sm">
-              <div className="z-10 flex flex-col gap-4">
+            {/* 학생 격려 배너 */}
+            <div className="bg-gradient-to-r from-pink-50 to-sky-50 rounded-[2rem] p-8 flex items-center justify-between border border-pink-100 relative overflow-hidden min-h-[260px] shadow-sm">
+              <div className="z-10 flex flex-col gap-4 max-w-xl">
                 <div className="flex items-center gap-2">
-                  <h2 className="text-2xl font-black text-pink-600">오늘의 추천 학습</h2>
-                  <span className="text-2xl">☀️</span>
+                  <h2 className="text-2xl md:text-3xl font-black text-pink-600">오늘도 툰스쿨과 함께 출발해요!</h2>
+                  <span className="text-2xl">🚀</span>
                 </div>
 
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="px-3 py-1 bg-pink-500 text-white text-sm font-bold rounded-full">{recommendedLearning.subject}</span>
-                    <span className="font-bold text-slate-700 text-lg">{recommendedLearning.unitTitle}</span>
-                  </div>
-                  <p className="text-slate-500 font-medium ml-1">{recommendedLearning.description}</p>
-                </div>
+                <p className="text-slate-600 font-bold text-lg leading-relaxed">
+                  내가 배운 내용을 멋진 만화로 만들어 볼까요?
+                </p>
 
                 <button 
                   onClick={() => navigate('/student/select-unit')}
                   className="mt-2 bg-pink-500 hover:bg-pink-600 text-white font-bold py-3 px-6 rounded-full shadow-md shadow-pink-500/20 hover:shadow-lg transition-all flex items-center gap-2 w-fit active:scale-95"
                 >
                   <Play className="w-5 h-5 fill-current" />
-                  <span>{recommendedLearning.source === 'teacher-assigned' ? '과제 시작' : '툰스쿨 에디터'}</span>
+                  <span>툰스쿨 에디터 입장</span>
                 </button>
               </div>
               <img 
@@ -267,7 +173,6 @@ export default function StudentMyPage() {
                 className="absolute right-0 bottom-0 h-[90%] md:h-[95%] object-contain object-right-bottom transform translate-x-4 opacity-90"
               />
             </div>
-
             {/* Stats Cards & Growth Chart */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Stats Column */}
@@ -287,7 +192,7 @@ export default function StudentMyPage() {
                   <div className="w-10 h-10 bg-sky-50 text-sky-500 rounded-full flex items-center justify-center mb-1">
                     <Calendar className="w-5 h-5" />
                   </div>
-                  <span className="text-xs font-bold text-slate-500">출석</span>
+                  <span className="text-xs font-bold text-slate-500">이번 달 출석</span>
                   <span className="text-2xl font-black text-sky-500">{attendedDaysCount}일</span>
                 </div>
                 <div className="bg-white rounded-[1.5rem] p-5 flex flex-col items-center justify-center gap-2 border border-slate-100 shadow-sm text-center">
@@ -387,7 +292,7 @@ export default function StudentMyPage() {
                   <h3 className="font-bold text-slate-800">출석 기록</h3>
                 </div>
                 <div className="text-sm font-bold text-slate-700">
-                  2026년 7월
+                  {attendanceMonth.year}년 {attendanceMonth.month}월
                 </div>
               </div>
 
