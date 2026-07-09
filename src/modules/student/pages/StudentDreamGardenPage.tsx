@@ -397,10 +397,6 @@ export default function StudentDreamGardenPage() {
                 ))}
               </div>
             </div>
-          </aside>
-
-          {/* ── 오른쪽 정보 오버레이 ── */}
-          <aside className="dream-garden-overlay dream-garden-overlay-right" aria-label="보유 아이템">
             {/* 획득 아이템 수 */}
             <div className="dg-info-section">
               <div className="dg-info-header">
