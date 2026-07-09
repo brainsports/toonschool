@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../../../shared/contexts/AuthContext';
 import { v4 as uuidv4 } from 'uuid';
 import StudentWorkspaceLayout from '../components/layout/StudentWorkspaceLayout'
 import StudentToolPanel from '../components/layout/StudentToolPanel'
@@ -21,6 +22,7 @@ import ComicScriptPanel from '../components/comic-editor/ComicScriptPanel';
 import ComicSpeechBubblePanel from '../components/comic-editor/ComicSpeechBubblePanel';
 import ComicLayerPanel from '../components/comic-editor/ComicLayerPanel';
 import ToonSchoolCharacterBadgeGroup from '../components/layout/ToonSchoolCharacterBadgeGroup';
+import HiddenItemEncounter from '../components/reward/HiddenItemEncounter';
 
 type ToolType = 'select' | 'background' | 'character' | 'bubble' | 'script' | 'layer';
 
@@ -182,6 +184,7 @@ function ComicCellWrapper({
 export default function StudentComicFullViewPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user, profile } = useAuth();
   
   const [selectionData, setSelectionData] = useState<any>(null);
   const [projectId] = useState<string>(location.state?.projectId || '');
@@ -840,6 +843,9 @@ export default function StudentComicFullViewPage() {
   const activePanelWidth = 72 + (activeTool !== 'select' ? 300 : 0);
   const centerOffset = activePanelWidth / 2;
 
+  const studentId = profile?.role === 'student' ? profile.id : user?.id;
+  const hiddenEncounterSourceId = projectData?.projectId ? `comic:${projectData.projectId}` : null;
+
   const centerContent = !allBackgroundsGenerated && !genAllState.isRunning && (
     <div 
       className="px-4 py-1.5 bg-purple-50 text-purple-600 rounded-full font-bold text-[13px] border border-purple-100 shadow-sm flex items-center gap-2 transition-transform duration-300"
@@ -864,14 +870,19 @@ export default function StudentComicFullViewPage() {
       actionButtons={actionButtons}
       centerContent={centerContent}
     >
+      <HiddenItemEncounter
+        studentId={studentId}
+        sourceId={hiddenEncounterSourceId}
+        enabled={Boolean(studentId && hiddenEncounterSourceId)}
+      />
       <div className="flex flex-col w-full h-full relative">
 
         {/* 하단 패널 및 캔버스 영역 */}
         <div className="flex-1 flex overflow-hidden w-full relative">
           <StudentToolPanel width="var(--student-layout-tool-panel-width,300px)" className="flex-row !w-auto">
-            <div className="flex h-full shrink-0 relative z-30 bg-[#f8f9fc] shadow-lg border-r border-[#d9deea]">
+            <div className="flex h-full shrink-0 relative z-30 bg-[#163F46] shadow-lg border-r border-[#0f3a3b]">
           {/* Main Vertical Toolbar */}
-          <div className="w-[72px] h-full shrink-0 z-40 flex flex-col items-center bg-white">
+          <div className="w-[72px] h-full shrink-0 z-40 flex flex-col items-center bg-[#163F46]">
             <div className="flex-1 flex flex-col items-center gap-2 overflow-y-auto w-full pt-4 student-scrollbar">
               {tools.map(tool => {
                 const Icon = tool.icon;
@@ -880,7 +891,7 @@ export default function StudentComicFullViewPage() {
                   <button
                     key={tool.id}
                     onClick={() => setActiveTool(tool.id)}
-                    className={`flex flex-col items-center justify-center w-14 h-14 rounded-xl transition-all shrink-0 ${isActive ? 'bg-purple-600 text-white' : 'text-[#555b6b] hover:text-[#303442] hover:bg-[#f3f4f7]'}`}
+                    className={`flex flex-col items-center justify-center w-14 h-14 rounded-xl transition-all shrink-0 ${isActive ? 'bg-[#ff2778] text-white shadow-md' : 'text-[#c7dede] hover:text-white hover:bg-white/10'}`}
                     title={tool.label}
                   >
                     <Icon className="w-5 h-5 mb-1" />

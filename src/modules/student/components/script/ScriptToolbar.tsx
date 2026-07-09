@@ -15,7 +15,7 @@ export default function ScriptToolbar({ activeTool, onSelectTool }: ScriptToolba
   ] as const;
 
   return (
-    <div className="w-full h-full flex flex-col items-center py-4 bg-[#f3f4f7] border-r border-[#dfe2ea]">
+    <div className="w-full h-full flex flex-col items-center py-4 bg-[#163F46] border-r border-[#0f3a3b]">
       <div className="flex flex-col gap-4 w-full px-2">
         {tools.map(tool => {
           const isActive = activeTool === tool.id;
@@ -25,8 +25,8 @@ export default function ScriptToolbar({ activeTool, onSelectTool }: ScriptToolba
               onClick={() => onSelectTool(tool.id)}
               className={`flex flex-col items-center justify-center py-3 px-1 rounded-xl transition-all group relative ${
                 isActive 
-                  ? 'bg-[#ff2778] text-[#ffffff]' 
-                  : 'text-[#555b6b] bg-transparent hover:bg-[#ffe6ef] hover:text-[#ff2778]'
+                  ? 'bg-[#ff2778] text-[#ffffff] shadow-md'
+                  : 'text-[#c7dede] bg-transparent hover:bg-white/10 hover:text-white'
               }`}
               title={tool.label}
             >
@@ -39,12 +39,12 @@ export default function ScriptToolbar({ activeTool, onSelectTool }: ScriptToolba
         })}
       </div>
 
-      <div className="mt-auto flex flex-col gap-3 w-full px-2 pt-4 border-t border-[#dfe2ea]">
-        <button className="flex flex-col items-center justify-center p-2 rounded-xl text-[#555b6b] bg-transparent hover:bg-[#ffe6ef] hover:text-[#ff2778] transition-colors">
+      <div className="mt-auto flex flex-col gap-3 w-full px-2 pt-4 border-t border-white/15">
+        <button className="flex flex-col items-center justify-center p-2 rounded-xl text-[#c7dede] bg-transparent hover:bg-white/10 hover:text-white transition-colors">
           <Undo2 className="w-5 h-5 mb-1" />
           <span className="text-[9px] font-jua">취소</span>
         </button>
-        <button className="flex flex-col items-center justify-center p-2 rounded-xl text-[#555b6b] bg-transparent hover:bg-[#ffe6ef] hover:text-[#ff2778] transition-colors">
+        <button className="flex flex-col items-center justify-center p-2 rounded-xl text-[#c7dede] bg-transparent hover:bg-white/10 hover:text-white transition-colors">
           <Redo2 className="w-5 h-5 mb-1" />
           <span className="text-[9px] font-jua">다시</span>
         </button>

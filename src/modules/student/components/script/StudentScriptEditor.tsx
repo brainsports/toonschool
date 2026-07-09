@@ -253,7 +253,7 @@ export default function StudentScriptEditor({ selectionData, projectId, onPrev, 
       {/* Left Tools Area */}
       <StudentToolPanel width="var(--student-layout-tool-panel-width,320px)" className="flex-row !w-auto">
         {/* Main Vertical Toolbar */}
-        <div className="w-[64px] h-full shrink-0 z-40 bg-[var(--student-color-tool-panel-bg,#f8f9fc)]">
+        <div className="w-[64px] h-full shrink-0 z-40 bg-[#163F46]">
           <ScriptToolbar 
             activeTool={activeTool}
             onSelectTool={(tool: ScriptToolType) => {
@@ -267,7 +267,7 @@ export default function StudentScriptEditor({ selectionData, projectId, onPrev, 
 
         {/* Tool Panels */}
         {isPanelOpen && (
-          <div className="w-[300px] lg:w-[320px] h-full transition-all shrink-0 bg-[#ffffff] border-l border-[var(--student-color-border,#d9deea)] z-30 flex flex-col relative">
+          <div className="w-[300px] lg:w-[320px] h-full transition-all shrink-0 bg-[#F7FAFA] border-l border-[#d6e4e4] z-30 flex flex-col relative">
             {/* 태블릿용 닫기 버튼 */}
             <button 
               className="lg:hidden absolute top-2 right-2 text-[#555b6b] hover:text-[#ff2778] p-2"

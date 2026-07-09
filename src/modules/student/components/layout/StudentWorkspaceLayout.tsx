@@ -42,7 +42,7 @@ export default function StudentWorkspaceLayout({
     <StudentPageShell bgVariant={bgVariant} maxWidth="full">
       <div className="student-editor-workspace">
         {/* Left Sidebar */}
-        <div className="shrink-0 w-[var(--student-layout-sidebar-width,200px)] h-full bg-white/95 backdrop-blur-sm border-r border-pink-100 overflow-y-auto z-30">
+        <div className="shrink-0 w-[var(--student-layout-sidebar-width,200px)] h-full bg-[#134B4C] border-r border-[#0f3a3b] shadow-[6px_0_18px_rgba(15,58,59,0.18)] overflow-y-auto z-30">
           <StudentFlowSidebar 
             currentStep={currentStep} 
             completedSteps={completedSteps} 

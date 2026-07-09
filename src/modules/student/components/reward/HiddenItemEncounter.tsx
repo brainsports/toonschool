@@ -42,8 +42,8 @@ export default function HiddenItemEncounter({
       hideTimerRef.current = window.setTimeout(() => {
         setVisible(false)
         setFinished(true)
-      }, getRandomMs(6, 10))
-    }, getRandomMs(45, 90))
+      }, getRandomMs(8, 10))
+    }, getRandomMs(15, 30))
 
     return () => {
       window.clearTimeout(showTimer)
@@ -72,7 +72,7 @@ export default function HiddenItemEncounter({
       onRewardGranted?.(result)
     } catch (error) {
       console.error('[HiddenItemEncounter] reward failed:', error)
-      setMessage('잠깐! 다시 눌러 볼까요?')
+      setMessage('앗! 다시 눌러 볼까요?')
     } finally {
       setIsClaiming(false)
     }
