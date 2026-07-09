@@ -9,7 +9,6 @@ import {
   Leaf,
   Loader2,
   Lock,
-  Plus,
   Rabbit,
   Sparkles,
   Sprout,
@@ -27,7 +26,6 @@ import {
   grantAttendanceReward,
   grantComicCompleteReward,
   grantLuckyRewardIfNeeded,
-  saveGardenPlacement,
 } from '../services/dreamGardenService'
 
 type GardenSlotId =
@@ -62,30 +60,6 @@ const gardenSlots: GardenSlot[] = [
   { id: 'bottom_bench', label: '벤치', category: 'decor', x: 63, y: 80, size: 'md', icon: Armchair, zIndex: 8 },
 ]
 
-const rarityLabels: Record<string, string> = {
-  common: '기본',
-  uncommon: '특별',
-  rare: '희귀',
-  epic: '반짝',
-  legendary: '전설',
-}
-
-const categoryLabels: Record<string, string> = {
-  nature: '자연',
-  animal: '친구',
-  spirit: '정령',
-  decor: '장식',
-  sky: '하늘',
-  legend: '전설',
-}
-
-const rarityStyles: Record<string, string> = {
-  common: 'bg-slate-100 text-slate-600 border-slate-200',
-  uncommon: 'bg-emerald-100 text-emerald-700 border-emerald-200',
-  rare: 'bg-sky-100 text-sky-700 border-sky-200',
-  epic: 'bg-purple-100 text-purple-700 border-purple-200',
-  legendary: 'bg-amber-100 text-amber-700 border-amber-200',
-}
 
 function getRewardMessage(result: RewardResult) {
   if (result.status === 'already_claimed') return '이미 받은 보상이에요.'
@@ -111,34 +85,6 @@ function ItemImage({ item, imgClassName, fallbackClassName }: { item?: StudentIt
   return <span className={fallbackClassName}>{getItemEmoji(item)}</span>
 }
 
-function getSlotForItem(studentItem: StudentItem, usedSlots: Set<GardenSlotId>) {
-  const item = studentItem.item
-  const code = item?.code?.toLowerCase() ?? ''
-  const name = item?.name?.toLowerCase() ?? ''
-
-  const preferredId =
-    code.includes('sky') || item?.category === 'sky'
-      ? 'sky_magic'
-      : code.includes('animal') || item?.category === 'animal'
-        ? 'right_animal'
-        : code.includes('bench') || name.includes('벤치')
-          ? 'bottom_bench'
-          : code.includes('pond') || name.includes('연못')
-            ? 'pond'
-            : code.includes('flower') || name.includes('꽃')
-              ? 'left_flowerbed'
-              : code.includes('tree') || name.includes('나무') || item?.category === 'nature'
-                ? 'top_tree'
-                : item?.category === 'decor'
-                  ? 'center_fountain'
-                  : 'path_decoration'
-
-  const preferredSlot = gardenSlots.find((slot) => slot.id === preferredId)
-  if (preferredSlot && !usedSlots.has(preferredSlot.id)) return preferredSlot
-
-  return gardenSlots.find((slot) => !usedSlots.has(slot.id)) ?? gardenSlots[0]
-}
-
 function getNearestSlot(placement: GardenPlacement, usedSlots: Set<GardenSlotId>) {
   const availableSlots = gardenSlots.filter((slot) => !usedSlots.has(slot.id))
   const slots = availableSlots.length > 0 ? availableSlots : gardenSlots
@@ -162,26 +108,6 @@ export default function StudentDreamGardenPage() {
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const groupedItems = useMemo(() => {
-    const map = new Map<string, { item: StudentItem; count: number }>()
-
-    studentItems.forEach((studentItem) => {
-      const key = studentItem.item_id
-      const existing = map.get(key)
-      if (existing) {
-        existing.count += studentItem.quantity
-      } else {
-        map.set(key, { item: studentItem, count: studentItem.quantity })
-      }
-    })
-
-    return Array.from(map.values())
-  }, [studentItems])
-
-  const placedStudentItemIds = useMemo(
-    () => new Set(placements.map((placement) => placement.student_item_id)),
-    [placements]
-  )
 
   const recentItems = useMemo(
     () =>
@@ -252,39 +178,6 @@ export default function StudentDreamGardenPage() {
     } catch (err) {
       console.error('[StudentDreamGardenPage] reward failed:', err)
       setError('보상을 받는 중 문제가 생겼어요.')
-    } finally {
-      setIsWorking(false)
-    }
-  }
-
-  async function handlePlaceItem(studentItem: StudentItem) {
-    if (!studentId) return
-
-    setIsWorking(true)
-    setError(null)
-    setMessage(null)
-
-    try {
-      const usedSlots = new Set<GardenSlotId>()
-      placements.forEach((placement) => {
-        usedSlots.add(getNearestSlot(placement, usedSlots).id)
-      })
-      const slot = getSlotForItem(studentItem, usedSlots)
-
-      await saveGardenPlacement({
-        studentId,
-        studentItemId: studentItem.id,
-        itemId: studentItem.item_id,
-        x: slot.x,
-        y: slot.y,
-        scale: slot.size === 'lg' ? 1.1 : slot.size === 'sm' ? 0.9 : 1,
-        zIndex: slot.zIndex,
-      })
-      setMessage(`${slot.label} 자리에 아이템을 놓았어요.`)
-      await loadGardenData()
-    } catch (err) {
-      console.error('[StudentDreamGardenPage] placement failed:', err)
-      setError('이미 놓았거나 배치할 수 없는 아이템이에요.')
     } finally {
       setIsWorking(false)
     }
@@ -518,55 +411,7 @@ export default function StudentDreamGardenPage() {
             })}
           </div>
 
-          {/* ── 하단 인벤토리 독 ── */}
-          {(authLoading || isLoading || !studentId || groupedItems.length > 0) && (
-            <div className="dream-garden-inventory-dock" aria-label="보유 아이템 목록">
-              {authLoading || isLoading ? (
-                <div className="dream-garden-inventory-empty">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  아이템 확인 중
-                </div>
-              ) : !studentId ? (
-                <div className="dream-garden-inventory-empty">학생 로그인 후 사용할 수 있어요.</div>
-              ) : groupedItems.length > 0 ? (
-                groupedItems.map(({ item: studentItem, count }) => {
-                  const item = studentItem.item
-                  const isPlaced = placedStudentItemIds.has(studentItem.id)
 
-                  return (
-                    <article key={studentItem.item_id} className="dream-garden-item-card">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <ItemImage item={item} imgClassName="dream-garden-item-thumb-img" fallbackClassName="dream-garden-item-thumb" />
-                        <div className="min-w-0">
-                          <h3 className="truncate font-jua text-base text-slate-800">{item?.name ?? '아이템'}</h3>
-                          <div className="mt-1 flex flex-wrap gap-1.5">
-                            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-600">
-                              {categoryLabels[item?.category ?? 'nature']}
-                            </span>
-                            <span className={`rounded-full border px-2 py-0.5 text-[11px] font-bold ${rarityStyles[item?.rarity ?? 'common']}`}>
-                              {rarityLabels[item?.rarity ?? 'common']}
-                            </span>
-                            <span className="rounded-full bg-pink-50 px-2 py-0.5 text-[11px] font-bold text-pink-600">
-                              {count}개
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        disabled={isWorking || isPlaced || !item?.is_placeable}
-                        onClick={() => handlePlaceItem(studentItem)}
-                        className="dream-garden-place-button"
-                      >
-                        <Plus className="w-4 h-4" />
-                        {isPlaced ? '배치됨' : '놓기'}
-                      </button>
-                    </article>
-                  )
-                })
-              ) : null}
-            </div>
-          )}
         </section>
       </main>
     </StudentPageShell>
