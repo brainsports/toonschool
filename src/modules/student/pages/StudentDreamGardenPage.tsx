@@ -450,6 +450,7 @@ export default function StudentDreamGardenPage() {
             </div>
 
             {/* 개발 테스트 */}
+            {false && (
             <details className="dream-garden-dev-panel">
               <summary>
                 <span>개발 테스트</span>
@@ -482,6 +483,7 @@ export default function StudentDreamGardenPage() {
                 </button>
               </div>
             </details>
+            )}
           </aside>
 
           {/* ── 정원 슬롯들 ── */}
