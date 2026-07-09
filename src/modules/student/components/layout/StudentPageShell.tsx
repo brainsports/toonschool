@@ -192,7 +192,7 @@ export default function StudentPageShell({
                 className="flex items-center gap-1 text-[#2d1f35] font-jua text-sm hover:scale-105 transition-transform"
               >
                 <Home className="w-4 h-4" />
-                <span>홈</span>
+                <span>나의 페이지</span>
               </button>
               <div className="w-px h-4 bg-white/50 mx-2" />
               <button 
