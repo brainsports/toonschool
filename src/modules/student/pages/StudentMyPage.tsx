@@ -16,8 +16,9 @@ import { useAuth } from '../../../shared/contexts/AuthContext'
 import { getStudentWorks } from '../services/studentWorkService'
 import { getLatestTeacherMessageForClass, getTeacherMessagesForClass, resolveStudentClassKey, type TeacherMessage } from '../services/teacherMessageService'
 import { getNotificationsForTarget, type StudentNotification } from '../services/notificationService'
-import { ensureTodayAttendance, getCurrentAttendanceMonth, getMonthlyAttendance } from '../services/studentAttendanceService'
+import { ensureTodayAttendance, getCurrentAttendanceMonth, getMonthlyAttendance, getTotalAttendanceCount } from '../services/studentAttendanceService'
 import { getStudentGrowthDashboard } from '../services/studentGrowthService'
+import { grantAttendanceReward } from '../services/dreamGardenService'
 import type { StudentGrowthDashboardData } from '../types/studentGrowth'
 
 
@@ -37,6 +38,7 @@ export default function StudentMyPage() {
   const [notifications, setNotifications] = useState<StudentNotification[]>([]);
   const [isAllNotificationsModalOpen, setIsAllNotificationsModalOpen] = useState(false);
   const [attendanceDates, setAttendanceDates] = useState<string[]>([]);
+  const [totalAttendanceCount, setTotalAttendanceCount] = useState(0);
   const [growthData, setGrowthData] = useState<StudentGrowthDashboardData | null>(null);
   const [isLoadingGrowth, setIsLoadingGrowth] = useState(true);
   const attendanceMonth = useMemo(() => getCurrentAttendanceMonth(), []);
@@ -106,8 +108,17 @@ export default function StudentMyPage() {
 
       try {
         await ensureTodayAttendance(user.id);
+        
+        const rewardResult = await grantAttendanceReward(user.id);
+        if (rewardResult.status === 'granted') {
+          window.dispatchEvent(new Event('attendanceRewardGranted'));
+        }
+
         const records = await getMonthlyAttendance(user.id);
         setAttendanceDates(records.map((record) => record.attendance_date));
+
+        const totalCount = await getTotalAttendanceCount(user.id);
+        setTotalAttendanceCount(totalCount);
       } catch (err) {
         console.error('[StudentMyPage] 출석 기록 조회 실패:', err);
       }
@@ -205,8 +216,8 @@ export default function StudentMyPage() {
                   <div className="w-10 h-10 bg-sky-50 text-sky-500 rounded-full flex items-center justify-center mb-1">
                     <Calendar className="w-5 h-5" />
                   </div>
-                  <span className="text-xs font-bold text-slate-500">이번 달 출석</span>
-                  <span className="text-2xl font-black text-sky-500">{attendedDaysCount}일</span>
+                  <span className="text-xs font-bold text-slate-500">총 출석일수</span>
+                  <span className="text-2xl font-black text-sky-500">{totalAttendanceCount}일</span>
                 </div>
                 <div className="bg-white rounded-[1.5rem] p-5 flex flex-col items-center justify-center gap-2 border border-slate-100 shadow-sm text-center">
                   <div className="w-10 h-10 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mb-1">

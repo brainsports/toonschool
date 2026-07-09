@@ -80,9 +80,19 @@ export default function StudentPageShell({
           setStudentData(data)
         }
       })
-      getAttendanceRewardItemCount(user.id)
-        .then(count => setAttendanceRewardCount(count))
-        .catch(err => console.error('[StudentPageShell] 출석보상 개수 조회 실패:', err))
+      
+      const loadRewardCount = () => {
+        getAttendanceRewardItemCount(user.id)
+          .then(count => setAttendanceRewardCount(count))
+          .catch(err => console.error('[StudentPageShell] 출석보상 개수 조회 실패:', err))
+      }
+      
+      loadRewardCount()
+      
+      window.addEventListener('attendanceRewardGranted', loadRewardCount)
+      return () => {
+        window.removeEventListener('attendanceRewardGranted', loadRewardCount)
+      }
     }
   }, [user?.id, authProfile?.role])
 
