@@ -1,7 +1,7 @@
 // 학생 UI 전체 페이지를 감싸는 공통 레이아웃 컴포넌트
 import React, { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { LogOut, Home, Star, Trophy, Calendar, Sprout } from 'lucide-react'
+import { LogOut, Home, Gift, X, Calendar, Sprout } from 'lucide-react'
 import { mockStudentProfile } from '../../data/studentMockData'
 import StudentSpaceBackground from './StudentSpaceBackground'
 import '../../styles/student-ui.css'
@@ -10,6 +10,8 @@ import { supabase } from '../../../../shared/lib/supabase'
 import AllWorksModal from '../mypage/AllWorksModal'
 import type { MyWork } from '../mypage/WorkCard'
 import { getStudentWorks } from '../../services/studentWorkService'
+import { getStudentItems } from '../../services/dreamGardenService'
+import type { StudentItem } from '../../types/dreamGarden'
 
 interface StudentPageShellProps {
   children: React.ReactNode
@@ -38,6 +40,19 @@ const bgOverlays = {
   pastel: 'student-pastel-bg from-transparent to-transparent',
 }
 
+function getItemEmoji(item?: StudentItem['item'] | null) {
+  if (item?.category === 'animal') return '🐰'
+  if (item?.category === 'sky') return '⭐'
+  if (item?.category === 'spirit') return '✨'
+  if (item?.category === 'decor') return '🎀'
+  if (item?.category === 'legend') return '👑'
+  return '🌱'
+}
+
+function formatAcquiredDate(dateString: string) {
+  return new Date(dateString).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' })
+}
+
 export default function StudentPageShell({
   children,
   showHUD = true,
@@ -51,6 +66,10 @@ export default function StudentPageShell({
   const [isAllWorksModalOpen, setIsAllWorksModalOpen] = useState(false)
   const [myWorks, setMyWorks] = useState<MyWork[]>([])
   const [hasLoadedWorks, setHasLoadedWorks] = useState(false)
+  const [isLootModalOpen, setIsLootModalOpen] = useState(false)
+  const [studentItems, setStudentItems] = useState<StudentItem[]>([])
+  const [hasLoadedItems, setHasLoadedItems] = useState(false)
+  const [isLoadingItems, setIsLoadingItems] = useState(false)
 
   useEffect(() => {
     if (user?.id && authProfile?.role === 'student') {
@@ -79,6 +98,25 @@ export default function StudentPageShell({
     setHasLoadedWorks(true)
   }, [authProfile?.id, authProfile?.name, hasLoadedWorks, user?.id])
 
+  const handleOpenLootModal = useCallback(async () => {
+    setIsLootModalOpen(true)
+
+    if (hasLoadedItems || !user?.id) {
+      return
+    }
+
+    try {
+      setIsLoadingItems(true)
+      const items = await getStudentItems(user.id)
+      setStudentItems(items)
+      setHasLoadedItems(true)
+    } catch (error) {
+      console.error('[StudentPageShell] 득템 현황 조회 실패:', error)
+    } finally {
+      setIsLoadingItems(false)
+    }
+  }, [hasLoadedItems, user?.id])
+
   const handleLogout = useCallback(async () => {
     await signOut()
     navigate('/', { replace: true })
@@ -94,6 +132,10 @@ export default function StudentPageShell({
   const profile = currentProfile;
   const isRealStudent = user && authProfile?.role === 'student';
   const isFull = maxWidth === 'full';
+  const totalLootCount = hasLoadedItems
+    ? studentItems.reduce((sum, item) => sum + item.quantity, 0)
+    : profile.totalBadges
+  const recentLootItems = studentItems.slice(0, 5)
 
   return (
     <div className={`${isFull ? 'h-[100dvh] overflow-hidden' : 'min-h-screen overflow-x-hidden'} flex flex-col ${isFull ? 'pb-0' : 'pb-12'} bg-gradient-to-tr ${bgOverlays[bgVariant as keyof typeof bgOverlays] || bgOverlays.default} relative`}>
@@ -163,28 +205,16 @@ export default function StudentPageShell({
 
             {/* 우측: 재화 및 액션 */}
             <div className="flex items-center gap-3">
-              {/* 별 개수 */}
+              {/* 득템 현황 */}
               <button
                 type="button"
-                onClick={() => navigate('/student/dream-garden')}
-                className="flex items-center gap-1.5 bg-yellow-50 border-2 border-yellow-200 px-3 py-1.5 rounded-full text-yellow-700 font-jua text-sm shadow-sm hover:scale-105 transition-transform"
-                title="획득한 아이템 보기"
-                aria-label="획득한 아이템 보기"
+                onClick={handleOpenLootModal}
+                className="flex items-center gap-1.5 bg-yellow-50 border-2 border-yellow-200 px-4 py-1.5 rounded-full text-yellow-700 font-jua text-sm shadow-sm hover:scale-105 transition-transform"
+                title="나의 득템 현황"
+                aria-label="나의 득템 현황"
               >
-                <Star className="w-5 h-5 fill-yellow-400 stroke-yellow-500 stroke-2" />
-                <span className="tracking-wide mt-0.5">{profile.totalStars}</span>
-              </button>
-
-              {/* 배지/트로피 개수 */}
-              <button
-                type="button"
-                onClick={() => navigate('/student/dream-garden')}
-                className="flex items-center gap-1.5 bg-pink-50 border-2 border-pink-200 px-3 py-1.5 rounded-full text-pink-700 font-jua text-sm shadow-sm hover:scale-105 transition-transform"
-                title="획득한 아이템 보기"
-                aria-label="획득한 아이템 보기"
-              >
-                <Trophy className="w-5 h-5 fill-pink-400 stroke-pink-500 stroke-2" />
-                <span className="tracking-wide mt-0.5">{profile.totalBadges}</span>
+                <Gift className="w-5 h-5 stroke-yellow-600 stroke-2" />
+                <span className="tracking-wide mt-0.5">🎁 득템 {totalLootCount}개</span>
               </button>
 
               {/* 연속 출석 */}
@@ -217,6 +247,69 @@ export default function StudentPageShell({
         onClose={() => setIsAllWorksModalOpen(false)}
         works={myWorks}
       />
+
+      {isLootModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <div className="bg-white rounded-[2rem] w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden shadow-2xl">
+            <div className="flex items-start justify-between gap-4 p-6 md:px-8 border-b border-slate-100">
+              <div>
+                <h2 className="text-2xl font-black text-slate-800">나의 득템 현황</h2>
+                <p className="text-sm font-medium text-slate-500 mt-1">내가 얻은 아이템을 확인해 보세요.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsLootModalOpen(false)}
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-colors"
+                aria-label="득템 현황 닫기"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="p-6 md:p-8 overflow-y-auto">
+              <div className="mb-5 rounded-2xl bg-yellow-50 border-2 border-yellow-100 px-5 py-4 flex items-center justify-between">
+                <span className="font-jua text-slate-700">전체 아이템 수</span>
+                <span className="font-jua text-2xl text-yellow-700">{totalLootCount}개</span>
+              </div>
+
+              {isLoadingItems ? (
+                <div className="py-10 text-center text-slate-400 font-bold">득템 현황을 불러오는 중이에요...</div>
+              ) : recentLootItems.length === 0 ? (
+                <div className="py-10 text-center rounded-2xl bg-slate-50 border border-slate-100 text-slate-500 font-bold">
+                  아직 얻은 아이템이 없어요.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {recentLootItems.map((studentItem) => (
+                    <div key={studentItem.id} className="flex items-center gap-3 rounded-2xl border border-slate-100 bg-slate-50/70 px-4 py-3">
+                      <div className="w-11 h-11 rounded-2xl bg-white flex items-center justify-center text-2xl shadow-sm">
+                        {getItemEmoji(studentItem.item)}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-jua text-slate-800 truncate">{studentItem.item?.name ?? '아이템'}</p>
+                        <p className="text-xs font-bold text-slate-400">{formatAcquiredDate(studentItem.acquired_at)} 획득</p>
+                      </div>
+                      <span className="shrink-0 rounded-full bg-white px-3 py-1 text-sm font-jua text-slate-600 border border-slate-100">
+                        {studentItem.quantity}개
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="p-6 md:px-8 border-t border-slate-100 flex justify-end">
+              <button
+                type="button"
+                onClick={() => navigate('/student/dream-garden')}
+                className="rounded-full bg-emerald-500 px-6 py-3 font-jua text-white shadow-lg shadow-emerald-500/20 hover:bg-emerald-600 transition-colors"
+              >
+                꿈의 정원 보기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
