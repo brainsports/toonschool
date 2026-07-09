@@ -94,12 +94,12 @@ function getRewardMessage(result: RewardResult) {
 }
 
 function getItemEmoji(item?: StudentItem['item'] | GardenPlacement['item'] | null) {
-  if (item?.category === 'animal') return '토끼'
-  if (item?.category === 'sky') return '반짝'
-  if (item?.category === 'decor') return '리본'
-  if (item?.category === 'spirit') return '요정'
-  if (item?.category === 'legend') return '보석'
-  return '새싹'
+  if (item?.category === 'animal') return '🐰'
+  if (item?.category === 'sky') return '⭐'
+  if (item?.category === 'decor') return '🎀'
+  if (item?.category === 'spirit') return '🧚'
+  if (item?.category === 'legend') return '💎'
+  return '🌱'
 }
 
 function getSlotForItem(studentItem: StudentItem, usedSlots: Set<GardenSlotId>) {
@@ -288,27 +288,179 @@ export default function StudentDreamGardenPage() {
     <StudentPageShell bgVariant="pastel" maxWidth="full">
       <main className="dream-garden-page">
         <section className="dream-garden-stage" aria-label="나의 꿈의 정원">
-          <div className="dream-garden-sky" />
-          <div className="dream-garden-grass" />
-          <div className="dream-garden-path dream-garden-path-main" />
-          <div className="dream-garden-path dream-garden-path-branch" />
-          <div className="dream-garden-pond-shape" />
-          <div className="dream-garden-flower-zone" />
-          <div className="dream-garden-forest-zone" />
 
+          {/* ── 배경 레이어 1: 하늘 그라데이션 ── */}
+          <div className="dg-bg-sky" />
+
+          {/* ── 배경 레이어 2: 무지개 ── */}
+          <div className="dg-rainbow" />
+
+          {/* ── 배경 레이어 3: 태양 ── */}
+          <div className="dg-sun">
+            <div className="dg-sun-rays" />
+          </div>
+
+          {/* ── 배경 레이어 4: 구름들 ── */}
+          <div className="dg-cloud dg-cloud-1" />
+          <div className="dg-cloud dg-cloud-2" />
+          <div className="dg-cloud dg-cloud-3" />
+
+          {/* ── 배경 레이어 5: 반짝이 별들 ── */}
+          <div className="dg-sparkle dg-sparkle-1">✦</div>
+          <div className="dg-sparkle dg-sparkle-2">✧</div>
+          <div className="dg-sparkle dg-sparkle-3">✦</div>
+          <div className="dg-sparkle dg-sparkle-4">✦</div>
+          <div className="dg-sparkle dg-sparkle-5">✧</div>
+
+          {/* ── 배경 레이어 6: 잔디 기반 ── */}
+          <div className="dg-bg-grass" />
+
+          {/* ── 배경 레이어 7: 나무/숲 배경 ── */}
+          <div className="dg-forest-bg">
+            {/* 나무들 (CSS only) */}
+            <div className="dg-tree dg-tree-1">
+              <div className="dg-tree-top" />
+              <div className="dg-tree-mid" />
+              <div className="dg-tree-trunk" />
+            </div>
+            <div className="dg-tree dg-tree-2">
+              <div className="dg-tree-top" />
+              <div className="dg-tree-mid" />
+              <div className="dg-tree-trunk" />
+            </div>
+            <div className="dg-treehouse">
+              <div className="dg-treehouse-top">
+                {/* 나무집 지붕 */}
+                <div className="dg-treehouse-roof" />
+                <div className="dg-treehouse-wall" />
+                <div className="dg-treehouse-window" />
+              </div>
+              <div className="dg-treehouse-trunk" />
+            </div>
+          </div>
+
+          {/* ── 배경 레이어 8: 돌 오솔길 ── */}
+          <div className="dg-path-stones">
+            {/* 돌들 - 각각 개별 배치 */}
+            {[...Array(18)].map((_, i) => (
+              <div key={i} className={`dg-stone dg-stone-${i + 1}`} />
+            ))}
+          </div>
+
+          {/* ── 배경 레이어 9: 중앙 원형 광장 ── */}
+          <div className="dg-plaza-circle" />
+          <div className="dg-plaza-ring" />
+
+          {/* ── 배경 레이어 10: 연못 (물결/연꽃/다리) ── */}
+          <div className="dg-pond-area">
+            <div className="dg-pond-water">
+              <div className="dg-pond-ripple dg-pond-ripple-1" />
+              <div className="dg-pond-ripple dg-pond-ripple-2" />
+            </div>
+            <div className="dg-lotus dg-lotus-1">🪷</div>
+            <div className="dg-lotus dg-lotus-2">🪷</div>
+            <div className="dg-swan">🦢</div>
+            <div className="dg-pond-bridge" />
+            <div className="dg-pond-bridge-rail dg-pond-bridge-rail-l" />
+            <div className="dg-pond-bridge-rail dg-pond-bridge-rail-r" />
+          </div>
+
+          {/* ── 배경 레이어 11: 꽃밭 구역 ── */}
+          <div className="dg-flowerbed-area">
+            <div className="dg-flowerbed-patch" />
+            {/* 꽃들 */}
+            <div className="dg-flower dg-flower-1">🌸</div>
+            <div className="dg-flower dg-flower-2">🌼</div>
+            <div className="dg-flower dg-flower-3">🌺</div>
+            <div className="dg-flower dg-flower-4">🌸</div>
+            <div className="dg-flower dg-flower-5">🌻</div>
+            <div className="dg-flower dg-flower-6">🌼</div>
+            <div className="dg-flower dg-flower-7">🌹</div>
+          </div>
+
+          {/* ── 배경 레이어 12: 울타리 ── */}
+          <div className="dg-fence-row dg-fence-bottom">
+            {[...Array(12)].map((_, i) => (
+              <div key={i} className="dg-fence-post">
+                <div className="dg-fence-cap" />
+                <div className="dg-fence-body" />
+              </div>
+            ))}
+          </div>
+          <div className="dg-fence-row dg-fence-right">
+            {[...Array(8)].map((_, i) => (
+              <div key={i} className="dg-fence-post dg-fence-post-v">
+                <div className="dg-fence-cap" />
+                <div className="dg-fence-body" />
+              </div>
+            ))}
+          </div>
+
+          {/* ── 배경 레이어 13: 장식물들 ── */}
+          {/* 가로등 */}
+          <div className="dg-lamp dg-lamp-1">
+            <div className="dg-lamp-head" />
+            <div className="dg-lamp-pole" />
+          </div>
+          <div className="dg-lamp dg-lamp-2">
+            <div className="dg-lamp-head" />
+            <div className="dg-lamp-pole" />
+          </div>
+
+          {/* 우체통 */}
+          <div className="dg-mailbox">
+            <div className="dg-mailbox-body">📮</div>
+          </div>
+
+          {/* 표지판 */}
+          <div className="dg-signpost">
+            <div className="dg-signpost-board">꿈의 정원</div>
+            <div className="dg-signpost-pole" />
+          </div>
+
+          {/* 아치 문 */}
+          <div className="dg-arch">
+            <div className="dg-arch-frame" />
+            <div className="dg-arch-flowers">🌸🌸</div>
+          </div>
+
+          {/* 벤치 배경 */}
+          <div className="dg-bench-area">
+            <div className="dg-bench-seat" />
+            <div className="dg-bench-legs" />
+          </div>
+
+          {/* 덤불들 */}
+          <div className="dg-bush dg-bush-1" />
+          <div className="dg-bush dg-bush-2" />
+          <div className="dg-bush dg-bush-3" />
+          <div className="dg-bush dg-bush-4" />
+
+          {/* 분수대 베이스 */}
+          <div className="dg-fountain-base">
+            <div className="dg-fountain-bowl-outer" />
+            <div className="dg-fountain-bowl-inner" />
+            <div className="dg-fountain-water-spray" />
+            <div className="dg-fountain-water-spray dg-fountain-water-spray-2" />
+            <div className="dg-fountain-water-spray dg-fountain-water-spray-3" />
+            <div className="dg-fountain-center-star">⭐</div>
+          </div>
+
+          {/* ── UI 레이어: 제목 패널 ── */}
           <div className="dream-garden-title">
-            <div className="inline-flex items-center gap-2 rounded-full bg-white/70 border border-white/80 px-3 py-1.5 text-emerald-800 font-jua text-sm shadow-sm">
+            <div className="dg-title-badge">
               <Sprout className="w-4 h-4" />
               꿈의 정원
             </div>
-            <h1 className="font-jua text-3xl md:text-5xl text-slate-800 leading-tight">
+            <h1 className="dg-title-text">
               {garden?.garden_name ?? '나의 꿈의 정원'}
             </h1>
-            <p className="mt-2 max-w-[560px] text-sm md:text-lg text-slate-700 font-bold">
+            <p className="dg-title-sub">
               출석하고 만화를 완성하면 정원 아이템을 모을 수 있어요.
             </p>
           </div>
 
+          {/* ── 토스트 알림 ── */}
           {(message || error) && (
             <div className={`dream-garden-toast ${error ? 'dream-garden-toast-error' : 'dream-garden-toast-success'}`}>
               {error ?? message}
@@ -322,78 +474,112 @@ export default function StudentDreamGardenPage() {
             </div>
           )}
 
+          {/* ── 왼쪽 정보 오버레이 ── */}
           <aside className="dream-garden-overlay dream-garden-overlay-left" aria-label="정원 정보">
-            <div className="flex items-center gap-2">
-              <div className="dream-garden-mini-icon bg-emerald-100 text-emerald-700">
-                <Leaf className="w-5 h-5" />
+            {/* 정원 단계 */}
+            <div className="dg-info-section">
+              <div className="dg-info-header">
+                <div className="dg-info-icon dg-info-icon-green">
+                  <Leaf className="w-4 h-4" />
+                </div>
+                <p className="dg-info-label">정원 단계</p>
               </div>
-              <div>
-                <p className="text-xs font-bold text-slate-500">정원 단계</p>
-                <p className="font-jua text-xl text-slate-800">Lv. {garden?.level ?? 1}</p>
+              <div className="dg-level-badge">
+                <span className="dg-level-num">{garden?.level ?? 1}단계</span>
+                <span className="dg-level-name">씨앗 뜨 정원</span>
+              </div>
+              <div className="dg-progress-bar-wrap">
+                <div className="dg-progress-track">
+                  <div
+                    className="dg-progress-fill"
+                    style={{ width: `${Math.min(100, (placedCount / gardenSlots.length) * 100)}%` }}
+                  />
+                </div>
+                <div className="dg-progress-labels">
+                  <span>꾸미기 진행</span>
+                  <span>{placedCount}/{gardenSlots.length}</span>
+                </div>
               </div>
             </div>
 
-            <div className="dream-garden-progress">
-              <div className="flex items-center justify-between text-xs font-bold text-slate-600">
-                <span>꾸미기 진행</span>
-                <span>{placedCount}/{gardenSlots.length}</span>
-              </div>
-              <div className="mt-2 h-3 rounded-full bg-white/70 overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-sky-400"
-                  style={{ width: `${Math.min(100, (placedCount / gardenSlots.length) * 100)}%` }}
-                />
-              </div>
-            </div>
-
-            <div>
-              <p className="mb-2 text-xs font-bold text-slate-500">아이템 종류</p>
-              <div className="grid grid-cols-2 gap-2">
-                {['자연', '친구', '장식', '하늘'].map((label) => (
-                  <span key={label} className="rounded-2xl bg-white/65 px-3 py-2 text-center text-sm font-jua text-slate-700">
-                    {label}
-                  </span>
+            {/* 아이템 종류 */}
+            <div className="dg-info-section">
+              <p className="dg-section-title">
+                <Flower2 className="w-3.5 h-3.5" />
+                아이템 종류
+              </p>
+              <div className="dg-category-grid">
+                {[
+                  { label: '정식', count: '18/45', color: '#f9a8d4' },
+                  { label: '식물', count: '16/32', color: '#86efac' },
+                  { label: '동물', count: '5/20', color: '#fcd34d' },
+                  { label: '건물', count: '3/15', color: '#93c5fd' },
+                  { label: '기타', count: '2/18', color: '#c4b5fd' },
+                ].map(({ label, count, color }) => (
+                  <div key={label} className="dg-category-chip" style={{ '--chip-color': color } as React.CSSProperties}>
+                    <span className="dg-chip-dot" style={{ background: color }} />
+                    <span className="dg-chip-label">{label}</span>
+                    <span className="dg-chip-count">{count}</span>
+                  </div>
                 ))}
               </div>
             </div>
 
-            <div className="rounded-3xl border border-white/70 bg-white/55 p-3">
-              <div className="flex items-center gap-2 text-slate-700">
-                <Lock className="w-4 h-4 text-purple-500" />
-                <p className="font-jua text-sm">잠긴 자리는 실루엣으로 보여요.</p>
+            {/* 잠금 아이템 안내 */}
+            <div className="dg-locked-info">
+              <div className="dg-locked-info-header">
+                <Lock className="w-3.5 h-3.5 text-purple-500" />
+                <p className="font-jua text-sm text-slate-700">잠금 아이템</p>
               </div>
-              <p className="mt-1 text-xs font-bold leading-relaxed text-slate-500">
-                아이템을 얻으면 알맞은 고정 자리에서 실제 모습으로 바뀌어요.
+              <p className="dg-locked-info-text">
+                다음 단계에서 더 많은 아이템을<br />만나보세요!
               </p>
+              <div className="dg-locked-slots">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="dg-locked-slot-chip">
+                    <Lock className="w-3 h-3" />
+                  </div>
+                ))}
+              </div>
             </div>
           </aside>
 
+          {/* ── 오른쪽 정보 오버레이 ── */}
           <aside className="dream-garden-overlay dream-garden-overlay-right" aria-label="보유 아이템">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-xs font-bold text-slate-500">내가 획득한 아이템</p>
-                <p className="font-jua text-2xl text-slate-800">{totalItemCount}개</p>
-              </div>
-              <div className="dream-garden-mini-icon bg-pink-100 text-pink-600">
-                <Gift className="w-5 h-5" />
+            {/* 획득 아이템 수 */}
+            <div className="dg-info-section">
+              <div className="dg-info-header">
+                <div className="dg-info-icon dg-info-icon-pink">
+                  <Gift className="w-4 h-4" />
+                </div>
+                <div>
+                  <p className="dg-info-label">내가 획득한 아이템</p>
+                  <p className="dg-big-count">{totalItemCount}개</p>
+                </div>
+                <button type="button" className="dg-view-all-btn">전체 보기</button>
               </div>
             </div>
 
-            <div>
-              <p className="mb-2 text-xs font-bold text-slate-500">최근 획득 아이템</p>
+            {/* 최근 획득 */}
+            <div className="dg-info-section">
+              <div className="dg-info-header">
+                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                <p className="dg-section-title-inline">최근 획득</p>
+                <button type="button" className="dg-view-all-btn">전체 보기</button>
+              </div>
               {recentItems.length === 0 ? (
-                <div className="rounded-3xl bg-white/60 px-4 py-4 text-center">
-                  <WandSparkles className="mx-auto mb-2 h-6 w-6 text-purple-300" />
-                  <p className="font-jua text-sm text-slate-600">첫 아이템을 기다리는 중</p>
+                <div className="dg-empty-recent">
+                  <WandSparkles className="w-5 h-5 text-purple-300" />
+                  <p className="font-jua text-sm text-slate-500">첫 아이템을 기다리는 중</p>
                 </div>
               ) : (
-                <div className="space-y-2">
+                <div className="dg-recent-list">
                   {recentItems.map((studentItem) => (
-                    <div key={studentItem.id} className="flex items-center gap-2 rounded-2xl bg-white/65 px-3 py-2">
-                      <span className="dream-garden-mini-emoji">{getItemEmoji(studentItem.item)}</span>
-                      <div className="min-w-0">
-                        <p className="truncate font-jua text-sm text-slate-800">{studentItem.item?.name ?? '아이템'}</p>
-                        <p className="text-[11px] font-bold text-slate-500">{rarityLabels[studentItem.item?.rarity ?? 'common']}</p>
+                    <div key={studentItem.id} className="dg-recent-item">
+                      <div className="dg-recent-thumb">{getItemEmoji(studentItem.item)}</div>
+                      <div className="dg-recent-info">
+                        <p className="dg-recent-name">{studentItem.item?.name ?? '아이템'}</p>
+                        <p className="dg-recent-time">방금 획득</p>
                       </div>
                     </div>
                   ))}
@@ -401,47 +587,53 @@ export default function StudentDreamGardenPage() {
               )}
             </div>
 
-            <div className="rounded-3xl border border-amber-100 bg-amber-50/75 p-3">
-              <p className="font-jua text-sm text-amber-900">보상 안내</p>
-              <p className="mt-1 text-xs font-bold leading-relaxed text-amber-800">
-                출석, 만화 완성, 행운 보상으로 정원을 채울 수 있어요.
+            {/* 보상 안내 */}
+            <div className="dg-reward-guide">
+              <div className="dg-reward-guide-header">
+                <Gift className="w-3.5 h-3.5 text-amber-600" />
+                <p className="font-jua text-sm text-amber-900">보상 안내</p>
+              </div>
+              <p className="dg-reward-guide-text">
+                정원 단계를 올리면 새로운<br />아이템과 특별 보상을 받을 수 있어요! 🎁
               </p>
             </div>
 
+            {/* 개발 테스트 */}
             <details className="dream-garden-dev-panel">
               <summary>
                 <span>개발 테스트</span>
                 <ChevronDown className="w-4 h-4" />
               </summary>
-              <div className="mt-3 grid gap-2">
+              <div className="dg-test-buttons">
                 <button
                   type="button"
                   disabled={!studentId || isWorking}
                   onClick={() => handleReward(() => grantAttendanceReward(studentId as string))}
-                  className="dream-garden-test-button bg-pink-500 text-white disabled:opacity-50"
+                  className="dg-test-btn dg-test-btn-pink"
                 >
-                  테스트 출석 보상 받기
+                  📅 출석
                 </button>
                 <button
                   type="button"
                   disabled={!studentId || isWorking}
                   onClick={() => handleReward(() => grantComicCompleteReward(studentId as string, `test-comic-${Date.now()}`))}
-                  className="dream-garden-test-button bg-purple-500 text-white disabled:opacity-50"
+                  className="dg-test-btn dg-test-btn-purple"
                 >
-                  테스트 만화 완성 보상
+                  ✏️ 만화 완성
                 </button>
                 <button
                   type="button"
                   disabled={!studentId || isWorking}
                   onClick={() => handleReward(() => grantLuckyRewardIfNeeded(studentId as string))}
-                  className="dream-garden-test-button bg-amber-300 text-amber-950 disabled:opacity-50"
+                  className="dg-test-btn dg-test-btn-amber"
                 >
-                  테스트 우연한 행운
+                  ❓ 우연한 행운
                 </button>
               </div>
             </details>
           </aside>
 
+          {/* ── 정원 슬롯들 ── */}
           <div className="dream-garden-slots" aria-label="정원 꾸미기 자리">
             {gardenSlots.map((slot) => {
               const placement = slotPlacements.get(slot.id)
@@ -473,6 +665,7 @@ export default function StudentDreamGardenPage() {
             })}
           </div>
 
+          {/* ── 하단 인벤토리 독 ── */}
           <div className="dream-garden-inventory-dock" aria-label="보유 아이템 목록">
             {authLoading || isLoading ? (
               <div className="dream-garden-inventory-empty">
@@ -484,7 +677,7 @@ export default function StudentDreamGardenPage() {
             ) : groupedItems.length === 0 ? (
               <div className="dream-garden-inventory-empty">
                 <Sparkles className="w-4 h-4 text-purple-400" />
-                보상으로 아이템을 모아 보세요.
+                🌟 보상으로 아이템을 모아 보세요.
               </div>
             ) : (
               groupedItems.map(({ item: studentItem, count }) => {
