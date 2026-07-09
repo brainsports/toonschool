@@ -94,12 +94,21 @@ function getRewardMessage(result: RewardResult) {
 }
 
 function getItemEmoji(item?: StudentItem['item'] | GardenPlacement['item'] | null) {
-  if (item?.category === 'animal') return '🐰'
-  if (item?.category === 'sky') return '⭐'
-  if (item?.category === 'decor') return '🎀'
-  if (item?.category === 'spirit') return '🧚'
-  if (item?.category === 'legend') return '💎'
-  return '🌱'
+  if (item?.category === 'nature') return '🌱'
+  if (item?.category === 'sky') return '✨'
+  if (item?.category === 'animal') return '🦋'
+  if (item?.category === 'decor') return '🪑'
+  if (item?.category === 'spirit') return '🌟'
+  if (item?.category === 'legend') return '🌈'
+  return '🎁'
+}
+
+function ItemImage({ item, imgClassName, fallbackClassName }: { item?: StudentItem['item'] | GardenPlacement['item'] | null, imgClassName?: string, fallbackClassName?: string }) {
+  const [imgError, setImgError] = useState(false)
+  if (item?.image_url && !imgError) {
+    return <img src={item.image_url} alt={item?.name ?? '아이템'} className={imgClassName} onError={() => setImgError(true)} draggable={false} />
+  }
+  return <span className={fallbackClassName}>{getItemEmoji(item)}</span>
 }
 
 function getSlotForItem(studentItem: StudentItem, usedSlots: Set<GardenSlotId>) {
@@ -422,7 +431,7 @@ export default function StudentDreamGardenPage() {
                 <div className="dg-recent-list">
                   {recentItems.map((studentItem) => (
                     <div key={studentItem.id} className="dg-recent-item">
-                      <div className="dg-recent-thumb">{getItemEmoji(studentItem.item)}</div>
+                      <ItemImage item={studentItem.item} imgClassName="dg-recent-thumb-img" fallbackClassName="dg-recent-thumb" />
                       <div className="dg-recent-info">
                         <p className="dg-recent-name">{studentItem.item?.name ?? '아이템'}</p>
                         <p className="dg-recent-time">방금 획득</p>
@@ -495,7 +504,7 @@ export default function StudentDreamGardenPage() {
                   <div className="dream-garden-slot-object">
                     {placement ? (
                       <>
-                        <span className="dream-garden-item-emoji">{getItemEmoji(placement.item)}</span>
+                        <ItemImage item={placement.item} imgClassName="dream-garden-item-img" fallbackClassName="dream-garden-item-emoji" />
                         <span className="dream-garden-item-name">{placement.item?.name ?? slot.label}</span>
                       </>
                     ) : (
@@ -522,8 +531,7 @@ export default function StudentDreamGardenPage() {
               <div className="dream-garden-inventory-empty">학생 로그인 후 사용할 수 있어요.</div>
             ) : groupedItems.length === 0 ? (
               <div className="dream-garden-inventory-empty">
-                <Sparkles className="w-4 h-4 text-purple-400" />
-                🌟 보상으로 아이템을 모아 보세요.
+                아직 획득한 아이템이 없어요. 출석하거나 만화를 완성하면 꿈의 정원 아이템을 받을 수 있어요.
               </div>
             ) : (
               groupedItems.map(({ item: studentItem, count }) => {
@@ -533,7 +541,7 @@ export default function StudentDreamGardenPage() {
                 return (
                   <article key={studentItem.item_id} className="dream-garden-item-card">
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="dream-garden-item-thumb">{getItemEmoji(item)}</div>
+                      <ItemImage item={item} imgClassName="dream-garden-item-thumb-img" fallbackClassName="dream-garden-item-thumb" />
                       <div className="min-w-0">
                         <h3 className="truncate font-jua text-base text-slate-800">{item?.name ?? '아이템'}</h3>
                         <div className="mt-1 flex flex-wrap gap-1.5">
