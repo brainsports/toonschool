@@ -1025,3 +1025,432 @@
   color: #d1d5db;
   cursor: not-allowed;
 }
+
+/* ===================================================
+   Dream Garden full-screen game UI
+   =================================================== */
+.dream-garden-page {
+  width: 100%;
+  padding: 0 1rem 1.25rem;
+}
+
+.dream-garden-stage {
+  position: relative;
+  width: min(100%, 1480px);
+  min-height: calc(100dvh - 96px);
+  margin: 0 auto;
+  overflow: hidden;
+  border-radius: 0 0 32px 32px;
+  background:
+    radial-gradient(circle at 16% 18%, rgba(255, 255, 255, 0.92) 0 4%, transparent 12%),
+    linear-gradient(180deg, #c8f2ff 0%, #dff9ff 27%, #d8f5c7 28%, #a8e59a 100%);
+  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.72), 0 18px 44px rgba(66, 118, 86, 0.18);
+  isolation: isolate;
+}
+
+.dream-garden-sky,
+.dream-garden-grass,
+.dream-garden-path,
+.dream-garden-pond-shape,
+.dream-garden-flower-zone,
+.dream-garden-forest-zone {
+  position: absolute;
+  pointer-events: none;
+}
+
+.dream-garden-sky {
+  inset: 0 0 auto 0;
+  height: 46%;
+  background-image:
+    radial-gradient(circle at 80% 17%, rgba(255, 244, 170, 0.95) 0 34px, rgba(255, 244, 170, 0.24) 35px 64px, transparent 65px),
+    radial-gradient(circle at 38% 19%, rgba(255, 255, 255, 0.82) 0 22px, transparent 23px),
+    radial-gradient(circle at 43% 17%, rgba(255, 255, 255, 0.72) 0 18px, transparent 19px),
+    radial-gradient(circle at 48% 20%, rgba(255, 255, 255, 0.66) 0 20px, transparent 21px);
+}
+
+.dream-garden-grass {
+  inset: 28% -5% -10% -5%;
+  border-radius: 52% 48% 0 0;
+  background:
+    radial-gradient(ellipse at 22% 52%, rgba(125, 211, 160, 0.48) 0 18%, transparent 36%),
+    radial-gradient(ellipse at 78% 70%, rgba(78, 193, 145, 0.34) 0 18%, transparent 34%),
+    linear-gradient(180deg, rgba(188, 240, 151, 0.86) 0%, rgba(118, 214, 132, 0.94) 100%);
+}
+
+.dream-garden-path-main {
+  left: 30%;
+  top: 32%;
+  width: 42%;
+  height: 72%;
+  border-radius: 50% 45% 0 0;
+  border: 34px solid rgba(244, 210, 145, 0.76);
+  border-left-color: transparent;
+  border-top-color: rgba(244, 210, 145, 0.76);
+  border-bottom-color: transparent;
+  transform: rotate(21deg);
+  filter: drop-shadow(0 4px 0 rgba(190, 147, 79, 0.14));
+}
+
+.dream-garden-path-branch {
+  left: 42%;
+  top: 54%;
+  width: 32%;
+  height: 20%;
+  border-radius: 999px;
+  border-top: 24px solid rgba(246, 218, 157, 0.78);
+  transform: rotate(-18deg);
+}
+
+.dream-garden-pond-shape {
+  right: 14%;
+  top: 31%;
+  width: 18%;
+  aspect-ratio: 1.65;
+  border-radius: 48% 52% 42% 58%;
+  background: linear-gradient(145deg, rgba(116, 214, 238, 0.85), rgba(68, 160, 222, 0.62));
+  border: 6px solid rgba(255, 255, 255, 0.58);
+  box-shadow: inset 0 10px 20px rgba(255, 255, 255, 0.42), 0 10px 18px rgba(66, 145, 154, 0.16);
+}
+
+.dream-garden-flower-zone {
+  left: 10%;
+  bottom: 26%;
+  width: 20%;
+  height: 15%;
+  border-radius: 46% 54% 42% 58%;
+  background:
+    radial-gradient(circle at 22% 44%, #f9a8d4 0 7px, transparent 8px),
+    radial-gradient(circle at 42% 64%, #fde68a 0 7px, transparent 8px),
+    radial-gradient(circle at 62% 42%, #fda4af 0 7px, transparent 8px),
+    rgba(86, 193, 126, 0.36);
+  border: 3px dashed rgba(255, 255, 255, 0.68);
+}
+
+.dream-garden-forest-zone {
+  left: 11%;
+  top: 21%;
+  width: 24%;
+  height: 24%;
+  border-radius: 55% 45% 48% 52%;
+  background:
+    radial-gradient(circle at 25% 60%, rgba(20, 132, 92, 0.58) 0 34px, transparent 35px),
+    radial-gradient(circle at 46% 44%, rgba(47, 159, 94, 0.62) 0 42px, transparent 43px),
+    radial-gradient(circle at 70% 63%, rgba(64, 179, 109, 0.52) 0 32px, transparent 33px);
+  opacity: 0.72;
+}
+
+.dream-garden-title {
+  position: absolute;
+  z-index: 20;
+  top: clamp(1rem, 2.4vw, 2rem);
+  left: clamp(1rem, 3vw, 2rem);
+  max-width: 620px;
+  padding: 0.25rem;
+  text-shadow: 0 2px 12px rgba(255, 255, 255, 0.6);
+}
+
+.dream-garden-toast,
+.dream-garden-loading {
+  position: absolute;
+  z-index: 45;
+  left: 50%;
+  top: 1.25rem;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  max-width: min(92%, 520px);
+  border-radius: 999px;
+  padding: 0.75rem 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(14px);
+  font-weight: 800;
+  font-size: 0.875rem;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
+}
+
+.dream-garden-toast-success { color: #047857; }
+.dream-garden-toast-error { color: #dc2626; }
+.dream-garden-loading { color: #475569; top: 5.5rem; }
+
+.dream-garden-overlay {
+  position: absolute;
+  z-index: 35;
+  width: 250px;
+  display: grid;
+  gap: 0.9rem;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.58);
+  box-shadow: 0 18px 40px rgba(64, 92, 111, 0.16);
+  backdrop-filter: blur(18px);
+  padding: 1rem;
+}
+
+.dream-garden-overlay-left {
+  left: clamp(0.75rem, 2vw, 1.5rem);
+  top: 28%;
+}
+
+.dream-garden-overlay-right {
+  right: clamp(0.75rem, 2vw, 1.5rem);
+  top: 18%;
+}
+
+.dream-garden-mini-icon {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16px;
+}
+
+.dream-garden-mini-emoji {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16px;
+  background: linear-gradient(145deg, #f0fdfa, #fdf2f8);
+  color: #475569;
+  font-family: var(--font-game-title);
+  font-size: 0.8rem;
+}
+
+.dream-garden-dev-panel {
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.55);
+  padding: 0.75rem;
+}
+
+.dream-garden-dev-panel summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  list-style: none;
+  font-family: var(--font-game-title);
+  color: #475569;
+}
+
+.dream-garden-dev-panel summary::-webkit-details-marker { display: none; }
+.dream-garden-dev-panel[open] summary svg { transform: rotate(180deg); }
+
+.dream-garden-test-button {
+  min-height: 38px;
+  border-radius: 16px;
+  padding: 0.45rem 0.75rem;
+  font-family: var(--font-game-title);
+  font-size: 0.875rem;
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.1);
+}
+
+.dream-garden-slots {
+  position: absolute;
+  inset: 0;
+  z-index: 15;
+}
+
+.dream-garden-slot {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dream-garden-slot-sm { width: 112px; height: 94px; }
+.dream-garden-slot-md { width: 142px; height: 118px; }
+.dream-garden-slot-lg { width: 176px; height: 148px; }
+
+.dream-garden-slot-ground {
+  position: absolute;
+  left: 50%;
+  bottom: 5%;
+  width: 88%;
+  height: 28%;
+  border-radius: 999px;
+  transform: translateX(-50%);
+  border: 2px dashed rgba(255, 255, 255, 0.75);
+  background: rgba(255, 255, 255, 0.2);
+  box-shadow: inset 0 2px 8px rgba(59, 130, 96, 0.12);
+}
+
+.dream-garden-slot-object {
+  position: relative;
+  display: flex;
+  min-width: 76px;
+  min-height: 76px;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 0.2rem;
+  border-radius: 28px;
+  transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+.dream-garden-slot-filled .dream-garden-slot-object {
+  background: rgba(255, 255, 255, 0.72);
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 12px 20px rgba(45, 104, 72, 0.16);
+  padding: 0.65rem 0.85rem;
+}
+
+.dream-garden-slot-filled .dream-garden-slot-object:hover {
+  transform: translateY(-4px) scale(1.03);
+}
+
+.dream-garden-slot-locked .dream-garden-slot-object {
+  border: 2px dashed rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.24);
+  color: rgba(46, 87, 70, 0.48);
+  filter: saturate(0.75);
+}
+
+.dream-garden-slot-silhouette {
+  width: 38px;
+  height: 38px;
+  opacity: 0.44;
+}
+
+.dream-garden-slot-lock {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  width: 16px;
+  height: 16px;
+  color: rgba(100, 116, 139, 0.62);
+}
+
+.dream-garden-slot-label,
+.dream-garden-item-name {
+  max-width: 118px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border-radius: 999px;
+  padding: 0.18rem 0.5rem;
+  background: rgba(255, 255, 255, 0.65);
+  color: #475569;
+  font-family: var(--font-game-title);
+  font-size: 0.72rem;
+}
+
+.dream-garden-item-emoji {
+  display: inline-flex;
+  width: 56px;
+  height: 56px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 20px;
+  background: linear-gradient(145deg, #ecfeff, #fdf2f8);
+  color: #334155;
+  font-family: var(--font-game-title);
+  font-size: 0.8rem;
+  box-shadow: inset 0 -4px 0 rgba(255, 255, 255, 0.45);
+}
+
+.dream-garden-inventory-dock {
+  position: absolute;
+  z-index: 40;
+  left: 50%;
+  bottom: clamp(0.75rem, 2vw, 1.35rem);
+  transform: translateX(-50%);
+  width: min(920px, calc(100% - 2rem));
+  display: flex;
+  gap: 0.75rem;
+  overflow-x: auto;
+  padding: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.78);
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.62);
+  box-shadow: 0 18px 38px rgba(15, 23, 42, 0.14);
+  backdrop-filter: blur(18px);
+}
+
+.dream-garden-item-card {
+  min-width: 265px;
+  max-width: 310px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.86);
+  padding: 0.75rem;
+}
+
+.dream-garden-item-thumb {
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 18px;
+  background: linear-gradient(145deg, #e0f2fe, #dcfce7);
+  color: #334155;
+  font-family: var(--font-game-title);
+  font-size: 0.78rem;
+}
+
+.dream-garden-place-button {
+  min-width: 72px;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  border-radius: 999px;
+  background: #10b981;
+  color: white;
+  font-family: var(--font-game-title);
+  box-shadow: 0 6px 0 #059669, 0 8px 14px rgba(5, 150, 105, 0.2);
+}
+
+.dream-garden-place-button:disabled {
+  background: #e2e8f0;
+  color: #94a3b8;
+  box-shadow: none;
+}
+
+.dream-garden-inventory-empty {
+  min-height: 54px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.58);
+  color: #64748b;
+  font-family: var(--font-game-title);
+}
+
+@media (max-width: 1180px) {
+  .dream-garden-stage { min-height: 820px; }
+  .dream-garden-overlay { width: 220px; padding: 0.85rem; }
+  .dream-garden-overlay-left { top: 26%; }
+  .dream-garden-overlay-right { top: 16%; }
+  .dream-garden-title { max-width: 520px; }
+}
+
+@media (max-width: 860px) {
+  .dream-garden-page { padding-inline: 0.5rem; }
+  .dream-garden-stage {
+    min-width: 760px;
+    min-height: 780px;
+  }
+  .dream-garden-page {
+    overflow-x: auto;
+  }
+  .dream-garden-overlay { width: 205px; }
+  .dream-garden-overlay-left { left: 0.75rem; top: 27%; }
+  .dream-garden-overlay-right { right: 0.75rem; top: 18%; }
+}
