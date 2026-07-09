@@ -289,176 +289,8 @@ export default function StudentDreamGardenPage() {
       <main className="dream-garden-page">
         <section className="dream-garden-stage" aria-label="나의 꿈의 정원">
 
-          {/* ── 배경 레이어 1: 하늘 그라데이션 ── */}
-          <div className="dg-bg-sky" />
-
-          {/* ── 배경 레이어 2: 무지개 ── */}
-          <div className="dg-rainbow" />
-
-          {/* ── 배경 레이어 3: 태양 ── */}
-          <div className="dg-sun">
-            <div className="dg-sun-rays" />
-          </div>
-
-          {/* ── 배경 레이어 4: 구름들 ── */}
-          <div className="dg-cloud dg-cloud-1" />
-          <div className="dg-cloud dg-cloud-2" />
-          <div className="dg-cloud dg-cloud-3" />
-
-          {/* ── 배경 레이어 5: 반짝이 별들 ── */}
-          <div className="dg-sparkle dg-sparkle-1">✦</div>
-          <div className="dg-sparkle dg-sparkle-2">✧</div>
-          <div className="dg-sparkle dg-sparkle-3">✦</div>
-          <div className="dg-sparkle dg-sparkle-4">✦</div>
-          <div className="dg-sparkle dg-sparkle-5">✧</div>
-
-          {/* ── 배경 레이어 6: 잔디 기반 ── */}
-          <div className="dg-bg-grass" />
-
-          {/* ── 배경 레이어 7: 나무/숲 배경 ── */}
-          <div className="dg-forest-bg">
-            {/* 나무들 (CSS only) */}
-            <div className="dg-tree dg-tree-1">
-              <div className="dg-tree-top" />
-              <div className="dg-tree-mid" />
-              <div className="dg-tree-trunk" />
-            </div>
-            <div className="dg-tree dg-tree-2">
-              <div className="dg-tree-top" />
-              <div className="dg-tree-mid" />
-              <div className="dg-tree-trunk" />
-            </div>
-            <div className="dg-treehouse">
-              <div className="dg-treehouse-top">
-                {/* 나무집 지붕 */}
-                <div className="dg-treehouse-roof" />
-                <div className="dg-treehouse-wall" />
-                <div className="dg-treehouse-window" />
-              </div>
-              <div className="dg-treehouse-trunk" />
-            </div>
-          </div>
-
-          {/* ── 배경 레이어 8: 돌 오솔길 ── */}
-          <div className="dg-path-stones">
-            {/* 돌들 - 각각 개별 배치 */}
-            {[...Array(18)].map((_, i) => (
-              <div key={i} className={`dg-stone dg-stone-${i + 1}`} />
-            ))}
-          </div>
-
-          {/* ── 배경 레이어 9: 중앙 원형 광장 ── */}
-          <div className="dg-plaza-circle" />
-          <div className="dg-plaza-ring" />
-
-          {/* ── 배경 레이어 10: 연못 (물결/연꽃/다리) ── */}
-          <div className="dg-pond-area">
-            <div className="dg-pond-water">
-              <div className="dg-pond-ripple dg-pond-ripple-1" />
-              <div className="dg-pond-ripple dg-pond-ripple-2" />
-            </div>
-            <div className="dg-lotus dg-lotus-1">🪷</div>
-            <div className="dg-lotus dg-lotus-2">🪷</div>
-            <div className="dg-swan">🦢</div>
-            <div className="dg-pond-bridge" />
-            <div className="dg-pond-bridge-rail dg-pond-bridge-rail-l" />
-            <div className="dg-pond-bridge-rail dg-pond-bridge-rail-r" />
-          </div>
-
-          {/* ── 배경 레이어 11: 꽃밭 구역 ── */}
-          <div className="dg-flowerbed-area">
-            <div className="dg-flowerbed-patch" />
-            {/* 꽃들 */}
-            <div className="dg-flower dg-flower-1">🌸</div>
-            <div className="dg-flower dg-flower-2">🌼</div>
-            <div className="dg-flower dg-flower-3">🌺</div>
-            <div className="dg-flower dg-flower-4">🌸</div>
-            <div className="dg-flower dg-flower-5">🌻</div>
-            <div className="dg-flower dg-flower-6">🌼</div>
-            <div className="dg-flower dg-flower-7">🌹</div>
-          </div>
-
-          {/* ── 배경 레이어 12: 울타리 ── */}
-          <div className="dg-fence-row dg-fence-bottom">
-            {[...Array(12)].map((_, i) => (
-              <div key={i} className="dg-fence-post">
-                <div className="dg-fence-cap" />
-                <div className="dg-fence-body" />
-              </div>
-            ))}
-          </div>
-          <div className="dg-fence-row dg-fence-right">
-            {[...Array(8)].map((_, i) => (
-              <div key={i} className="dg-fence-post dg-fence-post-v">
-                <div className="dg-fence-cap" />
-                <div className="dg-fence-body" />
-              </div>
-            ))}
-          </div>
-
-          {/* ── 배경 레이어 13: 장식물들 ── */}
-          {/* 가로등 */}
-          <div className="dg-lamp dg-lamp-1">
-            <div className="dg-lamp-head" />
-            <div className="dg-lamp-pole" />
-          </div>
-          <div className="dg-lamp dg-lamp-2">
-            <div className="dg-lamp-head" />
-            <div className="dg-lamp-pole" />
-          </div>
-
-          {/* 우체통 */}
-          <div className="dg-mailbox">
-            <div className="dg-mailbox-body">📮</div>
-          </div>
-
-          {/* 표지판 */}
-          <div className="dg-signpost">
-            <div className="dg-signpost-board">꿈의 정원</div>
-            <div className="dg-signpost-pole" />
-          </div>
-
-          {/* 아치 문 */}
-          <div className="dg-arch">
-            <div className="dg-arch-frame" />
-            <div className="dg-arch-flowers">🌸🌸</div>
-          </div>
-
-          {/* 벤치 배경 */}
-          <div className="dg-bench-area">
-            <div className="dg-bench-seat" />
-            <div className="dg-bench-legs" />
-          </div>
-
-          {/* 덤불들 */}
-          <div className="dg-bush dg-bush-1" />
-          <div className="dg-bush dg-bush-2" />
-          <div className="dg-bush dg-bush-3" />
-          <div className="dg-bush dg-bush-4" />
-
-          {/* 분수대 베이스 */}
-          <div className="dg-fountain-base">
-            <div className="dg-fountain-bowl-outer" />
-            <div className="dg-fountain-bowl-inner" />
-            <div className="dg-fountain-water-spray" />
-            <div className="dg-fountain-water-spray dg-fountain-water-spray-2" />
-            <div className="dg-fountain-water-spray dg-fountain-water-spray-3" />
-            <div className="dg-fountain-center-star">⭐</div>
-          </div>
-
-          {/* ── UI 레이어: 제목 패널 ── */}
-          <div className="dream-garden-title">
-            <div className="dg-title-badge">
-              <Sprout className="w-4 h-4" />
-              꿈의 정원
-            </div>
-            <h1 className="dg-title-text">
-              {garden?.garden_name ?? '나의 꿈의 정원'}
-            </h1>
-            <p className="dg-title-sub">
-              출석하고 만화를 완성하면 정원 아이템을 모을 수 있어요.
-            </p>
-          </div>
+          {/* ── 배경 이미지 (Stitch 시안 임시 배경) ── */}
+          <div className="dg-background-image" />
 
           {/* ── 토스트 알림 ── */}
           {(message || error) && (
@@ -476,6 +308,20 @@ export default function StudentDreamGardenPage() {
 
           {/* ── 왼쪽 정보 오버레이 ── */}
           <aside className="dream-garden-overlay dream-garden-overlay-left" aria-label="정원 정보">
+            {/* ── UI 레이어: 제목 패널 ── */}
+            <div className="dream-garden-title">
+              <div className="dg-title-badge">
+                <Sprout className="w-4 h-4" />
+                꿈의 정원
+              </div>
+              <h1 className="dg-title-text">
+                {garden?.garden_name ?? '나의 꿈의 정원'}
+              </h1>
+              <p className="dg-title-sub">
+                출석하고 만화를 완성하면 정원 아이템을 모을 수 있어요.
+              </p>
+            </div>
+
             {/* 정원 단계 */}
             <div className="dg-info-section">
               <div className="dg-info-header">
