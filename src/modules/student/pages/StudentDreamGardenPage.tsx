@@ -521,19 +521,16 @@ export default function StudentDreamGardenPage() {
           </div>
 
           {/* ── 하단 인벤토리 독 ── */}
-          <div className="dream-garden-inventory-dock" aria-label="보유 아이템 목록">
-            {authLoading || isLoading ? (
+          {(authLoading || isLoading || !studentId || groupedItems.length > 0) && (
+            <div className="dream-garden-inventory-dock" aria-label="보유 아이템 목록">
+              {authLoading || isLoading ? (
               <div className="dream-garden-inventory-empty">
                 <Loader2 className="w-4 h-4 animate-spin" />
                 아이템 확인 중
               </div>
             ) : !studentId ? (
               <div className="dream-garden-inventory-empty">학생 로그인 후 사용할 수 있어요.</div>
-            ) : groupedItems.length === 0 ? (
-              <div className="dream-garden-inventory-empty">
-                아직 획득한 아이템이 없어요. 출석하거나 만화를 완성하면 꿈의 정원 아이템을 받을 수 있어요.
-              </div>
-            ) : (
+            ) : groupedItems.length > 0 ? (
               groupedItems.map(({ item: studentItem, count }) => {
                 const item = studentItem.item
                 const isPlaced = placedStudentItemIds.has(studentItem.id)
@@ -569,8 +566,9 @@ export default function StudentDreamGardenPage() {
                   </article>
                 )
               })
-            )}
+            ) : null}
           </div>
+          )}
         </section>
       </main>
     </StudentPageShell>

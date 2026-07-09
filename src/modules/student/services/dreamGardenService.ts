@@ -67,7 +67,10 @@ async function getOrCreateRewardStats(studentId: string) {
     .eq('student_id', studentId)
     .maybeSingle()
 
-  if (selectError) throw selectError
+  if (selectError) {
+    console.error('[dreamGardenService] getOrCreateRewardStats failed:', selectError)
+    throw selectError
+  }
   if (existing) return existing as {
     id: string
     student_id: string
@@ -111,7 +114,10 @@ export async function getStudentGarden(studentId: string): Promise<StudentGarden
     .eq('student_id', studentId)
     .maybeSingle()
 
-  if (selectError) throw selectError
+  if (selectError) {
+    console.error('[dreamGardenService] getOrCreateGarden failed:', selectError)
+    throw selectError
+  }
   return (existing ?? null) as StudentGarden | null
 }
 
@@ -131,6 +137,7 @@ export async function createDefaultGarden(studentId: string): Promise<StudentGar
       const existing = await getStudentGarden(studentId)
       if (existing) return existing
     }
+    console.error('[dreamGardenService] getOrCreateGarden failed:', error)
     throw error
   }
   return data as StudentGarden
@@ -144,12 +151,15 @@ export async function getOrCreateStudentGarden(studentId: string): Promise<Stude
 
 export async function getStudentItems(studentId: string): Promise<StudentItem[]> {
   const { data, error } = await supabase
-    .from('student_items')
+    .from('student_garden_items')
     .select('*, item:items(*)')
     .eq('student_id', studentId)
     .order('acquired_at', { ascending: false })
 
-  if (error) throw error
+  if (error) {
+    console.error('[dreamGardenService] getOwnedItems failed:', error)
+    throw error
+  }
   return (data ?? []) as StudentItem[]
 }
 
@@ -183,7 +193,7 @@ export async function grantRandomItem(
 
   const item = pickWeightedRandomItem(placeableItems)
   const { data: studentItem, error: itemError } = await supabase
-    .from('student_items')
+    .from('student_garden_items')
     .insert({
       student_id: studentId,
       item_id: item.id,
@@ -195,7 +205,10 @@ export async function grantRandomItem(
     .select('*, item:items(*)')
     .single()
 
-  if (itemError) throw itemError
+  if (itemError) {
+    console.error('[dreamGardenService] getOwnedItems failed:', itemError)
+    throw itemError
+  }
 
   const { error: logError } = await supabase
     .from('reward_logs')
@@ -271,21 +284,24 @@ export async function grantLuckyRewardIfNeeded(studentId: string): Promise<Rewar
 export async function getGardenPlacements(studentId: string): Promise<GardenPlacement[]> {
   const garden = await getOrCreateStudentGarden(studentId)
   const { data, error } = await supabase
-    .from('garden_placements')
-    .select('*, item:items(*), student_item:student_items(*)')
+    .from('student_item_placements')
+    .select('*, item:items(*), student_item:student_garden_items(*)')
     .eq('garden_id', garden.id)
     .eq('is_visible', true)
     .order('z_index', { ascending: true })
     .order('created_at', { ascending: true })
 
-  if (error) throw error
+  if (error) {
+    console.error('[dreamGardenService] getPlacements failed:', error)
+    throw error
+  }
   return (data ?? []) as GardenPlacement[]
 }
 
 export async function saveGardenPlacement(input: SaveGardenPlacementInput): Promise<GardenPlacement> {
   const garden = await getOrCreateStudentGarden(input.studentId)
   const { data, error } = await supabase
-    .from('garden_placements')
+    .from('student_item_placements')
     .insert({
       garden_id: garden.id,
       student_item_id: input.studentItemId,
@@ -296,10 +312,13 @@ export async function saveGardenPlacement(input: SaveGardenPlacementInput): Prom
       z_index: input.zIndex ?? 1,
       is_visible: true,
     })
-    .select('*, item:items(*), student_item:student_items(*)')
+    .select('*, item:items(*), student_item:student_garden_items(*)')
     .single()
 
-  if (error) throw error
+  if (error) {
+    console.error('[dreamGardenService] getPlacements failed:', error)
+    throw error
+  }
   return data as GardenPlacement
 }
 
@@ -312,21 +331,27 @@ export async function updateGardenPlacement(input: UpdateGardenPlacementInput): 
   if (typeof input.isVisible === 'boolean') payload.is_visible = input.isVisible
 
   const { data, error } = await supabase
-    .from('garden_placements')
+    .from('student_item_placements')
     .update(payload)
     .eq('id', input.placementId)
-    .select('*, item:items(*), student_item:student_items(*)')
+    .select('*, item:items(*), student_item:student_garden_items(*)')
     .single()
 
-  if (error) throw error
+  if (error) {
+    console.error('[dreamGardenService] getPlacements failed:', error)
+    throw error
+  }
   return data as GardenPlacement
 }
 
 export async function deleteGardenPlacement(placementId: string): Promise<void> {
   const { error } = await supabase
-    .from('garden_placements')
+    .from('student_item_placements')
     .delete()
     .eq('id', placementId)
 
-  if (error) throw error
+  if (error) {
+    console.error('[dreamGardenService] getPlacements failed:', error)
+    throw error
+  }
 }
