@@ -72,6 +72,32 @@ export default function StudentPageShell({
   const [hasLoadedItems, setHasLoadedItems] = useState(false)
   const [isLoadingItems, setIsLoadingItems] = useState(false)
   const [attendanceRewardCount, setAttendanceRewardCount] = useState(0)
+  const studentId = authProfile?.role === 'student' ? (authProfile.id ?? user?.id) : user?.id
+
+  const loadLootItems = useCallback(async () => {
+    if (!studentId) {
+      setStudentItems([])
+      setHasLoadedItems(true)
+      return
+    }
+
+    try {
+      setIsLoadingItems(true)
+      const items = await getStudentItems(studentId)
+      setStudentItems(items)
+      setHasLoadedItems(true)
+    } catch (error) {
+      console.error('[StudentPageShell] 득템 현황 조회 실패:', error)
+    } finally {
+      setIsLoadingItems(false)
+    }
+  }, [studentId])
+
+  useEffect(() => {
+    if (showHUD) {
+      void loadLootItems()
+    }
+  }, [loadLootItems, showHUD])
 
   useEffect(() => {
     if (user?.id && authProfile?.role === 'student') {
@@ -80,21 +106,30 @@ export default function StudentPageShell({
           setStudentData(data)
         }
       })
-      
+
       const loadRewardCount = () => {
         getAttendanceRewardItemCount(user.id)
           .then(count => setAttendanceRewardCount(count))
           .catch(err => console.error('[StudentPageShell] 출석보상 개수 조회 실패:', err))
       }
-      
+      const handleAttendanceRewardGranted = () => {
+        loadRewardCount()
+        void loadLootItems()
+      }
+      const handleLootItemsChanged = () => {
+        void loadLootItems()
+      }
+
       loadRewardCount()
-      
-      window.addEventListener('attendanceRewardGranted', loadRewardCount)
+
+      window.addEventListener('attendanceRewardGranted', handleAttendanceRewardGranted)
+      window.addEventListener('studentLootItemsChanged', handleLootItemsChanged)
       return () => {
-        window.removeEventListener('attendanceRewardGranted', loadRewardCount)
+        window.removeEventListener('attendanceRewardGranted', handleAttendanceRewardGranted)
+        window.removeEventListener('studentLootItemsChanged', handleLootItemsChanged)
       }
     }
-  }, [user?.id, authProfile?.role])
+  }, [user?.id, authProfile?.role, loadLootItems])
 
   const handleOpenAllWorksModal = useCallback(async () => {
     setIsAllWorksModalOpen(true)
@@ -116,21 +151,12 @@ export default function StudentPageShell({
   const handleOpenLootModal = useCallback(async () => {
     setIsLootModalOpen(true)
 
-    if (hasLoadedItems || !user?.id) {
+    if (hasLoadedItems) {
       return
     }
 
-    try {
-      setIsLoadingItems(true)
-      const items = await getStudentItems(user.id)
-      setStudentItems(items)
-      setHasLoadedItems(true)
-    } catch (error) {
-      console.error('[StudentPageShell] 득템 현황 조회 실패:', error)
-    } finally {
-      setIsLoadingItems(false)
-    }
-  }, [hasLoadedItems, user?.id])
+    await loadLootItems()
+  }, [hasLoadedItems, loadLootItems])
 
   const handleLogout = useCallback(async () => {
     await signOut()
@@ -147,9 +173,7 @@ export default function StudentPageShell({
   const profile = currentProfile;
   const isRealStudent = user && authProfile?.role === 'student';
   const isFull = maxWidth === 'full';
-  const totalLootCount = hasLoadedItems
-    ? studentItems.reduce((sum, item) => sum + item.quantity, 0)
-    : profile.totalBadges
+  const totalLootCount = studentItems.reduce((sum, item) => sum + item.quantity, 0)
   const recentLootItems = studentItems.slice(0, 5)
 
   return (

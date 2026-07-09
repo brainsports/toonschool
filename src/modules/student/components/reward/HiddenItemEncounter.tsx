@@ -69,6 +69,9 @@ export default function HiddenItemEncounter({
         setFinished(true)
       }
       setMessage(result.status === 'granted' ? '꿈의 정원에 보냈어요!' : result.message)
+      if (result.status === 'granted') {
+        window.dispatchEvent(new Event('studentLootItemsChanged'))
+      }
       onRewardGranted?.(result)
     } catch (error) {
       console.error('[HiddenItemEncounter] reward failed:', error)
