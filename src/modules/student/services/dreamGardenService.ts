@@ -39,6 +39,16 @@ function pickWeightedRandomItem(items: DreamGardenItem[]) {
   return items[items.length - 1]
 }
 
+function getRewardCandidateItems(items: DreamGardenItem[], rewardType: RewardType) {
+  const placeableItems = items.filter((item) => item.is_placeable)
+
+  if (rewardType === 'attendance') {
+    return placeableItems.filter((item) => item.rarity === 'common')
+  }
+
+  return placeableItems
+}
+
 async function getExistingRewardLog(studentId: string, rewardType: RewardType, sourceId?: string) {
   let query = supabase
     .from('reward_logs')
@@ -56,6 +66,20 @@ async function getExistingRewardLog(studentId: string, rewardType: RewardType, s
   }
 
   const { data, error } = await query.maybeSingle()
+  if (error) throw error
+  return data
+}
+
+async function getExistingAttendanceRewardLog(studentId: string, today: string) {
+  const { data, error } = await supabase
+    .from('reward_logs')
+    .select('id, item_id')
+    .eq('student_id', studentId)
+    .eq('reward_type', 'attendance')
+    .or(`source_id.eq.${today},and(source_id.is.null,reward_date.eq.${today})`)
+    .limit(1)
+    .maybeSingle()
+
   if (error) throw error
   return data
 }
@@ -180,8 +204,8 @@ export async function grantRandomItem(
   }
 
   const activeItems = await getActiveItems()
-  const placeableItems = activeItems.filter((item) => item.is_placeable)
-  if (placeableItems.length === 0) {
+  const rewardItems = getRewardCandidateItems(activeItems, rewardType)
+  if (rewardItems.length === 0) {
     return {
       status: 'skipped',
       message: '받을 수 있는 아이템이 아직 없어요.',
@@ -191,7 +215,7 @@ export async function grantRandomItem(
     }
   }
 
-  const item = pickWeightedRandomItem(placeableItems)
+  const item = pickWeightedRandomItem(rewardItems)
   const { data: studentItem, error: itemError } = await supabase
     .from('student_items')
     .insert({
@@ -232,13 +256,47 @@ export async function grantRandomItem(
 }
 
 export async function grantAttendanceReward(studentId: string): Promise<RewardResult> {
-  const result = await grantRandomItem(studentId, 'attendance')
+  const today = getTodayDateKey()
+  const existingReward = await getExistingAttendanceRewardLog(studentId, today)
+  if (existingReward) {
+    return {
+      status: 'already_claimed',
+      message: '?대? 諛쏆? 蹂댁긽?댁뿉??',
+      item: null,
+      studentItem: null,
+      rewardType: 'attendance',
+    }
+  }
+
+  const result = await grantRandomItem(studentId, 'attendance', today)
   if (result.status === 'granted') {
-    await getOrCreateRewardStats(studentId)
-    await supabase
-      .from('student_reward_stats')
-      .update({ last_attendance_reward_date: getTodayDateKey() })
-      .eq('student_id', studentId)
+    try {
+      await getOrCreateRewardStats(studentId)
+      const { error } = await supabase
+        .from('student_reward_stats')
+        .update({ last_attendance_reward_date: today })
+        .eq('student_id', studentId)
+
+      if (error) throw error
+    } catch (error) {
+      console.error('[dreamGardenService] update attendance reward stats failed:', error)
+    }
+
+    if (result.studentItem) {
+      try {
+        await saveGardenPlacement({
+          studentId,
+          studentItemId: result.studentItem.id,
+          itemId: result.studentItem.item_id,
+          x: 74,
+          y: 70,
+          scale: 0.9,
+          zIndex: 8,
+        })
+      } catch (error) {
+        console.error('[dreamGardenService] auto place attendance reward failed:', error)
+      }
+    }
   }
   return result
 }
