@@ -151,7 +151,7 @@ export async function getOrCreateStudentGarden(studentId: string): Promise<Stude
 
 export async function getStudentItems(studentId: string): Promise<StudentItem[]> {
   const { data, error } = await supabase
-    .from('student_garden_items')
+    .from('student_items')
     .select('*, item:items(*)')
     .eq('student_id', studentId)
     .order('acquired_at', { ascending: false })
@@ -193,7 +193,7 @@ export async function grantRandomItem(
 
   const item = pickWeightedRandomItem(placeableItems)
   const { data: studentItem, error: itemError } = await supabase
-    .from('student_garden_items')
+    .from('student_items')
     .insert({
       student_id: studentId,
       item_id: item.id,
@@ -284,8 +284,8 @@ export async function grantLuckyRewardIfNeeded(studentId: string): Promise<Rewar
 export async function getGardenPlacements(studentId: string): Promise<GardenPlacement[]> {
   const garden = await getOrCreateStudentGarden(studentId)
   const { data, error } = await supabase
-    .from('student_item_placements')
-    .select('*, item:items(*), student_item:student_garden_items(*)')
+    .from('garden_placements')
+    .select('*, item:items(*), student_item:student_items(*)')
     .eq('garden_id', garden.id)
     .eq('is_visible', true)
     .order('z_index', { ascending: true })
@@ -301,7 +301,7 @@ export async function getGardenPlacements(studentId: string): Promise<GardenPlac
 export async function saveGardenPlacement(input: SaveGardenPlacementInput): Promise<GardenPlacement> {
   const garden = await getOrCreateStudentGarden(input.studentId)
   const { data, error } = await supabase
-    .from('student_item_placements')
+    .from('garden_placements')
     .insert({
       garden_id: garden.id,
       student_item_id: input.studentItemId,
@@ -312,7 +312,7 @@ export async function saveGardenPlacement(input: SaveGardenPlacementInput): Prom
       z_index: input.zIndex ?? 1,
       is_visible: true,
     })
-    .select('*, item:items(*), student_item:student_garden_items(*)')
+    .select('*, item:items(*), student_item:student_items(*)')
     .single()
 
   if (error) {
@@ -331,10 +331,10 @@ export async function updateGardenPlacement(input: UpdateGardenPlacementInput): 
   if (typeof input.isVisible === 'boolean') payload.is_visible = input.isVisible
 
   const { data, error } = await supabase
-    .from('student_item_placements')
+    .from('garden_placements')
     .update(payload)
     .eq('id', input.placementId)
-    .select('*, item:items(*), student_item:student_garden_items(*)')
+    .select('*, item:items(*), student_item:student_items(*)')
     .single()
 
   if (error) {
@@ -346,7 +346,7 @@ export async function updateGardenPlacement(input: UpdateGardenPlacementInput): 
 
 export async function deleteGardenPlacement(placementId: string): Promise<void> {
   const { error } = await supabase
-    .from('student_item_placements')
+    .from('garden_placements')
     .delete()
     .eq('id', placementId)
 

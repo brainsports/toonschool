@@ -524,50 +524,50 @@ export default function StudentDreamGardenPage() {
           {(authLoading || isLoading || !studentId || groupedItems.length > 0) && (
             <div className="dream-garden-inventory-dock" aria-label="보유 아이템 목록">
               {authLoading || isLoading ? (
-              <div className="dream-garden-inventory-empty">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                아이템 확인 중
-              </div>
-            ) : !studentId ? (
-              <div className="dream-garden-inventory-empty">학생 로그인 후 사용할 수 있어요.</div>
-            ) : groupedItems.length > 0 ? (
-              groupedItems.map(({ item: studentItem, count }) => {
-                const item = studentItem.item
-                const isPlaced = placedStudentItemIds.has(studentItem.id)
+                <div className="dream-garden-inventory-empty">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  아이템 확인 중
+                </div>
+              ) : !studentId ? (
+                <div className="dream-garden-inventory-empty">학생 로그인 후 사용할 수 있어요.</div>
+              ) : groupedItems.length > 0 ? (
+                groupedItems.map(({ item: studentItem, count }) => {
+                  const item = studentItem.item
+                  const isPlaced = placedStudentItemIds.has(studentItem.id)
 
-                return (
-                  <article key={studentItem.item_id} className="dream-garden-item-card">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <ItemImage item={item} imgClassName="dream-garden-item-thumb-img" fallbackClassName="dream-garden-item-thumb" />
-                      <div className="min-w-0">
-                        <h3 className="truncate font-jua text-base text-slate-800">{item?.name ?? '아이템'}</h3>
-                        <div className="mt-1 flex flex-wrap gap-1.5">
-                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-600">
-                            {categoryLabels[item?.category ?? 'nature']}
-                          </span>
-                          <span className={`rounded-full border px-2 py-0.5 text-[11px] font-bold ${rarityStyles[item?.rarity ?? 'common']}`}>
-                            {rarityLabels[item?.rarity ?? 'common']}
-                          </span>
-                          <span className="rounded-full bg-pink-50 px-2 py-0.5 text-[11px] font-bold text-pink-600">
-                            {count}개
-                          </span>
+                  return (
+                    <article key={studentItem.item_id} className="dream-garden-item-card">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <ItemImage item={item} imgClassName="dream-garden-item-thumb-img" fallbackClassName="dream-garden-item-thumb" />
+                        <div className="min-w-0">
+                          <h3 className="truncate font-jua text-base text-slate-800">{item?.name ?? '아이템'}</h3>
+                          <div className="mt-1 flex flex-wrap gap-1.5">
+                            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-600">
+                              {categoryLabels[item?.category ?? 'nature']}
+                            </span>
+                            <span className={`rounded-full border px-2 py-0.5 text-[11px] font-bold ${rarityStyles[item?.rarity ?? 'common']}`}>
+                              {rarityLabels[item?.rarity ?? 'common']}
+                            </span>
+                            <span className="rounded-full bg-pink-50 px-2 py-0.5 text-[11px] font-bold text-pink-600">
+                              {count}개
+                            </span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <button
-                      type="button"
-                      disabled={isWorking || isPlaced || !item?.is_placeable}
-                      onClick={() => handlePlaceItem(studentItem)}
-                      className="dream-garden-place-button"
-                    >
-                      <Plus className="w-4 h-4" />
-                      {isPlaced ? '배치됨' : '놓기'}
-                    </button>
-                  </article>
-                )
-              })
-            ) : null}
-          </div>
+                      <button
+                        type="button"
+                        disabled={isWorking || isPlaced || !item?.is_placeable}
+                        onClick={() => handlePlaceItem(studentItem)}
+                        className="dream-garden-place-button"
+                      >
+                        <Plus className="w-4 h-4" />
+                        {isPlaced ? '배치됨' : '놓기'}
+                      </button>
+                    </article>
+                  )
+                })
+              ) : null}
+            </div>
           )}
         </section>
       </main>
