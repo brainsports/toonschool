@@ -23,33 +23,40 @@ export default function HomePage() {
             
             {/* Header */}
             <header className="fixed top-0 left-0 w-full z-50 bg-white/95 backdrop-blur-md shadow-sm border-b border-gray-100 h-20 md:h-24">
-                <div className="max-w-7xl mx-auto px-6 h-full flex justify-between items-center">
-                    <Link to="/" className="flex items-center gap-3 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50">
+                <div className="max-w-7xl mx-auto px-6 h-full flex justify-between items-center relative">
+                    {/* Left: Logo */}
+                    <Link to="/" className="flex items-center gap-3 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 shrink-0">
                         <div className="w-10 h-10 bg-primary text-white flex items-center justify-center font-bold rounded-xl text-lg shadow-sm">TS</div>
-                        <span className="font-title-md font-extrabold text-2xl tracking-tight text-on-surface">툰스쿨</span>
+                        <span className="font-title-md font-extrabold text-2xl tracking-tight text-gray-900">툰스쿨</span>
                     </Link>
-                    <nav className="hidden xl:flex items-center space-x-10">
-                        <Link className="text-on-surface text-lg font-bold hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-md px-2 py-1" to="/">툰스쿨</Link>
-                        <Link className="text-on-surface text-lg font-bold hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-md px-2 py-1" to="/ai-content">AI 학습콘텐츠</Link>
-                        <Link className="text-on-surface text-lg font-bold hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-md px-2 py-1" to="/flipped-learning">거꾸로 학습법</Link>
-                        <Link className="text-on-surface text-lg font-bold hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-md px-2 py-1" to="/pwa">PC·태블릿 버전</Link>
-                        <Link className="text-on-surface text-lg font-bold hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-md px-2 py-1" to="/faq">궁금해요</Link>
+                    
+                    {/* Center: Navigation */}
+                    <nav className="hidden xl:flex absolute left-1/2 -translate-x-1/2 items-center space-x-10">
+                        <Link className="text-gray-700 text-lg font-bold hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-md px-2 py-1" to="/">툰스쿨</Link>
+                        <Link className="text-gray-700 text-lg font-bold hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-md px-2 py-1" to="/ai-content">AI 학습콘텐츠</Link>
+                        <Link className="text-gray-700 text-lg font-bold hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-md px-2 py-1" to="/flipped-learning">거꾸로 학습법</Link>
+                        <Link className="text-gray-700 text-lg font-bold hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-md px-2 py-1" to="/pwa">PC·태블릿 버전</Link>
+                        <Link className="text-gray-700 text-lg font-bold hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-md px-2 py-1" to="/faq">궁금해요</Link>
                     </nav>
-                    <div className="hidden md:flex items-center space-x-4">
+
+                    {/* Right: Buttons */}
+                    <div className="hidden md:flex items-center space-x-3 shrink-0">
                         <Link 
-                            className="bg-primary text-white px-8 py-3 rounded-full font-bold text-lg hover:bg-primary-container transition-all shadow-sm hover:shadow-md focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/30" 
-                            to="/login?redirect=/student/select-unit"
-                        >
-                            툰스쿨
-                        </Link>
-                        <Link 
-                            className="bg-white text-gray-700 border border-gray-200 px-8 py-3 rounded-full font-bold text-lg hover:bg-gray-50 transition-all shadow-sm hover:shadow-md focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-gray-200" 
+                            className="bg-white text-gray-700 border border-gray-200 px-6 py-3 md:px-7 md:py-3.5 rounded-xl font-bold text-base md:text-lg hover:bg-gray-50 transition-all shadow-sm focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-gray-200" 
                             to="/login?redirect=/admin/lms/classes"
                         >
                             관리 LMS
                         </Link>
+                        <Link 
+                            className="bg-pink-500 text-white px-6 py-3 md:px-7 md:py-3.5 rounded-xl font-bold text-base md:text-lg hover:bg-pink-600 transition-all shadow-sm hover:shadow-md focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-pink-300" 
+                            to="/login?redirect=/student/select-unit"
+                        >
+                            툰스쿨
+                        </Link>
                     </div>
-                    <button aria-label="메뉴 열기" className="xl:hidden text-on-surface-variant p-3 -mr-3 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50">
+
+                    {/* Mobile Menu Button */}
+                    <button aria-label="메뉴 열기" className="xl:hidden text-gray-600 p-3 -mr-3 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 hover:bg-gray-50 transition-colors">
                         <span className="material-symbols-outlined text-3xl">menu</span>
                     </button>
                 </div>
