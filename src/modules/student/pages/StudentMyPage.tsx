@@ -108,19 +108,31 @@ export default function StudentMyPage() {
 
       try {
         await ensureTodayAttendance(user.id);
-        
+      } catch (err) {
+        console.error('[StudentMyPage] 오늘 출석 기록 실패:', err);
+      }
+      
+      try {
         const rewardResult = await grantAttendanceReward(user.id);
         if (rewardResult.status === 'granted') {
           window.dispatchEvent(new Event('attendanceRewardGranted'));
         }
+      } catch (err) {
+        console.error('[StudentMyPage] 출석 보상 지급 실패:', err);
+      }
 
+      try {
         const records = await getMonthlyAttendance(user.id);
         setAttendanceDates(records.map((record) => record.attendance_date));
+      } catch (err) {
+        console.error('[StudentMyPage] 이번 달 출석 내역 조회 실패:', err);
+      }
 
+      try {
         const totalCount = await getTotalAttendanceCount(user.id);
         setTotalAttendanceCount(totalCount);
       } catch (err) {
-        console.error('[StudentMyPage] 출석 기록 조회 실패:', err);
+        console.error('[StudentMyPage] 총 출석일수 조회 실패:', err);
       }
     }
 
