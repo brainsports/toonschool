@@ -1047,7 +1047,7 @@
 .dg-background-image {
   position: absolute;
   inset: 0;
-  background-image: url('/images/student_garden_ui.png');
+  background-image: url('/images/student_garden_bg.webp');
   background-size: cover;
   background-position: center bottom;
   z-index: 1;
