@@ -90,7 +90,7 @@ export default function StudentMyPage() {
     async function loadTeacherMessageAndNotifications() {
       const classKey = resolveStudentClassKey(profile, user);
       
-      const msg = await getLatestTeacherMessageForClass(classKey);
+      const msg = await getLatestTeacherMessageForClass(classKey, user?.id);
       setLatestMessage(msg);
 
       const notis = await getNotificationsForTarget(classKey, profile);
@@ -114,17 +114,22 @@ export default function StudentMyPage() {
     loadAttendance();
   }, [user, profile]);
 
-  const refreshNotifications = async () => {
+  const refreshMessagesAndNotifications = async () => {
     const classKey = resolveStudentClassKey(profile, user);
-    const notis = await getNotificationsForTarget(classKey, profile);
+
+    const [msg, notis] = await Promise.all([
+      getLatestTeacherMessageForClass(classKey, user?.id),
+      getNotificationsForTarget(classKey, profile),
+    ]);
+
+    setLatestMessage(msg);
     setNotifications(notis);
   };
-
 
   const handleOpenTeacherMessages = async () => {
     setIsTeacherMessageModalOpen(true);
     const classKey = resolveStudentClassKey(profile, user);
-    const msgs = await getTeacherMessagesForClass(classKey);
+    const msgs = await getTeacherMessagesForClass(classKey, user?.id);
     setAllMessages(msgs);
   };
 
@@ -466,12 +471,13 @@ export default function StudentMyPage() {
           isOpen={isTeacherMessageModalOpen}
           onClose={() => setIsTeacherMessageModalOpen(false)}
           messages={allMessages}
+          onHidden={refreshMessagesAndNotifications}
         />
         <AllNotificationsModal
           isOpen={isAllNotificationsModalOpen}
           onClose={() => setIsAllNotificationsModalOpen(false)}
           notifications={notifications}
-          onDeleted={refreshNotifications}
+          onDeleted={refreshMessagesAndNotifications}
         />
     </StudentPageShell>
   )

@@ -1,15 +1,19 @@
 import { useEffect, useState } from 'react';
 import { Trash2, X } from 'lucide-react';
-import type { TeacherMessage } from '../../services/teacherMessageService';
+import { useAuth } from '../../../../shared/contexts/AuthContext';
+import { hideTeacherMessageForStudent, type TeacherMessage } from '../../services/teacherMessageService';
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
   messages: TeacherMessage[];
+  onHidden?: () => void;
 }
 
-export default function TeacherMessageModal({ isOpen, onClose, messages }: Props) {
+export default function TeacherMessageModal({ isOpen, onClose, messages, onHidden }: Props) {
+  const { user } = useAuth();
   const [visibleMessages, setVisibleMessages] = useState<TeacherMessage[]>(messages);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     setVisibleMessages(messages);
@@ -17,11 +21,25 @@ export default function TeacherMessageModal({ isOpen, onClose, messages }: Props
 
   if (!isOpen) return null;
 
-  const handleHideMessage = (messageId: string) => {
+  const handleHideMessage = async (messageId: string) => {
+    if (!user?.id) {
+      alert('로그인한 학생만 삭제할 수 있어요.');
+      return;
+    }
+
     if (!window.confirm('이 말씀을 내 화면에서 삭제할까요?')) return;
 
-    // TODO: 학생별 선생님 말씀 숨김 테이블이 준비되면 DB 숨김 처리로 교체합니다.
+    setIsDeleting(true);
+    const success = await hideTeacherMessageForStudent(user.id, messageId);
+    setIsDeleting(false);
+
+    if (!success) {
+      alert('말씀 삭제에 실패했어요. 잠시 후 다시 시도해 주세요.');
+      return;
+    }
+
     setVisibleMessages((current) => current.filter((message) => message.id !== messageId));
+    onHidden?.();
   };
 
   return (
@@ -31,7 +49,7 @@ export default function TeacherMessageModal({ isOpen, onClose, messages }: Props
         <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white z-10">
           <div className="flex items-center gap-2">
             <h2 className="text-xl font-black text-slate-800">선생님 말씀 모아보기</h2>
-            <span className="text-2xl">💌</span>
+            <span className="text-2xl">💬</span>
           </div>
           <button 
             onClick={onClose}
@@ -54,13 +72,13 @@ export default function TeacherMessageModal({ isOpen, onClose, messages }: Props
                 <div className="w-12 h-12 bg-pink-50 rounded-full overflow-hidden shrink-0">
                   <img src="/images/toonschool/characters/v2/hana-master/hana-v2-front.png" alt="Teacher" className="w-full h-full object-cover object-top" />
                 </div>
-                <div className="flex flex-col gap-1.5 pt-1 flex-1">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-bold text-slate-800">
+                <div className="flex flex-col gap-1.5 pt-1 flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-sm font-bold text-slate-800 truncate">
                         {msg.title || '선생님 말씀'}
                       </span>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded shrink-0 ${
                         msg.class_key === 'all-grades' 
                           ? 'bg-purple-100 text-purple-600' 
                           : 'bg-sky-100 text-sky-600'
@@ -75,7 +93,8 @@ export default function TeacherMessageModal({ isOpen, onClose, messages }: Props
                       <button
                         type="button"
                         onClick={() => handleHideMessage(msg.id)}
-                        className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                        disabled={isDeleting}
+                        className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
                         title="삭제"
                         aria-label="선생님 말씀 삭제"
                       >

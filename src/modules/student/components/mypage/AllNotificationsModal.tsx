@@ -1,8 +1,7 @@
 import { Bell, Trophy, MessageSquare, Star, Info, X, Trash2 } from 'lucide-react';
-import type { StudentNotification } from '../../services/notificationService';
-import { hideOrgNotification } from '../../services/notificationService';
 import { useAuth } from '../../../../shared/contexts/AuthContext';
 import { useEffect, useState } from 'react';
+import { hideStudentNotification, type StudentNotification } from '../../services/notificationService';
 
 interface Props {
   isOpen: boolean;
@@ -65,21 +64,29 @@ export default function AllNotificationsModal({ isOpen, onClose, notifications, 
     return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')}`;
   };
 
-  const handleDelete = async (notificationId: string) => {
+  const handleDelete = async (notification: StudentNotification) => {
+    if (!user?.id) {
+      alert('로그인한 학생만 삭제할 수 있어요.');
+      return;
+    }
+
     if (!window.confirm('이 알림을 내 알림함에서 삭제할까요?')) return;
 
-    setVisibleNotifications((current) => current.filter((noti) => noti.id !== notificationId));
-
-    if (!user) return;
-
     setIsDeleting(true);
-    const success = await hideOrgNotification(user.id, notificationId);
+    const success = await hideStudentNotification(
+      user.id,
+      notification.id,
+      notification.source_type ?? 'student_notification'
+    );
     setIsDeleting(false);
 
-    // TODO: student_notifications 원본 알림도 학생별 숨김 테이블이 생기면 DB 숨김 처리로 교체합니다.
-    if (success && onDeleted) {
-      onDeleted();
+    if (!success) {
+      alert('알림 삭제에 실패했어요. 잠시 후 다시 시도해 주세요.');
+      return;
     }
+
+    setVisibleNotifications((current) => current.filter((noti) => noti.id !== notification.id));
+    onDeleted?.();
   };
 
   return (
@@ -95,7 +102,7 @@ export default function AllNotificationsModal({ isOpen, onClose, notifications, 
             </div>
             <div>
               <h2 className="text-xl font-bold text-slate-800">알림함</h2>
-              <p className="text-sm text-slate-500 font-medium mt-0.5">최근 도착한 모든 알림이에요.</p>
+              <p className="text-sm text-slate-500 font-medium mt-0.5">최근 받은 모든 알림이에요.</p>
             </div>
           </div>
           <button 
@@ -110,24 +117,24 @@ export default function AllNotificationsModal({ isOpen, onClose, notifications, 
           {visibleNotifications.length > 0 ? (
             <div className="flex flex-col gap-4">
               {visibleNotifications.map((noti) => (
-                <div key={noti.id} className="flex gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:shadow-sm transition-all relative group">
+                <div key={`${noti.source_type ?? 'student_notification'}-${noti.id}`} className="flex gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:shadow-sm transition-all relative group">
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${getCategoryBg(noti.category)}`}>
                     {getCategoryIcon(noti.category)}
                   </div>
-                    <div className="flex flex-col gap-1.5 flex-1 pr-6">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0 ${noti.priority === 'high' ? 'bg-red-100 text-red-600' : 'bg-slate-200 text-slate-600'}`}>
-                            [{getCategoryLabel(noti.category)}]
-                          </span>
-                          <span className="text-sm font-bold text-slate-800 leading-tight">
-                            {noti.title}
-                          </span>
-                        </div>
-                        <span className="text-[11px] font-medium text-slate-400 shrink-0 mt-0.5">
-                          {formatDate(noti.notice_date)}
+                  <div className="flex flex-col gap-1.5 flex-1 pr-6 min-w-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0 ${noti.priority === 'high' ? 'bg-red-100 text-red-600' : 'bg-slate-200 text-slate-600'}`}>
+                          [{getCategoryLabel(noti.category)}]
+                        </span>
+                        <span className="text-sm font-bold text-slate-800 leading-tight">
+                          {noti.title}
                         </span>
                       </div>
+                      <span className="text-[11px] font-medium text-slate-400 shrink-0 mt-0.5">
+                        {formatDate(noti.notice_date)}
+                      </span>
+                    </div>
                     <p className="text-[13px] text-slate-600 leading-relaxed whitespace-pre-wrap">
                       {noti.content}
                     </p>
@@ -136,10 +143,11 @@ export default function AllNotificationsModal({ isOpen, onClose, notifications, 
                     )}
                   </div>
                   <button
-                    onClick={() => handleDelete(noti.id)}
+                    onClick={() => handleDelete(noti)}
                     disabled={isDeleting}
-                    className="absolute top-4 right-4 p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+                    className="absolute top-4 right-4 p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100 disabled:opacity-50"
                     title="삭제"
+                    aria-label="알림 삭제"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -148,8 +156,8 @@ export default function AllNotificationsModal({ isOpen, onClose, notifications, 
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center py-12 text-center h-full">
-              <span className="text-4xl mb-4">📭</span>
-              <p className="text-slate-500 font-bold">아직 도착한 알림이 없어요.</p>
+              <span className="text-4xl mb-4">🔔</span>
+              <p className="text-slate-500 font-bold">아직 받은 알림이 없어요.</p>
               <p className="text-slate-400 text-sm mt-1">새로운 소식이 생기면 이곳에 알려드릴게요!</p>
             </div>
           )}
