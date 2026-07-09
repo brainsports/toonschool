@@ -3,7 +3,7 @@ import { supabase } from '../../../shared/lib/supabase'
 export interface StudentAttendanceRecord {
   id: string
   student_id: string
-  reward_date: string
+  attendance_date: string
   created_at: string
 }
 
@@ -30,13 +30,10 @@ export async function ensureTodayAttendance(studentId: string) {
   const { today } = getCurrentAttendanceMonth()
 
   const { error } = await supabase
-    .from('reward_logs')
+    .from('student_attendance_logs')
     .insert({
       student_id: studentId,
-      reward_type: 'attendance',
-      reward_date: today,
-      source_id: null,
-      item_id: null,
+      attendance_date: today,
     })
 
   if (error && error.code !== '23505') {
@@ -50,14 +47,34 @@ export async function getMonthlyAttendance(studentId: string, date = new Date())
   const { firstDay, lastDay } = getCurrentAttendanceMonth(date)
 
   const { data, error } = await supabase
-    .from('reward_logs')
-    .select('id, student_id, reward_date, created_at')
+    .from('student_attendance_logs')
+    .select('id, student_id, attendance_date, created_at')
     .eq('student_id', studentId)
-    .eq('reward_type', 'attendance')
-    .gte('reward_date', firstDay)
-    .lte('reward_date', lastDay)
-    .order('reward_date', { ascending: true })
+    .gte('attendance_date', firstDay)
+    .lte('attendance_date', lastDay)
+    .order('attendance_date', { ascending: true })
 
   if (error) throw error
   return (data ?? []) as StudentAttendanceRecord[]
+}
+
+export async function getTotalAttendanceCount(studentId: string): Promise<number> {
+  const { count, error } = await supabase
+    .from('student_attendance_logs')
+    .select('*', { count: 'exact', head: true })
+    .eq('student_id', studentId)
+
+  if (error) throw error
+  return count ?? 0
+}
+
+export async function getAttendanceRewardItemCount(studentId: string): Promise<number> {
+  const { count, error } = await supabase
+    .from('student_items')
+    .select('*', { count: 'exact', head: true })
+    .eq('student_id', studentId)
+    .eq('source_type', 'attendance')
+
+  if (error) throw error
+  return count ?? 0
 }

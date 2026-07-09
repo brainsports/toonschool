@@ -11,6 +11,7 @@ import AllWorksModal from '../mypage/AllWorksModal'
 import type { MyWork } from '../mypage/WorkCard'
 import { getStudentWorks } from '../../services/studentWorkService'
 import { getStudentItems } from '../../services/dreamGardenService'
+import { getAttendanceRewardItemCount } from '../../services/studentAttendanceService'
 import type { StudentItem } from '../../types/dreamGarden'
 
 interface StudentPageShellProps {
@@ -70,6 +71,7 @@ export default function StudentPageShell({
   const [studentItems, setStudentItems] = useState<StudentItem[]>([])
   const [hasLoadedItems, setHasLoadedItems] = useState(false)
   const [isLoadingItems, setIsLoadingItems] = useState(false)
+  const [attendanceRewardCount, setAttendanceRewardCount] = useState(0)
 
   useEffect(() => {
     if (user?.id && authProfile?.role === 'student') {
@@ -78,6 +80,9 @@ export default function StudentPageShell({
           setStudentData(data)
         }
       })
+      getAttendanceRewardItemCount(user.id)
+        .then(count => setAttendanceRewardCount(count))
+        .catch(err => console.error('[StudentPageShell] 출석보상 개수 조회 실패:', err))
     }
   }, [user?.id, authProfile?.role])
 
@@ -217,10 +222,10 @@ export default function StudentPageShell({
                 <span className="tracking-wide mt-0.5">🎁 득템 {totalLootCount}개</span>
               </button>
 
-              {/* 연속 출석 */}
+              {/* 출석 보상 */}
               <div className="flex items-center gap-1.5 bg-sky-50 border-2 border-sky-200 px-3 py-1.5 rounded-full text-sky-700 font-jua text-sm shadow-sm">
                 <Calendar className="w-5 h-5 fill-sky-400 stroke-sky-500 stroke-2" />
-                <span className="tracking-wide mt-0.5">{profile.streakDays}일째</span>
+                <span className="tracking-wide mt-0.5">출석보상 {attendanceRewardCount}개</span>
               </div>
 
               {/* 로그아웃 버튼 */}

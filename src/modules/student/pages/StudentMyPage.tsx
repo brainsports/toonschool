@@ -107,7 +107,7 @@ export default function StudentMyPage() {
       try {
         await ensureTodayAttendance(user.id);
         const records = await getMonthlyAttendance(user.id);
-        setAttendanceDates(records.map((record) => record.reward_date));
+        setAttendanceDates(records.map((record) => record.attendance_date));
       } catch (err) {
         console.error('[StudentMyPage] 출석 기록 조회 실패:', err);
       }
