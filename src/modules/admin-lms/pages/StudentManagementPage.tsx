@@ -139,12 +139,30 @@ export default function StudentManagementPage() {
   }
 
   const handleCreate = async (data: Parameters<typeof createStudent>[0]) => {
-    const newStudent = await createStudent(data)
-    if (!selectedClassId || newStudent.classId === selectedClassId) {
-      setStudents(prev => [...prev, newStudent])
+    try {
+      const newStudent = await createStudent(data)
+      
+      // 목록 새로고침
+      if (actualCenterId) {
+        const refreshedData = await fetchStudentsByCenterAndGrade(actualCenterId, selectedGrade)
+        if (selectedClassId) {
+          setStudents(refreshedData.filter(s => s.classId === selectedClassId))
+        } else {
+          setStudents(refreshedData)
+        }
+      } else {
+        if (!selectedClassId || newStudent.classId === selectedClassId) {
+          setStudents(prev => [...prev, newStudent])
+        }
+      }
+      
+      fetchAndSetLicense()
+      alert('학생 계정이 생성되었습니다.')
+      showToast(`${newStudent.name} 학생이 생성되었습니다.`)
+    } catch (error) {
+      console.error('[StudentManagementPage] 학생 생성 실패:', error)
+      throw error
     }
-    fetchAndSetLicense()
-    showToast(`${newStudent.name} 학생이 생성되었습니다.`)
   }
 
   const handleDelete = async () => {

@@ -60,7 +60,51 @@ export async function createStudent(data: Omit<Student, 'id' | 'createdAt'>): Pr
   })
 
   if (error) {
-    throw new Error(error.message || '학생 생성 중 오류가 발생했습니다.')
+    let errorMessage = '학생 생성에 실패했습니다.'
+    let status = 500
+    
+    if ((error as any).context) {
+      const response = (error as any).context
+      if (response.status) {
+        status = response.status
+      }
+      try {
+        const clonedRes = response.clone()
+        const errorBody = await clonedRes.json()
+        if (errorBody && errorBody.error) {
+          errorMessage = errorBody.error
+        }
+      } catch (e) {
+        try {
+          const clonedRes = response.clone()
+          const errorBodyStr = await clonedRes.text()
+          if (errorBodyStr) {
+            try {
+              const parsed = JSON.parse(errorBodyStr)
+              if (parsed.error) errorMessage = parsed.error
+            } catch {
+              errorMessage = errorBodyStr
+            }
+          }
+        } catch (e2) {
+          errorMessage = error.message || '학생 생성에 실패했습니다.'
+        }
+      }
+    } else {
+      errorMessage = error.message || '학생 생성에 실패했습니다.'
+    }
+
+    console.error(`[createStudent] Error (${status}):`, errorMessage)
+
+    if (errorMessage.includes('Edge Function returned a non-2xx status code') || errorMessage === '학생 생성에 실패했습니다.') {
+      if (status === 404) errorMessage = '학생 생성 함수가 배포되지 않았습니다.'
+      else if (status === 401) errorMessage = '관리자 로그인이 만료되었습니다.'
+      else if (status === 403) errorMessage = '조직 관리자 권한이 없습니다.'
+      else if (status === 409) errorMessage = '이미 사용 중인 로그인 아이디입니다.'
+      else if (status === 500) errorMessage = '서버 내부 오류가 발생했습니다.'
+    }
+
+    throw new Error(errorMessage)
   }
 
   if (responseData?.error) {

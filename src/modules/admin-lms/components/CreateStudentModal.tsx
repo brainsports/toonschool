@@ -7,7 +7,7 @@ import type { ClassRoom } from '../types'
 interface Props {
   classes: ClassRoom[]
   defaultClassId?: string
-  onSave: (data: { name: string; loginId: string; password: string; classId: string; className: string; grade: number; number: number }) => void
+  onSave: (data: { name: string; loginId: string; password: string; classId: string; className: string; grade: number; number: number }) => Promise<void>
   onClose: () => void
 }
 
@@ -17,24 +17,33 @@ export default function CreateStudentModal({ classes, defaultClassId, onSave, on
   const [password, setPassword] = useState('')
   const [classId, setClassId] = useState(defaultClassId ?? (classes[0]?.id ?? ''))
   const [number, setNumber] = useState(1)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const selectedClass = classes.find(c => c.id === classId)
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!name.trim() || !loginId.trim() || !password.trim() || !classId) {
       alert('모든 항목을 입력해 주세요.')
       return
     }
-    onSave({
-      name: name.trim(),
-      loginId: loginId.trim(),
-      password,
-      classId,
-      className: selectedClass?.name ?? '',
-      grade: selectedClass?.grade ?? 1,
-      number,
-    })
-    onClose()
+    
+    setIsSubmitting(true)
+    try {
+      await onSave({
+        name: name.trim(),
+        loginId: loginId.trim(),
+        password,
+        classId,
+        className: selectedClass?.name ?? '',
+        grade: selectedClass?.grade ?? 1,
+        number,
+      })
+      onClose()
+    } catch (error: any) {
+      alert(error.message || '학생 생성에 실패했습니다.')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const inputStyle: React.CSSProperties = {
@@ -108,16 +117,17 @@ export default function CreateStudentModal({ classes, defaultClassId, onSave, on
         </div>
 
         <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
-          <button onClick={onClose} style={{
+          <button onClick={onClose} disabled={isSubmitting} style={{
             flex: 1, padding: '12px 0', borderRadius: 12, border: '1.5px solid #e5e7eb',
-            background: 'white', color: '#555', fontWeight: 600, fontSize: 15, cursor: 'pointer',
+            background: 'white', color: '#555', fontWeight: 600, fontSize: 15, cursor: isSubmitting ? 'not-allowed' : 'pointer',
+            opacity: isSubmitting ? 0.6 : 1
           }}>취소</button>
-          <button onClick={handleSubmit} style={{
+          <button onClick={handleSubmit} disabled={isSubmitting} style={{
             flex: 2, padding: '12px 0', borderRadius: 12, border: 'none',
-            background: 'linear-gradient(90deg, #ff2778, #ff6baf)',
-            color: 'white', fontWeight: 700, fontSize: 15, cursor: 'pointer',
-            boxShadow: '0 4px 12px rgba(255,39,120,0.3)',
-          }}>학생 생성</button>
+            background: isSubmitting ? '#9ca3af' : 'linear-gradient(90deg, #ff2778, #ff6baf)',
+            color: 'white', fontWeight: 700, fontSize: 15, cursor: isSubmitting ? 'not-allowed' : 'pointer',
+            boxShadow: isSubmitting ? 'none' : '0 4px 12px rgba(255,39,120,0.3)',
+          }}>{isSubmitting ? '생성 중...' : '학생 생성'}</button>
         </div>
       </div>
     </div>
