@@ -5,36 +5,82 @@ import type {
   OrgDashboardStats
 } from '../types/orgAdmin'
 
+type OrgLmsOverview = {
+  organization: {
+    id: string
+    name: string
+    total_licenses: number
+    stored_used_licenses?: number
+    license_start_date?: string | null
+    license_end_date?: string | null
+  }
+  teachers: OrgTeacher[]
+  totals: {
+    teacher_count: number
+    student_count: number
+    total_licenses: number
+    allocated_licenses: number
+    used_licenses: number
+    remaining_licenses: number
+  }
+  error?: string
+}
 export const orgAdminService = {
+  // --- Shared organization LMS overview ---
+  async getOrgLmsOverview(orgId?: string): Promise<OrgLmsOverview> {
+    const { data, error } = await supabase.rpc('get_org_lms_overview')
+
+    if (error) {
+      console.error('[OrgAdminService] getOrgLmsOverview failed', {
+        code: error.code,
+        message: error.message,
+        orgId,
+        stage: 'rpc'
+      })
+      throw error
+    }
+
+    if (data?.error) {
+      console.error('[OrgAdminService] getOrgLmsOverview logical error', {
+        message: data.error,
+        orgId,
+        stage: 'auth-or-scope'
+      })
+      throw new Error(data.error)
+    }
+
+    const overview = data as OrgLmsOverview
+    if (orgId && overview.organization?.id !== orgId) {
+      console.error('[OrgAdminService] getOrgLmsOverview org mismatch', {
+        orgId,
+        stage: 'scope-check'
+      })
+      throw new Error('????????뚯??? ?癲ル슢???ъ쒜???癲ル슢캉???????????ㅿ폍??????딅젩.')
+    }
+
+    return overview
+  },
+
   // --- Dashboard ---
   async getOrgAdminDashboard(orgId: string): Promise<OrgDashboardStats> {
-    const { data: orgData, error: orgError } = await supabase
-      .from('organizations')
-      .select('*')
-      .eq('id', orgId)
-      .single()
+    const overview = await this.getOrgLmsOverview(orgId)
+    const orgData = overview.organization
+    const totals = overview.totals
 
-    if (orgError) throw orgError
-
-    // RPC 함수를 통해 RLS 우회하여 통계값만 안전하게 획득
-    const { data: statsData, error: statsError } = await supabase.rpc('get_org_dashboard_stats')
-    
-    if (statsError) {
-      console.error('[OrgAdminService] get_org_dashboard_stats error:', statsError)
-    }
-    
-    if (statsData?.error) {
-      console.error('[OrgAdminService] get_org_dashboard_stats logical error:', statsData.error)
-    }
-
-    const teacherCount = statsData?.teacherCount || 0
-    const studentCount = statsData?.studentCount || 0
-
-    const { data: notifications } = await supabase
+    const { data: notifications, error: notificationError } = await supabase
       .from('org_notifications')
       .select('target_type, created_at')
       .eq('organization_id', orgId)
       .is('deleted_at', null)
+
+    if (notificationError) {
+      console.error('[OrgAdminService] getOrgAdminDashboard notifications failed', {
+        code: notificationError.code,
+        message: notificationError.message,
+        orgId,
+        stage: 'notifications'
+      })
+    }
 
     let teacherNotis = 0
     let studentNotis = 0
@@ -53,23 +99,14 @@ export const orgAdminService = {
       })
     }
 
-    // 배정된 전체 이용권 수는 license_allocations에서 합산 (간이 구현)
-    const { data: allocations } = await supabase
-      .from('license_allocations')
-      .select('quantity, used_quantity')
-      .eq('organization_id', orgId)
-
-    const allocatedLicenses = allocations?.reduce((acc, curr) => acc + curr.quantity, 0) || 0
-    const usedLicenses = allocations?.reduce((acc, curr) => acc + curr.used_quantity, 0) || 0
-
     return {
       orgName: orgData.name,
-      totalLicenses: orgData.total_licenses,
-      allocatedLicenses,
-      usedLicenses,
-      remainingLicenses: orgData.total_licenses - allocatedLicenses,
-      teacherCount: teacherCount || 0,
-      studentCount: studentCount || 0,
+      totalLicenses: totals.total_licenses,
+      allocatedLicenses: totals.allocated_licenses,
+      usedLicenses: totals.used_licenses,
+      remainingLicenses: totals.remaining_licenses,
+      teacherCount: totals.teacher_count,
+      studentCount: totals.student_count,
       recentNotificationCount: (teacherNotis + studentNotis),
       teacherNotificationCount: teacherNotis,
       studentNotificationCount: studentNotis,
@@ -82,65 +119,44 @@ export const orgAdminService = {
 
   // --- Teachers ---
   async getOrgTeachers(orgId: string): Promise<OrgTeacher[]> {
-    // 1. Get teachers
-    const { data: profiles, error: profilesError } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('organization_id', orgId)
-      .eq('role', 'teacher')
+    const overview = await this.getOrgLmsOverview(orgId)
 
-    if (profilesError) throw profilesError
-
-    // 2. Get allocations for these teachers
-    const { data: allocations } = await supabase
-      .from('license_allocations')
-      .select('*')
-      .eq('organization_id', orgId)
-
-    return profiles.map((p) => {
-      const allocation = allocations?.find((a) => a.to_user_id === p.id)
-      return {
-        ...p,
-        allocated_licenses: allocation?.quantity || 0,
-        used_licenses: allocation?.used_quantity || 0,
-        remaining_licenses: (allocation?.quantity || 0) - (allocation?.used_quantity || 0),
-        status: 'active', // TODO: Get actual status if added to profiles
-        assigned_class: p.center_id, // temporarily use center_id for class or similar mapping if exist
-        license_start_date: allocation?.license_start_date,
-        license_end_date: allocation?.license_end_date
-      } as OrgTeacher
-    })
+    return (overview.teachers || []).map((teacher) => ({
+      ...teacher,
+      allocated_licenses: teacher.allocated_licenses || 0,
+      used_licenses: teacher.used_licenses || 0,
+      remaining_licenses: teacher.remaining_licenses || 0,
+      student_count: teacher.student_count || 0,
+      status: teacher.status || 'active',
+      assigned_class: teacher.assigned_class || teacher.center_id || undefined,
+      license_start_date: teacher.license_start_date,
+      license_end_date: teacher.license_end_date
+    }))
   },
-
   async getOrgStudents(orgId: string): Promise<any[]> {
-    // 1. 해당 기관 소속 선생님들의 center_id 조회
-    const { data: teachers } = await supabase
+    const { data: teachers, error: teachersError } = await supabase
       .from('profiles')
       .select('center_id')
       .eq('organization_id', orgId)
       .eq('role', 'teacher')
       .not('center_id', 'is', null)
 
+    if (teachersError) throw teachersError
     if (!teachers || teachers.length === 0) return []
 
-    const centerIds = Array.from(new Set(teachers.map(t => t.center_id)))
-
+    const centerIds = Array.from(new Set(teachers.map(t => t.center_id).filter(Boolean)))
     if (centerIds.length === 0) return []
 
-    // 2. 해당 선생님들이 속한 center_id의 학생 목록 조회
     const { data: students, error: studentsError } = await supabase
-      .from('profiles')
-      .select('id, name, grade, center_id')
-      .eq('role', 'student')
+      .from('students')
+      .select('id, login_id, name, grade, center_id, status')
       .in('center_id', centerIds)
       .order('grade', { ascending: true })
       .order('name', { ascending: true })
 
     if (studentsError) throw studentsError
-    
-    // 중복 제거 (같은 학생이 여러번 조회된 경우 1명으로)
-    const uniqueStudents = students ? Array.from(new Map(students.map(s => [s.id, s])).values()) : []
-    return uniqueStudents
+
+    return students ? Array.from(new Map(students.map(s => [s.id, s])).values()) : []
   },
 
 
@@ -149,7 +165,7 @@ export const orgAdminService = {
     const orgStats = await this.getOrgAdminDashboard(orgId)
     if (data.license_end_date && orgStats.licenseEndDate) {
       if (new Date(data.license_end_date) > new Date(orgStats.licenseEndDate)) {
-        throw new Error(`선생님 이용권 종료일은 기관 이용권 종료일(${orgStats.licenseEndDate.split('T')[0]})을 넘을 수 없습니다.`)
+        throw new Error(`????◈類좊닱??????ㅼ굡獒뺣떼??????띻샴癲??? ???뚯??? ????ㅼ굡獒뺣떼??????띻샴癲??${orgStats.licenseEndDate.split('T')[0]})??????볥궙????????ㅿ폍??????딅젩.`)
       }
     }
     
@@ -182,7 +198,7 @@ export const orgAdminService = {
       const orgStats = await this.getOrgAdminDashboard(orgId)
       if (orgStats.licenseEndDate) {
         if (new Date(updates.license_end_date) > new Date(orgStats.licenseEndDate)) {
-          throw new Error(`선생님 이용권 종료일은 기관 이용권 종료일(${orgStats.licenseEndDate.split('T')[0]})을 넘을 수 없습니다.`)
+          throw new Error(`????◈類좊닱??????ㅼ굡獒뺣떼??????띻샴癲??? ???뚯??? ????ㅼ굡獒뺣떼??????띻샴癲??${orgStats.licenseEndDate.split('T')[0]})??????볥궙????????ㅿ폍??????딅젩.`)
         }
       }
     }
@@ -224,7 +240,7 @@ export const orgAdminService = {
     // 1. Check org remaining
     const orgStats = await this.getOrgAdminDashboard(orgId)
     if (orgStats.remainingLicenses < quantity) {
-      throw new Error("남은 이용권보다 많이 나눠줄 수 없어요.")
+      throw new Error("Not enough remaining licenses.")
     }
 
     // 2. Insert or update allocation
@@ -283,11 +299,11 @@ export const orgAdminService = {
       .eq('to_user_id', teacherId)
       .single()
 
-    if (!existing) throw new Error("배정된 이용권이 없습니다.")
+    if (!existing) throw new Error("No license allocation found.")
 
     const remaining = existing.quantity - existing.used_quantity
     if (remaining < quantity) {
-      throw new Error("이미 학생에게 사용된 이용권은 회수할 수 없어요.")
+      throw new Error("Used student licenses cannot be revoked.")
     }
 
     const afterQuantity = existing.quantity - quantity

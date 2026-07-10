@@ -64,6 +64,8 @@ export interface OrgTeacher extends Profile {
   allocated_licenses: number
   used_licenses: number
   remaining_licenses: number
+  stored_used_licenses?: number
+  student_count?: number
   last_login_at?: string
   status: 'active' | 'suspended' | 'inactive'
   assigned_class?: string
