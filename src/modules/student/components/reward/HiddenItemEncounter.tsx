@@ -14,6 +14,17 @@ function getRandomMs(minSeconds: number, maxSeconds: number) {
   return Math.round((minSeconds + Math.random() * (maxSeconds - minSeconds)) * 1000)
 }
 
+function getSupabaseErrorDetails(error: unknown) {
+  if (!error || typeof error !== 'object') return null
+  const record = error as Record<string, unknown>
+  return {
+    code: record.code ?? null,
+    message: record.message ?? null,
+    details: record.details ?? null,
+    hint: record.hint ?? null,
+  }
+}
+
 export default function HiddenItemEncounter({
   studentId,
   sourceId,
@@ -75,6 +86,10 @@ export default function HiddenItemEncounter({
       onRewardGranted?.(result)
     } catch (error) {
       console.error('[HiddenItemEncounter] reward failed:', error)
+      const supabaseError = getSupabaseErrorDetails(error)
+      if (supabaseError) {
+        console.error('[HiddenItemEncounter] Supabase reward error details:', supabaseError)
+      }
       setMessage('앗! 다시 눌러 볼까요?')
     } finally {
       setIsClaiming(false)
