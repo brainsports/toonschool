@@ -62,7 +62,7 @@ export default function StudentCompletePage() {
         </div>
 
         {/* 하단 버튼 영역 */}
-        <div className="flex gap-4 pt-8 border-t border-white/10 mt-auto">
+        <div className="flex flex-col md:flex-row gap-4 pt-8 border-t border-white/10 mt-auto">
           <button
             onClick={() => navigate('/student/my')}
             className="card-glass card-glass-interactive flex-1 min-h-[72px] text-slate-300 bg-white/5 border border-white/10 font-jua text-xl md:text-2xl flex items-center justify-center rounded-full"

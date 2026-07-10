@@ -17,15 +17,11 @@ export default function ScriptPreviewBoard({ zoomPercent, selectionData, selecte
   const cuts = [1, 2, 3, 4, 5, 6];
 
   return (
-    <div 
-      className="origin-top transition-transform duration-200 ease-out flex flex-col items-center"
+    <div
+      className="origin-top transition-transform duration-200 ease-out flex flex-col items-center w-full max-w-[1000px] bg-white shadow-[0_8px_24px_rgba(38,42,58,0.10)] p-4 md:p-6 lg:p-10"
       style={{ 
         transform: `scale(${zoomPercent / 100})`,
-        width: '1000px', // 기준 캔버스 너비
-        backgroundColor: '#ffffff',
-        boxShadow: '0 8px 24px rgba(38, 42, 58, 0.10)',
-        padding: '40px',
-        minHeight: '1414px', // A4 비율 대략
+        minHeight: 'auto', // 모바일에서 불필요한 공백 방지
       }}
     >
       {/* 대본 상단 헤더 영역 */}
@@ -38,8 +34,8 @@ export default function ScriptPreviewBoard({ zoomPercent, selectionData, selecte
         <p className="text-xl text-[#555b6b] font-medium">6컷 만화 대본</p>
       </div>
 
-      {/* 2x3 컷 그리드 */}
-      <div className="grid grid-cols-2 gap-8 w-full">
+      {/* 1열(모바일/태블릿세로) or 2x3 컷 그리드(태블릿가로/PC) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 lg:gap-8 w-full">
         {cuts.map(cut => {
           const isSelected = selectedCut === cut;
           const panelData = scriptData?.cuts?.find(p => p.cutNumber === cut);

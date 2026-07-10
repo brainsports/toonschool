@@ -86,45 +86,45 @@ export default function Login() {
 
   return (
     <div className="min-h-screen bg-[#f3f4f7] flex items-center justify-center overflow-hidden font-sans">
-      <div className="w-full max-w-[1376px] aspect-video max-h-screen flex flex-row relative">
+      <div className="w-full max-w-[1376px] md:aspect-video md:max-h-screen flex flex-col md:flex-row relative">
         
         {/* Left Area (Text & Hero Image) */}
-        <div className="w-[58%] h-full flex flex-col pt-16 md:pt-20 px-10 md:px-16 relative z-10">
+        <div className="w-full md:w-[58%] h-auto md:h-full flex flex-col pt-10 md:pt-20 px-6 md:px-16 relative z-10">
           
           {/* Logo and App Name */}
-          <Link to="/" className="flex items-center gap-3 mb-10 w-fit z-30 shrink-0">
-            <div className="h-12 w-12 rounded-xl bg-gradient-to-tr from-purple-600 to-pink-500 flex items-center justify-center font-bold text-white text-xl shadow-md">
+          <Link to="/" className="flex items-center gap-3 mb-6 md:mb-10 w-fit z-30 shrink-0">
+            <div className="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-gradient-to-tr from-purple-600 to-pink-500 flex items-center justify-center font-bold text-white text-lg md:text-xl shadow-md">
               TS
             </div>
-            <span className="font-extrabold text-2xl tracking-wider text-slate-800">
+            <span className="font-extrabold text-xl md:text-2xl tracking-wider text-slate-800">
               툰스쿨
             </span>
           </Link>
 
           {/* Catchphrase */}
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-slate-900 leading-[1.3] tracking-tight mb-6 z-30 shrink-0">
-            공부하지 말고,<br />
+          <h1 className="text-3xl md:text-5xl lg:text-6xl font-black text-slate-900 leading-[1.3] tracking-tight mb-4 md:mb-6 z-30 shrink-0">
+            공부하지 말고,<br className="hidden md:block" />
             <span className="text-[#ff2778]">공부를 만들자.</span>
           </h1>
           
           {/* Subtitle */}
-          <p className="text-lg md:text-xl text-slate-600 font-medium z-30 shrink-0 mb-8">
+          <p className="text-base md:text-xl lg:text-2xl text-slate-600 font-medium z-30 shrink-0 mb-4 md:mb-8 lg:mb-12">
             선생님과 학생이 함께 만드는 AI 학습만화 플랫폼
           </p>
 
           {/* Hero Image */}
-          <div className="flex-1 w-full flex items-end justify-start min-h-0 relative z-20 pb-4">
+          <div className="flex-1 w-full flex items-end justify-center md:justify-start min-h-0 relative z-20 pb-0 md:pb-4 lg:pb-8">
             <img 
               src="/images/toonschool/login-hero.png" 
               alt="툰스쿨 로그인 히어로 이미지"
-              style={{ width: '85%', maxWidth: '680px', objectFit: 'contain', marginTop: '36px' }}
+              className="w-[70%] md:w-[85%] lg:w-[90%] max-w-[680px] object-contain mt-4 md:mt-9 lg:mt-12"
             />
           </div>
         </div>
 
         {/* Right Area (Login Card) */}
-        <div className="w-[42%] h-full flex items-center justify-center pr-4 md:pr-16 z-30">
-          <div className="w-full max-w-[480px] bg-white rounded-[32px] p-8 md:p-10 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] border border-slate-100">
+        <div className="w-full md:w-[42%] h-auto md:h-full flex items-center justify-center px-4 md:pr-10 lg:pr-16 py-8 md:py-0 z-30">
+          <div className="w-full max-w-[480px] bg-white rounded-[24px] md:rounded-[32px] p-6 md:p-8 lg:p-10 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] border border-slate-100">
             
             <h2 className="text-2xl font-bold text-center text-slate-800 mb-8">
               툰스쿨 로그인

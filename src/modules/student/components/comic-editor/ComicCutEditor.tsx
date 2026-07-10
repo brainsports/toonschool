@@ -217,8 +217,8 @@ export default function ComicCutEditor({ topicId, cutNumber, scriptData }: Props
       {/* Center Main Area */}
       <div className="flex-1 flex flex-col min-w-0 bg-transparent h-full relative">
         {/* Canvas Area */}
-        <div className="flex-1 relative overflow-auto p-4 lg:p-8 student-scrollbar" ref={containerRef}>
-          <div className="w-full h-full flex justify-center items-center min-w-min min-h-min">
+        <div className="flex-1 relative overflow-auto p-2 lg:p-8 student-scrollbar" ref={containerRef}>
+          <div className="w-full h-full flex justify-center items-center min-w-min min-h-min pt-4 pb-24 lg:pb-4">
             {canvasSize.width > 0 && (
               <ComicCanvas
                 data={editData}

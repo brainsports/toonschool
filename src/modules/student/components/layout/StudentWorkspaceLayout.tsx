@@ -41,8 +41,18 @@ export default function StudentWorkspaceLayout({
   return (
     <StudentPageShell bgVariant={bgVariant} maxWidth="full">
       <div className="student-editor-workspace">
-        {/* Left Sidebar */}
-        <div className="hidden md:block shrink-0 w-[var(--student-layout-sidebar-width,200px)] h-full bg-[#134B4C] border-r border-[#0f3a3b] shadow-[6px_0_18px_rgba(15,58,59,0.18)] overflow-y-auto z-30">
+        {/* 모바일/태블릿 세로 모드 상단 스텝퍼 (lg 미만에서 표시) */}
+        <div className="lg:hidden w-full bg-[#134B4C] border-b border-[#0f3a3b] shadow-sm z-30 shrink-0">
+          <StudentFlowSidebar 
+            currentStep={currentStep} 
+            completedSteps={completedSteps} 
+            theme="dark"
+            orientation="horizontal"
+          />
+        </div>
+
+        {/* Left Sidebar (PC 및 태블릿 가로 모드 - lg 이상에서 표시) */}
+        <div className="hidden lg:block shrink-0 w-[var(--student-layout-sidebar-width,200px)] h-full bg-[#134B4C] border-r border-[#0f3a3b] shadow-[6px_0_18px_rgba(15,58,59,0.18)] overflow-y-auto z-30">
           <StudentFlowSidebar 
             currentStep={currentStep} 
             completedSteps={completedSteps} 
@@ -69,8 +79,8 @@ export default function StudentWorkspaceLayout({
               )}
               {(title || subtitle) && (
                 <div className="flex flex-col min-w-0">
-                  {title && <h1 className="text-2xl font-jua text-[#1f2433] drop-shadow-sm truncate m-0 leading-tight">{title}</h1>}
-                  {subtitle && <div className="text-sm font-bold text-[#7b8190] truncate mt-1">{subtitle}</div>}
+                  {title && <h1 className="text-xl md:text-2xl font-jua text-[#1f2433] drop-shadow-sm truncate m-0 leading-tight">{title}</h1>}
+                  {subtitle && <div className="text-xs md:text-sm font-bold text-[#7b8190] truncate mt-1">{subtitle}</div>}
                 </div>
               )}
             </div>
@@ -91,7 +101,7 @@ export default function StudentWorkspaceLayout({
           </div>
 
           {/* Children Content (Canvas, ToolPanel, etc.) */}
-          <div className="flex-1 flex overflow-hidden relative">
+          <div className="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
             {children}
           </div>
         </div>

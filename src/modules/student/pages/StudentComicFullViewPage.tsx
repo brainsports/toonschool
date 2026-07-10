@@ -878,7 +878,7 @@ export default function StudentComicFullViewPage() {
       <div className="flex flex-col w-full h-full relative">
 
         {/* 하단 패널 및 캔버스 영역 */}
-        <div className="flex-1 flex overflow-hidden w-full relative">
+        <div className="flex-1 flex flex-col lg:flex-row overflow-hidden w-full relative">
           <StudentToolPanel width="var(--student-layout-tool-panel-width,300px)" className="flex-row !w-auto">
             <div className="flex h-full shrink-0 relative z-30 bg-[#163F46] shadow-lg border-r border-[#0f3a3b]">
           {/* Main Vertical Toolbar */}
@@ -1019,9 +1019,9 @@ export default function StudentComicFullViewPage() {
       {/* Center Main Area */}
       <div className="flex-1 flex flex-col min-w-0 bg-transparent h-full relative">
         {/* Canvas Area Container */}
-        <div className="flex-1 w-full relative min-h-0 min-w-0 overflow-auto overscroll-contain student-scrollbar mt-6" ref={containerRef}>
+        <div className="flex-1 w-full relative min-h-0 min-w-0 overflow-auto overscroll-contain student-scrollbar mt-2 lg:mt-6" ref={containerRef}>
           <div 
-            className="p-8 pb-32 flex justify-center origin-top transition-transform duration-200"
+            className="p-4 lg:p-8 pb-32 flex justify-center origin-top transition-transform duration-200"
             style={{ transform: `scale(${currentZoom / 100})`, minWidth: 'max-content', minHeight: 'max-content' }}
           >
             {detailedCutNumber ? (

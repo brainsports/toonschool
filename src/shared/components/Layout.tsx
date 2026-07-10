@@ -44,10 +44,36 @@ export default function Layout() {
         </button>
       </header>
 
-      {/* Sidebar - Desktop */}
-      <aside className={`fixed md:sticky top-0 left-0 h-screen w-64 border-r border-slate-900 bg-slate-950/40 backdrop-blur-md p-6 flex flex-col justify-between shrink-0 z-20 transition-transform duration-300 md:translate-x-0 ${mobileMenuOpen ? 'translate-x-0 bg-slate-950/95 w-full h-full' : '-translate-x-full md:block'}`}>
+      {/* Mobile Sidebar Overlay */}
+      {mobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Sidebar - Desktop & Mobile */}
+      <aside className={`fixed md:sticky top-0 left-0 h-screen w-64 md:w-64 border-r border-slate-900 bg-slate-950/95 md:bg-slate-950/40 backdrop-blur-md p-6 flex flex-col justify-between shrink-0 z-50 md:z-20 transition-transform duration-300 ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
         <div className="space-y-6">
-          {/* Logo */}
+          {/* Mobile Close Button */}
+          <div className="flex items-center justify-between md:hidden mb-4">
+            <div className="flex items-center gap-2">
+              <div className="h-8 w-8 rounded-lg bg-gradient-to-tr from-purple-600 to-pink-500 flex items-center justify-center font-bold text-white text-sm">
+                TS
+              </div>
+              <span className="font-bold text-lg bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-400 tracking-wider">
+                TOONSCHOOL
+              </span>
+            </div>
+            <button 
+              onClick={() => setMobileMenuOpen(false)}
+              className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          {/* Logo - Desktop */}
           <div className="hidden md:flex items-center gap-3">
             <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-purple-600 to-pink-500 flex items-center justify-center shadow-lg shadow-purple-500/20 font-bold text-white text-lg">
               TS
@@ -139,7 +165,7 @@ export default function Layout() {
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 px-6 py-8 md:p-12 overflow-y-auto max-w-6xl mx-auto w-full z-10">
+      <main className="flex-1 px-6 py-8 md:px-10 md:py-10 lg:p-12 overflow-y-auto max-w-6xl mx-auto w-full z-10">
         <Outlet />
       </main>
     </div>

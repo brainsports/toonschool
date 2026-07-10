@@ -88,45 +88,45 @@ export default function Signup() {
 
   return (
     <div className="min-h-screen bg-[#f3f4f7] flex items-center justify-center overflow-hidden font-sans">
-      <div className="w-full max-w-[1376px] aspect-video max-h-screen flex flex-row relative">
+      <div className="w-full max-w-[1376px] md:aspect-video md:max-h-screen flex flex-col md:flex-row relative">
         
         {/* Left Area (Text & Hero Image) */}
-        <div className="w-[58%] h-full flex flex-col pt-16 md:pt-20 px-10 md:px-16 relative z-10">
+        <div className="w-full md:w-[58%] h-auto md:h-full flex flex-col pt-10 md:pt-20 px-6 md:px-16 relative z-10">
           
           {/* Logo and App Name */}
-          <Link to="/" className="flex items-center gap-3 mb-10 w-fit z-30 shrink-0">
-            <div className="h-12 w-12 rounded-xl bg-gradient-to-tr from-purple-600 to-pink-500 flex items-center justify-center font-bold text-white text-xl shadow-md">
+          <Link to="/" className="flex items-center gap-3 mb-6 md:mb-10 w-fit z-30 shrink-0">
+            <div className="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-gradient-to-tr from-purple-600 to-pink-500 flex items-center justify-center font-bold text-white text-lg md:text-xl shadow-md">
               TS
             </div>
-            <span className="font-extrabold text-2xl tracking-wider text-slate-800">
+            <span className="font-extrabold text-xl md:text-2xl tracking-wider text-slate-800">
               툰스쿨
             </span>
           </Link>
 
           {/* Catchphrase */}
-          <h1 className="text-[32px] md:text-[42px] lg:text-[48px] font-black text-slate-900 leading-[1.2] tracking-tight mb-5 z-30 shrink-0 break-keep">
-            선생님 계정을 만들고,<br />
-            <span className="text-[#ff2778] whitespace-nowrap">승인 후 학습만화를 시작해요.</span>
+          <h1 className="text-3xl md:text-[42px] lg:text-[48px] font-black text-slate-900 leading-[1.2] tracking-tight mb-3 md:mb-5 z-30 shrink-0 break-keep">
+            선생님 계정을 만들고,<br className="hidden md:block" />
+            <span className="text-[#ff2778] whitespace-normal md:whitespace-nowrap">승인 후 학습만화를 시작해요.</span>
           </h1>
           
           {/* Subtitle */}
-          <p className="text-[17px] md:text-[19px] text-slate-600 font-medium z-30 shrink-0 mb-10">
+          <p className="text-base md:text-[19px] lg:text-[21px] text-slate-600 font-medium z-30 shrink-0 mb-4 md:mb-10 lg:mb-12">
             학생 계정은 선생님 페이지에서 쉽게 추가할 수 있어요.
           </p>
 
           {/* Hero Image */}
-          <div className="flex-1 w-full flex items-end justify-start min-h-0 relative z-20 pb-4">
+          <div className="flex-1 w-full flex items-end justify-center md:justify-start min-h-0 relative z-20 pb-0 md:pb-4 lg:pb-8 hidden md:flex">
             <img 
               src="/images/toonschool/login-hero.png" 
               alt="툰스쿨 로그인 히어로 이미지"
-              style={{ width: '85%', maxWidth: '640px', objectFit: 'contain', marginTop: '16px' }}
+              className="w-[70%] md:w-[85%] lg:w-[90%] max-w-[640px] object-contain mt-4 md:mt-4 lg:mt-8"
             />
           </div>
         </div>
 
         {/* Right Area (Signup Card) */}
-        <div className="w-[42%] h-full flex flex-col items-center justify-center pr-4 md:pr-16 z-30 relative py-8">
-          <div className="w-full max-w-[480px] bg-white rounded-[32px] p-8 md:p-10 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] border border-slate-100 flex-shrink-0 relative z-10">
+        <div className="w-full md:w-[42%] h-auto md:h-full flex flex-col items-center justify-center px-4 md:pr-10 lg:pr-16 py-8 md:py-8 z-30 relative">
+          <div className="w-full max-w-[480px] bg-white rounded-[24px] md:rounded-[32px] p-6 md:p-8 lg:p-10 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] border border-slate-100 flex-shrink-0 relative z-10">
             
             <div className="flex flex-col items-center mb-6">
               <span className="inline-block px-3 py-1 mb-3 rounded-full bg-slate-100 text-slate-600 text-xs font-bold tracking-wide">
