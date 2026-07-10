@@ -22,6 +22,8 @@ export default function Signup() {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
+    const cleanEmail = email.trim().toLowerCase()
+    const cleanName = name.trim()
 
     if (!termsAgreed || !privacyAgreed) {
       setError('필수 약관에 동의해 주세요.')
@@ -43,11 +45,11 @@ export default function Signup() {
     try {
       // 1. Sign up the user via Supabase Auth
       const { data, error: authError } = await supabase.auth.signUp({
-        email,
+        email: cleanEmail,
         password,
         options: {
           data: {
-            name: name,
+            name: cleanName,
           }
         }
       })
@@ -56,21 +58,26 @@ export default function Signup() {
         throw new Error(authError.message)
       }
 
+      if (!data.user) {
+        throw new Error('\uD68C\uC6D0\uAC00\uC785 \uC751\uB2F5\uC5D0\uC11C \uC0AC\uC6A9\uC790 \uC815\uBCF4\uB97C \uD655\uC778\uD558\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.')
+      }
+
       if (data.user) {
         // 2. Insert profile record with default values
         const { error: profileError } = await supabase
           .from('profiles')
           .insert({
             id: data.user.id,
-            email: data.user.email,
-            name: name,
+            email: data.user.email ?? cleanEmail,
+            name: cleanName,
             role: 'free_user',       // Default role
             plan_type: 'free',       // Default plan
             monthly_quota: 3         // Default quota
           })
 
         if (profileError) {
-          console.error('Error writing user profile, continuing anyway:', profileError.message)
+          console.error('Error writing user profile:', profileError.message)
+          throw new Error('\uD68C\uC6D0\uAC00\uC785\uC740 \uC644\uB8CC\uB410\uC9C0\uB9CC \uD504\uB85C\uD544 \uC800\uC7A5\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4. \uAD00\uB9AC\uC790\uC5D0\uAC8C \uBB38\uC758\uD574 \uC8FC\uC138\uC694.')
         }
 
         setSuccess(true)

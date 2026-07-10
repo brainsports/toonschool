@@ -64,7 +64,7 @@ serve(async (req) => {
 
     const { data: callerProfile, error: callerProfileError } = await adminClient
       .from('profiles')
-      .select('id, role, organization_id')
+      .select('id, role, organization_id, center_id')
       .eq('id', callerUser.id)
       .single()
 
@@ -96,6 +96,7 @@ serve(async (req) => {
     if (password.length < 4) throw new RequestError('비밀번호는 4자 이상이어야 합니다.')
 
     const organizationId = callerProfile.organization_id
+    const centerId = callerProfile.center_id ?? null
     if (!organizationId) {
       throw new RequestError('기관 정보가 연결되지 않았습니다.', 400)
     }
@@ -150,6 +151,7 @@ serve(async (req) => {
         name,
         role: 'student',
         organization_id: organizationId,
+        center_id: centerId,
         status: 'active',
         plan_type: 'free',
         monthly_quota: 0,
@@ -178,8 +180,8 @@ serve(async (req) => {
         login_id: loginId,
         temp_password: password, 
         class_id: validClassId,
-        grade: `${grade}학년`,
-        center_id: null,
+        grade: `${grade}\uD559\uB144`,
+        center_id: centerId,
         organization_id: organizationId,
         status: 'active'
       })

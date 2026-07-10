@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 
@@ -29,8 +29,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState<boolean>(true)
 
-  // Helper to fetch profile details from DB
-  const fetchProfile = async (uid: string): Promise<Profile | null> => {
+  const fetchProfile = useCallback(async (uid: string): Promise<Profile | null> => {
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -47,45 +46,67 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error('Failed to fetch user profile:', err)
       return null
     }
-  }
+  }, [])
 
   useEffect(() => {
-    // 1. Check current session
+    let mounted = true
+
     const initializeAuth = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession()
-        if (session?.user) {
-          const prof = await fetchProfile(session.user.id)
-          setUser(session.user)
-          setProfile(prof)
+        if (!mounted) return
+
+        setUser(session?.user ?? null)
+        if (!session?.user) {
+          setProfile(null)
+          setLoading(false)
         }
       } catch (err) {
         console.error('Error getting auth session:', err)
-      } finally {
+        if (!mounted) return
+        setUser(null)
+        setProfile(null)
         setLoading(false)
       }
     }
 
     initializeAuth()
 
-    // 2. Subscribe to auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setLoading(true)
-      if (session?.user) {
-        const prof = await fetchProfile(session.user.id)
-        setUser(session.user)
-        setProfile(prof)
-      } else {
-        setUser(null)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      const nextUser = session?.user ?? null
+      setUser(nextUser)
+
+      if (!nextUser) {
         setProfile(null)
+        setLoading(false)
+      } else {
+        setLoading(true)
       }
-      setLoading(false)
     })
 
     return () => {
+      mounted = false
       subscription.unsubscribe()
     }
   }, [])
+
+  useEffect(() => {
+    if (!user) return
+
+    let cancelled = false
+
+    fetchProfile(user.id)
+      .then((prof) => {
+        if (!cancelled) setProfile(prof)
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [fetchProfile, user])
 
   const signOut = async () => {
     setLoading(true)

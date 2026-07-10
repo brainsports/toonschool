@@ -2,10 +2,11 @@ import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../shared/lib/supabase'
 import { useAuth } from '../shared/contexts/AuthContext'
+import { toAuthEmailFromLoginIdentifier } from '../shared/lib/authIdentifiers'
 import { Eye, EyeOff } from 'lucide-react'
 
 export default function Login() {
-  const [email, setEmail] = useState('')
+  const [loginIdentifier, setLoginIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -17,62 +18,68 @@ export default function Login() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
+
+    const authEmail = toAuthEmailFromLoginIdentifier(loginIdentifier)
+    if (!authEmail) {
+      setError('이메일 또는 학생 아이디를 입력해 주세요.')
+      return
+    }
+
     setIsLoading(true)
 
     try {
-      const loginEmail = email.includes('@') ? email : `${email.toLowerCase()}@student.toonschool.local`
-
       const { data, error: authError } = await supabase.auth.signInWithPassword({
-        email: loginEmail,
+        email: authEmail,
         password
       })
 
       if (authError) {
-        throw new Error(authError.message)
+        throw new Error('아이디 또는 비밀번호를 확인해 주세요.')
       }
 
       if (data.user) {
         const profile = await fetchProfile(data.user.id)
-        
+        const redirectUrl = searchParams.get('redirect')
+
         if (profile) {
-          const redirectUrl = searchParams.get('redirect')
-          
-          // 1. 학생 계정인 경우 무조건 마이페이지로 이동 (redirect 파라미터 무시)
           if (profile.role === 'student') {
-            if (redirectUrl && redirectUrl.startsWith('/admin/lms')) {
-              alert('관리 LMS는 선생님 및 관리자 계정만 이용할 수 있습니다.')
+            if (redirectUrl && redirectUrl.startsWith('/student/')) {
+              navigate(redirectUrl)
+            } else {
+              if (redirectUrl && redirectUrl.startsWith('/admin/lms')) {
+                alert('관리 LMS는 선생님 및 관리자 계정만 사용할 수 있습니다.')
+              }
+              navigate('/student/select-unit')
             }
-            navigate('/student/mypage')
             return
           }
 
-          // 2. 관리자/선생님 계정인 경우 (adminLmsRoles)
           const adminLmsRoles = ['teacher', 'org_admin', 'middle_admin', 'super_admin']
           if (adminLmsRoles.includes(profile.role)) {
             if (!redirectUrl || redirectUrl === '/admin/lms' || redirectUrl === '/admin/lms/classes' || redirectUrl === '/mypage' || redirectUrl === '/') {
               if (profile.role === 'org_admin') navigate('/admin/lms/organization')
               else if (profile.role === 'middle_admin') navigate('/manager/dashboard')
               else if (profile.role === 'super_admin') navigate('/admin/lms/super')
-              else navigate('/admin/lms/classes') // teacher
+              else navigate('/admin/lms/classes')
+            } else if (redirectUrl.startsWith('/student/')) {
+              navigate('/admin/lms/classes')
             } else {
               navigate(redirectUrl)
             }
             return
           }
 
-          // 그 외 역할이 /admin/lms 로 접근하려 할 때
           if (redirectUrl && redirectUrl.startsWith('/admin/lms')) {
-            setError('관리 LMS는 선생님 및 관리자 계정만 이용할 수 있습니다.')
+            setError('관리 LMS는 선생님 및 관리자 계정만 사용할 수 있습니다.')
             await supabase.auth.signOut()
             return
           }
 
-          if (redirectUrl) {
+          if (redirectUrl && !redirectUrl.startsWith('/student/')) {
             navigate(redirectUrl)
             return
           }
 
-          // 나머지 일반 사용자 (free_user 등)
           navigate('/mypage')
         } else {
           navigate('/mypage')
@@ -89,49 +96,40 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-[#f3f4f7] flex items-center justify-center overflow-hidden font-sans">
       <div className="w-full max-w-[1376px] md:aspect-video md:max-h-screen flex flex-col md:flex-row relative">
-        
-        {/* Left Area (Text & Hero Image) */}
         <div className="w-full md:w-[58%] h-auto md:h-full flex flex-col pt-10 md:pt-20 px-6 md:px-16 relative z-10">
-          
-          {/* Logo and App Name */}
           <Link to="/" className="flex items-center gap-3 mb-6 md:mb-10 w-fit z-30 shrink-0">
             <div className="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-gradient-to-tr from-purple-600 to-pink-500 flex items-center justify-center font-bold text-white text-lg md:text-xl shadow-md">
               TS
             </div>
             <span className="font-extrabold text-xl md:text-2xl tracking-wider text-slate-800">
-              툰스쿨
+              ToonSchool
             </span>
           </Link>
 
-          {/* Catchphrase */}
           <h1 className="text-3xl md:text-5xl lg:text-6xl font-black text-slate-900 leading-[1.3] tracking-tight mb-4 md:mb-6 z-30 shrink-0">
             공부하지 말고,<br className="hidden md:block" />
-            <span className="text-[#ff2778]">공부를 만들자.</span>
+            <span className="text-[#ff2778]">공부를 만들자</span>
           </h1>
-          
-          {/* Subtitle */}
+
           <p className="text-base md:text-xl lg:text-2xl text-slate-600 font-medium z-30 shrink-0 mb-4 md:mb-8 lg:mb-12">
             선생님과 학생이 함께 만드는 AI 학습만화 플랫폼
           </p>
 
-          {/* Hero Image */}
           <div className="flex-1 w-full flex items-end justify-center md:justify-start min-h-0 relative z-20 pb-0 md:pb-4 lg:pb-8">
-            <img 
-              src="/images/toonschool/login-hero.png" 
-              alt="툰스쿨 로그인 히어로 이미지"
+            <img
+              src="/images/toonschool/login-hero.png"
+              alt="ToonSchool 로그인 히어로 이미지"
               className="w-[70%] md:w-[85%] lg:w-[90%] max-w-[680px] object-contain mt-4 md:mt-9 lg:mt-12"
             />
           </div>
         </div>
 
-        {/* Right Area (Login Card) */}
         <div className="w-full md:w-[42%] h-auto md:h-full flex items-center justify-center px-4 md:pr-10 lg:pr-16 py-8 md:py-0 z-30">
           <div className="w-full max-w-[480px] bg-white rounded-[24px] md:rounded-[32px] p-6 md:p-8 lg:p-10 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] border border-slate-100">
-            
             <h2 className="text-2xl font-bold text-center text-slate-800 mb-8">
-              툰스쿨 로그인
+              ToonSchool 로그인
             </h2>
-            
+
             {error && (
               <div className="mb-6 p-3 rounded-xl bg-rose-50 border border-rose-100 text-rose-500 text-sm flex items-center justify-center gap-2">
                 <span>{error}</span>
@@ -139,22 +137,19 @@ export default function Login() {
             )}
 
             <form onSubmit={handleLogin} className="space-y-4">
-              {/* Email Input */}
               <div>
                 <input
-                  type="email"
-                  name="email"
+                  type="text"
+                  name="username"
                   autoComplete="username"
-                  inputMode="email"
                   required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="아이디 또는 이메일"
+                  value={loginIdentifier}
+                  onChange={(e) => setLoginIdentifier(e.target.value)}
+                  placeholder="이메일 또는 학생 아이디"
                   className="w-full px-5 py-4 rounded-xl bg-[#f8f9fa] border border-transparent focus:border-[#ff2778] focus:bg-white focus:ring-1 focus:ring-[#ff2778] text-slate-800 placeholder-slate-400 outline-none transition-all text-[15px]"
                 />
               </div>
 
-              {/* Password Input */}
               <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}
@@ -175,7 +170,6 @@ export default function Login() {
                 </button>
               </div>
 
-              {/* Submit Button */}
               <button
                 type="submit"
                 disabled={isLoading}
@@ -185,7 +179,6 @@ export default function Login() {
               </button>
             </form>
 
-            {/* Links */}
             <div className="flex items-center justify-center gap-4 mt-8 text-sm text-slate-500 font-medium">
               <Link to="/signup" className="hover:text-slate-800 transition-colors">회원가입</Link>
               <div className="w-px h-3 bg-slate-300"></div>
@@ -194,7 +187,6 @@ export default function Login() {
               <button type="button" className="hover:text-slate-800 transition-colors">비밀번호 찾기</button>
             </div>
 
-            {/* Bottom Register Prompt */}
             <div className="mt-8 pt-6 border-t border-slate-100 flex items-center justify-between">
               <span className="text-slate-500 font-medium text-[15px]">처음 오셨나요?</span>
               <Link to="/signup" className="text-[#ff2778] font-bold hover:text-[#e01962] transition-colors text-[15px]">
@@ -203,7 +195,6 @@ export default function Login() {
             </div>
           </div>
         </div>
-        
       </div>
     </div>
   )

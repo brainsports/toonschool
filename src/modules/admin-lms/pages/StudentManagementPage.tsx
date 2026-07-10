@@ -107,15 +107,15 @@ export default function StudentManagementPage() {
   }, [profile, user])
 
   useEffect(() => {
-    if (!actualCenterId) return
-    fetchStudentsByCenterAndGrade(actualCenterId, selectedGrade).then(data => {
+    if (!actualCenterId && !profile?.organization_id) return
+    fetchStudentsByCenterAndGrade(actualCenterId, selectedGrade, profile?.organization_id).then(data => {
       if (selectedClassId) {
         setStudents(data.filter(s => s.classId === selectedClassId))
       } else {
         setStudents(data)
       }
     })
-  }, [selectedGrade, selectedClassId, actualCenterId])
+  }, [selectedGrade, selectedClassId, actualCenterId, profile?.organization_id])
 
   useEffect(() => {
     const targetKey = selectedClassId || 'all-grades'
@@ -143,8 +143,8 @@ export default function StudentManagementPage() {
       const newStudent = await createStudent(data)
       
       // 목록 새로고침
-      if (actualCenterId) {
-        const refreshedData = await fetchStudentsByCenterAndGrade(actualCenterId, selectedGrade)
+      if (actualCenterId || profile?.organization_id) {
+        const refreshedData = await fetchStudentsByCenterAndGrade(actualCenterId, selectedGrade, profile?.organization_id)
         if (selectedClassId) {
           setStudents(refreshedData.filter(s => s.classId === selectedClassId))
         } else {
@@ -205,8 +205,8 @@ export default function StudentManagementPage() {
       setNewPassword('')
 
       // Refresh list
-      if (actualCenterId) {
-        fetchStudentsByCenterAndGrade(actualCenterId, selectedGrade).then(data => {
+      if (actualCenterId || profile?.organization_id) {
+        fetchStudentsByCenterAndGrade(actualCenterId, selectedGrade, profile?.organization_id).then(data => {
           if (selectedClassId) {
             setStudents(data.filter(s => s.classId === selectedClassId))
           } else {
@@ -327,7 +327,7 @@ export default function StudentManagementPage() {
         }
 
         let existingLoginIds = new Set<string>()
-        if (actualCenterId) {
+        if (actualCenterId || profile?.organization_id) {
           const { data: dbStudents } = await supabase
             .from('students')
             .select('login_id')
@@ -386,59 +386,89 @@ export default function StudentManagementPage() {
   }
 
   const handleBulkUpload = async () => {
-    if (!actualCenterId) {
-      alert('소속 기관 정보가 없습니다.')
+    if (!actualCenterId && !profile?.organization_id) {
+      alert('\uC18C\uC18D \uAE30\uAD00 \uC815\uBCF4\uB97C \uD655\uC778\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.')
       return
     }
 
     const validRows = parsedRows.filter(r => r._status === 'ready')
     if (validRows.length === 0) {
-      alert('등록 가능한 데이터가 없습니다.')
+      alert('\uB4F1\uB85D \uAC00\uB2A5\uD55C \uB370\uC774\uD130\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.')
       return
     }
 
     setIsUploading(true)
     let successCount = 0
-    const prefix = profile?.organization_id 
-      ? profile.organization_id.substring(0, 4) 
-      : (actualCenterId.substring(0, 4) || 'stu')
+    const failures: string[] = []
+    const prefix = profile?.organization_id
+      ? profile.organization_id.substring(0, 4)
+      : ((actualCenterId || 'stu').substring(0, 4) || 'stu')
 
-    const { data: dbStudents } = await supabase.from('students').select('login_id')
-    const existingLoginIds = new Set(dbStudents?.map(s => s.login_id) || [])
+    let existingLoginIds = new Set<string>()
+    let existingQuery = supabase.from('students').select('login_id')
+    if (actualCenterId) {
+      existingQuery = existingQuery.eq('center_id', actualCenterId)
+    } else if (profile?.organization_id) {
+      existingQuery = existingQuery.eq('organization_id', profile.organization_id)
+    }
+    const { data: dbStudents } = await existingQuery
+    if (dbStudents) {
+      existingLoginIds = new Set(dbStudents.map(s => s.login_id))
+    }
 
-
-    const inserts = validRows.map(row => {
-      let loginId = row.학생코드
-      if (!loginId) {
-        do {
-          loginId = `${prefix}_${Math.floor(100000 + Math.random() * 900000)}`
-        } while (existingLoginIds.has(loginId))
-        existingLoginIds.add(loginId)
+    const readCell = (row: ExcelRow, keys: string[]) => {
+      const source = row as Record<string, unknown>
+      for (const key of keys) {
+        const value = source[key]
+        if (value !== undefined && value !== null && String(value).trim()) {
+          return String(value).trim()
+        }
       }
-
-      return {
-        center_id: actualCenterId,
-        organization_id: profile?.organization_id || null,
-        name: row.이름,
-        grade: `${row.학년}학년`,
-        login_id: loginId,
-        student_code: row.학생코드 || null,
-        guardian_phone: row['보호자 연락처'] || null,
-        temp_password: '1234',
-        status: 'active'
-      }
-    })
+      return ''
+    }
 
     try {
-      const { data, error } = await supabase.from('students').insert(inserts).select()
-      if (error) throw error
+      for (const [index, row] of validRows.entries()) {
+        const name = readCell(row, ['\uC774\uB984', 'name'])
+        const gradeValue = readCell(row, ['\uD559\uB144', 'grade'])
+        const gradeNumber = Number.parseInt(gradeValue, 10) || selectedGrade
+        let loginId = readCell(row, ['\uD559\uC0DD\uCF54\uB4DC', 'loginId'])
 
-      successCount = data?.length || 0
-      alert(`업로드 완료! 성공: ${successCount}건, 실패/제외: ${parsedRows.length - successCount}건`)
+        if (!loginId) {
+          do {
+            loginId = `${prefix}_${Math.floor(100000 + Math.random() * 900000)}`
+          } while (existingLoginIds.has(loginId))
+        }
+
+        if (existingLoginIds.has(loginId)) {
+          failures.push(`${loginId}: \uC774\uBBF8 \uC0AC\uC6A9 \uC911\uC778 \uC544\uC774\uB514`)
+          continue
+        }
+
+        existingLoginIds.add(loginId)
+
+        try {
+          await createStudent({
+            name,
+            loginId,
+            password: '1234',
+            classId: `class-${gradeNumber}`,
+            className: `${gradeNumber}\uD559\uB144 \uC804\uCCB4`,
+            grade: gradeNumber,
+            number: index + 1,
+          })
+          successCount += 1
+        } catch (error) {
+          const message = error instanceof Error ? error.message : '\uC54C \uC218 \uC5C6\uB294 \uC624\uB958'
+          failures.push(`${loginId}: ${message}`)
+        }
+      }
+
+      alert(`\uC5C5\uB85C\uB4DC \uC644\uB8CC! \uC131\uACF5: ${successCount}\uAC74, \uC2E4\uD328: ${failures.length}\uAC74${failures.length ? '\n' + failures.slice(0, 5).join('\n') : ''}`)
       setIsExcelModalOpen(false)
       setParsedRows([])
-      
-      fetchStudentsByCenterAndGrade(actualCenterId, selectedGrade).then(data => {
+
+      fetchStudentsByCenterAndGrade(actualCenterId, selectedGrade, profile?.organization_id).then(data => {
         if (selectedClassId) {
           setStudents(data.filter(s => s.classId === selectedClassId))
         } else {
@@ -447,12 +477,11 @@ export default function StudentManagementPage() {
       })
     } catch (err) {
       console.error(err)
-      alert('일부 또는 전체 데이터 등록에 실패했습니다.')
+      alert('\uC77C\uAD04 \uB4F1\uB85D \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.')
     } finally {
       setIsUploading(false)
     }
   }
-
   const btnBase: React.CSSProperties = {
     padding: '10px 18px', borderRadius: 10, fontWeight: 600, fontSize: 14, cursor: 'pointer', border: 'none',
   }
