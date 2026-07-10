@@ -180,14 +180,17 @@ function DraggablePlacement({
         touchAction: 'none',
         userSelect: 'none',
         cursor: isDragging ? 'grabbing' : 'grab',
-        transition: isDragging ? 'none' : 'left 0.3s ease, top 0.3s ease, transform 0.2s',
+        transition: isDragging ? 'none' : 'left 0.3s ease, top 0.3s ease, transform 0.2s, filter 0.2s',
         transform: isDragging ? 'scale(1.05)' : 'none',
-        boxShadow: isDragging ? '0 10px 25px rgba(0,0,0,0.15)' : 'none',
+        filter: isDragging ? 'drop-shadow(0 8px 16px rgba(0,0,0,0.2)) drop-shadow(0 0 2px rgba(255,255,255,0.5))' : 'none',
       }}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerUp}
+      tabIndex={0}
+      aria-label={placement.item?.name ?? slot.label}
+      title={placement.item?.name ?? slot.label}
     >
       <div className="dream-garden-slot-ground" />
       <div className="dream-garden-slot-object" draggable={false}>
