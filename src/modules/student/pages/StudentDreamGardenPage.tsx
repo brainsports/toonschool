@@ -15,6 +15,7 @@ import {
   TreePine,
   WandSparkles,
   Waves,
+  X,
 } from 'lucide-react'
 import StudentPageShell from '../components/layout/StudentPageShell'
 import { useAuth } from '../../../shared/contexts/AuthContext'
@@ -107,12 +108,17 @@ export default function StudentDreamGardenPage() {
   const [isWorking, setIsWorking] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [isAllItemsModalOpen, setIsAllItemsModalOpen] = useState(false)
 
 
   const recentItems = useMemo(
     () =>
       [...studentItems]
-        .sort((a, b) => new Date(b.acquired_at).getTime() - new Date(a.acquired_at).getTime())
+        .sort((a, b) => {
+          const aTime = new Date(a.acquired_at || a.created_at).getTime()
+          const bTime = new Date(b.acquired_at || b.created_at).getTime()
+          return bTime - aTime
+        })
         .slice(0, 3),
     [studentItems]
   )
@@ -165,6 +171,27 @@ export default function StudentDreamGardenPage() {
       void loadGardenData()
     }
   }, [authLoading, studentId])
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isAllItemsModalOpen) {
+        setIsAllItemsModalOpen(false)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isAllItemsModalOpen])
+
+  useEffect(() => {
+    if (isAllItemsModalOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = 'auto'
+    }
+    return () => {
+      document.body.style.overflow = 'auto'
+    }
+  }, [isAllItemsModalOpen])
 
   async function handleReward(action: () => Promise<RewardResult>) {
     setIsWorking(true)
@@ -300,7 +327,6 @@ export default function StudentDreamGardenPage() {
                   <p className="dg-info-label">내가 획득한 아이템</p>
                   <p className="dg-big-count">{totalItemCount}개</p>
                 </div>
-                <button type="button" className="dg-view-all-btn">전체 보기</button>
               </div>
             </div>
 
@@ -309,7 +335,13 @@ export default function StudentDreamGardenPage() {
               <div className="dg-info-header">
                 <Sparkles className="w-3.5 h-3.5 text-amber-500" />
                 <p className="dg-section-title-inline">최근 획득</p>
-                <button type="button" className="dg-view-all-btn">전체 보기</button>
+                <button
+                  type="button"
+                  className="dg-view-all-btn"
+                  onClick={() => setIsAllItemsModalOpen(true)}
+                >
+                  전체 보기
+                </button>
               </div>
               {recentItems.length === 0 ? (
                 <div className="dg-empty-recent">
@@ -414,6 +446,82 @@ export default function StudentDreamGardenPage() {
 
         </section>
       </main>
+
+      {/* ── 전체 아이템 모달 ── */}
+      {isAllItemsModalOpen && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm transition-opacity"
+          onClick={() => setIsAllItemsModalOpen(false)}
+        >
+          <div
+            className="w-full max-w-4xl bg-white rounded-3xl shadow-2xl flex flex-col overflow-hidden max-h-[80vh] animate-in fade-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* 모달 헤더 */}
+            <div className="flex items-center justify-between p-6 pb-4 border-b border-slate-100 shrink-0">
+              <div>
+                <h2 className="text-2xl font-jua text-slate-800 flex items-center gap-2">
+                  <Gift className="w-6 h-6 text-pink-500" />
+                  내가 획득한 아이템
+                </h2>
+                <p className="text-slate-500 font-medium mt-1">총 {totalItemCount}개</p>
+              </div>
+              <button
+                type="button"
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
+                onClick={() => setIsAllItemsModalOpen(false)}
+                aria-label="닫기"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* 모달 본문 (스크롤) */}
+            <div className="p-6 overflow-y-auto">
+              {studentItems.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 text-center">
+                  <WandSparkles className="w-12 h-12 text-slate-300 mb-4" />
+                  <p className="font-jua text-xl text-slate-500">아직 획득한 아이템이 없어요.</p>
+                  <p className="text-slate-400 mt-2">출석하거나 만화를 완성해서 아이템을 모아보세요!</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {[...studentItems]
+                    .sort((a, b) => {
+                      const aTime = new Date(a.acquired_at || a.created_at).getTime()
+                      const bTime = new Date(b.acquired_at || b.created_at).getTime()
+                      return bTime - aTime
+                    })
+                    .map((studentItem) => (
+                      <article key={studentItem.id} className="bg-slate-50 rounded-2xl p-4 border border-slate-100 flex flex-col items-center text-center hover:shadow-md transition-shadow">
+                        <div className="w-20 h-20 bg-white rounded-xl flex items-center justify-center shadow-sm mb-3">
+                          <ItemImage item={studentItem.item} imgClassName="max-w-[4rem] max-h-[4rem] object-contain" fallbackClassName="text-3xl" />
+                        </div>
+                        <strong className="font-jua text-lg text-slate-800 mb-1 line-clamp-1">
+                          {studentItem.item?.name ?? '알 수 없는 아이템'}
+                        </strong>
+                        <div className="flex flex-col items-center gap-1 text-sm text-slate-500">
+                          <span className="px-2 py-0.5 bg-slate-200/50 rounded-full text-xs font-medium">
+                            {studentItem.item?.category === 'nature' && '식물'}
+                            {studentItem.item?.category === 'sky' && '하늘 장식'}
+                            {studentItem.item?.category === 'animal' && '동물'}
+                            {studentItem.item?.category === 'decor' && '장식'}
+                            {studentItem.item?.category === 'spirit' && '정령'}
+                            {studentItem.item?.category === 'legend' && '전설'}
+                            {!['nature', 'sky', 'animal', 'decor', 'spirit', 'legend'].includes(studentItem.item?.category ?? '') && (studentItem.item?.category ?? '기타')}
+                          </span>
+                          <span className="text-xs">
+                            {new Date(studentItem.acquired_at || studentItem.created_at).toLocaleDateString('ko-KR')} 획득
+                          </span>
+                        </div>
+                      </article>
+                    ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </StudentPageShell>
   )
 }
