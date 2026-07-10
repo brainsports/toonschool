@@ -647,9 +647,9 @@
 
 /* 완료 단계 pill */
 .flow-step-completed {
-  background-color: rgba(232, 249, 247, 0.14);
-  color: #e8fffb;
-  border: 1.5px solid rgba(199, 222, 222, 0.28);
+  background-color: #f8fafc; /* 밝은 회백색 */
+  color: #4c1d95; /* 진한 보라색 */
+  border: 1.5px solid rgba(255, 255, 255, 0.8);
 }
 
 /* 미완료(잠금) 단계 pill */
