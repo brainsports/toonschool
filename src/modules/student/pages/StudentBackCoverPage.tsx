@@ -10,7 +10,27 @@ import { showToast } from '../utils/toast'
 import { projectStorage } from '../utils/projectStorage'
 import { useAuth } from '../../../shared/contexts/AuthContext'
 import { supabase } from '../../../shared/lib/supabase'
+import {
+  grantComicCompleteReward,
+  grantLuckyRewardIfNeeded,
+} from '../services/dreamGardenService'
 
+
+const backCoverRewardRequests = new Set<string>()
+
+function getSupabaseErrorDetails(error: unknown) {
+  if (!error || typeof error !== 'object') {
+    return { code: null, message: null, details: null, hint: null }
+  }
+
+  const record = error as Record<string, unknown>
+  return {
+    code: record.code ?? null,
+    message: record.message ?? null,
+    details: record.details ?? null,
+    hint: record.hint ?? null,
+  }
+}
 const subjectBackCoverThemes: Record<string, { name: string, brand: string, background: string, patternColor: string }> = {
   korean: { name: '국어', brand: '#422C8C', background: '#F2ECFF', patternColor: 'rgba(244, 114, 182, 0.12)' },
   math: { name: '수학', brand: '#422C8C', background: '#EEF4FF', patternColor: 'rgba(245, 158, 11, 0.12)' },
@@ -47,6 +67,7 @@ export default function StudentBackCoverPage() {
   const location = useLocation()
   
   const { user, profile: authProfile } = useAuth()
+  const studentId = authProfile?.role === 'student' ? (authProfile.id ?? user?.id) : user?.id
   const [studentData, setStudentData] = useState<any>(null)
   const [isStudentDataLoaded, setIsStudentDataLoaded] = useState(false)
 
@@ -150,47 +171,99 @@ export default function StudentBackCoverPage() {
     setIsLoaded(true);
   }, [location.state, isStudentDataLoaded, isLoaded, studentData, authProfile]);
 
-  useEffect(() => {
-    if (!isLoaded) return;
-    const currentProjectId = location.state?.projectId || localStorage.getItem('currentProjectId');
-    if (!currentProjectId) return;
+  const grantCompletionRewardAfterBackCoverSave = async (projectId: string) => {
+    if (!studentId || !projectId) return
 
-    const topicData = projectStorage.loadTopic<any>(currentProjectId);
-    const unitData = projectStorage.loadUnit<any>(currentProjectId);
-    const selection = topicData?.selection || unitData || {};
-    const topic = topicData?.topic || {};
+    const requestKey = `${studentId}:${projectId}`
+    if (backCoverRewardRequests.has(requestKey)) return
+    backCoverRewardRequests.add(requestKey)
+
+    try {
+      const result = await grantComicCompleteReward(studentId, projectId)
+      if (result.status !== 'granted') return
+
+      try {
+        await grantLuckyRewardIfNeeded(studentId)
+      } catch (error) {
+        const details = getSupabaseErrorDetails(error)
+        console.error('[StudentBackCoverPage] lucky reward failed after comic completion:', {
+          errorCode: details.code,
+          message: details.message,
+          details: details.details,
+          hint: details.hint,
+          studentId,
+          projectId,
+        })
+      }
+
+      window.dispatchEvent(new Event('studentLootItemsChanged'))
+    } catch (error) {
+      const details = getSupabaseErrorDetails(error)
+      console.error('[StudentBackCoverPage] comic complete reward failed:', {
+        errorCode: details.code,
+        message: details.message,
+        details: details.details,
+        hint: details.hint,
+        studentId,
+        projectId,
+      })
+    } finally {
+      backCoverRewardRequests.delete(requestKey)
+    }
+  }
+
+  const saveBackCoverData = (shouldGrantReward = false) => {
+    const currentProjectId = location.state?.projectId || localStorage.getItem('currentProjectId')
+    if (!currentProjectId) return false
+
+    const topicData = projectStorage.loadTopic<any>(currentProjectId)
+    const unitData = projectStorage.loadUnit<any>(currentProjectId)
+    const selection = topicData?.selection || unitData || {}
+    const topic = topicData?.topic || {}
 
     const backCoverData = {
       projectId: currentProjectId,
       subject: selection?.subjectId || '',
-      subjectName: subjectName,
+      subjectName,
       grade: selection?.gradeValue || selection?.grade || '',
       topicTitle: topicName,
       topicId: topic?.id || '',
       unitTitle: selection?.majorUnitName || '',
       lessonTitle: selection?.middleUnitName || '',
       updatedAt: new Date().toISOString(),
-      
+
       authorName,
       gradeClassInfo,
       unitName,
       createdDate,
       bgColor,
-      bgOpacity: backCoverBgOpacity
-    };
+      bgOpacity: backCoverBgOpacity,
+    }
 
-    projectStorage.saveBackCover(currentProjectId, backCoverData);
-    
+    const isSaved = projectStorage.saveBackCover(currentProjectId, backCoverData)
+    if (!isSaved) return false
+
     // Legacy support
-    localStorage.setItem('backCoverBgColor', bgColor);
-    localStorage.setItem('backCoverBgOpacity', String(backCoverBgOpacity));
-    localStorage.setItem('backCoverAuthor', authorName);
-    localStorage.setItem('backCoverGradeClass', gradeClassInfo);
-    localStorage.setItem('backCoverSubject', subjectName);
-    localStorage.setItem('backCoverUnit', unitName);
-    localStorage.setItem('backCoverTopic', topicName);
-    localStorage.setItem('backCoverDate', createdDate);
-  }, [bgColor, backCoverBgOpacity, authorName, gradeClassInfo, subjectName, unitName, topicName, createdDate, isLoaded, location.state]);
+    localStorage.setItem('backCoverBgColor', bgColor)
+    localStorage.setItem('backCoverBgOpacity', String(backCoverBgOpacity))
+    localStorage.setItem('backCoverAuthor', authorName)
+    localStorage.setItem('backCoverGradeClass', gradeClassInfo)
+    localStorage.setItem('backCoverSubject', subjectName)
+    localStorage.setItem('backCoverUnit', unitName)
+    localStorage.setItem('backCoverTopic', topicName)
+    localStorage.setItem('backCoverDate', createdDate)
+
+    if (shouldGrantReward) {
+      void grantCompletionRewardAfterBackCoverSave(currentProjectId)
+    }
+
+    return true
+  }
+
+  useEffect(() => {
+    if (!isLoaded) return
+    void saveBackCoverData(false)
+  }, [bgColor, backCoverBgOpacity, authorName, gradeClassInfo, subjectName, unitName, topicName, createdDate, isLoaded, location.state])
 
   const handleGenerateInfo = () => {
     const currentProjectId = location.state?.projectId || localStorage.getItem('currentProjectId');
@@ -300,10 +373,12 @@ export default function StudentBackCoverPage() {
       </button>
       <button
         onClick={() => {
-          const projectId = location.state?.projectId || localStorage.getItem('currentProjectId');
+          const projectId = location.state?.projectId || localStorage.getItem('currentProjectId')
+          const isSaved = saveBackCoverData(true)
+          if (!isSaved) return
           navigate('/student/comic/read', {
             state: { projectId }
-          });
+          })
         }}
         className="btn-student btn-student-primary btn-student-md"
       >

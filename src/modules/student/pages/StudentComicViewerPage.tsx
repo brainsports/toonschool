@@ -15,27 +15,8 @@ import html2canvas from 'html2canvas'
 import { jsPDF } from 'jspdf'
 import { useAuth } from '../../../shared/contexts/AuthContext'
 import { createGrowthEvaluationForSharedComic } from '../services/studentGrowthService'
-import {
-  grantComicCompleteReward,
-  grantLuckyRewardIfNeeded,
-} from '../services/dreamGardenService'
 const BGM_PATH = '/audio/viewer/if-i-had-a-chicken.mp3';
 
-const comicCompleteRewardRequests = new Set<string>();
-
-function getSupabaseErrorDetails(error: unknown) {
-  if (!error || typeof error !== 'object') {
-    return { code: null, message: null, details: null, hint: null }
-  }
-
-  const record = error as Record<string, unknown>
-  return {
-    code: record.code ?? null,
-    message: record.message ?? null,
-    details: record.details ?? null,
-    hint: record.hint ?? null,
-  }
-}
 function hexToRgba(hex: string, opacity: number) {
   const normalized = hex.replace('#', '');
   if (normalized.length !== 6 && normalized.length !== 3) return hex;
@@ -287,7 +268,7 @@ const createShareUrl = (slug: string) => {
 export default function StudentComicViewerPage() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { user, profile } = useAuth()
+  const { user } = useAuth()
   
   const [pages, setPages] = useState<ViewerPage[]>([])
   const [currentSpreadIndex, setCurrentSpreadIndex] = useState(0)
@@ -305,8 +286,6 @@ export default function StudentComicViewerPage() {
   const audioRef = useRef<HTMLAudioElement>(null)
 
   const [projectData, setProjectData] = useState<ComicProjectData | null>(null)
-  const [completionRewardProjectId, setCompletionRewardProjectId] = useState<string | null>(null)
-  const [rewardNotice, setRewardNotice] = useState<string | null>(null)
 
   const [showMenu, setShowMenu] = useState(false)
   const [isAutoFlip, setIsAutoFlip] = useState(false)
@@ -381,7 +360,6 @@ export default function StudentComicViewerPage() {
     const currentProjectId = stateProjectId || legacyTopicId || localStorage.getItem('currentProjectId');
 
     if (!currentProjectId) {
-      setCompletionRewardProjectId(null)
       return; 
     }
 
@@ -391,7 +369,6 @@ export default function StudentComicViewerPage() {
     const storedFrontCover = projectStorage.loadFrontCover<EditorState>(currentProjectId);
     const storedSummary = projectStorage.loadSummary<any>(currentProjectId);
     const storedBackCover = projectStorage.loadBackCover<any>(currentProjectId);
-    const loadedCuts: Array<ComicCutEditData | null> = [];
 
     const newPages: ViewerPage[] = [];
 
@@ -401,7 +378,6 @@ export default function StudentComicViewerPage() {
     // 2~7. 만화 6컷
     for (let i = 1; i <= 6; i++) {
       const cutData = loadComicCutData(currentProjectId, i);
-      loadedCuts.push(cutData);
       const scriptCut = storedProjectData?.script?.cuts?.find(c => c.cutNumber === i);
       newPages.push({ type: 'comic-cut', cutNum: i, data: cutData, scriptCut });
     }
@@ -420,72 +396,8 @@ export default function StudentComicViewerPage() {
     newPages.push({ type: 'back-cover', data: storedBackCover });
 
     setPages(newPages);
-
-    const completedProjectId = storedProjectData?.projectId || currentProjectId;
-    const isCompletedComic =
-      Boolean(storedProjectData?.projectId) &&
-      Boolean(storedBackCover) &&
-      loadedCuts.length === 6 &&
-      loadedCuts.every((cutData) => Boolean(cutData?.backgroundImageUrl));
-
-    setCompletionRewardProjectId(isCompletedComic ? completedProjectId : null);
   }, [location.state])
 
-  const studentId = profile?.role === 'student' ? (profile.id ?? user?.id) : user?.id
-
-  useEffect(() => {
-    if (!studentId || !completionRewardProjectId) return
-
-    const requestKey = `${studentId}:${completionRewardProjectId}`
-    if (comicCompleteRewardRequests.has(requestKey)) return
-
-    let isMounted = true
-    comicCompleteRewardRequests.add(requestKey)
-
-    const grantCompletionReward = async () => {
-      try {
-        const result = await grantComicCompleteReward(studentId, completionRewardProjectId)
-        if (result.status !== 'granted') return
-
-        try {
-          await grantLuckyRewardIfNeeded(studentId)
-        } catch (error) {
-          const details = getSupabaseErrorDetails(error)
-          console.error('[StudentComicViewerPage] lucky reward failed after comic completion:', {
-            errorCode: details.code,
-            message: details.message,
-            details: details.details,
-            hint: details.hint,
-            studentId,
-            projectId: completionRewardProjectId,
-          })
-        }
-
-        window.dispatchEvent(new Event('studentLootItemsChanged'))
-      } catch (error) {
-        const details = getSupabaseErrorDetails(error)
-        console.error('[StudentComicViewerPage] comic complete reward failed:', {
-          errorCode: details.code,
-          message: details.message,
-          details: details.details,
-          hint: details.hint,
-          studentId,
-          projectId: completionRewardProjectId,
-        })
-        if (isMounted) {
-          setRewardNotice('만화는 완성되었지만 아이템 지급을 확인하지 못했어요. 잠시 후 다시 확인해 주세요.')
-        }
-      } finally {
-        comicCompleteRewardRequests.delete(requestKey)
-      }
-    }
-
-    void grantCompletionReward()
-
-    return () => {
-      isMounted = false
-    }
-  }, [completionRewardProjectId, studentId])
 
   // --- Zoom Logic ---
   const BASE_WIDTH = 1000;
@@ -1245,12 +1157,6 @@ export default function StudentComicViewerPage() {
       bgVariant="default"
     >
       <audio ref={audioRef} src={BGM_PATH} preload="auto" loop />
-
-      {rewardNotice && (
-        <div className="absolute left-1/2 top-24 z-[120] -translate-x-1/2 rounded-full bg-amber-50 px-5 py-3 text-sm font-bold text-amber-700 shadow-lg border border-amber-200" role="status">
-          {rewardNotice}
-        </div>
-      )}
       {!hasStarted && (
         <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex flex-col items-center justify-center">
           <div className="bg-white rounded-[40px] p-16 shadow-2xl flex flex-col items-center max-w-[800px] text-center border-[8px] border-purple-100 animate-in zoom-in duration-300">
