@@ -210,58 +210,77 @@ export default function StudentMyPage() {
               />
             </div>
             {/* Stats Cards & Growth Chart */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Stats Column */}
-              <div className="grid grid-cols-2 md:grid-cols-1 lg:grid-cols-3 gap-4">
-                <div className="bg-white rounded-[1.5rem] p-5 flex flex-col items-center justify-center gap-2 border border-slate-100 shadow-sm text-center">
-                  <div className="w-10 h-10 bg-pink-50 text-pink-500 rounded-full flex items-center justify-center mb-1">
-                    <Trophy className="w-5 h-5" />
-                  </div>
-                  <span className="text-xs font-bold text-slate-500">완성 작품</span>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Card 1: 완성 작품 */}
+              <div className="bg-white rounded-[20px] px-6 py-5 flex items-center gap-4 border border-slate-100 shadow-sm min-h-[112px]">
+                <div className="w-12 h-12 bg-pink-50 text-pink-500 rounded-full flex items-center justify-center shrink-0">
+                  <Trophy className="w-6 h-6" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-xs font-bold text-slate-500 mb-0.5">완성 작품</span>
                   {completedWorksCount > 0 ? (
-                    <span className="text-2xl font-black text-slate-700">{completedWorksCount}</span>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-2xl font-black text-slate-700">{completedWorksCount}</span>
+                      <span className="text-sm font-bold text-slate-500">개</span>
+                    </div>
                   ) : (
-                    <Heart className="w-7 h-7 text-pink-400 fill-pink-400" />
+                    <Heart className="w-6 h-6 text-pink-400 fill-pink-400 mt-1" />
                   )}
-                </div>
-                <div className="bg-white rounded-[1.5rem] p-5 flex flex-col items-center justify-center gap-2 border border-slate-100 shadow-sm text-center">
-                  <div className="w-10 h-10 bg-sky-50 text-sky-500 rounded-full flex items-center justify-center mb-1">
-                    <Calendar className="w-5 h-5" />
-                  </div>
-                  <span className="text-xs font-bold text-slate-500">총 출석일수</span>
-                  <span className="text-2xl font-black text-sky-500">{totalAttendanceCount}일</span>
-                </div>
-                <div className="bg-white rounded-[1.5rem] p-5 flex flex-col items-center justify-center gap-2 border border-slate-100 shadow-sm text-center">
-                  <div className="w-10 h-10 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mb-1">
-                    <CheckCircle2 className="w-5 h-5" />
-                  </div>
-                  <span className="text-xs font-bold text-slate-500">성장 점수</span>
-                  <span className="text-2xl font-black text-emerald-500">{growthData?.latest?.total_score || 0}점</span>
                 </div>
               </div>
 
-              {/* Chart Column */}
-              <div className="bg-white rounded-[1.5rem] p-6 border border-slate-100 shadow-sm flex flex-col justify-between min-h-[160px]">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-bold text-slate-800">성장 기록</h3>
-                  <div className="text-xs font-bold px-2 py-1 bg-emerald-50 text-emerald-600 rounded-md">
-                    {growthData?.latest ? `최근 작품 점수 ${growthData.latest.total_score}점` : '기록 없음'}
+              {/* Card 2: 총 출석일수 */}
+              <div className="bg-white rounded-[20px] px-6 py-5 flex items-center gap-4 border border-slate-100 shadow-sm min-h-[112px]">
+                <div className="w-12 h-12 bg-sky-50 text-sky-500 rounded-full flex items-center justify-center shrink-0">
+                  <Calendar className="w-6 h-6" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-xs font-bold text-slate-500 mb-0.5">총 출석일수</span>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-2xl font-black text-sky-500">{totalAttendanceCount}</span>
+                    <span className="text-sm font-bold text-sky-500">일</span>
                   </div>
                 </div>
+              </div>
 
-                {isLoadingGrowth ? (
-                   <div className="flex-1 flex items-center justify-center">
-                     <span className="text-slate-400 text-sm font-medium">불러오는 중...</span>
-                   </div>
-                ) : !growthData?.latest ? (
-                   <div className="flex-1 flex flex-col items-center justify-center text-center px-4 py-6 bg-slate-50 rounded-xl border border-slate-100 border-dashed">
-                     <span className="text-2xl mb-2">🌱</span>
-                     <p className="text-slate-600 font-bold text-sm mb-1">아직 성장기록이 없어요.</p>
-                     <p className="text-slate-400 text-xs break-keep mt-1">만화를 완성하면 AI 선생님이 작품을 보고 성장 피드백을 남겨 줄게요.</p>
-                   </div>
-                ) : (
-                  <>
-                    <div className="mb-4 text-[13px] font-bold text-slate-600 flex items-center gap-1.5 bg-slate-50 px-3 py-2 rounded-lg">
+              {/* Card 3: 성장 점수 */}
+              <div className="bg-white rounded-[20px] px-6 py-5 flex items-center gap-4 border border-slate-100 shadow-sm min-h-[112px]">
+                <div className="w-12 h-12 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center shrink-0">
+                  <CheckCircle2 className="w-6 h-6" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-xs font-bold text-slate-500 mb-0.5">성장 점수</span>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-2xl font-black text-emerald-500">{growthData?.latest?.total_score || 0}</span>
+                    <span className="text-sm font-bold text-emerald-500">점</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Growth Chart */}
+            <div className="bg-white rounded-[20px] p-6 border border-slate-100 shadow-sm flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <h3 className="font-bold text-slate-800">성장 기록</h3>
+                <div className="text-xs font-bold px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-lg">
+                  {growthData?.latest ? `최근 작품 점수 ${growthData.latest.total_score}점` : '기록 없음'}
+                </div>
+              </div>
+
+              {isLoadingGrowth ? (
+                 <div className="flex-1 flex items-center justify-center py-10">
+                   <span className="text-slate-400 text-sm font-medium">불러오는 중...</span>
+                 </div>
+              ) : !growthData?.latest ? (
+                 <div className="flex-1 flex flex-col items-center justify-center text-center px-4 py-8 bg-slate-50 rounded-xl border border-slate-100 border-dashed">
+                   <span className="text-2xl mb-2">🌱</span>
+                   <p className="text-slate-600 font-bold text-sm mb-1">아직 성장기록이 없어요.</p>
+                   <p className="text-slate-400 text-xs break-keep mt-1">만화를 완성하면 AI 선생님이 작품을 보고 성장 피드백을 남겨 줄게요.</p>
+                 </div>
+              ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.15fr)_minmax(280px,0.85fr)] gap-6 items-stretch">
+                  <div className="flex flex-col">
+                    <div className="mb-3.5 text-[13px] font-bold text-slate-600 flex items-center gap-1.5 bg-slate-50 px-3 py-2.5 rounded-lg">
                       <span className="text-lg">{growthData.delta && growthData.delta > 0 ? '🚀' : growthData.delta !== null ? '💪' : '🌟'}</span>
                       {growthData.delta !== null ? (
                         growthData.delta > 0 
@@ -281,11 +300,11 @@ export default function StudentMyPage() {
                         { label: '완성 태도', score: growthData.latest.completion_score, maxScore: 20, color: 'bg-yellow-400', bg: 'bg-yellow-50' },
                       ].map((area, idx) => (
                         <div key={idx} className="flex flex-col gap-1.5">
-                          <div className="flex items-center justify-between text-xs font-bold">
+                          <div className="flex items-center justify-between text-[13px] font-bold">
                             <span className="text-slate-700">{area.label}</span>
                             <span className="text-slate-700">{area.score}<span className="text-slate-400 font-medium"> / {area.maxScore}</span></span>
                           </div>
-                          <div className={`w-full h-2.5 rounded-full ${area.bg}`}>
+                          <div className={`w-full h-2 rounded-full ${area.bg}`}>
                             <div 
                               className={`h-full rounded-full ${area.color}`} 
                               style={{ width: `${(area.score / area.maxScore) * 100}%` }}
@@ -294,24 +313,24 @@ export default function StudentMyPage() {
                         </div>
                       ))}
                     </div>
+                  </div>
 
-                    <div className="mt-5 flex flex-col gap-3">
-                      <div className="bg-sky-50 rounded-xl p-3 border border-sky-100">
-                        <div className="text-xs font-black text-sky-600 mb-1">이번 작품에서 잘한 점</div>
-                        <p className="text-[13px] text-slate-700 font-medium break-keep">
-                          {growthData.latest.strength_feedback}
-                        </p>
-                      </div>
-                      <div className="bg-pink-50 rounded-xl p-3 border border-pink-100">
-                        <div className="text-xs font-black text-pink-600 mb-1">다음에 더 좋아질 점</div>
-                        <p className="text-[13px] text-slate-700 font-medium break-keep">
-                          {growthData.latest.improvement_feedback}
-                        </p>
-                      </div>
+                  <div className="flex flex-col gap-3 h-full">
+                    <div className="bg-sky-50 rounded-[14px] p-4 border border-sky-100 flex-1 flex flex-col">
+                      <div className="text-xs font-black text-sky-600 mb-1.5">이번 작품에서 잘한 점</div>
+                      <p className="text-[13px] text-slate-700 font-medium break-keep leading-[1.6]">
+                        {growthData.latest.strength_feedback}
+                      </p>
                     </div>
-                  </>
-                )}
-              </div>
+                    <div className="bg-pink-50 rounded-[14px] p-4 border border-pink-100 flex-1 flex flex-col">
+                      <div className="text-xs font-black text-pink-600 mb-1.5">다음에 더 좋아질 점</div>
+                      <p className="text-[13px] text-slate-700 font-medium break-keep leading-[1.6]">
+                        {growthData.latest.improvement_feedback}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* My Works */}
