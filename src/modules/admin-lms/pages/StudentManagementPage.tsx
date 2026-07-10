@@ -571,19 +571,20 @@ export default function StudentManagementPage() {
       </div>
 
       {/* 학생 목록 표 */}
-      <div style={{ background: 'white', borderRadius: 16, boxShadow: '0 2px 12px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
-        <div style={{
-          display: 'grid', gridTemplateColumns: '40px 60px 100px 140px 120px 80px',
-          padding: '14px 20px', background: '#fafafa',
-          borderBottom: '1.5px solid #f0f0f0', fontSize: 13, fontWeight: 700, color: '#666',
-        }}>
-          <div><input type="checkbox" checked={students.length > 0 && checkedIds.size === students.length} onChange={toggleAll} style={{ cursor: 'pointer' }} /></div>
-          <div>번호</div>
-          <div>이름</div>
-          <div>아이디</div>
-          <div>비밀번호</div>
-          <div>관리</div>
-        </div>
+      <div className="table-wrapper" style={{ background: 'white', borderRadius: 16, boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+        <div style={{ minWidth: '600px' }}>
+          <div style={{
+            display: 'grid', gridTemplateColumns: '40px 60px 100px 140px 120px 80px',
+            padding: '14px 20px', background: '#fafafa',
+            borderBottom: '1.5px solid #f0f0f0', fontSize: 13, fontWeight: 700, color: '#666',
+          }}>
+            <div><input type="checkbox" checked={students.length > 0 && checkedIds.size === students.length} onChange={toggleAll} style={{ cursor: 'pointer' }} /></div>
+            <div>번호</div>
+            <div>이름</div>
+            <div>아이디</div>
+            <div>비밀번호</div>
+            <div>관리</div>
+          </div>
 
         {students.length === 0 ? (
           <div style={{ padding: 48, textAlign: 'center', color: '#bbb', fontSize: 15 }}>
@@ -622,6 +623,7 @@ export default function StudentManagementPage() {
             </div>
           ))
         )}
+        </div>
       </div>
 
       {/* 학생 생성 모달 */}

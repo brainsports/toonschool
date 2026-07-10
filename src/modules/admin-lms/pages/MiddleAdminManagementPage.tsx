@@ -46,48 +46,50 @@ export default function MiddleAdminManagementPage() {
             등록된 중간관리자가 없습니다.
           </div>
         ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-            <thead style={{ background: '#f8f9fa', borderBottom: '1px solid #eee' }}>
-              <tr>
-                <th style={{ padding: '16px 20px', fontSize: 13, fontWeight: 600, color: '#666' }}>이름</th>
-                <th style={{ padding: '16px 20px', fontSize: 13, fontWeight: 600, color: '#666' }}>이메일</th>
-                <th style={{ padding: '16px 20px', fontSize: 13, fontWeight: 600, color: '#666' }}>배정된 기관 수</th>
-                <th style={{ padding: '16px 20px', fontSize: 13, fontWeight: 600, color: '#666' }}>상태</th>
-                <th style={{ padding: '16px 20px', fontSize: 13, fontWeight: 600, color: '#666' }}>생성일</th>
-              </tr>
-            </thead>
-            <tbody>
-              {admins.map(admin => (
-                <tr key={admin.id} style={{ borderBottom: '1px solid #eee' }}>
-                  <td style={{ padding: '16px 20px', fontSize: 14, fontWeight: 600, color: '#1a1a2e' }}>
-                    {admin.name || '이름 없음'}
-                  </td>
-                  <td style={{ padding: '16px 20px', fontSize: 14, color: '#555' }}>
-                    {admin.email}
-                  </td>
-                  <td style={{ padding: '16px 20px', fontSize: 14, color: '#555' }}>
-                    {admin.assigned_orgs?.length || 0}개
-                    <div style={{ fontSize: 12, color: '#888', marginTop: 4 }}>
-                      {admin.assigned_orgs?.slice(0, 2).map((o: any) => o.name).join(', ')}
-                      {(admin.assigned_orgs?.length || 0) > 2 ? ' ...' : ''}
-                    </div>
-                  </td>
-                  <td style={{ padding: '16px 20px' }}>
-                    <span style={{ 
-                      padding: '4px 8px', borderRadius: 12, fontSize: 12, fontWeight: 600,
-                      background: admin.status === 'active' ? '#e3fce1' : '#ffe1e1',
-                      color: admin.status === 'active' ? '#0b821a' : '#c91414'
-                    }}>
-                      {admin.status === 'active' ? '정상' : '사용정지'}
-                    </span>
-                  </td>
-                  <td style={{ padding: '16px 20px', fontSize: 14, color: '#888' }}>
-                    {new Date(admin.created_at).toLocaleDateString()}
-                  </td>
+          <div className="table-wrapper">
+            <table style={{ minWidth: '700px', width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+              <thead style={{ background: '#f8f9fa', borderBottom: '1px solid #eee' }}>
+                <tr>
+                  <th style={{ padding: '16px 20px', fontSize: 13, fontWeight: 600, color: '#666' }}>이름</th>
+                  <th style={{ padding: '16px 20px', fontSize: 13, fontWeight: 600, color: '#666' }}>이메일</th>
+                  <th style={{ padding: '16px 20px', fontSize: 13, fontWeight: 600, color: '#666' }}>배정된 기관 수</th>
+                  <th style={{ padding: '16px 20px', fontSize: 13, fontWeight: 600, color: '#666' }}>상태</th>
+                  <th style={{ padding: '16px 20px', fontSize: 13, fontWeight: 600, color: '#666' }}>생성일</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {admins.map(admin => (
+                  <tr key={admin.id} style={{ borderBottom: '1px solid #eee' }}>
+                    <td style={{ padding: '16px 20px', fontSize: 14, fontWeight: 600, color: '#1a1a2e' }}>
+                      {admin.name || '이름 없음'}
+                    </td>
+                    <td style={{ padding: '16px 20px', fontSize: 14, color: '#555' }}>
+                      {admin.email}
+                    </td>
+                    <td style={{ padding: '16px 20px', fontSize: 14, color: '#555' }}>
+                      {admin.assigned_orgs?.length || 0}개
+                      <div style={{ fontSize: 12, color: '#888', marginTop: 4 }}>
+                        {admin.assigned_orgs?.slice(0, 2).map((o: any) => o.name).join(', ')}
+                        {(admin.assigned_orgs?.length || 0) > 2 ? ' ...' : ''}
+                      </div>
+                    </td>
+                    <td style={{ padding: '16px 20px' }}>
+                      <span style={{ 
+                        padding: '4px 8px', borderRadius: 12, fontSize: 12, fontWeight: 600,
+                        background: admin.status === 'active' ? '#e3fce1' : '#ffe1e1',
+                        color: admin.status === 'active' ? '#0b821a' : '#c91414'
+                      }}>
+                        {admin.status === 'active' ? '정상' : '사용정지'}
+                      </span>
+                    </td>
+                    <td style={{ padding: '16px 20px', fontSize: 14, color: '#888' }}>
+                      {new Date(admin.created_at).toLocaleDateString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 

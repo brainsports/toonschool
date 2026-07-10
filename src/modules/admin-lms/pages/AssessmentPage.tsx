@@ -233,23 +233,25 @@ export default function AssessmentPage() {
           <span style={{ fontSize: 13, color: '#aaa' }}>클릭하면 상세 평가서를 볼 수 있어요</span>
         </div>
 
-        {/* 표 헤더 */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: '100px 70px 80px repeat(5, 1fr) 80px',
-          padding: '12px 24px', background: '#fafafa',
-          borderBottom: '1px solid #f0f0f0', fontSize: 12, fontWeight: 700, color: '#888',
-        }}>
-          <div>이름</div>
-          <div style={{ textAlign: 'center' }}>총점</div>
-          <div style={{ textAlign: 'center' }}>단계</div>
-          <div style={{ textAlign: 'center' }}>이해력</div>
-          <div style={{ textAlign: 'center' }}>요약력</div>
-          <div style={{ textAlign: 'center' }}>표현력</div>
-          <div style={{ textAlign: 'center' }}>문제해결</div>
-          <div style={{ textAlign: 'center' }}>공유태도</div>
-          <div style={{ textAlign: 'center' }}>상세보기</div>
-        </div>
+        <div className="table-wrapper">
+          <div style={{ minWidth: '800px' }}>
+            {/* 표 헤더 */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '100px 70px 80px repeat(5, 1fr) 80px',
+              padding: '12px 24px', background: '#fafafa',
+              borderBottom: '1px solid #f0f0f0', fontSize: 12, fontWeight: 700, color: '#888',
+            }}>
+              <div>이름</div>
+              <div style={{ textAlign: 'center' }}>총점</div>
+              <div style={{ textAlign: 'center' }}>단계</div>
+              <div style={{ textAlign: 'center' }}>이해력</div>
+              <div style={{ textAlign: 'center' }}>요약력</div>
+              <div style={{ textAlign: 'center' }}>표현력</div>
+              <div style={{ textAlign: 'center' }}>문제해결</div>
+              <div style={{ textAlign: 'center' }}>공유태도</div>
+              <div style={{ textAlign: 'center' }}>상세보기</div>
+            </div>
 
         {assessments.length === 0 ? (
           <div style={{ padding: 48, textAlign: 'center', color: '#bbb', fontSize: 15 }}>
@@ -295,6 +297,8 @@ export default function AssessmentPage() {
             )
           })
         )}
+          </div>
+        </div>
       </div>
 
       {/* 성장 단계 설명 */}

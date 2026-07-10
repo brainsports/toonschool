@@ -132,20 +132,21 @@ export default function TeacherManagementPage() {
       </div>
 
       {/* 선생님 목록 표 */}
-      <div style={{ background: 'white', borderRadius: 16, boxShadow: '0 2px 12px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
-        {/* 표 헤더 */}
-        <div style={{
-          display: 'grid', gridTemplateColumns: '40px 50px 100px 140px 100px 120px',
-          padding: '14px 20px', background: '#fafafa',
-          borderBottom: '1.5px solid #f0f0f0', fontSize: 13, fontWeight: 700, color: '#666',
-        }}>
-          <div><input type="checkbox" checked={teachers.length > 0 && checkedIds.size === teachers.length} onChange={toggleAll} style={{ cursor: 'pointer' }} /></div>
-          <div>순번</div>
-          <div>이름</div>
-          <div>아이디</div>
-          <div>가입일</div>
-          <div style={{ textAlign: 'center' }}>비밀번호 초기화</div>
-        </div>
+      <div className="table-wrapper" style={{ background: 'white', borderRadius: 16, boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+        <div style={{ minWidth: '600px' }}>
+          {/* 표 헤더 */}
+          <div style={{
+            display: 'grid', gridTemplateColumns: '40px 50px 100px 140px 100px 120px',
+            padding: '14px 20px', background: '#fafafa',
+            borderBottom: '1.5px solid #f0f0f0', fontSize: 13, fontWeight: 700, color: '#666',
+          }}>
+            <div><input type="checkbox" checked={teachers.length > 0 && checkedIds.size === teachers.length} onChange={toggleAll} style={{ cursor: 'pointer' }} /></div>
+            <div>순번</div>
+            <div>이름</div>
+            <div>아이디</div>
+            <div>가입일</div>
+            <div style={{ textAlign: 'center' }}>비밀번호 초기화</div>
+          </div>
 
         {teachers.length === 0 ? (
           <div style={{ padding: 48, textAlign: 'center', color: '#bbb', fontSize: 15 }}>
@@ -179,6 +180,7 @@ export default function TeacherManagementPage() {
             </div>
           ))
         )}
+        </div>
       </div>
 
       {/* 선생님 생성 모달 */}

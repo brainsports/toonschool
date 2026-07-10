@@ -141,26 +141,27 @@ export default function ClassManagementPage() {
       </div>
 
       {/* 학급 목록 표 */}
-      <div style={{ background: 'white', borderRadius: 16, boxShadow: '0 2px 12px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
-        {/* 표 헤더 */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: '40px 60px 1fr 160px 80px 300px',
-          padding: '14px 20px',
-          background: '#fafafa',
-          borderBottom: '1.5px solid #f0f0f0',
-          fontSize: 13, fontWeight: 700, color: '#666',
-        }}>
-          <div>
-            <input type="checkbox" checked={gradeClasses.length > 0 && checkedIds.size === gradeClasses.length}
-              onChange={toggleAll} style={{ cursor: 'pointer' }} />
+      <div className="table-wrapper" style={{ background: 'white', borderRadius: 16, boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+        <div style={{ minWidth: '800px' }}>
+          {/* 표 헤더 */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '40px 60px 1fr 160px 80px 300px',
+            padding: '14px 20px',
+            background: '#fafafa',
+            borderBottom: '1.5px solid #f0f0f0',
+            fontSize: 13, fontWeight: 700, color: '#666',
+          }}>
+            <div>
+              <input type="checkbox" checked={gradeClasses.length > 0 && checkedIds.size === gradeClasses.length}
+                onChange={toggleAll} style={{ cursor: 'pointer' }} />
+            </div>
+            <div>학년</div>
+            <div>학급명</div>
+            <div>단원 제한 설정</div>
+            <div style={{ textAlign: 'center' }}>학생 수</div>
+            <div style={{ textAlign: 'center' }}>관리</div>
           </div>
-          <div>학년</div>
-          <div>학급명</div>
-          <div>단원 제한 설정</div>
-          <div style={{ textAlign: 'center' }}>학생 수</div>
-          <div style={{ textAlign: 'center' }}>관리</div>
-        </div>
 
         {gradeClasses.length === 0 ? (
           <div style={{ padding: 48, textAlign: 'center', color: '#bbb', fontSize: 15 }}>
@@ -221,6 +222,7 @@ export default function ClassManagementPage() {
             </div>
           ))
         )}
+        </div>
       </div>
 
       {/* 단원설정 모달 */}
