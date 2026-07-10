@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useRef } from 'react'
 import {
   Armchair,
   ChevronDown,
@@ -29,6 +29,7 @@ import {
   grantComicCompleteReward,
   grantLuckyRewardIfNeeded,
   saveGardenPlacement,
+  updateGardenPlacement,
 } from '../services/dreamGardenService'
 
 type GardenSlotId =
@@ -99,6 +100,108 @@ function getNearestSlot(placement: GardenPlacement, usedSlots: Set<GardenSlotId>
   }, slots[0])
 }
 
+function DraggablePlacement({
+  slot,
+  placement,
+  onSave,
+}: {
+  slot: GardenSlot
+  placement: GardenPlacement
+  onSave: (id: string, x: number, y: number) => Promise<void>
+}) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [isDragging, setIsDragging] = useState(false)
+  const [pos, setPos] = useState({ x: placement.x, y: placement.y })
+  const startPos = useRef({ x: 0, y: 0 })
+  const startPointer = useRef({ x: 0, y: 0 })
+
+  useEffect(() => {
+    if (!isDragging) {
+      setPos({ x: placement.x, y: placement.y })
+    }
+  }, [placement.x, placement.y, isDragging])
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    if (e.button !== 0 && e.pointerType === 'mouse') return
+    const el = containerRef.current
+    if (!el) return
+    el.setPointerCapture(e.pointerId)
+    setIsDragging(true)
+    startPos.current = { ...pos }
+    startPointer.current = { x: e.clientX, y: e.clientY }
+  }
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!isDragging) return
+    const parent = containerRef.current?.parentElement
+    if (!parent) return
+    const rect = parent.getBoundingClientRect()
+    
+    const dxPercent = ((e.clientX - startPointer.current.x) / rect.width) * 100
+    const dyPercent = ((e.clientY - startPointer.current.y) / rect.height) * 100
+    
+    let newX = startPos.current.x + dxPercent
+    let newY = startPos.current.y + dyPercent
+    
+    newX = Math.max(2, Math.min(94, newX))
+    newY = Math.max(3, Math.min(92, newY))
+    
+    setPos({ x: newX, y: newY })
+  }
+
+  const handlePointerUp = async (e: React.PointerEvent) => {
+    if (!isDragging) return
+    setIsDragging(false)
+    const el = containerRef.current
+    if (el) el.releasePointerCapture(e.pointerId)
+    
+    const pxDx = Math.abs(e.clientX - startPointer.current.x)
+    const pxDy = Math.abs(e.clientY - startPointer.current.y)
+    if (pxDx < 3 && pxDy < 3) {
+      setPos(startPos.current)
+      return
+    }
+    
+    try {
+      await onSave(placement.id, pos.x, pos.y)
+    } catch (err) {
+      setPos(startPos.current)
+    }
+  }
+
+  return (
+    <div
+      ref={containerRef}
+      className={`dream-garden-slot dream-garden-slot-${slot.size} dream-garden-slot-filled`}
+      style={{
+        left: `${pos.x}%`,
+        top: `${pos.y}%`,
+        zIndex: isDragging ? 100 : slot.zIndex,
+        touchAction: 'none',
+        userSelect: 'none',
+        cursor: isDragging ? 'grabbing' : 'grab',
+        transition: isDragging ? 'none' : 'left 0.3s ease, top 0.3s ease, transform 0.2s',
+        transform: isDragging ? 'scale(1.05)' : 'none',
+        boxShadow: isDragging ? '0 10px 25px rgba(0,0,0,0.15)' : 'none',
+      }}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
+    >
+      <div className="dream-garden-slot-ground" />
+      <div className="dream-garden-slot-object" draggable={false}>
+        <ItemImage
+          item={placement.item}
+          imgClassName="dream-garden-item-img pointer-events-none"
+          fallbackClassName="dream-garden-item-emoji pointer-events-none"
+        />
+        <span className="dream-garden-item-name pointer-events-none">{placement.item?.name ?? slot.label}</span>
+      </div>
+    </div>
+  )
+}
+
 export default function StudentDreamGardenPage() {
   const { user, profile, loading: authLoading } = useAuth()
   const studentId = profile?.role === 'student' ? profile.id : user?.id
@@ -112,6 +215,22 @@ export default function StudentDreamGardenPage() {
   const [error, setError] = useState<string | null>(null)
   const [isAllItemsModalOpen, setIsAllItemsModalOpen] = useState(false)
 
+  async function handleSavePosition(placementId: string, x: number, y: number) {
+    setMessage('위치 저장 중...')
+    try {
+      await updateGardenPlacement({ placementId, x, y })
+      setMessage('위치를 저장했어요.')
+      setTimeout(() => setMessage(null), 2000)
+      
+      setPlacements((prev) =>
+        prev.map((p) => (p.id === placementId ? { ...p, x, y } : p))
+      )
+    } catch (err) {
+      setError('위치를 저장하지 못했어요. 다시 옮겨 주세요.')
+      setTimeout(() => setError(null), 3000)
+      throw err
+    }
+  }
 
   const recentItems = useMemo(
     () =>
@@ -447,26 +566,28 @@ export default function StudentDreamGardenPage() {
               const placement = slotPlacements.get(slot.id)
               const SlotIcon = slot.icon
 
+              if (placement) {
+                return (
+                  <DraggablePlacement
+                    key={placement.id}
+                    slot={slot}
+                    placement={placement}
+                    onSave={handleSavePosition}
+                  />
+                )
+              }
+
               return (
                 <div
                   key={slot.id}
-                  className={`dream-garden-slot dream-garden-slot-${slot.size} ${placement ? 'dream-garden-slot-filled' : 'dream-garden-slot-locked'}`}
+                  className={`dream-garden-slot dream-garden-slot-${slot.size} dream-garden-slot-locked`}
                   style={{ left: `${slot.x}%`, top: `${slot.y}%`, zIndex: slot.zIndex }}
                 >
                   <div className="dream-garden-slot-ground" />
                   <div className="dream-garden-slot-object">
-                    {placement ? (
-                      <>
-                        <ItemImage item={placement.item} imgClassName="dream-garden-item-img" fallbackClassName="dream-garden-item-emoji" />
-                        <span className="dream-garden-item-name">{placement.item?.name ?? slot.label}</span>
-                      </>
-                    ) : (
-                      <>
-                        <SlotIcon className="dream-garden-slot-silhouette" />
-                        <Lock className="dream-garden-slot-lock" />
-                        <span className="dream-garden-slot-label">{slot.label}</span>
-                      </>
-                    )}
+                    <SlotIcon className="dream-garden-slot-silhouette" />
+                    <Lock className="dream-garden-slot-lock" />
+                    <span className="dream-garden-slot-label">{slot.label}</span>
                   </div>
                 </div>
               )
