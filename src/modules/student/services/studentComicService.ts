@@ -642,10 +642,42 @@ const doGenerateSingleComicCut = async (
     let isRegeneration = false;
     let originalBackgroundPrompt = cutData?.originalBackgroundPrompt;
     let sceneBible: StorySceneBible;
+    const hasCustomBackgroundPrompt = Boolean(cutData?.customBackgroundPrompt?.trim());
 
-    if (cutData?.customBackgroundPrompt && cutData.customBackgroundPrompt.trim() !== '') {
+    if (originalBackgroundPrompt?.trim() && !hasCustomBackgroundPrompt) {
+      const originalPromptCacheParams: ComicBackgroundCacheParams = {
+        grade: projectData.grade,
+        subject: projectData.subject,
+        semester: projectData.semester,
+        unitId: projectData.mainUnit,
+        subunitId: projectData.subUnit,
+        topicTitle: projectData.topicTitle,
+        cutNo: cutNumber,
+        backgroundPrompt: originalBackgroundPrompt,
+        styleKey: 'toonschool-v2-single-background-v2'
+      };
+
+      const originalPromptCacheResult = await findCachedComicBackground(originalPromptCacheParams);
+
+      if (originalPromptCacheResult.hit) {
+        console.info(`[ToonSchool Background Cache] ORIGINAL_PROMPT_PRELOOKUP_HIT cut=${cutNumber}`);
+        if (!cutData) {
+          cutData = { cutNumber, elements: [], updatedAt: new Date().toISOString() };
+        }
+        cutData.backgroundImageUrl = originalPromptCacheResult.publicUrl;
+        cutData.originalBackgroundPrompt = originalBackgroundPrompt;
+        cutData.updatedAt = new Date().toISOString();
+        saveComicCutData(projectData.projectId, cutNumber, cutData);
+        updateState({ status: 'success', progress: 100, message: '완료!' });
+        return originalPromptCacheResult.publicUrl;
+      }
+
+      console.info(`[ToonSchool Background Cache] ORIGINAL_PROMPT_PRELOOKUP_MISS cut=${cutNumber}`);
+    }
+
+    if (hasCustomBackgroundPrompt) {
       isRegeneration = true;
-      editedUserDescription = cutData.customBackgroundPrompt;
+      editedUserDescription = cutData?.customBackgroundPrompt || '';
 
       if (!originalBackgroundPrompt) {
         // 원본 프롬프트가 없으면 새로 생성 (1회 호출)
@@ -843,7 +875,14 @@ const doGenerateSingleComicCut = async (
       throw Object.assign(new Error(msg), { errorCode: 'POLL_TIMEOUT' });
     }
 
-    const compressedImage = panelImageBase64;
+    updateState({ progress: 96, message: '그림 최적화 중...' });
+    let compressedImage = panelImageBase64;
+    try {
+      const { compressImageDataUrl } = await import('../../../shared/lib/imageUtils');
+      compressedImage = await compressImageDataUrl(panelImageBase64, 800, 0.8);
+    } catch (compressError) {
+      console.warn('[ToonSchool Background] Failed to compress image in single cut flow, using original:', compressError);
+    }
 
     const forbiddenWordsCheck = ['comic page', 'panels', 'speech bubbles', '말풍선', '만화칸', '사람', '캐릭터', 'people', 'character', 'text'];
     const hasForbiddenWords = forbiddenWordsCheck.some(w => visualPrompt.toLowerCase().includes(w));

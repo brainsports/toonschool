@@ -143,14 +143,17 @@ export const findCachedComicBackground = async (params: ComicBackgroundCachePara
     if (data && data.public_url) {
       console.log(`[ToonSchool Background Cache] HIT cut=${params.cutNo} cache_key=${cacheKey}`);
       
-      supabase
+      const { error: updateError } = await supabase
         .from('comic_background_cache')
         .update({
           reused_count: (data.reused_count || 0) + 1,
           last_used_at: new Date().toISOString()
         })
-        .eq('id', data.id)
-        .then();
+        .eq('id', data.id);
+
+      if (updateError) {
+        console.warn(`[ToonSchool Background Cache] REUSE COUNT UPDATE FAILED cut=${params.cutNo} cache_key=${cacheKey}`, updateError);
+      }
         
       return {
         hit: true,
