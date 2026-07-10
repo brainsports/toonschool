@@ -59,7 +59,7 @@ serve(async (req) => {
     const { data: { user: callerUser }, error: verifyError } = await adminClient.auth.getUser(token)
 
     if (verifyError || !callerUser) {
-      throw new RequestError('로그인 정보가 유효하지 않습니다.', 401)
+      throw new RequestError('관리자 로그인이 만료되었습니다.', 401)
     }
 
     const { data: callerProfile, error: callerProfileError } = await adminClient
@@ -69,7 +69,8 @@ serve(async (req) => {
       .single()
 
     if (callerProfileError || !callerProfile) {
-      throw new RequestError('호출자 권한 정보를 확인할 수 없습니다.', 403)
+      console.error('[create-student] caller profile fetch error:', callerProfileError)
+      throw new RequestError('관리자 권한 정보를 확인할 수 없습니다.', 403)
     }
 
     // 선생님 또는 관리자만 학생을 생성할 수 있음
@@ -95,6 +96,9 @@ serve(async (req) => {
     if (password.length < 4) throw new RequestError('비밀번호는 4자 이상이어야 합니다.')
 
     const organizationId = callerProfile.organization_id
+    if (!organizationId) {
+      throw new RequestError('기관 정보가 연결되지 않았습니다.', 400)
+    }
 
     // 이메일(아이디) 중복 체크
     const { data: existingProfiles, error: profileCheckError } = await adminClient
@@ -104,11 +108,12 @@ serve(async (req) => {
       .limit(1)
 
     if (profileCheckError) {
+      console.error('[create-student] profile check error:', profileCheckError)
       throw new RequestError('중복 확인 중 오류가 발생했습니다.', 500)
     }
 
     if (existingProfiles && existingProfiles.length > 0) {
-      throw new RequestError('이미 가입된 아이디입니다. 다른 아이디를 입력해 주세요.', 409)
+      throw new RequestError('이미 사용 중인 아이디입니다.', 409)
     }
 
     let createdAuthUserId: string | null = null
@@ -126,9 +131,10 @@ serve(async (req) => {
     })
 
     if (authError || !authData.user) {
+      console.error('[create-student] auth create error:', authError)
       const isDuplicate = authError?.message?.toLowerCase().includes('already') || authError?.message?.toLowerCase().includes('registered')
       throw new RequestError(
-        isDuplicate ? '이미 가입된 아이디입니다. 다른 아이디를 입력해 주세요.' : '계정 생성 중 오류가 발생했습니다.',
+        isDuplicate ? '이미 사용 중인 아이디입니다.' : '계정 생성 중 오류가 발생했습니다.',
         isDuplicate ? 409 : 500
       )
     }
@@ -150,6 +156,7 @@ serve(async (req) => {
       })
 
     if (profileError) {
+      console.error('[create-student] profile insert error:', profileError)
       await rollback('delete auth user after profile insert failure', () =>
         adminClient.auth.admin.deleteUser(createdAuthUserId as string)
       )
@@ -158,6 +165,10 @@ serve(async (req) => {
 
     profileCreated = true
 
+    // UUID 유효성 검사 (프론트에서 mock 데이터를 보낼 경우 대비)
+    const isValidUUID = (uuid: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uuid)
+    const validClassId = classId && isValidUUID(classId) ? classId : null
+
     // students 추가 (LMS에서 조회하기 위함)
     const { error: studentError } = await adminClient
       .from('students')
@@ -165,16 +176,16 @@ serve(async (req) => {
         id: createdAuthUserId,
         name,
         login_id: loginId,
-        password, // 학생 관리를 위해 평문 비밀번호를 저장하는 기존 로직이 있다면 유지
-        class_id: classId,
-        class_name: className,
+        temp_password: password, 
+        class_id: validClassId,
         grade: `${grade}학년`,
-        number,
         center_id: organizationId,
+        organization_id: organizationId,
         status: 'active'
       })
 
     if (studentError) {
+      console.error('[create-student] student insert error:', studentError)
       if (profileCreated) {
         await rollback('delete profile after student insert failure', () =>
           adminClient.from('profiles').delete().eq('id', createdAuthUserId as string)
@@ -183,7 +194,7 @@ serve(async (req) => {
       await rollback('delete auth user after student insert failure', () =>
         adminClient.auth.admin.deleteUser(createdAuthUserId as string)
       )
-      throw new RequestError('학생 정보 저장 중 오류가 발생했습니다.', 500)
+      throw new RequestError('학생 계정 저장에 실패했습니다.', 500)
     }
 
     return new Response(
