@@ -157,7 +157,6 @@ export default function StudentManagementPage() {
       }
       
       fetchAndSetLicense()
-      alert('학생 계정이 생성되었습니다.')
       showToast(`${newStudent.name} 학생이 생성되었습니다.`)
     } catch (error) {
       console.error('[StudentManagementPage] 학생 생성 실패:', error)
