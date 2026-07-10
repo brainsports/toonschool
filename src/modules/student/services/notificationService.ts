@@ -60,7 +60,7 @@ export async function getNotificationsForTarget(targetKey: string, profile?: any
     const { data: studentData, error: studentError } = await supabase
       .from('student_notifications')
       .select('*')
-      .in('target_key', [targetKey, 'all-grades'])
+      .in('target_key', [targetKey, 'all-grades', profile?.id].filter(Boolean))
       .eq('is_published', true)
       .order('notice_date', { ascending: false });
 

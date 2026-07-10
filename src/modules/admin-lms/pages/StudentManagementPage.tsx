@@ -8,6 +8,8 @@ import { useAuth } from '../../../shared/contexts/AuthContext'
 import type { Student, ClassRoom, LicenseInfo } from '../types'
 import { deleteStudents, createStudent, moveStudentsToClass, fetchStudentsByCenterAndGrade } from '../services/studentService'
 import { fetchLicenseInfo } from '../services/classService'
+import { createTeacherMessage, getTeacherMessagesForClass } from '../../student/services/teacherMessageService'
+import { createNotification } from '../../student/services/notificationService'
 import LicenseCard from '../components/LicenseCard'
 import CreateStudentModal from '../components/CreateStudentModal'
 import ConfirmModal from '../components/ConfirmModal'
@@ -38,6 +40,15 @@ export default function StudentManagementPage() {
   const [showMoveModal, setShowMoveModal] = useState(false)
   const [moveTargetClassId, setMoveTargetClassId] = useState('')
   const [toast, setToast] = useState('')
+
+  const [teacherMsgContent, setTeacherMsgContent] = useState('')
+  const [isMsgSaving, setIsMsgSaving] = useState(false)
+  const [recentTeacherMsg, setRecentTeacherMsg] = useState<any>(null)
+
+  const [notiTitle, setNotiTitle] = useState('')
+  const [notiContent, setNotiContent] = useState('')
+  const [notiTargetType, setNotiTargetType] = useState<'all' | 'selected'>('all')
+  const [isNotiSaving, setIsNotiSaving] = useState(false)
 
   const [editPasswordStudentId, setEditPasswordStudentId] = useState<string | null>(null)
   const [newPassword, setNewPassword] = useState('')
@@ -105,6 +116,13 @@ export default function StudentManagementPage() {
       }
     })
   }, [selectedGrade, selectedClassId, actualCenterId])
+
+  useEffect(() => {
+    const targetKey = selectedClassId || 'all-grades'
+    getTeacherMessagesForClass(targetKey).then(msgs => {
+      setRecentTeacherMsg(msgs[0] || null)
+    }).catch(() => null)
+  }, [selectedClassId])
 
   const gradeClasses = allClasses.filter(c => c.grade === selectedGrade)
 
@@ -182,6 +200,82 @@ export default function StudentManagementPage() {
     } catch (err) {
       console.error('[StudentManagementPage] Unexpected error updating password:', err)
       alert('비밀번호 수정에 실패했습니다.')
+    }
+  }
+
+  const handleSaveTeacherMessage = async () => {
+    if (!teacherMsgContent.trim()) {
+      showToast('말씀을 입력해주세요.')
+      return
+    }
+    setIsMsgSaving(true)
+    try {
+      const newMsg = await createTeacherMessage({
+        class_key: selectedClassId || 'all-grades',
+        content: teacherMsgContent.trim(),
+        message_date: new Date().toISOString().split('T')[0],
+        is_published: true,
+        teacher_id: user?.id,
+        center_id: actualCenterId || profile?.center_id,
+        title: '선생님 말씀'
+      })
+      setRecentTeacherMsg(newMsg)
+      setTeacherMsgContent('')
+      showToast('선생님 말씀이 저장되었습니다.')
+    } catch (err) {
+      showToast('저장 중 오류가 발생했습니다.')
+    } finally {
+      setIsMsgSaving(false)
+    }
+  }
+
+  const handleSendNotification = async () => {
+    if (!notiTitle.trim() || !notiContent.trim()) {
+      showToast('제목과 내용을 모두 입력해주세요.')
+      return
+    }
+    if (notiTargetType === 'selected' && checkedIds.size === 0) {
+      showToast('받는 학생을 선택해주세요.')
+      return
+    }
+
+    setIsNotiSaving(true)
+    try {
+      const today = new Date().toISOString().split('T')[0]
+      const basePayload = {
+        title: notiTitle.trim(),
+        content: notiContent.trim(),
+        category: 'notice',
+        notice_date: today,
+        is_published: true,
+        sender_id: user?.id,
+        sender_role: 'teacher'
+      }
+
+      if (notiTargetType === 'all') {
+        await createNotification({
+          ...basePayload,
+          target_key: selectedClassId || 'all-grades',
+        })
+      } else {
+        const promises = Array.from(checkedIds).map(studentId => 
+          createNotification({
+            ...basePayload,
+            target_key: studentId,
+          })
+        )
+        await Promise.all(promises)
+      }
+      
+      setNotiTitle('')
+      setNotiContent('')
+      setNotiTargetType('all')
+      setCheckedIds(new Set())
+      showToast('학생 알림이 전송되었습니다.')
+    } catch (err) {
+      showToast('알림 전송 중 오류가 발생했습니다.')
+    } finally {
+      setIsNotiSaving(false)
     }
   }
 
@@ -405,6 +499,75 @@ export default function StudentManagementPage() {
 
       <div style={{ fontSize: 13, color: '#666', marginBottom: 20 }}>
         안내: 엑셀 일괄 등록 시 학생의 최초 비밀번호는 <span style={{ fontWeight: 'bold', color: '#ff2778' }}>1234</span>로 설정됩니다.
+      </div>
+
+      {/* 선생님 말씀 및 학생 알림 보내기 영역 */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 20, marginBottom: 24 }}>
+        {/* 선생님 말씀 카드 */}
+        <div style={{ background: 'white', borderRadius: 16, padding: 24, boxShadow: '0 2px 12px rgba(0,0,0,0.06)', border: '1px solid #f9a8d4' }}>
+          <h3 style={{ margin: '0 0 16px', fontSize: 18, fontWeight: 700, color: '#1a1a2e', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 20 }}>💬</span> 선생님 말씀
+          </h3>
+          <textarea
+            value={teacherMsgContent}
+            onChange={e => setTeacherMsgContent(e.target.value)}
+            placeholder="학생들에게 전할 짧은 안내문을 작성하세요."
+            rows={3}
+            style={{ width: '100%', padding: 12, borderRadius: 10, border: '1.5px solid #e5e7eb', fontSize: 14, resize: 'vertical', boxSizing: 'border-box', outline: 'none' }}
+          />
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
+            <div style={{ fontSize: 13, color: '#888', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginRight: 10 }}>
+              {recentTeacherMsg ? `최근 저장: ${recentTeacherMsg.content}` : '저장된 말씀이 없습니다.'}
+            </div>
+            <button 
+              onClick={handleSaveTeacherMessage} 
+              disabled={isMsgSaving}
+              style={{ ...btnBase, background: 'linear-gradient(90deg,#ff2778,#ff6baf)', color: 'white', padding: '8px 16px' }}
+            >
+              {isMsgSaving ? '저장 중...' : '저장'}
+            </button>
+          </div>
+        </div>
+
+        {/* 학생 알림 보내기 카드 */}
+        <div style={{ background: 'white', borderRadius: 16, padding: 24, boxShadow: '0 2px 12px rgba(0,0,0,0.06)', border: '1px solid #bae6fd' }}>
+          <h3 style={{ margin: '0 0 16px', fontSize: 18, fontWeight: 700, color: '#1a1a2e', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 20 }}>🔔</span> 학생 알림 보내기
+          </h3>
+          <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
+            <label style={{ fontSize: 14, color: '#333', display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+              <input type="radio" checked={notiTargetType === 'all'} onChange={() => setNotiTargetType('all')} />
+              전체 학생
+            </label>
+            <label style={{ fontSize: 14, color: '#333', display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+              <input type="radio" checked={notiTargetType === 'selected'} onChange={() => setNotiTargetType('selected')} />
+              선택한 학생 ({checkedIds.size}명)
+            </label>
+          </div>
+          <input
+            type="text"
+            value={notiTitle}
+            onChange={e => setNotiTitle(e.target.value)}
+            placeholder="알림 제목"
+            style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid #e5e7eb', fontSize: 14, marginBottom: 10, boxSizing: 'border-box', outline: 'none' }}
+          />
+          <textarea
+            value={notiContent}
+            onChange={e => setNotiContent(e.target.value)}
+            placeholder="알림 내용을 작성하세요."
+            rows={2}
+            style={{ width: '100%', padding: 12, borderRadius: 10, border: '1.5px solid #e5e7eb', fontSize: 14, resize: 'vertical', boxSizing: 'border-box', outline: 'none' }}
+          />
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
+            <button 
+              onClick={handleSendNotification} 
+              disabled={isNotiSaving}
+              style={{ ...btnBase, background: '#0ea5e9', color: 'white', padding: '8px 16px' }}
+            >
+              {isNotiSaving ? '전송 중...' : '전송'}
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* 학생 목록 표 */}
