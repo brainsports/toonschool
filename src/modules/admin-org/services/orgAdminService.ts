@@ -5,6 +5,29 @@ import type {
   OrgDashboardStats
 } from '../types/orgAdmin'
 
+const extractOrgFunctionError = async (error: any) => {
+  let errorMessage = error?.message || '요청 처리 중 오류가 발생했습니다.'
+
+  if (error?.context) {
+    try {
+      if (typeof error.context.clone === 'function') {
+        const errBody = await error.context.clone().json()
+        errorMessage = errBody?.message || errBody?.error || errorMessage
+      } else {
+        errorMessage = error.context.message || error.context.error || errorMessage
+      }
+    } catch {
+      // Keep the original client error message when the function body cannot be parsed.
+    }
+  }
+
+  if (errorMessage === 'Edge Function returned a non-2xx status code') {
+    return '선생님 계정 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.'
+  }
+
+  return errorMessage
+}
+
 type OrgLmsOverview = {
   organization: {
     id: string
@@ -160,35 +183,40 @@ export const orgAdminService = {
   },
 
 
-  async createTeacherForOrg(orgId: string, adminId: string, data: { name: string; email: string; assigned_class: string; initial_licenses: number; memo: string; license_start_date?: string; license_end_date?: string }): Promise<void> {
+  async createTeacherForOrg(orgId: string, _adminId: string, data: { name: string; email: string; tempPassword?: string; password?: string; assigned_class: string; initial_licenses: number; memo: string; license_start_date?: string; license_end_date?: string }): Promise<void> {
     // Check organization license dates first
     const orgStats = await this.getOrgAdminDashboard(orgId)
     if (data.license_end_date && orgStats.licenseEndDate) {
       if (new Date(data.license_end_date) > new Date(orgStats.licenseEndDate)) {
-        throw new Error(`????◈類좊닱??????ㅼ굡獒뺣떼??????띻샴癲??? ???뚯??? ????ㅼ굡獒뺣떼??????띻샴癲??${orgStats.licenseEndDate.split('T')[0]})??????볥궙????????ㅿ폍??????딅젩.`)
+        throw new Error(`이용권 종료일은 기관 종료일(${orgStats.licenseEndDate.split('T')[0]})보다 늦을 수 없습니다.`)
       }
     }
-    
-    // 1. Create User via Auth Admin (Note: In actual app, we need backend edge function to create user)
-    // Here we'll simulate creating profile directly or use an edge function
-    // Assuming backend handles auth creation, for MVP we just insert to profiles and simulate auth
-    const fakeId = crypto.randomUUID()
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .insert({
-        id: fakeId,
-        email: data.email,
+
+    const cleanEmail = data.email.trim().toLowerCase()
+    const password = data.tempPassword || data.password || ''
+
+    const { data: result, error } = await supabase.functions.invoke('create-teacher', {
+      body: {
         name: data.name,
-        role: 'teacher',
+        email: cleanEmail,
+        password,
         organization_id: orgId,
-        plan_type: 'free',
-        monthly_quota: 0
-      })
+        license_count: data.initial_licenses,
+        licenseTotal: data.initial_licenses,
+        license_start_date: data.license_start_date,
+        license_end_date: data.license_end_date,
+        licenseStart: data.license_start_date,
+        licenseEnd: data.license_end_date
+      }
+    })
 
-    if (profileError) throw profileError
+    if (error) {
+      console.error('[OrgAdminService] createTeacherForOrg Edge Function failed', error)
+      throw new Error(await extractOrgFunctionError(error))
+    }
 
-    if (data.initial_licenses > 0 || data.license_start_date || data.license_end_date) {
-      await this.allocateTeacherLicense(orgId, adminId, fakeId, data.initial_licenses, data.memo, data.license_start_date, data.license_end_date)
+    if (result?.error || result?.message) {
+      throw new Error(result.message || result.error)
     }
   },
 
