@@ -16,6 +16,36 @@ export const IMAGE_GENERATION_POLL_TIMEOUT_MS = 180000;
 export const SINGLE_CUT_TIMEOUT_MS = 180000;
 export const FULL_COMIC_TIMEOUT_MS = 480000;
 
+const COMIC_ASSETS_PUBLIC_PATH_PREFIX = '/storage/v1/object/public/comic_assets/';
+
+const extractComicAssetsPathFromPublicUrl = (resultUrl: string, projectId: string): string | null => {
+  try {
+    const url = new URL(resultUrl);
+    const prefixIndex = url.pathname.indexOf(COMIC_ASSETS_PUBLIC_PATH_PREFIX);
+
+    if (prefixIndex === -1) {
+      return null;
+    }
+
+    const encodedPath = url.pathname.slice(prefixIndex + COMIC_ASSETS_PUBLIC_PATH_PREFIX.length);
+    let storagePath = encodedPath;
+
+    try {
+      storagePath = decodeURIComponent(encodedPath);
+    } catch {
+      storagePath = encodedPath;
+    }
+
+    const expectedPrefix = `cuts/${projectId}/`;
+    if (!storagePath.startsWith(expectedPrefix)) {
+      return null;
+    }
+
+    return storagePath;
+  } catch {
+    return null;
+  }
+};
 
 export interface ComicGenerationState {
   status: 'idle' | 'generating' | 'success' | 'error';
@@ -853,6 +883,31 @@ const doGenerateSingleComicCut = async (
     cutData.updatedAt = new Date().toISOString();
     saveComicCutData(projectData.projectId, cutNumber, cutData);
     logStage({ cutNumber, stage: 'saveCutResult', status: 'success' });
+
+    if (
+      panelImageBase64 &&
+      cacheSaveResult?.publicUrl &&
+      finalBackgroundImageUrl === cacheSaveResult.publicUrl &&
+      cutData.backgroundImageUrl === cacheSaveResult.publicUrl
+    ) {
+      const comicAssetsPath = extractComicAssetsPathFromPublicUrl(panelImageBase64, projectData.projectId);
+
+      if (comicAssetsPath) {
+        try {
+          const { error: removeError } = await supabase.storage
+            .from('comic_assets')
+            .remove([comicAssetsPath]);
+
+          if (removeError) {
+            console.warn('[ToonSchool Background Cleanup] Failed to remove temporary comic_assets image', removeError);
+          } else {
+            console.debug(`[ToonSchool Background Cleanup] Removed temporary comic_assets image path=${comicAssetsPath}`);
+          }
+        } catch (cleanupError) {
+          console.warn('[ToonSchool Background Cleanup] Failed to remove temporary comic_assets image', cleanupError);
+        }
+      }
+    }
 
     updateState({ status: 'success', progress: 100, message: '완료!', elapsedMs: finalElapsedMs });
     return finalBackgroundImageUrl;
