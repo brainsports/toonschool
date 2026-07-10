@@ -156,7 +156,7 @@ serve(async (req) => {
       })
 
     if (profileError) {
-      console.error('[create-student] profile insert error:', profileError)
+      console.error('[create-student] profile insert error (raw):', JSON.stringify(profileError, null, 2))
       await rollback('delete auth user after profile insert failure', () =>
         adminClient.auth.admin.deleteUser(createdAuthUserId as string)
       )
@@ -179,13 +179,13 @@ serve(async (req) => {
         temp_password: password, 
         class_id: validClassId,
         grade: `${grade}학년`,
-        center_id: organizationId,
+        center_id: null,
         organization_id: organizationId,
         status: 'active'
       })
 
     if (studentError) {
-      console.error('[create-student] student insert error:', studentError)
+      console.error('[create-student] student insert error (raw):', JSON.stringify(studentError, null, 2))
       if (profileCreated) {
         await rollback('delete profile after student insert failure', () =>
           adminClient.from('profiles').delete().eq('id', createdAuthUserId as string)
