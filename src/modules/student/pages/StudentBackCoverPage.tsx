@@ -212,7 +212,7 @@ export default function StudentBackCoverPage() {
     }
   }
 
-  const saveBackCoverData = (shouldGrantReward = false) => {
+  const saveBackCoverData = async (shouldGrantReward = false) => {
     const currentProjectId = location.state?.projectId || localStorage.getItem('currentProjectId')
     if (!currentProjectId) return false
 
@@ -254,7 +254,7 @@ export default function StudentBackCoverPage() {
     localStorage.setItem('backCoverDate', createdDate)
 
     if (shouldGrantReward) {
-      void grantCompletionRewardAfterBackCoverSave(currentProjectId)
+      await grantCompletionRewardAfterBackCoverSave(currentProjectId)
     }
 
     return true
@@ -372,9 +372,9 @@ export default function StudentBackCoverPage() {
         <span>정보 생성하기</span>
       </button>
       <button
-        onClick={() => {
+        onClick={async () => {
           const projectId = location.state?.projectId || localStorage.getItem('currentProjectId')
-          const isSaved = saveBackCoverData(true)
+          const isSaved = await saveBackCoverData(true)
           if (!isSaved) return
           navigate('/student/comic/read', {
             state: { projectId }
