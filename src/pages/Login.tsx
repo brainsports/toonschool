@@ -20,8 +20,10 @@ export default function Login() {
     setIsLoading(true)
 
     try {
+      const loginEmail = email.includes('@') ? email : `${email.toLowerCase()}@student.toonschool.local`
+
       const { data, error: authError } = await supabase.auth.signInWithPassword({
-        email,
+        email: loginEmail,
         password
       })
 

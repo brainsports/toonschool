@@ -47,15 +47,32 @@ export async function fetchStudentsByCenterAndGrade(centerId: string, grade: num
 }
 
 export async function createStudent(data: Omit<Student, 'id' | 'createdAt'>): Promise<Student> {
-  // TODO: supabase.auth.admin.createUser + supabase.from('profiles').insert(...)
-  // 참고: 생성 시 선생님의 organization_id를 조회하여 profiles.organization_id에 함께 넣어주어야 함
-  const newStudent: Student = {
+  const { data: responseData, error } = await supabase.functions.invoke('create-student', {
+    body: {
+      loginId: data.loginId,
+      name: data.name,
+      password: data.password,
+      classId: data.classId,
+      className: data.className,
+      grade: data.grade,
+      number: data.number
+    }
+  })
+
+  if (error) {
+    throw new Error(error.message || '학생 생성 중 오류가 발생했습니다.')
+  }
+
+  if (responseData?.error) {
+    throw new Error(responseData.error)
+  }
+
+  // Assuming responseData.student contains the created student details with id
+  return {
     ...data,
-    id: `stu-${Date.now()}`,
+    id: responseData.student.id,
     createdAt: new Date().toLocaleDateString('ko-KR').replace(/\./g, '.').trim(),
   }
-  MOCK_STUDENTS.push(newStudent)
-  return newStudent
 }
 
 export async function updateStudent(id: string, data: Partial<Student>): Promise<void> {
