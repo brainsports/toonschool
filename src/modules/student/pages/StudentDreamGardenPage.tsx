@@ -21,12 +21,14 @@ import StudentPageShell from '../components/layout/StudentPageShell'
 import { useAuth } from '../../../shared/contexts/AuthContext'
 import type { GardenPlacement, RewardResult, StudentGarden, StudentItem } from '../types/dreamGarden'
 import {
+  getAutoGardenPlacement,
   getGardenPlacements,
   getOrCreateStudentGarden,
   getStudentItems,
   grantAttendanceReward,
   grantComicCompleteReward,
   grantLuckyRewardIfNeeded,
+  saveGardenPlacement,
 } from '../services/dreamGardenService'
 
 type GardenSlotId =
@@ -150,10 +152,38 @@ export default function StudentDreamGardenPage() {
 
     try {
       const gardenData = await getOrCreateStudentGarden(studentId)
-      const [itemsData, placementsData] = await Promise.all([
+      let [itemsData, placementsData] = await Promise.all([
         getStudentItems(studentId),
         getGardenPlacements(studentId),
       ])
+
+      const unplacedAurora = itemsData.find(
+        (si) => si.item?.code === 'aurora_tree' && !placementsData.some((p) => p.item_id === si.item_id)
+      )
+
+      if (unplacedAurora && unplacedAurora.item?.is_placeable) {
+        const usedSlots = new Set<GardenSlotId>()
+        placementsData.forEach((p) => {
+          if (p.is_visible !== false) {
+            usedSlots.add(getNearestSlot(p, usedSlots).id)
+          }
+        })
+
+        if (!usedSlots.has('top_tree')) {
+          try {
+            const placementInfo = getAutoGardenPlacement(unplacedAurora.item)
+            const newPlacement = await saveGardenPlacement({
+              studentId,
+              studentItemId: unplacedAurora.id,
+              itemId: unplacedAurora.item_id,
+              ...placementInfo,
+            })
+            placementsData = [...placementsData, newPlacement]
+          } catch (err) {
+            console.error('[StudentDreamGardenPage] aurora tree recovery failed:', err)
+          }
+        }
+      }
 
       setGarden(gardenData)
       setStudentItems(itemsData)

@@ -58,6 +58,10 @@ const flowerGardenZones: AutoPlacementZone[] = [
   { x: 63, y: 80, scale: 0.85, zIndex: 9 },
 ]
 
+const treeGardenZones: AutoPlacementZone[] = [
+  { x: 24, y: 24, scale: 1, zIndex: 3 },
+]
+
 const grassGardenZones: AutoPlacementZone[] = [
   { x: 34, y: 70, scale: 0.85, zIndex: 8 },
   { x: 45, y: 68, scale: 0.85, zIndex: 8 },
@@ -114,6 +118,9 @@ export function getAutoGardenPlacement(item?: DreamGardenItem | null): AutoPlace
     ['flower', 'flower_seed', 'mushroom'].some((keyword) => code.includes(keyword)) ||
     ['꽃', '꽃씨', '버섯'].some((keyword) => name.includes(keyword))
   if (isFlowerItem) return pickAutoPlacementZone(flowerGardenZones, seed)
+
+  const isTreeItem = code.includes('tree') || name.includes('나무')
+  if (isTreeItem) return pickAutoPlacementZone(treeGardenZones, seed)
 
   const isGrassItem = code.includes('grass') || name.includes('풀') || name.includes('잔디')
   if (isGrassItem) return pickAutoPlacementZone(grassGardenZones, seed)
@@ -392,6 +399,19 @@ export async function grantComicCompleteReward(studentId: string, comicId: strin
     .update({ completed_comic_count: stats.completed_comic_count + 1 })
     .eq('student_id', studentId)
 
+  if (result.studentItem) {
+    try {
+      await saveGardenPlacement({
+        studentId,
+        studentItemId: result.studentItem.id,
+        itemId: result.studentItem.item_id,
+        ...getAutoGardenPlacement(result.studentItem.item ?? result.item),
+      })
+    } catch (error) {
+      console.error('[dreamGardenService] auto place comic reward failed:', error)
+    }
+  }
+
   return result
 }
 
@@ -415,6 +435,19 @@ export async function grantLuckyRewardIfNeeded(studentId: string): Promise<Rewar
       .from('student_reward_stats')
       .update({ last_lucky_reward_count: nextLuckyCount })
       .eq('student_id', studentId)
+
+    if (result.studentItem) {
+      try {
+        await saveGardenPlacement({
+          studentId,
+          studentItemId: result.studentItem.id,
+          itemId: result.studentItem.item_id,
+          ...getAutoGardenPlacement(result.studentItem.item ?? result.item),
+        })
+      } catch (error) {
+        console.error('[dreamGardenService] auto place lucky reward failed:', error)
+      }
+    }
   }
 
   return result
@@ -439,6 +472,22 @@ export async function getGardenPlacements(studentId: string): Promise<GardenPlac
 
 export async function saveGardenPlacement(input: SaveGardenPlacementInput): Promise<GardenPlacement> {
   const garden = await getOrCreateStudentGarden(input.studentId)
+
+  const { data: existing, error: checkError } = await supabase
+    .from('garden_placements')
+    .select('*, item:items(*), student_item:student_items(*)')
+    .eq('garden_id', garden.id)
+    .eq('item_id', input.itemId)
+    .maybeSingle()
+
+  if (checkError) {
+    console.error('[dreamGardenService] check existing placement failed:', checkError)
+  }
+
+  if (existing) {
+    return existing as GardenPlacement
+  }
+
   const { data, error } = await supabase
     .from('garden_placements')
     .insert({
