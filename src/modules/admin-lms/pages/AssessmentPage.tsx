@@ -29,6 +29,7 @@ export default function AssessmentPage() {
   const [selectedPeriod, setSelectedPeriod] = useState('이번 학기')
   const [assessments, setAssessments] = useState<AssessmentRecord[]>([])
   const [selectedStudent, setSelectedStudent] = useState<AssessmentRecord | null>(null)
+  const [showDevPopup, setShowDevPopup] = useState(true)
 
   useEffect(() => {
     fetchClasses().then((list: ClassRoom[]) => {
@@ -37,6 +38,17 @@ export default function AssessmentPage() {
       if (grade5.length > 0) setSelectedClassId(grade5[0].id)
     })
   }, [])
+
+  useEffect(() => {
+    if (showDevPopup) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [showDevPopup])
 
   useEffect(() => {
     const gradeClasses = allClasses.filter(c => c.grade === selectedGrade)
@@ -304,6 +316,65 @@ export default function AssessmentPage() {
       {/* 학생 상세 모달 */}
       {selectedStudent && (
         <StudentDetailModal record={selectedStudent} onClose={() => setSelectedStudent(null)} />
+      )}
+
+      {/* 개발중 안내 팝업 */}
+      {showDevPopup && (
+        <div 
+          role="dialog" 
+          aria-modal="true"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.6)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+          }}
+        >
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '20px',
+            padding: '40px 30px',
+            width: '90%',
+            maxWidth: '400px',
+            textAlign: 'center',
+            boxShadow: '0 10px 30px rgba(0,0,0,0.2)'
+          }}>
+            <h2 style={{
+              margin: '0 0 30px 0',
+              fontSize: '24px',
+              fontWeight: 800,
+              color: '#333',
+              wordBreak: 'keep-all'
+            }}>
+              평가관리는 개발중입니다
+            </h2>
+            <button 
+              onClick={() => setShowDevPopup(false)}
+              style={{
+                backgroundColor: '#ff2778',
+                color: 'white',
+                border: 'none',
+                borderRadius: '12px',
+                padding: '16px 32px',
+                fontSize: '16px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                width: '100%',
+                transition: 'background-color 0.2s',
+              }}
+              onMouseEnter={e => e.currentTarget.style.backgroundColor = '#e61e68'}
+              onMouseLeave={e => e.currentTarget.style.backgroundColor = '#ff2778'}
+            >
+              확인
+            </button>
+          </div>
+        </div>
       )}
     </div>
   )
