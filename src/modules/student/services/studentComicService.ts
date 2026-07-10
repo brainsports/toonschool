@@ -832,11 +832,14 @@ const doGenerateSingleComicCut = async (
       metadata.backgroundOnlyInterpretation = visualPrompt;
     }
 
-    saveComicBackgroundToCache(cacheResult.cacheKey, compressedImage, cacheParams, metadata).then(() => {
-      console.log(`[ToonSchool Background Cache] SAVED cut=${cutNumber}`);
-    }).catch(err => {
-      console.error('Failed to save background to cache', err);
-    });
+    const cacheSaveResult = await saveComicBackgroundToCache(cacheResult.cacheKey, compressedImage, cacheParams, metadata);
+    const finalBackgroundImageUrl = cacheSaveResult?.publicUrl || compressedImage;
+
+    if (cacheSaveResult?.publicUrl) {
+      console.log(`[ToonSchool Background Cache] SAVED cut=${cutNumber} final_url=cache`);
+    } else {
+      console.warn(`[ToonSchool Background Cache] SAVE UNAVAILABLE cut=${cutNumber} final_url=source`);
+    }
 
     // ── saveCutResult ─────────────────────────────────────────────────────────
     logStage({ cutNumber, stage: 'saveCutResult', status: 'start' });
@@ -845,14 +848,14 @@ const doGenerateSingleComicCut = async (
     if (!cutData) {
       cutData = { cutNumber, elements: [], updatedAt: new Date().toISOString() };
     }
-    cutData.backgroundImageUrl = compressedImage;
+    cutData.backgroundImageUrl = finalBackgroundImageUrl;
     cutData.originalBackgroundPrompt = originalBackgroundPrompt;
     cutData.updatedAt = new Date().toISOString();
     saveComicCutData(projectData.projectId, cutNumber, cutData);
     logStage({ cutNumber, stage: 'saveCutResult', status: 'success' });
 
     updateState({ status: 'success', progress: 100, message: '완료!', elapsedMs: finalElapsedMs });
-    return compressedImage;
+    return finalBackgroundImageUrl;
 
   } catch (error: any) {
     console.error(`Error generating comic cut ${cutNumber}:`, error);

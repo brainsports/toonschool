@@ -28,6 +28,13 @@ export type ComicBackgroundCacheMiss = {
 
 export type ComicBackgroundCacheResult = ComicBackgroundCacheHit | ComicBackgroundCacheMiss;
 
+export type ComicBackgroundCacheSaveResult = {
+  publicUrl: string;
+  storagePath: string;
+  storageBucket: string;
+  cacheKey: string;
+};
+
 export const normalizeBackgroundPrompt = (prompt: string): string => {
   let normalized = prompt.trim();
   normalized = normalized.replace(/\s+/g, ' ');
@@ -167,8 +174,8 @@ export const saveComicBackgroundToCache = async (
   dataUrl: string,
   params: ComicBackgroundCacheParams,
   metadata: any = {}
-): Promise<void> => {
-  if (!cacheKey) return;
+): Promise<ComicBackgroundCacheSaveResult | null> => {
+  if (!cacheKey) return null;
 
   try {
     const blob = await dataUrlToBlob(dataUrl);
@@ -187,7 +194,7 @@ export const saveComicBackgroundToCache = async (
 
     if (uploadError) {
       console.error(`[ToonSchool Background Cache] SAVE FAILED (Upload) cut=${params.cutNo}`, uploadError);
-      return;
+      return null;
     }
 
     const { data: publicUrlData } = supabase.storage
@@ -222,12 +229,19 @@ export const saveComicBackgroundToCache = async (
 
     if (dbError) {
       console.error(`[ToonSchool Background Cache] SAVE FAILED (DB Upsert) cut=${params.cutNo}`, dbError);
-      return;
+      return null;
     }
 
     console.log(`[ToonSchool Background Cache] SAVED cut=${params.cutNo} cache_key=${cacheKey} path=${storagePath}`);
+    return {
+      publicUrl,
+      storagePath,
+      storageBucket: bucketName,
+      cacheKey
+    };
 
   } catch (err) {
     console.error(`[ToonSchool Background Cache] SAVE FAILED cut=${params.cutNo}`, err);
+    return null;
   }
 };
