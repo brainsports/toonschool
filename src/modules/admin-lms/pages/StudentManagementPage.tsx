@@ -6,7 +6,7 @@ import * as XLSX from 'xlsx'
 import { supabase } from '../../../shared/lib/supabase'
 import { useAuth } from '../../../shared/contexts/AuthContext'
 import type { Student, ClassRoom, LicenseInfo } from '../types'
-import { deleteStudents, createStudent, moveStudentsToClass, fetchStudentsByCenterAndGrade } from '../services/studentService'
+import { deleteStudents, deleteStudent, createStudent, moveStudentsToClass, fetchStudentsByCenterAndGrade } from '../services/studentService'
 import { fetchLicenseInfo } from '../services/classService'
 import { createTeacherMessage, getTeacherMessagesForClass } from '../../student/services/teacherMessageService'
 import { createNotification } from '../../student/services/notificationService'
@@ -37,6 +37,8 @@ export default function StudentManagementPage() {
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set())
   const [showCreate, setShowCreate] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState(false)
+  const [singleDeleteConfirm, setSingleDeleteConfirm] = useState<Student | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
   const [showMoveModal, setShowMoveModal] = useState(false)
   const [moveTargetClassId, setMoveTargetClassId] = useState('')
   const [toast, setToast] = useState('')
@@ -170,6 +172,35 @@ export default function StudentManagementPage() {
     setCheckedIds(new Set())
     fetchAndSetLicense()
     showToast('학생이 삭제되었습니다.')
+  }
+
+  const handleSingleDelete = async () => {
+    if (!singleDeleteConfirm) return
+    setIsDeleting(true)
+    try {
+      await deleteStudent(singleDeleteConfirm.id)
+      
+      // 목록 새로고침
+      if (actualCenterId || profile?.organization_id) {
+        const refreshedData = await fetchStudentsByCenterAndGrade(actualCenterId, selectedGrade, profile?.organization_id)
+        if (selectedClassId) {
+          setStudents(refreshedData.filter(s => s.classId === selectedClassId))
+        } else {
+          setStudents(refreshedData)
+        }
+      } else {
+        setStudents(prev => prev.filter(s => s.id !== singleDeleteConfirm.id))
+      }
+      
+      fetchAndSetLicense()
+      showToast('학생이 삭제되었습니다.')
+      setSingleDeleteConfirm(null)
+    } catch (err: any) {
+      console.error('[StudentManagementPage] 단일 학생 삭제 오류:', err)
+      showToast(err.message || '학생 삭제에 실패했습니다.')
+    } finally {
+      setIsDeleting(false)
+    }
   }
 
   const handleMove = async () => {
@@ -657,14 +688,28 @@ export default function StudentManagementPage() {
               <div style={{ fontSize: 13, color: '#555', fontFamily: 'monospace' }}>{stu.loginId}</div>
               <div style={{ fontSize: 13, color: '#aaa', fontFamily: 'monospace' }}>******</div>
               <div>
-                <button onClick={() => {
-                  setEditPasswordStudentId(stu.id)
-                  setNewPassword('')
-                }} style={{
-                  padding: '6px 12px', fontSize: 12, borderRadius: 6,
-                  border: '1px solid #ddd', background: 'white', cursor: 'pointer',
-                  fontWeight: 600, color: '#555'
-                }}>수정</button>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <button onClick={() => {
+                    setEditPasswordStudentId(stu.id)
+                    setNewPassword('')
+                  }} style={{
+                    padding: '6px 12px', fontSize: 12, borderRadius: 6,
+                    border: '1px solid #ddd', background: 'white', cursor: 'pointer',
+                    fontWeight: 600, color: '#555'
+                  }}>수정</button>
+                  <button 
+                    onClick={() => setSingleDeleteConfirm(stu)} 
+                    disabled={isDeleting}
+                    style={{
+                      padding: '6px 12px', fontSize: 12, borderRadius: 6,
+                      border: '1px solid #fca5a5', background: isDeleting ? '#f3f4f6' : '#fee2e2', 
+                      cursor: isDeleting ? 'not-allowed' : 'pointer',
+                      fontWeight: 600, color: isDeleting ? '#9ca3af' : '#ef4444'
+                    }}
+                  >
+                    삭제
+                  </button>
+                </div>
               </div>
             </div>
           ))
@@ -690,6 +735,18 @@ export default function StudentManagementPage() {
           confirmLabel="삭제"
           onConfirm={handleDelete}
           onClose={() => setDeleteConfirm(false)}
+          danger
+        />
+      )}
+
+      {/* 단일 삭제 확인 모달 */}
+      {singleDeleteConfirm && (
+        <ConfirmModal
+          title="학생 삭제"
+          message={`'${singleDeleteConfirm.name}' 학생 (${singleDeleteConfirm.loginId})을(를) 삭제하시겠습니까?\n학생을 삭제하면 출석, 보상, 만화 프로젝트 등 관련 기록도 함께 삭제될 수 있습니다.`}
+          confirmLabel={isDeleting ? '삭제 중...' : '완전 삭제'}
+          onConfirm={handleSingleDelete}
+          onClose={() => !isDeleting && setSingleDeleteConfirm(null)}
           danger
         />
       )}
