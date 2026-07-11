@@ -43,13 +43,20 @@ export default function Login() {
 
         if (profile) {
           if (profile.role === 'student') {
-            if (redirectUrl && redirectUrl.startsWith('/student/')) {
+            const isExternalUrl = redirectUrl && (redirectUrl.startsWith('http') || redirectUrl.startsWith('//'))
+            
+            if (
+              redirectUrl && 
+              !isExternalUrl && 
+              redirectUrl.startsWith('/student/') && 
+              redirectUrl !== '/student/select-unit'
+            ) {
               navigate(redirectUrl)
             } else {
               if (redirectUrl && redirectUrl.startsWith('/admin/lms')) {
                 alert('관리 LMS는 선생님 및 관리자 계정만 사용할 수 있습니다.')
               }
-              navigate('/student/select-unit')
+              navigate('/student/mypage')
             }
             return
           }
