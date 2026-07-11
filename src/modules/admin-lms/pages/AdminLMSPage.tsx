@@ -9,7 +9,7 @@ export default function AdminLMSPage() {
   if (loading || !profile) return null;
 
   switch(profile.role) {
-    case 'org_admin': return <Navigate to="/admin/lms/organization" replace />
+    case 'org_admin': return <Navigate to="/admin/org/dashboard" replace />
     case 'middle_admin': return <Navigate to="/admin/lms/manager" replace />
     case 'super_admin': return <Navigate to="/admin/lms/super" replace />
     case 'teacher':

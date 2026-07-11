@@ -134,10 +134,10 @@ export default function AppRouter() {
         <Route path="profile" element={<AdminProfilePage />} />
         <Route path="resources" element={<ResourceInbox />} />
         
-        {/* 기관관리자 (org_admin) */}
-        <Route path="organization" element={<OrgAdminDashboard />} />
-        <Route path="org-teachers" element={<OrgTeacherManagement />} />
-        <Route path="licenses" element={<OrgLicenseManagement />} />
+        {/* 기관관리자 (org_admin) - 기존 라우트 리다이렉트 */}
+        <Route path="organization" element={<Navigate to="/admin/org/dashboard" replace />} />
+        <Route path="org-teachers" element={<Navigate to="/admin/org/teachers" replace />} />
+        <Route path="licenses" element={<Navigate to="/admin/org/licenses" replace />} />
 
         {/* 중간관리자 (middle_admin) 이전 임시라우트 (삭제 가능하지만 호환성 위해 남김) */}
         <Route path="manager" element={<Navigate to="/manager/dashboard" replace />} />

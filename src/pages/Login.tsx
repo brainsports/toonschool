@@ -64,7 +64,7 @@ export default function Login() {
           const adminLmsRoles = ['teacher', 'org_admin', 'middle_admin', 'super_admin']
           if (adminLmsRoles.includes(profile.role)) {
             if (!redirectUrl || redirectUrl === '/admin/lms' || redirectUrl === '/admin/lms/classes' || redirectUrl === '/mypage' || redirectUrl === '/') {
-              if (profile.role === 'org_admin') navigate('/admin/lms/organization')
+              if (profile.role === 'org_admin') navigate('/admin/org/dashboard')
               else if (profile.role === 'middle_admin') navigate('/manager/dashboard')
               else if (profile.role === 'super_admin') navigate('/admin/lms/super')
               else navigate('/admin/lms/classes')
