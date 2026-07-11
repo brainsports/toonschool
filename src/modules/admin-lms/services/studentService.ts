@@ -152,6 +152,65 @@ export async function deleteStudents(ids: string[]): Promise<void> {
   })
 }
 
+export async function deleteStudent(studentId: string): Promise<{ success: boolean, deletedStudentId?: string }> {
+  const { data: responseData, error } = await supabase.functions.invoke('delete-student-by-teacher', {
+    body: { studentId }
+  })
+
+  if (error) {
+    let errorMessage = '학생 삭제에 실패했습니다.'
+    let status = 500
+
+    if ((error as any).context) {
+      const response = (error as any).context
+      if (response.status) {
+        status = response.status
+      }
+      try {
+        const clonedRes = response.clone()
+        const errorBody = await clonedRes.json()
+        if (errorBody && errorBody.error) {
+          errorMessage = errorBody.error
+        }
+      } catch (e) {
+        try {
+          const clonedRes = response.clone()
+          const errorBodyStr = await clonedRes.text()
+          if (errorBodyStr) {
+            try {
+              const parsed = JSON.parse(errorBodyStr)
+              if (parsed.error) errorMessage = parsed.error
+            } catch {
+              errorMessage = errorBodyStr
+            }
+          }
+        } catch (e2) {
+          errorMessage = error.message || '학생 삭제에 실패했습니다.'
+        }
+      }
+    } else {
+      errorMessage = error.message || '학생 삭제에 실패했습니다.'
+    }
+
+    console.error(`[deleteStudent] Error (${status}):`, errorMessage)
+
+    if (errorMessage.includes('Edge Function returned a non-2xx status code') || errorMessage === '학생 삭제에 실패했습니다.') {
+      if (status === 404) errorMessage = '학생 삭제 함수가 배포되지 않았거나 존재하지 않는 학생입니다.'
+      else if (status === 401) errorMessage = '로그인이 만료되었습니다.'
+      else if (status === 403) errorMessage = '삭제 권한이 없거나 보호된 계정입니다.'
+      else if (status === 500) errorMessage = '서버 내부 오류가 발생했습니다.'
+    }
+
+    throw new Error(errorMessage)
+  }
+
+  if (responseData?.error) {
+    throw new Error(responseData.error)
+  }
+
+  return responseData
+}
+
 export async function moveStudentsToClass(studentIds: string[], targetClassId: string, targetClassName: string): Promise<void> {
   studentIds.forEach(id => {
     const student = MOCK_STUDENTS.find(s => s.id === id)
