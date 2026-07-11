@@ -81,6 +81,17 @@ execute function public.protect_profile_system_fields();
 -- table grant is narrowed as defense in depth; service_role keeps its access.
 revoke insert on table public.profiles from anon, authenticated;
 
+-- User metadata is client-editable and must never grant administrative reads.
+-- The existing is_super_admin() policy remains as the DB-backed replacement.
+do $$
+begin
+  execute format(
+    'drop policy if exists %I on public.profiles',
+    'Super admins can read all profiles'
+  );
+end;
+$$;
+
 -- Repair only the explicitly identified signup test account. Do not infer a
 -- role for any other auth user that is missing a profile.
 insert into public.profiles (
