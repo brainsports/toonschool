@@ -50,8 +50,8 @@ import PWAPage from '../pages/PWAPage'
 import PricingPage from '../pages/PricingPage'
 import FAQPage from '../pages/FAQPage'
 
-// 관리 LMS
-import AdminLMSLayout from '../modules/admin-lms/components/AdminLMSLayout'
+// 공통 관리자 레이아웃
+import AdminPortalLayout from '../shared/components/AdminPortalLayout'
 import AdminLMSPage from '../modules/admin-lms/pages/AdminLMSPage'
 import ClassManagementPage from '../modules/admin-lms/pages/ClassManagementPage'
 import AdminStudentManagementPage from '../modules/admin-lms/pages/StudentManagementPage'
@@ -60,7 +60,6 @@ import TeacherManagementPage from '../modules/admin-lms/pages/TeacherManagementP
 import AdminProfilePage from '../modules/admin-lms/pages/AdminProfilePage'
 
 // 기관관리자 라우트
-import OrgAdminLayout from '../modules/admin-org/components/OrgAdminLayout'
 import OrgAdminDashboard from '../modules/admin-org/pages/OrgAdminDashboard'
 import OrgTeacherManagement from '../modules/admin-org/pages/OrgTeacherManagement'
 import OrgLicenseManagement from '../modules/admin-org/pages/OrgLicenseManagement'
@@ -125,7 +124,7 @@ export default function AppRouter() {
       <Route path="/book/:slug" element={<SharedComicViewerPage />} />
 
       {/* 관리 LMS 라우트 */}
-      <Route path="/admin/lms" element={<AdminLMSLayout />}>
+      <Route path="/admin/lms" element={<AdminPortalLayout />}>
         <Route index element={<AdminLMSPage />} />
         {/* 공통/선생님 */}
         <Route path="classes" element={<ClassManagementPage />} />
@@ -155,13 +154,14 @@ export default function AppRouter() {
       </Route>
 
       {/* 기존 기관관리자 라우트 (하위 호환성을 위해 유지) */}
-      <Route path="/admin/org" element={<OrgAdminLayout />}>
+      <Route path="/admin/org" element={<AdminPortalLayout />}>
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<OrgAdminDashboard />} />
         <Route path="teachers" element={<OrgTeacherManagement />} />
         <Route path="licenses" element={<OrgLicenseManagement />} />
         <Route path="notifications/send" element={<OrgNotificationSender />} />
         <Route path="notifications/sent" element={<OrgSentNotifications />} />
+        <Route path="profile" element={<AdminProfilePage />} />
         <Route path="resources" element={<ResourceInbox />} />
       </Route>
 

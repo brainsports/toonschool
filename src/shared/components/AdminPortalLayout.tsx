@@ -1,38 +1,20 @@
-// ──────────────────────────────────────────────
-// 관리 LMS 전체 레이아웃 - 1단 상단 탭 메뉴
-// ──────────────────────────────────────────────
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { NavLink, Outlet, Link, useNavigate, useLocation } from 'react-router-dom'
-import { useAuth } from '../../../shared/contexts/AuthContext'
-import { useState } from 'react'
-import TeacherNotificationInbox from './TeacherNotificationInbox'
-import OrgAdminNotificationInbox from './OrgAdminNotificationInbox'
+import { useAuth } from '../contexts/AuthContext'
+import TeacherNotificationInbox from '../../modules/admin-lms/components/TeacherNotificationInbox'
+import OrgAdminNotificationInbox from '../../modules/admin-lms/components/OrgAdminNotificationInbox'
 
 const getMenuItems = (role: string) => {
   switch (role) {
     case 'org_admin':
       return [
-        { label: '기관대시보드', path: '/admin/lms/organization' },
-        { label: '선생님관리', path: '/admin/lms/org-teachers' },
-        { label: '이용권관리', path: '/admin/lms/licenses' },
-        { label: '관리자정보', path: '/admin/lms/profile' },
-        { label: '자료실', path: '/admin/lms/resources' },
-      ];
-    case 'middle_admin':
-      return [
-        { label: '중간관리자 대시보드', path: '/admin/lms/manager' },
-        { label: '기관관리', path: '/admin/lms/centers' },
-        { label: '이용현황', path: '/admin/lms/usage' },
-        { label: '선생님/학생 현황', path: '/admin/lms/status' },
-        { label: '관리자정보', path: '/admin/lms/profile' },
-      ];
-    case 'super_admin':
-      return [
-        { label: '슈퍼관리자 대시보드', path: '/admin/lms/super' },
-        { label: '전체 기관관리', path: '/admin/lms/all-centers' },
-        { label: '전체 관리자관리', path: '/admin/lms/all-admins' },
-        { label: '이용권/결제관리', path: '/admin/lms/all-licenses' },
-        { label: '시스템 설정', path: '/admin/lms/settings' },
+        { label: '기관 대시보드', path: '/admin/org/dashboard' },
+        { label: '선생님 관리', path: '/admin/org/teachers' },
+        { label: '이용권 관리', path: '/admin/org/licenses' },
+        { label: '알림 보내기', path: '/admin/org/notifications/send' },
+        { label: '보낸 알림함', path: '/admin/org/notifications/sent' },
+        { label: '관리자 정보', path: '/admin/org/profile' },
+        { label: '자료실', path: '/admin/org/resources' },
       ];
     case 'teacher':
     default:
@@ -46,7 +28,18 @@ const getMenuItems = (role: string) => {
   }
 }
 
-export default function AdminLMSLayout() {
+const getRoleDisplayName = (role: string) => {
+  switch (role) {
+    case 'org_admin': return '기관관리자';
+    case 'teacher': return '선생님';
+    case 'middle_admin': return '중간관리자';
+    case 'super_admin': return '슈퍼관리자';
+    case 'student': return '학생';
+    default: return '사용자';
+  }
+}
+
+export default function AdminPortalLayout() {
   const { profile, loading, user, signOut } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
@@ -59,34 +52,53 @@ export default function AdminLMSLayout() {
       if (!user || !profile) {
         navigate(`/login?redirect=${encodeURIComponent(location.pathname)}`, { replace: true })
       } else {
-        const allowedRoles = ['teacher', 'org_admin', 'middle_admin', 'super_admin']
+        const allowedRoles = ['teacher', 'org_admin', 'super_admin']
         if (!allowedRoles.includes(profile.role)) {
-          alert('관리 LMS는 선생님 및 관리자 계정만 이용할 수 있습니다.')
+          alert('접근 권한이 없습니다.')
           if (profile.role === 'student') {
             navigate('/student', { replace: true })
           } else {
             navigate('/', { replace: true })
           }
-        } else if (profile.role === 'org_admin') {
-          if (location.pathname.startsWith('/admin/lms/classes') || location.pathname.startsWith('/admin/lms/students')) {
-            navigate('/admin/lms/organization', { replace: true })
-          }
+        }
+        
+        // 경로 기반 역할 체크 리다이렉트
+        if (profile.role === 'org_admin' && location.pathname.startsWith('/admin/lms')) {
+          if (location.pathname === '/admin/lms/resources') navigate('/admin/org/resources', { replace: true });
+          else if (location.pathname === '/admin/lms/profile') navigate('/admin/org/profile', { replace: true });
+          else if (location.pathname === '/admin/lms/organization') navigate('/admin/org/dashboard', { replace: true });
+          else if (location.pathname === '/admin/lms/org-teachers') navigate('/admin/org/teachers', { replace: true });
+          else if (location.pathname === '/admin/lms/licenses') navigate('/admin/org/licenses', { replace: true });
+          else navigate('/admin/org/dashboard', { replace: true });
+        } else if (profile.role === 'teacher' && location.pathname.startsWith('/admin/org')) {
+          navigate('/admin/lms/classes', { replace: true });
         }
       }
     }
   }, [loading, user, profile, navigate, location.pathname])
 
   if (loading || !user || !profile) {
-    return null
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f3f4f7' }}>
+        <p style={{ color: '#888', fontSize: 16 }}>불러오는 중입니다...</p>
+      </div>
+    )
   }
 
-  const allowedRoles = ['teacher', 'org_admin', 'middle_admin', 'super_admin']
+  const allowedRoles = ['teacher', 'org_admin', 'super_admin']
   if (!allowedRoles.includes(profile.role)) {
-    return null
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f3f4f7' }}>
+        <p style={{ color: '#ff2778', fontSize: 18, fontWeight: 700 }}>이 페이지를 볼 수 있는 권한이 없어요.</p>
+      </div>
+    )
   }
+
+  const menuItems = getMenuItems(profile.role);
+  const roleDisplayName = getRoleDisplayName(profile.role);
 
   return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #f0f4ff 0%, #fdf0f8 50%, #f0fdf4 100%)' }}>
+    <div style={{ minHeight: '100vh', background: '#f3f4f7' }}>
       {/* 상단 헤더 */}
       <header style={{
         background: 'white',
@@ -97,7 +109,7 @@ export default function AdminLMSLayout() {
         zIndex: 50,
       }}>
         <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 24px' }}>
-          {/* 로고 & 타이틀 */}
+          {/* 로고 & 타이틀 & 우측 기능 */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 16, paddingBottom: 8, flexWrap: 'wrap', gap: 12 }}>
             <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
               <div style={{
@@ -107,12 +119,12 @@ export default function AdminLMSLayout() {
               }}>TS</div>
               <div>
                 <div style={{ fontSize: 16, fontWeight: 800, color: '#1a1a2e', lineHeight: 1 }}>툰스쿨</div>
-                <div style={{ fontSize: 11, color: '#ff2778', fontWeight: 600 }}>관리 LMS</div>
+                <div style={{ fontSize: 11, color: '#ff2778', fontWeight: 600 }}>{roleDisplayName}</div>
               </div>
             </Link>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-              {/* 알림 벨 아이콘 (선생님 및 기관관리자 표시) */}
+              {/* 알림 벨 아이콘 */}
               {(profile.role === 'teacher' || profile.role === 'org_admin') && (
                 <div style={{ position: 'relative' }}>
                   <button
@@ -169,7 +181,7 @@ export default function AdminLMSLayout() {
                       />
                     )
                   )}
-                  {/* 최초 렌더링 시 알림 개수를 가져오기 위해 보이지 않게 컴포넌트를 하나 렌더링하여 초기 카운트를 가져옴 */}
+                  {/* 초기 카운트 렌더링 */}
                   {!isInboxOpen && (
                     <div style={{ display: 'none' }}>
                       {profile.role === 'teacher' ? (
@@ -188,7 +200,7 @@ export default function AdminLMSLayout() {
                 </div>
               )}
 
-              {/* 현재 로그인 계정 프로필 칩 */}
+              {/* 프로필 칩 */}
               <div style={{ 
                 display: 'flex', alignItems: 'center', gap: 8, 
                 background: '#f8fafc', padding: '6px 12px 6px 6px', 
@@ -199,7 +211,7 @@ export default function AdminLMSLayout() {
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   color: 'white', fontSize: 12, fontWeight: 700, flexShrink: 0
                 }}>
-                  {(profile.name ? profile.name.charAt(0) : ((profile as any).full_name ? (profile as any).full_name.charAt(0) : (user.email ? user.email.charAt(0).toUpperCase() : 'T')))}
+                  {(profile.name ? profile.name.charAt(0) : ((profile as any).full_name ? (profile as any).full_name.charAt(0) : (user.email ? user.email.charAt(0).toUpperCase() : 'U')))}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', maxWidth: 160 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -207,12 +219,7 @@ export default function AdminLMSLayout() {
                       {profile.name || (profile as any).full_name || (user.email ? user.email.split('@')[0] : '사용자')}
                     </span>
                     <span style={{ fontSize: 10, fontWeight: 600, color: '#ff2778', background: '#ffe4ee', padding: '2px 6px', borderRadius: 4, whiteSpace: 'nowrap' }}>
-                      {profile.role === 'teacher' ? '선생님' :
-                       profile.role === 'org_admin' ? '기관관리자' :
-                       profile.role === 'middle_admin' ? '중간관리자' :
-                       profile.role === 'super_admin' ? '슈퍼관리자' :
-                       profile.role === 'student' ? '학생' :
-                       profile.role === 'free_user' ? '일반회원' : '사용자'}
+                      {roleDisplayName}
                     </span>
                   </div>
                   <div style={{ fontSize: 11, color: '#64748b', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -221,6 +228,7 @@ export default function AdminLMSLayout() {
                 </div>
               </div>
 
+              {/* 로그아웃 버튼 */}
               <button 
                 onClick={async () => {
                   try {
@@ -245,7 +253,7 @@ export default function AdminLMSLayout() {
 
           {/* 1단 탭 메뉴 */}
           <nav style={{ display: 'flex', gap: 4, paddingBottom: 0, overflowX: 'auto' }}>
-            {getMenuItems(profile.role).map(item => (
+            {menuItems.map(item => (
               <NavLink
                 key={item.path}
                 to={item.path}
