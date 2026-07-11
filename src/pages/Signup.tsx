@@ -63,23 +63,6 @@ export default function Signup() {
       }
 
       if (data.user) {
-        // 2. Insert profile record with default values
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert({
-            id: data.user.id,
-            email: data.user.email ?? cleanEmail,
-            name: cleanName,
-            role: 'free_user',       // Default role
-            plan_type: 'free',       // Default plan
-            monthly_quota: 3         // Default quota
-          })
-
-        if (profileError) {
-          console.error('Error writing user profile:', profileError.message)
-          throw new Error('\uD68C\uC6D0\uAC00\uC785\uC740 \uC644\uB8CC\uB410\uC9C0\uB9CC \uD504\uB85C\uD544 \uC800\uC7A5\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4. \uAD00\uB9AC\uC790\uC5D0\uAC8C \uBB38\uC758\uD574 \uC8FC\uC138\uC694.')
-        }
-
         setSuccess(true)
         setTimeout(() => {
           navigate('/login')
