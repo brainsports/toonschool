@@ -12,7 +12,7 @@ import { createTeacherMessage, getTeacherMessagesForClass } from '../../student/
 import { createNotification } from '../../student/services/notificationService'
 import LicenseCard from '../components/LicenseCard'
 import CreateStudentModal from '../components/CreateStudentModal'
-import ConfirmModal from '../components/ConfirmModal'
+import ConfirmModal from '../../../shared/components/ConfirmModal'
 
 interface ExcelRow {
   이름?: string
@@ -172,6 +172,7 @@ export default function StudentManagementPage() {
     setCheckedIds(new Set())
     fetchAndSetLicense()
     showToast('학생이 삭제되었습니다.')
+    setDeleteConfirm(false)
   }
 
   const handleSingleDelete = async () => {
@@ -651,7 +652,7 @@ export default function StudentManagementPage() {
       <div className="table-wrapper" style={{ background: 'white', borderRadius: 16, boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
         <div style={{ minWidth: '600px' }}>
           <div style={{
-            display: 'grid', gridTemplateColumns: '40px 60px 100px 140px 120px 80px',
+            display: 'grid', gridTemplateColumns: '40px 60px 100px 140px 100px 140px',
             padding: '14px 20px', background: '#fafafa',
             borderBottom: '1.5px solid #f0f0f0', fontSize: 13, fontWeight: 700, color: '#666',
           }}>
@@ -676,7 +677,7 @@ export default function StudentManagementPage() {
         ) : (
           students.sort((a, b) => a.number - b.number).map((stu, idx) => (
             <div key={stu.id} style={{
-              display: 'grid', gridTemplateColumns: '40px 60px 100px 140px 120px 80px',
+              display: 'grid', gridTemplateColumns: '40px 60px 100px 140px 100px 140px',
               padding: '13px 20px',
               borderBottom: idx < students.length - 1 ? '1px solid #f9f9f9' : 'none',
               alignItems: 'center',
@@ -688,11 +689,12 @@ export default function StudentManagementPage() {
               <div style={{ fontSize: 13, color: '#555', fontFamily: 'monospace' }}>{stu.loginId}</div>
               <div style={{ fontSize: 13, color: '#aaa', fontFamily: 'monospace' }}>******</div>
               <div>
-                <div style={{ display: 'flex', gap: '6px' }}>
+                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                   <button onClick={() => {
                     setEditPasswordStudentId(stu.id)
                     setNewPassword('')
                   }} style={{
+                    minWidth: '56px', whiteSpace: 'nowrap', flexShrink: 0,
                     padding: '6px 12px', fontSize: 12, borderRadius: 6,
                     border: '1px solid #ddd', background: 'white', cursor: 'pointer',
                     fontWeight: 600, color: '#555'
@@ -701,6 +703,7 @@ export default function StudentManagementPage() {
                     onClick={() => setSingleDeleteConfirm(stu)} 
                     disabled={isDeleting}
                     style={{
+                      minWidth: '56px', whiteSpace: 'nowrap', flexShrink: 0,
                       padding: '6px 12px', fontSize: 12, borderRadius: 6,
                       border: '1px solid #fca5a5', background: isDeleting ? '#f3f4f6' : '#fee2e2', 
                       cursor: isDeleting ? 'not-allowed' : 'pointer',
@@ -728,28 +731,27 @@ export default function StudentManagementPage() {
       )}
 
       {/* 삭제 확인 모달 */}
-      {deleteConfirm && (
-        <ConfirmModal
-          title="학생 삭제"
-          message={`선택한 ${checkedIds.size}명의 학생을 삭제하시겠습니까?\n삭제된 학생 데이터는 복구할 수 없습니다.`}
-          confirmLabel="삭제"
-          onConfirm={handleDelete}
-          onClose={() => setDeleteConfirm(false)}
-          danger
-        />
-      )}
+      <ConfirmModal
+        open={deleteConfirm}
+        title="학생 삭제"
+        description={`선택한 ${checkedIds.size}명의 학생을 삭제하시겠습니까?\n삭제된 학생 데이터는 복구할 수 없습니다.`}
+        confirmText="삭제"
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteConfirm(false)}
+        variant="danger"
+      />
 
       {/* 단일 삭제 확인 모달 */}
-      {singleDeleteConfirm && (
-        <ConfirmModal
-          title="학생 삭제"
-          message={`'${singleDeleteConfirm.name}' 학생 (${singleDeleteConfirm.loginId})을(를) 삭제하시겠습니까?\n학생을 삭제하면 출석, 보상, 만화 프로젝트 등 관련 기록도 함께 삭제될 수 있습니다.`}
-          confirmLabel={isDeleting ? '삭제 중...' : '완전 삭제'}
-          onConfirm={handleSingleDelete}
-          onClose={() => !isDeleting && setSingleDeleteConfirm(null)}
-          danger
-        />
-      )}
+      <ConfirmModal
+        open={!!singleDeleteConfirm}
+        title="학생 삭제"
+        description={`'${singleDeleteConfirm?.name}' 학생 (${singleDeleteConfirm?.loginId})을(를) 삭제하시겠습니까?\n학생을 삭제하면 출석, 보상, 만화 프로젝트 등 관련 기록도 함께 삭제될 수 있습니다.`}
+        confirmText={isDeleting ? '삭제 중...' : '완전 삭제'}
+        onConfirm={handleSingleDelete}
+        onCancel={() => !isDeleting && setSingleDeleteConfirm(null)}
+        variant="danger"
+        loading={isDeleting}
+      />
 
       {/* 학급이동 모달 */}
       {showMoveModal && (

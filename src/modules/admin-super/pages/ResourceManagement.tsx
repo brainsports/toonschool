@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { superAdminService } from '../services/superAdminService'
+import ConfirmModal from '../../../shared/components/ConfirmModal'
 import { FileText, Plus, Trash2, Download } from 'lucide-react'
 
 export default function ResourceManagement() {
@@ -16,6 +17,9 @@ export default function ResourceManagement() {
   const [status, setStatus] = useState('published')
   const [importance, setImportance] = useState('normal')
   const [file, setFile] = useState<File | null>(null)
+  
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   useEffect(() => {
     fetchData()
@@ -113,16 +117,23 @@ export default function ResourceManagement() {
     }
   }
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm('정말 이 자료를 삭제하시겠습니까?')) return
+  const confirmDelete = async () => {
+    if (!deleteConfirmId) return
     
     try {
-      await superAdminService.softDeleteResource(id)
-      alert('삭제되었습니다.')
+      setIsDeleting(true)
+      await superAdminService.softDeleteResource(deleteConfirmId)
       fetchData()
+      setDeleteConfirmId(null)
     } catch (error: any) {
       alert(`삭제 중 오류가 발생했습니다: ${error.message}`)
+    } finally {
+      setIsDeleting(false)
     }
+  }
+
+  const handleDelete = (id: string) => {
+    setDeleteConfirmId(id)
   }
 
   const handleDownload = async (resource: any) => {
@@ -355,6 +366,17 @@ export default function ResourceManagement() {
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        open={!!deleteConfirmId}
+        title="자료 삭제"
+        description="이 자료를 정말 삭제하시겠습니까? 첨부 파일도 함께 삭제될 수 있습니다."
+        confirmText={isDeleting ? '삭제 중...' : '삭제'}
+        onConfirm={confirmDelete}
+        onCancel={() => !isDeleting && setDeleteConfirmId(null)}
+        variant="danger"
+        loading={isDeleting}
+      />
     </div>
   )
 }

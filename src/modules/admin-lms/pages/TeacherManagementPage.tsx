@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react'
 import type { Teacher, OrgInfo } from '../types'
 import { fetchTeachers, fetchOrgInfo, createTeacher, deleteTeachers, resetPassword } from '../services/teacherService'
-import ConfirmModal from '../components/ConfirmModal'
+import ConfirmModal from '../../../shared/components/ConfirmModal'
 
 export default function TeacherManagementPage() {
   const [orgInfo, setOrgInfo] = useState<OrgInfo | null>(null)
@@ -12,6 +12,7 @@ export default function TeacherManagementPage() {
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set())
   const [showCreate, setShowCreate] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
   const [toast, setToast] = useState('')
   const [newName, setNewName] = useState('')
   const [newId, setNewId] = useState('')
@@ -59,10 +60,16 @@ export default function TeacherManagementPage() {
       showToast(`⚠️ ${withClasses.map(t => t.name).join(', ')} 선생님은 담당 학급이 있어 삭제 전 학급을 먼저 해제해 주세요.`)
       return
     }
-    await deleteTeachers([...checkedIds])
-    setTeachers(prev => prev.filter(t => !checkedIds.has(t.id)))
-    setCheckedIds(new Set())
-    showToast('선생님이 삭제되었습니다.')
+    setIsDeleting(true)
+    try {
+      await deleteTeachers([...checkedIds])
+      setTeachers(prev => prev.filter(t => !checkedIds.has(t.id)))
+      setCheckedIds(new Set())
+      showToast('선생님이 삭제되었습니다.')
+    } finally {
+      setIsDeleting(false)
+      setDeleteConfirm(false)
+    }
   }
 
   const handleResetPw = async (teacher: Teacher) => {
@@ -223,16 +230,16 @@ export default function TeacherManagementPage() {
       )}
 
       {/* 삭제 확인 모달 */}
-      {deleteConfirm && (
-        <ConfirmModal
-          title="선생님 삭제"
-          message={`선택한 ${checkedIds.size}명의 선생님 계정을 삭제하시겠습니까?`}
-          confirmLabel="삭제"
-          onConfirm={handleDelete}
-          onClose={() => setDeleteConfirm(false)}
-          danger
-        />
-      )}
+      <ConfirmModal
+        open={deleteConfirm}
+        title="선생님 삭제"
+        description={`선택한 ${checkedIds.size}명의 선생님 계정을 삭제하시겠습니까?`}
+        confirmText={isDeleting ? '삭제 중...' : '삭제'}
+        onConfirm={handleDelete}
+        onCancel={() => !isDeleting && setDeleteConfirm(false)}
+        variant="danger"
+        loading={isDeleting}
+      />
     </div>
   )
 }

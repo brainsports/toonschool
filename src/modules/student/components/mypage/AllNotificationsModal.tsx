@@ -2,6 +2,7 @@ import { Bell, Trophy, MessageSquare, Star, Info, X, Trash2 } from 'lucide-react
 import { useAuth } from '../../../../shared/contexts/AuthContext';
 import { useEffect, useState } from 'react';
 import { hideStudentNotification, type StudentNotification } from '../../services/notificationService';
+import ConfirmModal from '../../../../shared/components/ConfirmModal';
 
 interface Props {
   isOpen: boolean;
@@ -14,6 +15,7 @@ export default function AllNotificationsModal({ isOpen, onClose, notifications, 
   const { user } = useAuth();
   const [isDeleting, setIsDeleting] = useState(false);
   const [visibleNotifications, setVisibleNotifications] = useState<StudentNotification[]>(notifications);
+  const [deleteConfirmNoti, setDeleteConfirmNoti] = useState<StudentNotification | null>(null);
 
   useEffect(() => {
     setVisibleNotifications(notifications);
@@ -64,29 +66,34 @@ export default function AllNotificationsModal({ isOpen, onClose, notifications, 
     return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')}`;
   };
 
-  const handleDelete = async (notification: StudentNotification) => {
-    if (!user?.id) {
-      alert('로그인한 학생만 삭제할 수 있어요.');
-      return;
-    }
-
-    if (!window.confirm('이 알림을 내 알림함에서 삭제할까요?')) return;
+  const confirmDelete = async () => {
+    if (!user?.id || !deleteConfirmNoti) return;
 
     setIsDeleting(true);
     const success = await hideStudentNotification(
       user.id,
-      notification.id,
-      notification.source_type ?? 'student_notification'
+      deleteConfirmNoti.id,
+      deleteConfirmNoti.source_type ?? 'student_notification'
     );
     setIsDeleting(false);
 
     if (!success) {
       alert('알림 삭제에 실패했어요. 잠시 후 다시 시도해 주세요.');
+      setDeleteConfirmNoti(null);
       return;
     }
 
-    setVisibleNotifications((current) => current.filter((noti) => noti.id !== notification.id));
+    setVisibleNotifications((current) => current.filter((noti) => noti.id !== deleteConfirmNoti.id));
+    setDeleteConfirmNoti(null);
     onDeleted?.();
+  };
+
+  const handleDelete = (notification: StudentNotification) => {
+    if (!user?.id) {
+      alert('로그인한 학생만 삭제할 수 있어요.');
+      return;
+    }
+    setDeleteConfirmNoti(notification);
   };
 
   return (
@@ -172,6 +179,17 @@ export default function AllNotificationsModal({ isOpen, onClose, notifications, 
           </button>
         </div>
       </div>
+
+      <ConfirmModal
+        open={!!deleteConfirmNoti}
+        title="알림 삭제"
+        description="이 알림을 내 알림함에서 삭제할까요?"
+        confirmText={isDeleting ? '삭제 중...' : '삭제'}
+        onConfirm={confirmDelete}
+        onCancel={() => !isDeleting && setDeleteConfirmNoti(null)}
+        variant="danger"
+        loading={isDeleting}
+      />
     </div>
   );
 }

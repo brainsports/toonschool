@@ -3,6 +3,7 @@ import { orgAdminService } from '../services/orgAdminService'
 import type { OrgNotification } from '../types/orgAdmin'
 import { useAuth } from '../../../shared/contexts/AuthContext'
 import NotificationDetailModal from '../components/NotificationDetailModal'
+import ConfirmModal from '../../../shared/components/ConfirmModal'
 
 export default function OrgSentNotifications() {
   const { profile } = useAuth()
@@ -10,6 +11,8 @@ export default function OrgSentNotifications() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedNotif, setSelectedNotif] = useState<OrgNotification | null>(null)
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   useEffect(() => {
     async function loadData() {
@@ -27,25 +30,27 @@ export default function OrgSentNotifications() {
     loadData()
   }, [profile])
 
-  const handleDelete = async (notificationId: string) => {
-    if (!window.confirm('이 알림을 정말 삭제하시겠습니까?\n이 발송 건을 삭제하면 수신한 대상(선생님, 학생 등)의 알림함과 읽음 기록에서도 모두 함께 삭제됩니다.')) return;
-    
-    if (!profile?.organization_id) return;
+  const confirmDelete = async () => {
+    if (!profile?.organization_id || !deleteConfirmId) return;
 
     try {
-      setLoading(true);
-      await orgAdminService.deleteOrgNotification(profile.organization_id, notificationId);
-      alert('알림이 완전히 삭제되었습니다.');
+      setIsDeleting(true);
+      await orgAdminService.deleteOrgNotification(profile.organization_id, deleteConfirmId);
       
       // Refresh notifications list
       const data = await orgAdminService.getSentOrgNotifications(profile.organization_id, profile.id);
       setNotifications(data);
+      setDeleteConfirmId(null);
     } catch (err: any) {
       console.error(err);
       alert('삭제 중 오류가 발생했습니다: ' + err.message);
     } finally {
-      setLoading(false);
+      setIsDeleting(false);
     }
+  };
+
+  const handleDelete = (notificationId: string) => {
+    setDeleteConfirmId(notificationId);
   };
 
   const getTargetLabel = (type: string) => {
@@ -128,6 +133,17 @@ export default function OrgSentNotifications() {
         isOpen={!!selectedNotif} 
         onClose={() => setSelectedNotif(null)} 
         notification={selectedNotif} 
+      />
+
+      <ConfirmModal
+        open={!!deleteConfirmId}
+        title="발송 이력 삭제"
+        description="이 발송 이력을 정말 삭제하시겠습니까? 연결된 수신자 알림도 함께 삭제될 수 있습니다."
+        confirmText={isDeleting ? '삭제 중...' : '삭제'}
+        onConfirm={confirmDelete}
+        onCancel={() => !isDeleting && setDeleteConfirmId(null)}
+        variant="danger"
+        loading={isDeleting}
       />
     </div>
   )

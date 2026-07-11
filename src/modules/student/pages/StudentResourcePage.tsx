@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { AlertCircle, Calendar, Download, FileText, Trash2 } from 'lucide-react'
+import ConfirmModal from '../../../shared/components/ConfirmModal'
 import StudentPageShell from '../components/layout/StudentPageShell'
 import { useAuth } from '../../../shared/contexts/AuthContext'
 import { resourceService, type InboxResource } from '../../resources/services/resourceService'
@@ -9,6 +10,7 @@ export default function StudentResourcePage() {
   const [resources, setResources] = useState<InboxResource[]>([])
   const [hiddenResourceIds, setHiddenResourceIds] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
+  const [deleteConfirmResource, setDeleteConfirmResource] = useState<InboxResource | null>(null)
 
   const hiddenStorageKey = `student-hidden-resources:${profile?.id ?? 'guest'}`
 
@@ -68,13 +70,17 @@ export default function StudentResourcePage() {
     }
   }
 
-  const handleHideResource = (resource: InboxResource) => {
-    const confirmed = window.confirm('이 자료를 내 자료실에서 삭제할까요?')
-    if (!confirmed) return
+  const confirmHideResource = () => {
+    if (!deleteConfirmResource) return
 
-    const nextHiddenIds = Array.from(new Set([...hiddenResourceIds, resource.id]))
+    const nextHiddenIds = Array.from(new Set([...hiddenResourceIds, deleteConfirmResource.id]))
     setHiddenResourceIds(nextHiddenIds)
     window.localStorage.setItem(hiddenStorageKey, JSON.stringify(nextHiddenIds))
+    setDeleteConfirmResource(null)
+  }
+
+  const handleHideResource = (resource: InboxResource) => {
+    setDeleteConfirmResource(resource)
   }
 
   const formatDate = (dateString: string) => {
@@ -157,6 +163,16 @@ export default function StudentResourcePage() {
           </div>
         )}
       </div>
+
+      <ConfirmModal
+        open={!!deleteConfirmResource}
+        title="자료 삭제"
+        description="이 자료를 내 자료실에서 삭제할까요?"
+        confirmText="삭제"
+        onConfirm={confirmHideResource}
+        onCancel={() => setDeleteConfirmResource(null)}
+        variant="danger"
+      />
     </StudentPageShell>
   )
 }

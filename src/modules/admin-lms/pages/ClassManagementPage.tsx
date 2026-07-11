@@ -8,7 +8,7 @@ import { fetchLicenseInfo, updateUnitSetting, deleteClasses, fetchClassesByOrgan
 import { CURRICULUM_UNITS } from '../data/mockClasses'
 import LicenseCard from '../components/LicenseCard'
 import UnitSettingModal from '../components/UnitSettingModal'
-import ConfirmModal from '../components/ConfirmModal'
+import ConfirmModal from '../../../shared/components/ConfirmModal'
 import TeacherMessageModal from '../components/TeacherMessageModal'
 import NotificationWriteModal from '../components/NotificationWriteModal'
 import CreateClassModal from '../components/CreateClassModal'
@@ -25,6 +25,7 @@ export default function ClassManagementPage() {
   const [messageModalClass, setMessageModalClass] = useState<ClassRoom | null>(null)
   const [notificationModalClass, setNotificationModalClass] = useState<ClassRoom | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [toast, setToast] = useState('')
 
@@ -77,10 +78,16 @@ export default function ClassManagementPage() {
   }
 
   const handleDelete = async () => {
-    await deleteClasses([...checkedIds])
-    setGradeClasses(prev => prev.filter(c => !checkedIds.has(c.id)))
-    setCheckedIds(new Set())
-    showToast('선택한 학급이 삭제되었습니다.')
+    setIsDeleting(true)
+    try {
+      await deleteClasses([...checkedIds])
+      setGradeClasses(prev => prev.filter(c => !checkedIds.has(c.id)))
+      setCheckedIds(new Set())
+      showToast('선택한 학급이 삭제되었습니다.')
+    } finally {
+      setIsDeleting(false)
+      setDeleteConfirm(false)
+    }
   }
 
   const btnBase: React.CSSProperties = {
@@ -259,17 +266,16 @@ export default function ClassManagementPage() {
         />
       )}
 
-      {/* 삭제 확인 모달 */}
-      {deleteConfirm && (
-        <ConfirmModal
-          title="학급 삭제"
-          message={`선택한 ${checkedIds.size}개의 학급을 삭제하시겠습니까?\n실제 데이터는 비활성화(inactive) 처리됩니다.`}
-          confirmLabel="삭제"
-          onConfirm={handleDelete}
-          onClose={() => setDeleteConfirm(false)}
-          danger
-        />
-      )}
+      <ConfirmModal
+        open={deleteConfirm}
+        title="학급 삭제"
+        description={`선택한 ${checkedIds.size}개의 학급을 삭제하시겠습니까?\n실제 데이터는 비활성화(inactive) 처리됩니다.`}
+        confirmText={isDeleting ? '삭제 중...' : '삭제'}
+        onConfirm={handleDelete}
+        onCancel={() => !isDeleting && setDeleteConfirm(false)}
+        variant="danger"
+        loading={isDeleting}
+      />
 
       {/* 학급 생성 모달 */}
       {showCreateModal && profile?.organization_id && (

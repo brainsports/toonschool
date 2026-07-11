@@ -6,6 +6,7 @@ import TeacherCreateModal from '../components/TeacherCreateModal'
 import TeacherEditModal from '../components/TeacherEditModal'
 import { formatDate, getLicenseStatus } from '../utils/dateUtils'
 import TeacherNotificationModal from '../components/TeacherNotificationModal'
+import ConfirmModal from '../../../shared/components/ConfirmModal'
 
 type LoadError = 'NO_ORG' | 'LOAD_FAILED' | null
 
@@ -18,6 +19,9 @@ export default function OrgTeacherManagement() {
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [editTeacher, setEditTeacher] = useState<OrgTeacher | null>(null)
   const [notifyTeacher, setNotifyTeacher] = useState<OrgTeacher | null>(null)
+  
+  const [deleteConfirmTeacher, setDeleteConfirmTeacher] = useState<OrgTeacher | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const loadTeachers = async () => {
     if (!profile?.organization_id) {
@@ -55,17 +59,24 @@ export default function OrgTeacherManagement() {
     await loadTeachers()
   }
 
-  const handleDelete = async (teacher: OrgTeacher) => {
-    if (!window.confirm(`[${teacher.name || teacher.email || '선생님'}] 선생님을 사용 정지 처리할까요?`)) return
-    if (!profile?.organization_id) return
+  const confirmDelete = async () => {
+    if (!deleteConfirmTeacher || !profile?.organization_id) return
 
     try {
-      await orgAdminService.suspendOrgTeacher(profile.organization_id, teacher.id)
+      setIsDeleting(true)
+      await orgAdminService.suspendOrgTeacher(profile.organization_id, deleteConfirmTeacher.id)
       alert('선생님 상태를 변경했습니다.')
       await loadTeachers()
+      setDeleteConfirmTeacher(null)
     } catch (err: any) {
       alert(err.message)
+    } finally {
+      setIsDeleting(false)
     }
+  }
+
+  const handleDelete = (teacher: OrgTeacher) => {
+    setDeleteConfirmTeacher(teacher)
   }
 
   const handleNotifySubmit = async (title: string, content: string) => {
@@ -152,6 +163,17 @@ export default function OrgTeacherManagement() {
       <TeacherCreateModal isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} onSubmit={handleCreateSubmit} />
       <TeacherEditModal isOpen={!!editTeacher} onClose={() => setEditTeacher(null)} teacher={editTeacher} onSubmit={handleEditSubmit} />
       <TeacherNotificationModal isOpen={!!notifyTeacher} onClose={() => setNotifyTeacher(null)} teacher={notifyTeacher} onSubmit={handleNotifySubmit} />
+      
+      <ConfirmModal
+        open={!!deleteConfirmTeacher}
+        title="선생님 정지"
+        description={`[${deleteConfirmTeacher?.name || deleteConfirmTeacher?.email || '선생님'}] 선생님을 사용 정지 처리할까요?`}
+        confirmText={isDeleting ? '처리 중...' : '정지'}
+        onConfirm={confirmDelete}
+        onCancel={() => !isDeleting && setDeleteConfirmTeacher(null)}
+        variant="warning"
+        loading={isDeleting}
+      />
     </div>
   )
 }

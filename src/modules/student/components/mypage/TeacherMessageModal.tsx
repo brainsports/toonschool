@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Trash2, X } from 'lucide-react';
 import { useAuth } from '../../../../shared/contexts/AuthContext';
 import { hideTeacherMessageForStudent, type TeacherMessage } from '../../services/teacherMessageService';
+import ConfirmModal from '../../../../shared/components/ConfirmModal';
 
 interface Props {
   isOpen: boolean;
@@ -13,6 +14,7 @@ interface Props {
 export default function TeacherMessageModal({ isOpen, onClose, messages, onHidden }: Props) {
   const { user } = useAuth();
   const [visibleMessages, setVisibleMessages] = useState<TeacherMessage[]>(messages);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
@@ -21,25 +23,30 @@ export default function TeacherMessageModal({ isOpen, onClose, messages, onHidde
 
   if (!isOpen) return null;
 
-  const handleHideMessage = async (messageId: string) => {
-    if (!user?.id) {
-      alert('로그인한 학생만 삭제할 수 있어요.');
-      return;
-    }
-
-    if (!window.confirm('이 말씀을 내 화면에서 삭제할까요?')) return;
+  const confirmHideMessage = async () => {
+    if (!user?.id || !deleteConfirmId) return;
 
     setIsDeleting(true);
-    const success = await hideTeacherMessageForStudent(user.id, messageId);
+    const success = await hideTeacherMessageForStudent(user.id, deleteConfirmId);
     setIsDeleting(false);
 
     if (!success) {
       alert('말씀 삭제에 실패했어요. 잠시 후 다시 시도해 주세요.');
+      setDeleteConfirmId(null);
       return;
     }
 
-    setVisibleMessages((current) => current.filter((message) => message.id !== messageId));
+    setVisibleMessages((current) => current.filter((message) => message.id !== deleteConfirmId));
+    setDeleteConfirmId(null);
     onHidden?.();
+  };
+
+  const handleHideMessage = (messageId: string) => {
+    if (!user?.id) {
+      alert('로그인한 학생만 삭제할 수 있어요.');
+      return;
+    }
+    setDeleteConfirmId(messageId);
   };
 
   return (
@@ -111,6 +118,17 @@ export default function TeacherMessageModal({ isOpen, onClose, messages, onHidde
           )}
         </div>
       </div>
+      
+      <ConfirmModal
+        open={!!deleteConfirmId}
+        title="선생님 말씀 삭제"
+        description="이 말씀을 내 화면에서 삭제할까요?"
+        confirmText={isDeleting ? '삭제 중...' : '삭제'}
+        onConfirm={confirmHideMessage}
+        onCancel={() => !isDeleting && setDeleteConfirmId(null)}
+        variant="danger"
+        loading={isDeleting}
+      />
     </div>
   );
 }
