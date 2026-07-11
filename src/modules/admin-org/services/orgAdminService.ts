@@ -401,13 +401,32 @@ export const orgAdminService = {
     return data as OrgNotification[]
   },
 
-  async deleteOrgNotification(orgId: string, notificationId: string): Promise<void> {
-    const { error } = await supabase
-      .from('org_notifications')
-      .update({ deleted_at: new Date().toISOString() })
-      .eq('id', notificationId)
-      .eq('organization_id', orgId)
+  async deleteOrgNotification(_orgId: string, notificationId: string): Promise<void> {
+    if (!notificationId || notificationId.trim() === '') {
+      throw new Error('삭제할 알림 ID가 유효하지 않습니다.');
+    }
 
-    if (error) throw error
+    const { data, error } = await supabase.rpc('delete_admin_notification', {
+      p_notification_id: notificationId
+    });
+
+    if (error) {
+      console.error('deleteOrgNotification Error:', {
+        error,
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        notificationId
+      });
+      throw error;
+    }
+
+    if (data && typeof data === 'object') {
+      const res = data as any;
+      if (res.success === false) {
+        throw new Error(res.error || '알림 삭제에 실패했습니다.');
+      }
+    }
   }
 }
