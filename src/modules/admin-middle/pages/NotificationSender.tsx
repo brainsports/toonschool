@@ -14,6 +14,10 @@ export default function NotificationSender() {
   const [isImportant, setIsImportant] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [history, setHistory] = useState<any[]>([])
+  
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   useEffect(() => {
     if (profile) {
@@ -69,6 +73,33 @@ export default function NotificationSender() {
       alert(err.message || '알림 발송에 실패했습니다.')
     } finally {
       setIsSubmitting(false)
+    }
+  }
+
+  const handleDeleteClick = (id: string) => {
+    setDeletingId(id)
+    setShowDeleteModal(true)
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!deletingId) return
+    setIsDeleting(true)
+    try {
+      const { data, error } = await supabase.rpc('delete_middle_admin_notification', {
+        p_notification_id: deletingId
+      })
+      if (error) throw error
+      if (data && data.success === false) throw new Error(data.error)
+      
+      alert('알림이 모든 수신자의 알림함에서 삭제되었습니다.')
+      fetchHistory()
+    } catch (err: any) {
+      console.error('Delete notification error:', err)
+      alert('알림을 삭제하지 못했습니다. 잠시 후 다시 시도해 주세요.')
+    } finally {
+      setIsDeleting(false)
+      setShowDeleteModal(false)
+      setDeletingId(null)
     }
   }
 
@@ -174,12 +205,13 @@ export default function NotificationSender() {
                 <th style={{ padding: '16px 24px', fontSize: 14, fontWeight: 700, color: '#475569' }}>발송 대상</th>
                 <th style={{ padding: '16px 24px', fontSize: 14, fontWeight: 700, color: '#475569' }}>제목</th>
                 <th style={{ padding: '16px 24px', fontSize: 14, fontWeight: 700, color: '#475569' }}>중요 여부</th>
+                <th style={{ padding: '16px 24px', fontSize: 14, fontWeight: 700, color: '#475569', textAlign: 'center' }}>관리</th>
               </tr>
             </thead>
             <tbody>
               {history.length === 0 ? (
                 <tr>
-                  <td colSpan={5} style={{ padding: '32px', textAlign: 'center', color: '#94a3b8', fontSize: 15 }}>
+                  <td colSpan={6} style={{ padding: '32px', textAlign: 'center', color: '#94a3b8', fontSize: 15 }}>
                     발송 이력이 없습니다.
                   </td>
                 </tr>
@@ -210,6 +242,34 @@ export default function NotificationSender() {
                         <span style={{ color: '#94a3b8' }}>-</span>
                       )}
                     </td>
+                    <td style={{ padding: '16px 24px', textAlign: 'center' }}>
+                      <button
+                        onClick={() => handleDeleteClick(item.id)}
+                        disabled={isDeleting && deletingId === item.id}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          padding: '6px 12px',
+                          background: '#fee2e2',
+                          color: '#dc2626',
+                          border: 'none',
+                          borderRadius: 6,
+                          fontSize: 13,
+                          fontWeight: 600,
+                          cursor: (isDeleting && deletingId === item.id) ? 'not-allowed' : 'pointer',
+                          transition: 'background 0.2s',
+                          opacity: (isDeleting && deletingId === item.id) ? 0.7 : 1
+                        }}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M3 6h18"></path>
+                          <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                          <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                        </svg>
+                        {(isDeleting && deletingId === item.id) ? '삭제 중...' : '삭제'}
+                      </button>
+                    </td>
                   </tr>
                 ))
               )}
@@ -217,6 +277,62 @@ export default function NotificationSender() {
           </table>
         </div>
       </div>
+
+      {showDeleteModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 9999, padding: 20
+        }}>
+          <div style={{
+            background: 'white', borderRadius: 16, padding: 32, width: '100%', maxWidth: 400,
+            boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+              <div style={{ background: '#fee2e2', width: 40, height: 40, borderRadius: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#dc2626' }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                  <line x1="12" y1="9" x2="12" y2="13"></line>
+                  <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+              </div>
+              <h3 style={{ fontSize: 20, fontWeight: 800, color: '#1a1a2e', margin: 0 }}>알림을 삭제할까요?</h3>
+            </div>
+            
+            <p style={{ fontSize: 15, color: '#475569', lineHeight: 1.6, marginBottom: 24, marginTop: 0 }}>
+              이 알림을 삭제하면 기관관리자, 선생님, 학생의 알림함에서도 함께 삭제됩니다.<br/>
+              <strong>삭제한 알림은 복구할 수 없습니다.</strong>
+            </p>
+
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button
+                onClick={() => {
+                  setShowDeleteModal(false)
+                  setDeletingId(null)
+                }}
+                disabled={isDeleting}
+                style={{
+                  flex: 1, padding: '12px 0', background: '#f1f5f9', color: '#475569',
+                  border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 15, cursor: 'pointer'
+                }}
+              >
+                취소
+              </button>
+              <button
+                onClick={handleDeleteConfirm}
+                disabled={isDeleting}
+                style={{
+                  flex: 1, padding: '12px 0', background: '#dc2626', color: 'white',
+                  border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 15,
+                  cursor: isDeleting ? 'not-allowed' : 'pointer', opacity: isDeleting ? 0.7 : 1
+                }}
+              >
+                {isDeleting ? '삭제 중...' : '모두 삭제'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
