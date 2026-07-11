@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../shared/lib/supabase'
 import { useAuth } from '../shared/contexts/AuthContext'
@@ -11,9 +11,36 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [rememberId, setRememberId] = useState(false)
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const { fetchProfile } = useAuth()
+
+  useEffect(() => {
+    const savedId = localStorage.getItem('toonschool_saved_login_id')
+    if (savedId) {
+      setLoginIdentifier(savedId)
+      setRememberId(true)
+    }
+  }, [])
+
+  const handleLoginIdentifierChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value
+    setLoginIdentifier(value)
+    if (rememberId) {
+      localStorage.setItem('toonschool_saved_login_id', value)
+    }
+  }
+
+  const handleRememberIdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const checked = e.target.checked
+    setRememberId(checked)
+    if (checked) {
+      localStorage.setItem('toonschool_saved_login_id', loginIdentifier)
+    } else {
+      localStorage.removeItem('toonschool_saved_login_id')
+    }
+  }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -151,7 +178,7 @@ export default function Login() {
                   autoComplete="username"
                   required
                   value={loginIdentifier}
-                  onChange={(e) => setLoginIdentifier(e.target.value)}
+                  onChange={handleLoginIdentifierChange}
                   placeholder="이메일 또는 학생 아이디"
                   className="w-full px-5 py-4 rounded-xl bg-[#f8f9fa] border border-transparent focus:border-[#ff2778] focus:bg-white focus:ring-1 focus:ring-[#ff2778] text-slate-800 placeholder-slate-400 outline-none transition-all text-[15px]"
                 />
@@ -175,6 +202,19 @@ export default function Login() {
                 >
                   {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
+              </div>
+
+              <div className="flex items-center gap-2 pt-1">
+                <input
+                  type="checkbox"
+                  id="rememberId"
+                  checked={rememberId}
+                  onChange={handleRememberIdChange}
+                  className="w-4 h-4 text-[#ff2778] bg-white border-slate-300 rounded focus:ring-[#ff2778] focus:ring-2 accent-[#ff2778] cursor-pointer"
+                />
+                <label htmlFor="rememberId" className="text-sm text-slate-600 cursor-pointer select-none">
+                  아이디 저장
+                </label>
               </div>
 
               <button
