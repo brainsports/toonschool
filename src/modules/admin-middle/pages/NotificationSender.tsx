@@ -94,7 +94,14 @@ export default function NotificationSender() {
       alert('알림이 모든 수신자의 알림함에서 삭제되었습니다.')
       fetchHistory()
     } catch (err: any) {
-      console.error('Delete notification error:', err)
+      console.error('Delete notification error:', {
+        error: err,
+        code: err?.code,
+        message: err?.message,
+        details: err?.details,
+        hint: err?.hint,
+        deletingId
+      });
       alert('알림을 삭제하지 못했습니다. 잠시 후 다시 시도해 주세요.')
     } finally {
       setIsDeleting(false)
