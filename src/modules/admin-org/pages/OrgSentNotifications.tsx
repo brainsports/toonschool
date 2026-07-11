@@ -27,6 +27,27 @@ export default function OrgSentNotifications() {
     loadData()
   }, [profile])
 
+  const handleDelete = async (notificationId: string) => {
+    if (!window.confirm('이 알림을 정말 삭제하시겠습니까?\n이 발송 건을 삭제하면 수신한 대상(선생님, 학생 등)의 알림함과 읽음 기록에서도 모두 함께 삭제됩니다.')) return;
+    
+    if (!profile?.organization_id) return;
+
+    try {
+      setLoading(true);
+      await orgAdminService.deleteOrgNotification(profile.organization_id, notificationId);
+      alert('알림이 완전히 삭제되었습니다.');
+      
+      // Refresh notifications list
+      const data = await orgAdminService.getSentOrgNotifications(profile.organization_id, profile.id);
+      setNotifications(data);
+    } catch (err: any) {
+      console.error(err);
+      alert('삭제 중 오류가 발생했습니다: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const getTargetLabel = (type: string) => {
     switch(type) {
       case 'all': return '선생님 전체'
@@ -59,7 +80,7 @@ export default function OrgSentNotifications() {
                 <th style={{ padding: '16px 20px', fontWeight: 600, color: '#555', fontSize: 14 }}>제목</th>
                 <th style={{ padding: '16px 20px', fontWeight: 600, color: '#555', fontSize: 14, textAlign: 'center' }}>중요도</th>
                 <th style={{ padding: '16px 20px', fontWeight: 600, color: '#555', fontSize: 14, textAlign: 'center' }}>읽음 수</th>
-                <th style={{ padding: '16px 20px', fontWeight: 600, color: '#555', fontSize: 14, textAlign: 'center' }}>상세 보기</th>
+                <th style={{ padding: '16px 20px', fontWeight: 600, color: '#555', fontSize: 14, textAlign: 'center' }}>관리</th>
               </tr>
             </thead>
             <tbody>
@@ -81,12 +102,20 @@ export default function OrgSentNotifications() {
                   </td>
                   <td style={{ padding: '16px 20px', color: '#666', fontSize: 14, textAlign: 'center' }}>-</td>
                   <td style={{ padding: '16px 20px', textAlign: 'center' }}>
-                    <button 
-                      onClick={() => setSelectedNotif(n)}
-                      style={{ padding: '6px 12px', background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
-                    >
-                      상세
-                    </button>
+                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                      <button 
+                        onClick={() => setSelectedNotif(n)}
+                        style={{ padding: '6px 12px', background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+                      >
+                        상세
+                      </button>
+                      <button 
+                        onClick={() => handleDelete(n.id)}
+                        style={{ padding: '6px 12px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+                      >
+                        삭제
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
