@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { NavLink, Outlet, Link, useNavigate, useLocation } from 'react-router-dom'
+import { NavLink, Outlet, Link, useNavigate, useLocation, Navigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import TeacherNotificationInbox from '../../modules/admin-lms/components/TeacherNotificationInbox'
 import OrgAdminNotificationInbox from '../../modules/admin-lms/components/OrgAdminNotificationInbox'
@@ -86,6 +86,9 @@ export default function AdminPortalLayout() {
   }
 
   const allowedRoles = ['teacher', 'org_admin', 'super_admin']
+  if (profile.role === 'super_admin') {
+    return <Navigate to="/admin/super/dashboard" replace />
+  }
   if (profile.status && profile.status !== 'active') {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f3f4f7' }}>

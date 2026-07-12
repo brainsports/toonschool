@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom'
+import { Outlet, Link, useNavigate, useLocation, Navigate } from 'react-router-dom'
 import { useAuth } from '../../../shared/contexts/AuthContext'
 import MiddleAdminNotificationInbox from './MiddleAdminNotificationInbox'
 
@@ -51,6 +51,9 @@ export default function MiddleAdminLayout() {
   }
 
   const allowedRoles = ['middle_admin', 'super_admin']
+  if (profile.role === 'super_admin') {
+    return <Navigate to="/admin/super/dashboard" replace />
+  }
   if (profile.status && profile.status !== 'active') {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f3f4f7' }}>
