@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 
 export default function PricingPage() {
     return (
-        <div className="min-h-screen bg-surface-dim flex flex-col items-center justify-center p-6">
+        <div className="flex flex-col items-center justify-center p-6 flex-1 w-full pt-32">
             <h1 className="text-4xl md:text-5xl font-bold mb-6 text-on-surface">이용권 구매</h1>
             <p className="text-xl text-on-surface-variant mb-12">
                 교사와 기관을 위한 이용권을 준비하고 있습니다.

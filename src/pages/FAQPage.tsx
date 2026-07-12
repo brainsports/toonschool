@@ -3,7 +3,7 @@ import { ChevronDown } from 'lucide-react';
 
 export default function FAQPage() {
     return (
-        <div className="min-h-screen bg-surface-dim flex flex-col items-center py-24 p-6">
+        <div className="flex flex-col items-center py-24 p-6 w-full">
             <div className="max-w-3xl mx-auto w-full">
                 <div className="text-center mb-12">
                     <h1 className="text-4xl md:text-5xl font-bold mb-6 text-on-surface">궁금해요</h1>

@@ -3,36 +3,6 @@ import { Monitor, Smartphone, Tablet } from 'lucide-react'; // 아이콘 활용
 
 export default function PWAPage() {
     return (
-        <div className="min-h-screen bg-surface-dim font-body-md text-on-surface">
-            {/* Header */}
-            <header className="fixed top-0 left-0 w-full z-50 bg-white/95 backdrop-blur-md shadow-sm border-b border-gray-100 h-20 md:h-24">
-                <div className="max-w-7xl mx-auto px-6 h-full flex justify-between items-center">
-                    <Link to="/" className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-primary text-white flex items-center justify-center font-bold rounded-lg text-lg">TS</div>
-                        <span className="font-title-md font-extrabold text-2xl tracking-tight text-on-surface">툰스쿨</span>
-                    </Link>
-                    <nav className="hidden xl:flex items-center space-x-10">
-                        <Link className="text-on-surface text-lg font-bold hover:text-primary transition-colors" to="/">툰스쿨</Link>
-                        <Link className="text-on-surface text-lg font-bold hover:text-primary transition-colors" to="/ai-content">AI 학습콘텐츠</Link>
-                        <Link className="text-on-surface text-lg font-bold hover:text-primary transition-colors" to="/flipped-learning">거꾸로 학습법</Link>
-                        <Link className="text-primary text-lg font-bold hover:text-primary transition-colors" to="/pwa">PC·태블릿 버전</Link>
-                        <Link className="text-on-surface text-lg font-bold hover:text-primary transition-colors" to="/faq">궁금해요</Link>
-                    </nav>
-                    <div className="hidden md:flex items-center space-x-4">
-                        <Link 
-                            className="bg-[#ff2778] text-white px-8 py-3 rounded-full font-bold text-lg hover:bg-pink-600 transition-colors shadow-sm" 
-                            to="/login"
-                        >
-                            관리 LMS
-                        </Link>
-                        <Link className="bg-[#ff2778] text-white px-8 py-3 rounded-full font-bold text-lg hover:bg-pink-600 transition-colors shadow-sm" to="/pricing">이용권 구매</Link>
-                    </div>
-                    <button aria-label="Menu" className="xl:hidden text-on-surface-variant p-2">
-                        <span className="material-symbols-outlined text-3xl">menu</span>
-                    </button>
-                </div>
-            </header>
-
             <main className="max-w-4xl mx-auto px-6 pt-32 pb-16 flex flex-col items-center text-center">
                 <h1 className="text-4xl font-extrabold mb-4 text-on-surface">PC·태블릿 버전</h1>
                 <p className="text-lg text-on-surface-variant mb-12">
@@ -91,6 +61,5 @@ export default function PWAPage() {
                     메인으로 돌아가기
                 </Link>
             </main>
-        </div>
     );
 }

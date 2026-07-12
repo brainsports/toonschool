@@ -7,31 +7,6 @@ export default function AIContentPage() {
     const [sec4Tab, setSec4Tab] = useState('share');
 
     return (
-        <div className="text-on-surface smooth-scroll font-body-md overflow-x-hidden bg-surface-dim">
-            {/* Header (copied from HomePage) */}
-            <header className="fixed top-0 left-0 w-full z-50 bg-white/95 backdrop-blur-md shadow-sm border-b border-gray-100 h-20 md:h-24">
-                <div className="max-w-7xl mx-auto px-6 h-full flex justify-between items-center">
-                    <Link to="/" className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-primary text-white flex items-center justify-center font-bold rounded-lg text-lg">TS</div>
-                        <span className="font-title-md font-extrabold text-2xl tracking-tight text-on-surface">툰스쿨</span>
-                    </Link>
-                    <nav className="hidden xl:flex items-center space-x-10">
-                        <Link className="text-on-surface text-lg font-bold hover:text-primary transition-colors" to="/">툰스쿨</Link>
-                        <Link className="text-primary text-lg font-bold hover:text-primary transition-colors border-b-2 border-primary" to="/ai-content">AI 학습콘텐츠</Link>
-                        <Link className="text-on-surface text-lg font-bold hover:text-primary transition-colors" to="/flipped-learning">거꾸로 학습법</Link>
-                        <Link className="text-on-surface text-lg font-bold hover:text-primary transition-colors" to="/pwa">PC·태블릿 버전</Link>
-                        <Link className="text-on-surface text-lg font-bold hover:text-primary transition-colors" to="/faq">궁금해요</Link>
-                    </nav>
-                    <div className="hidden md:flex items-center space-x-4">
-                        <Link className="bg-[#ff2778] text-white px-8 py-3 rounded-full font-bold text-lg hover:bg-pink-600 transition-colors shadow-sm" to="/login">관리 LMS</Link>
-                        <Link className="bg-[#ff2778] text-white px-8 py-3 rounded-full font-bold text-lg hover:bg-pink-600 transition-colors shadow-sm" to="/pricing">이용권 구매</Link>
-                    </div>
-                    <button aria-label="Menu" className="xl:hidden text-on-surface-variant p-2">
-                        <span className="material-symbols-outlined text-3xl">menu</span>
-                    </button>
-                </div>
-            </header>
-
             <main className="pt-20 md:pt-24 w-full mx-auto flex flex-col">
                 {/* Section 1: Hero */}
                 <section className="py-24 bg-surface-dim overflow-hidden relative">
@@ -329,26 +304,5 @@ export default function AIContentPage() {
                     </div>
                 </section>
             </main>
-
-            {/* Footer (copied from HomePage) */}
-            <footer className="w-full px-6 py-12 flex flex-col items-center text-center space-y-6 bg-surface-dim border-t border-outline-variant">
-                <div className="flex items-center gap-2 mb-2 opacity-50 grayscale hover:grayscale-0 hover:opacity-100 transition-all">
-                    <div className="w-6 h-6 bg-gray-400 text-white flex items-center justify-center font-bold rounded text-xs">TS</div>
-                    <span className="font-title-md font-bold text-gray-500">ToonSchool</span>
-                </div>
-                <p className="text-gray-500 font-medium text-sm">공부하지 말고, 공부를 만들자.</p>
-                <div className="flex flex-wrap justify-center gap-4 text-sm text-gray-500">
-                    <Link className="hover:text-primary transition-colors" to="/">홈</Link>
-                    <Link className="hover:text-primary transition-colors" to="/about">툰스쿨이란</Link>
-                    <Link className="hover:text-primary transition-colors" to="/student/select-unit">툰스쿨 에디터</Link>
-                    <Link className="hover:text-primary transition-colors" to="/classroom">수업 활용</Link>
-                    <Link className="hover:text-primary transition-colors" to="/flipped-learning">거꾸로 학습법</Link>
-                    <Link className="hover:text-primary transition-colors" to="/share">공유 링크</Link>
-                    <Link className="hover:text-primary transition-colors" to="/pricing">요금제</Link>
-                    <Link className="hover:text-primary transition-colors" to="/contact">고객센터</Link>
-                </div>
-                <p className="text-sm text-gray-400 mt-4">© 2024 ToonSchool. All rights reserved.</p>
-            </footer>
-        </div>
     );
 }

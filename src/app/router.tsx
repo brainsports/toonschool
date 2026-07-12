@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import Layout from '../shared/components/Layout'
+import PublicLayout from '../shared/components/PublicLayout'
 import Dashboard from '../pages/Dashboard'
 import HomePage from '../pages/HomePage'
 import NotFound from '../pages/NotFound'
@@ -84,13 +85,15 @@ import MiddleSettings from '../modules/admin-middle/pages/MiddleSettings'
 export default function AppRouter() {
   return (
     <Routes>
-      <Route path="/" element={<HomePage />} />
-      <Route path="/ai-content" element={<AIContentPage />} />
-      <Route path="/flipped-learning" element={<FlippedLearningPage />} />
-      <Route path="/lms" element={<LMSPage />} />
-      <Route path="/pwa" element={<PWAPage />} />
-      <Route path="/pricing" element={<PricingPage />} />
-      <Route path="/faq" element={<FAQPage />} />
+      <Route element={<PublicLayout />}>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/ai-content" element={<AIContentPage />} />
+        <Route path="/flipped-learning" element={<FlippedLearningPage />} />
+        <Route path="/lms" element={<LMSPage />} />
+        <Route path="/pwa" element={<PWAPage />} />
+        <Route path="/pricing" element={<PricingPage />} />
+        <Route path="/faq" element={<FAQPage />} />
+      </Route>
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
       <Route element={<Layout />}>
