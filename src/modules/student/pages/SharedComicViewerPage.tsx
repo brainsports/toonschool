@@ -14,8 +14,11 @@ type SharedPage = {
 
 type Spread = { pages: [number | null, number | null] };
 
-const getSpreads = (totalCount: number): Spread[] => {
+const getSpreads = (totalCount: number, isSingle: boolean): Spread[] => {
   if (totalCount === 0) return [];
+  if (isSingle) {
+    return Array.from({ length: totalCount }).map((_, i) => ({ pages: [i, null] }));
+  }
   if (totalCount === 1) return [{ pages: [null, 0] }];
   const spreads: Spread[] = [];
   spreads.push({ pages: [null, 0] });
@@ -53,7 +56,7 @@ const PageWrapper = ({ children, isLeft, isRight, isSingle }: any) => {
   }, []);
 
   return (
-    <div ref={ref} className={`flex-1 h-full bg-white relative overflow-hidden ${isSingle ? 'rounded-none shadow-lg border border-slate-200' : isLeft ? 'rounded-none border-r-0' : isRight ? 'rounded-none border-l border-black/5' : ''} shadow-[inset_0_0_40px_rgba(0,0,0,0.03)]`}>
+    <div ref={ref} className={`flex-1 h-full bg-white relative overflow-hidden ${isSingle ? 'rounded-[12px] shadow-md border border-slate-200/50' : isLeft ? 'rounded-none border-r-0' : isRight ? 'rounded-none border-l border-black/5' : ''} shadow-[inset_0_0_40px_rgba(0,0,0,0.03)]`}>
       <div style={{ transform: `scale(${scale})`, transformOrigin: 'top left', width: 1400, height: 1980, position: 'absolute', top: 0, left: 0 }}>
         <div className="relative z-10 w-full h-full bg-white">
           {children}
@@ -87,7 +90,22 @@ export default function SharedComicViewerPage() {
   const [flipDirection, setFlipDirection] = useState<'next' | 'prev' | null>(null)
   const [targetSpreadIndex, setTargetSpreadIndex] = useState<number | null>(null)
 
-  const spreads = getSpreads(pages.length)
+  const [isSinglePageMode, setIsSinglePageMode] = useState(false)
+  const prevSingleModeRef = useRef(isSinglePageMode)
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth)
+
+  useEffect(() => {
+    const checkMode = () => {
+      const isMobileOrPortrait = window.innerWidth <= 768 || (window.innerWidth <= 1024 && window.innerHeight > window.innerWidth);
+      setIsSinglePageMode(isMobileOrPortrait);
+      setWindowWidth(window.innerWidth);
+    };
+    checkMode();
+    window.addEventListener('resize', checkMode);
+    return () => window.removeEventListener('resize', checkMode);
+  }, []);
+
+  const spreads = getSpreads(pages.length, isSinglePageMode)
 
   const currentSpreadIndexRef = useRef(currentSpreadIndex)
   currentSpreadIndexRef.current = currentSpreadIndex
@@ -147,6 +165,25 @@ export default function SharedComicViewerPage() {
   }, [])
 
   useEffect(() => {
+    if (pages.length === 0) return;
+    if (prevSingleModeRef.current !== isSinglePageMode) {
+      const oldSpreads = getSpreads(pages.length, prevSingleModeRef.current);
+      const currentSpread = oldSpreads[currentSpreadIndexRef.current];
+      if (currentSpread) {
+        const pageViewing = currentSpread.pages[0] !== null ? currentSpread.pages[0] : currentSpread.pages[1];
+        if (pageViewing !== null) {
+          const newSpreads = getSpreads(pages.length, isSinglePageMode);
+          const newIndex = newSpreads.findIndex(s => s.pages[0] === pageViewing || s.pages[1] === pageViewing);
+          if (newIndex !== -1) {
+            setCurrentSpreadIndex(newIndex);
+          }
+        }
+      }
+      prevSingleModeRef.current = isSinglePageMode;
+    }
+  }, [isSinglePageMode, pages.length]);
+
+  useEffect(() => {
     const fetchSharedComic = async () => {
       if (!slug) return;
       setIsLoading(true);
@@ -179,16 +216,16 @@ export default function SharedComicViewerPage() {
     fetchSharedComic();
   }, [slug])
 
-  const BASE_WIDTH = 1000;
+  const BASE_WIDTH = isSinglePageMode ? 500 : 1000;
   const BASE_HEIGHT = 707;
-  const SCROLL_PADDING = 80;
+  const SCROLL_PADDING = isSinglePageMode ? 16 : 32;
   
   let fitScale = 1;
   if (containerSize.width > 0 && containerSize.height > 0) {
     const scaleW = (containerSize.width - SCROLL_PADDING * 2) / BASE_WIDTH;
     const scaleH = (containerSize.height - SCROLL_PADDING * 2) / BASE_HEIGHT;
     fitScale = Math.min(scaleW, scaleH);
-    fitScale = Math.max(0.6, fitScale);
+    fitScale = Math.max(0.3, fitScale);
   }
   
   const currentZoom = zoomPercent !== null ? zoomPercent : (containerSize.width > 0 ? Math.round(fitScale * 100) : 100);
@@ -327,14 +364,14 @@ export default function SharedComicViewerPage() {
     )
   }
 
-  const renderHalf = (pageIndex: number | null, isLeft: boolean) => {
+  const renderHalf = (pageIndex: number | null, isLeft: boolean, isSingle = false) => {
     if (pageIndex === null) {
       return <div className={`w-full h-full ${isLeft ? 'rounded-none' : 'rounded-none'} bg-transparent`} />;
     }
     return (
-      <div className={`w-full h-full relative bg-white ${isLeft ? 'rounded-none border-r border-black/10' : 'rounded-none border-l border-black/5'} overflow-hidden`}>
-        {renderPage(pages[pageIndex], isLeft, false)}
-        <div className={`absolute top-0 ${isLeft ? 'right-0 bg-gradient-to-l' : 'left-0 bg-gradient-to-r'} w-12 h-full from-black/10 to-transparent pointer-events-none mix-blend-multiply opacity-50`} />
+      <div className={`w-full h-full relative bg-white ${isSingle ? 'rounded-[12px]' : isLeft ? 'rounded-none border-r border-black/10' : 'rounded-none border-l border-black/5'} overflow-hidden`}>
+        {renderPage(pages[pageIndex], isLeft, isSingle)}
+        {!isSingle && <div className={`absolute top-0 ${isLeft ? 'right-0 bg-gradient-to-l' : 'left-0 bg-gradient-to-r'} w-12 h-full from-black/10 to-transparent pointer-events-none mix-blend-multiply opacity-50`} />}
       </div>
     );
   };
@@ -343,6 +380,13 @@ export default function SharedComicViewerPage() {
     if (spreads.length === 0) return '0 / 0';
     const spread = spreads[currentSpreadIndex];
     if (!spread) return '';
+    
+    if (isSinglePageMode) {
+       const p = spread.pages[0];
+       if (p === null) return `0 / ${pages.length}`;
+       return `${p + 1} / ${pages.length}`;
+    }
+
     const p1 = spread.pages[0];
     const p2 = spread.pages[1];
     if (p1 === null && p2 !== null) return `${p2 + 1} / ${pages.length}`;
@@ -476,7 +520,7 @@ export default function SharedComicViewerPage() {
         }
       `}</style>
       <div 
-        className="flex-1 w-full relative overflow-auto student-scrollbar bg-[#f3f4f7] flex flex-col items-center pt-8 pb-10 px-4 md:px-10"
+        className="flex-1 w-full relative overflow-auto student-scrollbar bg-[#f3f4f7] flex flex-col items-center pt-4 pb-8 px-2 md:px-8"
       >
          
          <div className="flex flex-col items-center my-auto shrink-0 w-full">
@@ -493,116 +537,142 @@ export default function SharedComicViewerPage() {
               <div className="w-full h-full relative rounded-none book-shell" style={{ perspective: '2400px' }}>
                 {isFlipping && targetSpreadIndex !== null && (
                   <div className="absolute inset-0 flex rounded-none book-spread">
-                    <div className="w-1/2 h-full book-page-left">
-                      {renderHalf(spreads[targetSpreadIndex].pages[0], true)}
+                    <div className={`${isSinglePageMode ? 'w-full' : 'w-1/2'} h-full book-page-left`}>
+                      {renderHalf(spreads[targetSpreadIndex].pages[0], true, isSinglePageMode)}
                     </div>
-                    <div className="w-1/2 h-full book-page-right">
-                      {renderHalf(spreads[targetSpreadIndex].pages[1], false)}
-                    </div>
+                    {!isSinglePageMode && (
+                      <div className="w-1/2 h-full book-page-right">
+                        {renderHalf(spreads[targetSpreadIndex].pages[1], false, isSinglePageMode)}
+                      </div>
+                    )}
                   </div>
                 )}
 
                 <div className="absolute inset-0 flex rounded-none pointer-events-auto book-spread">
                   <div 
-                    className={`w-1/2 h-full relative book-page book-page-left ${isFlipping ? 'cursor-progress' : (currentSpreadIndex > 0 ? 'cursor-pointer' : 'cursor-default')}`} 
+                    className={`${isSinglePageMode ? 'w-full' : 'w-1/2'} h-full relative book-page book-page-left ${isFlipping ? 'cursor-progress' : (currentSpreadIndex > 0 ? 'cursor-pointer' : 'cursor-default')}`} 
                     onClick={(e) => { e.stopPropagation(); if (!isFlipping) handlePrev(); }}
                   >
-                    {(!isFlipping || flipDirection === 'next') && renderHalf(spreads[currentSpreadIndex].pages[0], true)}
+                    {(!isFlipping || flipDirection === 'next') && renderHalf(spreads[currentSpreadIndex].pages[0], true, isSinglePageMode)}
                   </div>
                   
-                  <div 
-                    className={`w-1/2 h-full relative book-page book-page-right ${isFlipping ? 'cursor-progress' : (currentSpreadIndex < spreads.length - 1 ? 'cursor-pointer' : 'cursor-default')}`}
-                    onClick={(e) => { e.stopPropagation(); if (!isFlipping) handleNext(); }}
-                  >
-                    {(!isFlipping || flipDirection === 'prev') && renderHalf(spreads[currentSpreadIndex].pages[1], false)}
-                  </div>
+                  {!isSinglePageMode && (
+                    <div 
+                      className={`w-1/2 h-full relative book-page book-page-right ${isFlipping ? 'cursor-progress' : (currentSpreadIndex < spreads.length - 1 ? 'cursor-pointer' : 'cursor-default')}`}
+                      onClick={(e) => { e.stopPropagation(); if (!isFlipping) handleNext(); }}
+                    >
+                      {(!isFlipping || flipDirection === 'prev') && renderHalf(spreads[currentSpreadIndex].pages[1], false, isSinglePageMode)}
+                    </div>
+                  )}
                 </div>
 
                 {isFlipping && targetSpreadIndex !== null && (
-                  <div className="absolute inset-0 pointer-events-none z-30">
+                  <div className="absolute inset-0 pointer-events-none z-30 flex justify-center">
                     {flipDirection === 'next' && (
                       <div 
-                        className="absolute right-0 w-1/2 h-full flipping-page flipping-next"
-                        style={{ transformOrigin: 'left center', transformStyle: 'preserve-3d' }}
+                        className={`absolute ${isSinglePageMode ? 'w-full right-0' : 'w-1/2 right-0'} h-full flipping-page flipping-next`}
+                        style={{ transformOrigin: isSinglePageMode ? 'center center' : 'left center', transformStyle: 'preserve-3d' }}
                       >
                         <div className="absolute inset-0 bg-white rounded-none page-curl-wrapper-next overflow-hidden" style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
-                          {renderHalf(spreads[currentSpreadIndex].pages[1], false)}
+                          {renderHalf(spreads[currentSpreadIndex].pages[isSinglePageMode ? 0 : 1], false, isSinglePageMode)}
                           <div className="page-curl-overlay next-curl-overlay"></div>
                           <div className="page-curl-overlay next-curl-shadow"></div>
                           <div className="page-curl-overlay next-curl-highlight"></div>
                         </div>
                         <div className="absolute inset-0 bg-white rounded-none overflow-hidden" style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}>
-                          {renderHalf(spreads[targetSpreadIndex].pages[0], true)}
-                          <div className="page-shadow-overlay-right"></div>
+                          {renderHalf(spreads[targetSpreadIndex].pages[0], true, isSinglePageMode)}
+                          {!isSinglePageMode && <div className="page-shadow-overlay-right"></div>}
                         </div>
                       </div>
                     )}
                     
                     {flipDirection === 'prev' && (
                       <div 
-                        className="absolute left-0 w-1/2 h-full flipping-page flipping-prev"
-                        style={{ transformOrigin: 'right center', transformStyle: 'preserve-3d' }}
+                        className={`absolute ${isSinglePageMode ? 'w-full left-0' : 'w-1/2 left-0'} h-full flipping-page flipping-prev`}
+                        style={{ transformOrigin: isSinglePageMode ? 'center center' : 'right center', transformStyle: 'preserve-3d' }}
                       >
                         <div className="absolute inset-0 bg-white rounded-none page-curl-wrapper-prev overflow-hidden" style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
-                          {renderHalf(spreads[currentSpreadIndex].pages[0], true)}
+                          {renderHalf(spreads[currentSpreadIndex].pages[0], true, isSinglePageMode)}
                           <div className="page-curl-overlay prev-curl-overlay"></div>
                           <div className="page-curl-overlay prev-curl-shadow"></div>
                           <div className="page-curl-overlay prev-curl-highlight"></div>
                         </div>
                         <div className="absolute inset-0 bg-white rounded-none overflow-hidden" style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'rotateY(-180deg)' }}>
-                          {renderHalf(spreads[targetSpreadIndex].pages[1], false)}
-                          <div className="page-shadow-overlay"></div>
+                          {renderHalf(spreads[targetSpreadIndex].pages[isSinglePageMode ? 0 : 1], false, isSinglePageMode)}
+                          {!isSinglePageMode && <div className="page-shadow-overlay"></div>}
                         </div>
                       </div>
                     )}
                   </div>
                 )}
 
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-full bg-gradient-to-r from-black/10 via-transparent to-black/10 z-40 pointer-events-none mix-blend-multiply opacity-60" />
+                {!isSinglePageMode && <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-full bg-gradient-to-r from-black/10 via-transparent to-black/10 z-40 pointer-events-none mix-blend-multiply opacity-60" />}
               </div>
            </div>
 
            {hasStarted && (
-             <div className="mt-8 flex items-center gap-2 px-4 py-2 rounded-full shadow-lg z-50 transition-all shrink-0 playerWrapper" style={{ backgroundColor: 'rgba(40, 25, 10, 0.88)' }}>
-               <button onClick={() => { if (!isFlipping) setCurrentSpreadIndex(0) }} disabled={isFlipping} className="p-2 hover:bg-white/10 rounded-full text-white transition-colors disabled:opacity-30" title="처음으로">
-                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m11 17-5-5 5-5"/><path d="m18 17-5-5 5-5"/><path d="M4 17V7"/></svg>
-               </button>
-               <button onClick={handlePrev} disabled={currentSpreadIndex === 0 || isFlipping} className="p-2 hover:bg-white/10 rounded-full text-white transition-colors disabled:opacity-30" title="이전">
+             <div className="mt-4 flex items-center gap-1.5 md:gap-2 px-3 py-1.5 md:px-4 md:py-2 rounded-full shadow-md z-50 transition-all shrink-0 playerWrapper border border-white/10" style={{ backgroundColor: 'rgba(30, 34, 45, 0.75)', backdropFilter: 'blur(8px)' }}>
+               {windowWidth > 600 && (
+                 <button onClick={() => { if (!isFlipping) setCurrentSpreadIndex(0) }} disabled={isFlipping} className="p-1.5 md:p-2 hover:bg-white/10 rounded-full text-white transition-colors disabled:opacity-30" title="처음으로">
+                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m11 17-5-5 5-5"/><path d="m18 17-5-5 5-5"/><path d="M4 17V7"/></svg>
+                 </button>
+               )}
+               <button onClick={handlePrev} disabled={currentSpreadIndex === 0 || isFlipping} className="p-1.5 md:p-2 hover:bg-white/10 rounded-full text-white transition-colors disabled:opacity-30" title="이전">
                  <ArrowLeft className="w-5 h-5" />
                </button>
-               <div className="bg-white text-slate-900 font-bold px-3 py-1 rounded-md text-sm mx-2 min-w-[60px] text-center font-jua">
+               <div className="bg-white/90 text-slate-800 font-bold px-2 md:px-3 py-1 rounded md:rounded-md text-xs md:text-sm mx-1 md:mx-2 min-w-[50px] md:min-w-[60px] text-center font-jua">
                  {getPageIndicatorText()}
                </div>
-               <button onClick={handleNext} disabled={currentSpreadIndex === spreads.length - 1 || isFlipping} className="p-2 hover:bg-white/10 rounded-full text-white transition-colors disabled:opacity-30" title="다음">
+               <button onClick={handleNext} disabled={currentSpreadIndex === spreads.length - 1 || isFlipping} className="p-1.5 md:p-2 hover:bg-white/10 rounded-full text-white transition-colors disabled:opacity-30" title="다음">
                  <ArrowRight className="w-5 h-5" />
                </button>
-               <button onClick={() => { if (!isFlipping) setCurrentSpreadIndex(spreads.length - 1) }} disabled={isFlipping} className="p-2 hover:bg-white/10 rounded-full text-white transition-colors disabled:opacity-30" title="마지막으로">
-                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m13 17 5-5-5-5"/><path d="m6 17 5-5-5-5"/><path d="M20 17V7"/></svg>
-               </button>
+               {windowWidth > 600 && (
+                 <button onClick={() => { if (!isFlipping) setCurrentSpreadIndex(spreads.length - 1) }} disabled={isFlipping} className="p-1.5 md:p-2 hover:bg-white/10 rounded-full text-white transition-colors disabled:opacity-30" title="마지막으로">
+                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m13 17 5-5-5-5"/><path d="m6 17 5-5-5-5"/><path d="M20 17V7"/></svg>
+                 </button>
+               )}
                
-               <div className="w-[1px] h-5 bg-white/20 mx-1"></div>
+               <div className="w-[1px] h-4 md:h-5 bg-white/20 mx-1"></div>
                
+               {windowWidth > 600 && (
+                 <>
+                   <button onClick={() => setZoomPercent(Math.min(300, currentZoom + 10))} className="p-1.5 md:p-2 hover:bg-white/10 rounded-full text-white transition-colors" title="확대">
+                     <ZoomIn className="w-4 h-4 md:w-5 md:h-5" />
+                   </button>
+                   <button onClick={() => setZoomPercent(null)} className="p-1.5 md:p-2 hover:bg-white/10 rounded-full text-white transition-colors" title="화면맞춤">
+                     <Maximize className="w-4 h-4 md:w-5 md:h-5" />
+                   </button>
+                   <button onClick={toggleFullscreen} className="p-1.5 md:p-2 hover:bg-white/10 rounded-full text-white transition-colors" title="전체화면">
+                     <Monitor className="w-4 h-4 md:w-5 md:h-5" />
+                   </button>
+                   <div className="w-[1px] h-4 md:h-5 bg-white/20 mx-1"></div>
+                 </>
+               )}
+
                <div className="relative">
-                 <button onClick={() => setShowMenu(!showMenu)} className="p-2 hover:bg-white/10 rounded-full text-white transition-colors" title="추가 기능">
+                 <button onClick={() => setShowMenu(!showMenu)} className="p-1.5 md:p-2 hover:bg-white/10 rounded-full text-white transition-colors" title="추가 기능">
                     <MoreVertical className="w-5 h-5" />
                  </button>
                  {showMenu && (
                    <>
                      <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)}></div>
-                     <div className="absolute bottom-full mb-3 right-0 bg-white rounded-xl shadow-xl border border-slate-100 py-2 w-48 text-slate-700 font-medium z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
-                        <button onClick={() => { setZoomPercent(Math.min(300, currentZoom + 10)); setShowMenu(false); }} className="w-full px-4 py-3 text-left hover:bg-slate-50 flex items-center gap-3"><ZoomIn className="w-4 h-4 text-slate-400"/> 확대하기</button>
-                        <button onClick={() => { setZoomPercent(Math.max(25, currentZoom - 10)); setShowMenu(false); }} className="w-full px-4 py-3 text-left hover:bg-slate-50 flex items-center gap-3"><ZoomOut className="w-4 h-4 text-slate-400"/> 축소하기</button>
-                        <button onClick={() => { setZoomPercent(null); setShowMenu(false); }} className="w-full px-4 py-3 text-left hover:bg-slate-50 flex items-center gap-3"><Maximize className="w-4 h-4 text-slate-400"/> 화면맞춤</button>
-                        <div className="h-[1px] bg-slate-100 my-1"></div>
-                        <button onClick={() => { handleCopyLink(); setShowMenu(false); }} className="w-full px-4 py-3 text-left hover:bg-slate-50 flex items-center gap-3"><Copy className="w-4 h-4 text-slate-400"/> 링크 복사하기</button>
-                        <button onClick={() => { toggleAutoFlip(); setShowMenu(false); }} className="w-full px-4 py-3 text-left hover:bg-slate-50 flex items-center gap-3">
+                     <div className="absolute bottom-full mb-3 right-0 bg-white rounded-xl shadow-xl border border-slate-100 py-2 w-48 text-slate-700 font-medium z-50 animate-in fade-in slide-in-from-bottom-2 duration-200 text-sm">
+                        {windowWidth <= 600 && (
+                          <>
+                            <button onClick={() => { setZoomPercent(Math.min(300, currentZoom + 10)); setShowMenu(false); }} className="w-full px-4 py-2.5 text-left hover:bg-slate-50 flex items-center gap-3"><ZoomIn className="w-4 h-4 text-slate-400"/> 확대하기</button>
+                            <button onClick={() => { setZoomPercent(Math.max(25, currentZoom - 10)); setShowMenu(false); }} className="w-full px-4 py-2.5 text-left hover:bg-slate-50 flex items-center gap-3"><ZoomOut className="w-4 h-4 text-slate-400"/> 축소하기</button>
+                            <button onClick={() => { setZoomPercent(null); setShowMenu(false); }} className="w-full px-4 py-2.5 text-left hover:bg-slate-50 flex items-center gap-3"><Maximize className="w-4 h-4 text-slate-400"/> 화면맞춤</button>
+                            <button onClick={() => { toggleFullscreen(); setShowMenu(false); }} className="w-full px-4 py-2.5 text-left hover:bg-slate-50 flex items-center gap-3"><Monitor className="w-4 h-4 text-slate-400"/> 전체화면</button>
+                            <div className="h-[1px] bg-slate-100 my-1"></div>
+                          </>
+                        )}
+                        <button onClick={() => { handleCopyLink(); setShowMenu(false); }} className="w-full px-4 py-2.5 text-left hover:bg-slate-50 flex items-center gap-3"><Copy className="w-4 h-4 text-slate-400"/> 링크 복사하기</button>
+                        <button onClick={() => { toggleAutoFlip(); setShowMenu(false); }} className="w-full px-4 py-2.5 text-left hover:bg-slate-50 flex items-center gap-3">
                            <PlayCircle className={`w-4 h-4 ${isAutoFlip ? 'text-[#ff2778]' : 'text-slate-400'}`}/> <span className={isAutoFlip ? 'text-[#ff2778]' : ''}>{isAutoFlip ? '자동 넘김 중지' : '자동 넘김'}</span>
                         </button>
-                        <button onClick={() => { toggleMusic(); setShowMenu(false); }} className="w-full px-4 py-3 text-left hover:bg-slate-50 flex items-center gap-3">
+                        <button onClick={() => { toggleMusic(); setShowMenu(false); }} className="w-full px-4 py-2.5 text-left hover:bg-slate-50 flex items-center gap-3">
                            {isMusicOn ? <VolumeX className="w-4 h-4 text-slate-400"/> : <Volume2 className="w-4 h-4 text-slate-400"/>} {isMusicOn ? '음악 끄기' : '음악 켜기'}
                         </button>
-                        <div className="h-[1px] bg-slate-100 my-1"></div>
-                        <button onClick={() => { toggleFullscreen(); setShowMenu(false); }} className="w-full px-4 py-3 text-left hover:bg-slate-50 flex items-center gap-3"><Monitor className="w-4 h-4 text-slate-400"/> 전체화면</button>
                      </div>
                    </>
                  )}
