@@ -54,6 +54,7 @@ import FAQPage from '../pages/FAQPage'
 // 공통 관리자 레이아웃
 import AdminPortalLayout from '../shared/components/AdminPortalLayout'
 import RequireSuperAdmin from '../shared/components/RequireSuperAdmin'
+import RequireStudent from '../shared/components/RequireStudent'
 import AdminLMSPage from '../modules/admin-lms/pages/AdminLMSPage'
 import ClassManagementPage from '../modules/admin-lms/pages/ClassManagementPage'
 import AdminStudentManagementPage from '../modules/admin-lms/pages/StudentManagementPage'
@@ -102,27 +103,31 @@ export default function AppRouter() {
           <Route path="progress" element={<ProgressPage />} />
           <Route path="evaluation" element={<EvaluationPage />} />
         </Route>
-        <Route path="student" element={<StudentDashboard />} />
+        <Route element={<RequireStudent />}>
+          <Route path="student" element={<StudentDashboard />} />
+        </Route>
         <Route path="toon" element={<ToonEditor />} />
         <Route path="p/:slug" element={<ToonViewer />} />
         <Route path="p/:slug/quiz" element={<QuizPage />} />
         <Route path="analytics" element={<AnalyticsDashboard />} />
         <Route path="*" element={<NotFound />} />
       </Route>
-      <Route path="/student/select-unit" element={<StudentUnitSelectPage />} />
-      <Route path="/student/topic" element={<StudentTopicMakerPage />} />
-      <Route path="/student/script" element={<StudentScriptPage />} />
-      <Route path="/student/front-cover" element={<StudentFrontCoverPage />} />
-      <Route path="/student/comic/full" element={<StudentComicFullViewPage />} />
-      <Route path="/student/comic/cut/:cutNumber" element={<StudentComicCutPage />} />
-      <Route path="/student/unit-summary" element={<StudentUnitSummaryPage />} />
-      <Route path="/student/quiz/intro" element={<StudentQuizMakerPage />} />
-      <Route path="/student/back-cover" element={<StudentBackCoverPage />} />
-      <Route path="/student/comic/read" element={<StudentComicViewerPage />} />
-      <Route path="/student/mypage" element={<StudentMyPage />} />
-      <Route path="/student/my" element={<Navigate to="/student/mypage" replace />} />
-      <Route path="/student/resources" element={<StudentResourcePage />} />
-      <Route path="/student/dream-garden" element={<StudentDreamGardenPage />} />
+      <Route element={<RequireStudent />}>
+        <Route path="/student/select-unit" element={<StudentUnitSelectPage />} />
+        <Route path="/student/topic" element={<StudentTopicMakerPage />} />
+        <Route path="/student/script" element={<StudentScriptPage />} />
+        <Route path="/student/front-cover" element={<StudentFrontCoverPage />} />
+        <Route path="/student/comic/full" element={<StudentComicFullViewPage />} />
+        <Route path="/student/comic/cut/:cutNumber" element={<StudentComicCutPage />} />
+        <Route path="/student/unit-summary" element={<StudentUnitSummaryPage />} />
+        <Route path="/student/quiz/intro" element={<StudentQuizMakerPage />} />
+        <Route path="/student/back-cover" element={<StudentBackCoverPage />} />
+        <Route path="/student/comic/read" element={<StudentComicViewerPage />} />
+        <Route path="/student/mypage" element={<StudentMyPage />} />
+        <Route path="/student/my" element={<Navigate to="/student/mypage" replace />} />
+        <Route path="/student/resources" element={<StudentResourcePage />} />
+        <Route path="/student/dream-garden" element={<StudentDreamGardenPage />} />
+      </Route>
       <Route path="/book/:slug" element={<SharedComicViewerPage />} />
 
       {/* 관리 LMS 라우트 */}

@@ -24,9 +24,9 @@ export default function HomePage() {
 {/* Header */}
 <header className="fixed top-0 left-0 w-full z-50 bg-white/95 backdrop-blur-md shadow-sm border-b border-gray-100 h-20 md:h-24">
 <div className="max-w-7xl mx-auto px-6 h-full flex justify-between items-center">
-<Link to="/" className="flex items-center gap-3">
+<Link to="/" className="flex items-center gap-3 shrink-0">
 <div className="w-10 h-10 bg-primary text-white flex items-center justify-center font-bold rounded-lg text-lg">TS</div>
-<span className="font-title-md font-extrabold text-2xl tracking-tight text-on-surface">툰스쿨</span>
+<span className="hidden sm:inline font-title-md font-extrabold text-2xl tracking-tight text-on-surface">툰스쿨</span>
 </Link>
 <nav className="hidden xl:flex items-center space-x-10">
 <Link className="text-on-surface text-lg font-bold hover:text-primary transition-colors" to="/">툰스쿨</Link>
@@ -35,16 +35,20 @@ export default function HomePage() {
 <Link className="text-on-surface text-lg font-bold hover:text-primary transition-colors" to="/pwa">PC·태블릿 버전</Link>
 <Link className="text-on-surface text-lg font-bold hover:text-primary transition-colors" to="/faq">궁금해요</Link>
 </nav>
-<div className="hidden md:flex items-center space-x-4">
-<Link 
-    className="bg-[#ff2778] text-white px-8 py-3 rounded-full font-bold text-lg hover:bg-pink-600 transition-colors shadow-sm" 
-    to="/login?redirect=/student/select-unit"
+<div className="ml-auto flex items-center gap-2 md:gap-3">
+<Link
+    className="inline-flex min-h-11 items-center justify-center rounded-full bg-cyan-500 px-4 py-2 text-sm font-extrabold text-white shadow-sm shadow-cyan-500/25 transition-all hover:bg-cyan-600 hover:shadow-md focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-cyan-200 active:bg-cyan-700 md:min-h-12 md:px-7 md:text-lg"
+    to="/login?mode=student&redirect=/student/mypage"
+    aria-label="학생 로그인"
+    title="학생 전용 로그인"
 >
-    툰스쿨
+    학생툰
 </Link>
-<Link 
-    className="bg-[#ff2778] text-white px-8 py-3 rounded-full font-bold text-lg hover:bg-pink-600 transition-colors shadow-sm" 
-    to="/login?redirect=/admin/lms/classes"
+<Link
+    className="inline-flex min-h-11 items-center justify-center rounded-full bg-slate-800 px-4 py-2 text-sm font-extrabold text-white shadow-sm shadow-slate-900/20 transition-all hover:bg-slate-900 hover:shadow-md focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-300 active:bg-slate-950 md:min-h-12 md:px-7 md:text-lg"
+    to="/login?mode=admin&redirect=/admin/lms/classes"
+    aria-label="선생님 및 관리자 로그인"
+    title="선생님기관관리자중간관리자슈퍼관리자 로그인"
 >
     관리 LMS
 </Link>

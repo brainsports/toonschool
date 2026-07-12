@@ -15,6 +15,23 @@ export default function Login() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const { fetchProfile } = useAuth()
+  const loginMode = searchParams.get('mode')
+  const isStudentMode = loginMode === 'student'
+  const isAdminMode = loginMode === 'admin'
+  const adminLmsRoles = ['teacher', 'org_admin', 'middle_admin', 'super_admin']
+
+  const getSafeRedirect = () => {
+    const redirectUrl = searchParams.get('redirect')
+    if (!redirectUrl || !redirectUrl.startsWith('/') || redirectUrl.startsWith('//')) return null
+    return redirectUrl
+  }
+
+  const getAdminHome = (role: string) => {
+    if (role === 'org_admin') return '/admin/org/dashboard'
+    if (role === 'middle_admin') return '/manager/dashboard'
+    if (role === 'super_admin') return '/admin/super/dashboard'
+    return '/admin/lms/classes'
+  }
 
   useEffect(() => {
     const savedId = localStorage.getItem('toonschool_saved_login_id')
@@ -76,7 +93,7 @@ export default function Login() {
 
       if (data.user) {
         const profile = await fetchProfile(data.user.id)
-        const redirectUrl = searchParams.get('redirect')
+        const redirectUrl = getSafeRedirect()
 
         if (profile) {
           // 이용 정지 계정 로그인 차단 (기존 로그인 흐름은 유지, 최소 수정)
@@ -85,12 +102,24 @@ export default function Login() {
             setError('이용이 정지된 계정입니다. 관리자에게 문의해 주세요.')
             return
           }
+          if (isStudentMode && profile.role !== 'student') {
+            await supabase.auth.signOut()
+            setError('학생툰은 학생 계정만 사용할 수 있습니다. 관리 LMS 버튼으로 로그인해 주세요.')
+            return
+          }
+          if (isAdminMode && !adminLmsRoles.includes(profile.role)) {
+            await supabase.auth.signOut()
+            setError('관리 LMS는 선생님 및 관리자 계정만 사용할 수 있습니다. 학생툰 버튼으로 로그인해 주세요.')
+            return
+          }
+          if (isAdminMode && profile.status && profile.status !== 'active') {
+            await supabase.auth.signOut()
+            setError('현재 활성 상태가 아닌 관리자 계정입니다. 관리자에게 문의해 주세요.')
+            return
+          }
           if (profile.role === 'student') {
-            const isExternalUrl = redirectUrl && (redirectUrl.startsWith('http') || redirectUrl.startsWith('//'))
-            
             if (
               redirectUrl && 
-              !isExternalUrl && 
               redirectUrl.startsWith('/student/') && 
               redirectUrl !== '/student/select-unit'
             ) {
@@ -104,15 +133,11 @@ export default function Login() {
             return
           }
 
-          const adminLmsRoles = ['teacher', 'org_admin', 'middle_admin', 'super_admin']
           if (adminLmsRoles.includes(profile.role)) {
             if (!redirectUrl || redirectUrl === '/admin/lms' || redirectUrl === '/admin/lms/classes' || redirectUrl === '/mypage' || redirectUrl === '/') {
-              if (profile.role === 'org_admin') navigate('/admin/org/dashboard')
-              else if (profile.role === 'middle_admin') navigate('/manager/dashboard')
-              else if (profile.role === 'super_admin') navigate('/admin/lms/super')
-              else navigate('/admin/lms/classes')
+              navigate(getAdminHome(profile.role))
             } else if (redirectUrl.startsWith('/student/')) {
-              navigate('/admin/lms/classes')
+              navigate(getAdminHome(profile.role))
             } else {
               navigate(redirectUrl)
             }

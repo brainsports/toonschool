@@ -51,6 +51,13 @@ export default function MiddleAdminLayout() {
   }
 
   const allowedRoles = ['middle_admin', 'super_admin']
+  if (profile.status && profile.status !== 'active') {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f3f4f7' }}>
+        <p style={{ color: '#7c3aed', fontSize: 18, fontWeight: 700 }}>활성 상태가 아닌 계정은 관리 LMS에 접근할 수 없습니다.</p>
+      </div>
+    )
+  }
   if (!allowedRoles.includes(profile.role)) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f3f4f7' }}>
