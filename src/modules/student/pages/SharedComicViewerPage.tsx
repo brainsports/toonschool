@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams } from 'react-router-dom'
-import StudentZoomControl from '../components/layout/StudentZoomControl'
 import { Volume2, VolumeX, ArrowLeft, ArrowRight, BookOpen, MoreVertical, ZoomIn, ZoomOut, Maximize, PlayCircle, Monitor, Copy } from 'lucide-react'
 import { supabase } from '../../../shared/lib/supabase'
 
@@ -682,16 +681,6 @@ export default function SharedComicViewerPage() {
          </div>
       </div>
 
-      <div className="absolute bottom-6 right-6 z-50">
-        <StudentZoomControl
-          scale={(currentZoom) / 100}
-          onZoomIn={() => setZoomPercent(Math.min(300, currentZoom + 10))}
-          onZoomOut={() => setZoomPercent(Math.max(25, currentZoom - 10))}
-          onFitToScreen={() => setZoomPercent(null)}
-          minScale={0.25}
-          maxScale={3.0}
-        />
-      </div>
     </div>
   )
 }
