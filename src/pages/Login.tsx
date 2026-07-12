@@ -24,6 +24,16 @@ export default function Login() {
     }
   }, [])
 
+  // 정지/대기 등 사유를 담아 리다이렉트된 경우 안내문 표시 (민감정보 제외)
+  useEffect(() => {
+    const reason = searchParams.get('reason')
+    if (reason === 'suspended') {
+      setError('이용이 정지된 계정입니다. 관리자에게 문의해 주세요.')
+    } else if (reason === 'pending') {
+      setError('현재 승인 대기 중인 계정입니다.')
+    }
+  }, [searchParams])
+
   const handleLoginIdentifierChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value
     setLoginIdentifier(value)

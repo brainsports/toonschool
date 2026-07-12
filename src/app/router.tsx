@@ -53,6 +53,7 @@ import FAQPage from '../pages/FAQPage'
 
 // 공통 관리자 레이아웃
 import AdminPortalLayout from '../shared/components/AdminPortalLayout'
+import RequireSuperAdmin from '../shared/components/RequireSuperAdmin'
 import AdminLMSPage from '../modules/admin-lms/pages/AdminLMSPage'
 import ClassManagementPage from '../modules/admin-lms/pages/ClassManagementPage'
 import AdminStudentManagementPage from '../modules/admin-lms/pages/StudentManagementPage'
@@ -181,18 +182,20 @@ export default function AppRouter() {
         <Route path="settings" element={<MiddleSettings />} />
       </Route>
 
-      {/* 수퍼관리자 전용 라우트 */}
-      <Route path="/admin/super" element={<SuperAdminLayout />}>
-        <Route index element={<Navigate to="dashboard" replace />} />
-        <Route path="dashboard" element={<SuperDashboard />} />
-        <Route path="members" element={<SuperMemberManagement />} />
-        <Route path="middle-admins" element={<SuperMiddleAdminManagement />} />
-        <Route path="organizations" element={<SuperOrganizationManagement />} />
-        <Route path="teachers" element={<SuperTeacherManagement />} />
-        <Route path="licenses" element={<SuperLicenseManagement />} />
-        <Route path="notifications" element={<SuperNotificationManagement />} />
-        <Route path="resources" element={<SuperResourceManagement />} />
-        <Route path="audit-logs" element={<SuperAuditLogPage />} />
+      {/* 수퍼관리자 전용 라우트 (RequireSuperAdmin 공통 가드로 일괄 보호) */}
+      <Route path="/admin/super" element={<RequireSuperAdmin />}>
+        <Route element={<SuperAdminLayout />}>
+          <Route index element={<Navigate to="dashboard" replace />} />
+          <Route path="dashboard" element={<SuperDashboard />} />
+          <Route path="members" element={<SuperMemberManagement />} />
+          <Route path="middle-admins" element={<SuperMiddleAdminManagement />} />
+          <Route path="organizations" element={<SuperOrganizationManagement />} />
+          <Route path="teachers" element={<SuperTeacherManagement />} />
+          <Route path="licenses" element={<SuperLicenseManagement />} />
+          <Route path="notifications" element={<SuperNotificationManagement />} />
+          <Route path="resources" element={<SuperResourceManagement />} />
+          <Route path="audit-logs" element={<SuperAuditLogPage />} />
+        </Route>
       </Route>
     </Routes>
   )
