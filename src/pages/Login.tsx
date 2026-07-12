@@ -69,6 +69,12 @@ export default function Login() {
         const redirectUrl = searchParams.get('redirect')
 
         if (profile) {
+          // 이용 정지 계정 로그인 차단 (기존 로그인 흐름은 유지, 최소 수정)
+          if (profile.status === 'suspended') {
+            await supabase.auth.signOut()
+            setError('이용이 정지된 계정입니다. 관리자에게 문의해 주세요.')
+            return
+          }
           if (profile.role === 'student') {
             const isExternalUrl = redirectUrl && (redirectUrl.startsWith('http') || redirectUrl.startsWith('//'))
             

@@ -15,6 +15,7 @@ import SuperLicenseManagement from '../modules/admin-super/pages/LicenseManageme
 import SuperNotificationManagement from '../modules/admin-super/pages/NotificationManagement'
 import SuperResourceManagement from '../modules/admin-super/pages/ResourceManagement'
 import SuperAuditLogPage from '../modules/admin-super/pages/AuditLogPage'
+import SuperMemberManagement from '../modules/admin-super/pages/MemberManagement'
 import CenterAdminLayout from '../modules/center-admin/components/CenterAdminLayout'
 import CenterAdminDashboard from '../modules/center-admin/pages/CenterAdminDashboard'
 import StudentManagementPageLegacy from '../modules/center-admin/pages/StudentManagementPage'
@@ -184,6 +185,7 @@ export default function AppRouter() {
       <Route path="/admin/super" element={<SuperAdminLayout />}>
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<SuperDashboard />} />
+        <Route path="members" element={<SuperMemberManagement />} />
         <Route path="middle-admins" element={<SuperMiddleAdminManagement />} />
         <Route path="organizations" element={<SuperOrganizationManagement />} />
         <Route path="teachers" element={<SuperTeacherManagement />} />

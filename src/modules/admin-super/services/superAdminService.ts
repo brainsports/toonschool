@@ -745,7 +745,98 @@ export const superAdminService = {
     const { data: publicData } = supabase.storage
       .from('admin-resources')
       .getPublicUrl(filePath);
-      
+
     return publicData.publicUrl;
+  },
+
+  // ===== 회원 관리 (super_admin) =====
+  // 모든 조회/변경은 super_admin 전용 SECURITY DEFINER RPC 로 처리.
+  // 삭제는 service role 을 사용하는 Edge Function(admin-manage-user)으로 처리.
+  async getMembers(params: {
+    search?: string
+    role?: string
+    status?: string
+    sort?: string
+    page?: number
+    pageSize?: number
+  }) {
+    const { data, error } = await supabase.rpc('get_super_admin_members', {
+      p_search: params.search ?? '',
+      p_role: params.role ?? '',
+      p_status: params.status ?? '',
+      p_sort: params.sort ?? 'recent',
+      p_page: params.page ?? 1,
+      p_page_size: params.pageSize ?? 20,
+    })
+    if (error) throw error
+    // RPC 가 권한 오류를 { success:false, code:403 } 으로 반환할 수 있음
+    if (data && data.success === false) {
+      throw new Error(data.error || '회원 목록을 불러올 수 없습니다.')
+    }
+    return data
+  },
+
+  async getMemberDetail(userId: string) {
+    const { data, error } = await supabase.rpc('get_super_admin_member_detail', {
+      p_user_id: userId,
+    })
+    if (error) throw error
+    if (data && data.success === false) {
+      throw new Error(data.error || '회원 정보를 불러올 수 없습니다.')
+    }
+    return data?.member ?? null
+  },
+
+  async updateMemberRole(targetId: string, newRole: string, organizationId?: string | null) {
+    const { data, error } = await supabase.rpc('update_member_role', {
+      p_target_id: targetId,
+      p_new_role: newRole,
+      p_organization_id: organizationId ?? null,
+    })
+    if (error) throw error
+    if (data && data.success === false) {
+      throw new Error(data.error || '역할 변경에 실패했습니다.')
+    }
+    return data
+  },
+
+  async updateMemberStatus(targetId: string, newStatus: string) {
+    const { data, error } = await supabase.rpc('update_member_status', {
+      p_target_id: targetId,
+      p_new_status: newStatus,
+    })
+    if (error) throw error
+    if (data && data.success === false) {
+      throw new Error(data.error || '상태 변경에 실패했습니다.')
+    }
+    return data
+  },
+
+  async deleteMember(targetUserId: string, confirmEmail: string) {
+    const { data, error } = await supabase.functions.invoke('admin-manage-user', {
+      body: { targetUserId, confirmEmail },
+    })
+    if (error) {
+      const errorMessage = await extractFunctionError(error)
+      throw new Error(errorMessage)
+    }
+    if (data?.error) {
+      throw new Error(data.error)
+    }
+    return data
+  },
+
+  // 역할 변경 모달의 기관 선택용 경량 조회
+  async getOrganizationsForSelect() {
+    const { data, error } = await supabase
+      .from('organizations')
+      .select('id, name')
+      .neq('status', 'deleted')
+      .order('name', { ascending: true })
+    if (error) {
+      console.error('[회원관리] 기관 목록 조회 실패:', error)
+      return []
+    }
+    return data || []
   }
 }

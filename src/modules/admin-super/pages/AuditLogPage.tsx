@@ -25,6 +25,9 @@ export default function AuditLogPage() {
     switch (action) {
       case 'ASSIGN_ROLE': return '권한 배정'
       case 'UPDATE_MIDDLE_ADMIN': return '중간관리자 수정'
+      case 'UPDATE_MEMBER_ROLE': return '회원 역할 변경'
+      case 'UPDATE_MEMBER_STATUS': return '회원 상태 변경'
+      case 'DELETE_MEMBER': return '회원 삭제'
       case 'DELETE_RESOURCE': return '자료 삭제'
       default: return action
     }
@@ -74,6 +77,15 @@ export default function AuditLogPage() {
                     )}
                     {log.action === 'UPDATE_MIDDLE_ADMIN' && log.after_data && (
                       <div>이용권: {log.after_data.license_total}개</div>
+                    )}
+                    {log.action === 'UPDATE_MEMBER_ROLE' && (
+                      <div>역할: {log.before_data?.role} → {log.after_data?.role}</div>
+                    )}
+                    {log.action === 'UPDATE_MEMBER_STATUS' && (
+                      <div>상태: {log.before_data?.status} → {log.after_data?.status}</div>
+                    )}
+                    {log.action === 'DELETE_MEMBER' && log.before_data && (
+                      <div>삭제: {log.before_data.email}</div>
                     )}
                     {log.action === 'DELETE_RESOURCE' && (
                       <div>자료 ID: {log.target_id}</div>

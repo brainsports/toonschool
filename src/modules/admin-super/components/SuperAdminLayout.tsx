@@ -11,7 +11,8 @@ import {
   History as HistoryIcon,
   LogOut,
   Menu,
-  ShieldCheck
+  ShieldCheck,
+  UserCog
 } from 'lucide-react'
 
 export default function SuperAdminLayout() {
@@ -30,6 +31,7 @@ export default function SuperAdminLayout() {
 
   const menuItems = [
     { icon: LayoutDashboard, label: '대시보드', path: '/admin/super/dashboard' },
+    { icon: UserCog, label: '회원 관리', path: '/admin/super/members' },
     { icon: ShieldCheck, label: '중간관리자 관리', path: '/admin/super/middle-admins' },
     { icon: Building2, label: '기관 관리', path: '/admin/super/organizations' },
     { icon: Users, label: '선생님 관리', path: '/admin/super/teachers' },
