@@ -75,3 +75,4 @@ EXCEPTION WHEN OTHERS THEN
     RETURN json_build_object('success', false, 'error', SQLERRM);
 END;
 $$;
+GRANT EXECUTE ON FUNCTION public.delete_middle_admin_notification(UUID) TO authenticated;
