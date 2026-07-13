@@ -473,11 +473,14 @@ export async function getGardenPlacements(studentId: string): Promise<GardenPlac
 export async function saveGardenPlacement(input: SaveGardenPlacementInput): Promise<GardenPlacement> {
   const garden = await getOrCreateStudentGarden(input.studentId)
 
+  // 중복 판정은 학생이 실제로 획득한 '개별 보유 아이템 인스턴스'(student_item_id) 기준.
+  // 같은 아이템(item_id)을 여러 개 획득해도 각각 별도 배치가 생성되어야 한다.
+  // DB의 unique(garden_id, student_item_id) 제약과 일치.
   const { data: existing, error: checkError } = await supabase
     .from('garden_placements')
     .select('*, item:items(*), student_item:student_items(*)')
     .eq('garden_id', garden.id)
-    .eq('item_id', input.itemId)
+    .eq('student_item_id', input.studentItemId)
     .maybeSingle()
 
   if (checkError) {
@@ -497,6 +500,7 @@ export async function saveGardenPlacement(input: SaveGardenPlacementInput): Prom
       x: input.x ?? 40,
       y: input.y ?? 40,
       scale: input.scale ?? 1,
+      rotation: input.rotation ?? 0,
       z_index: input.zIndex ?? 1,
       is_visible: true,
     })
@@ -504,7 +508,7 @@ export async function saveGardenPlacement(input: SaveGardenPlacementInput): Prom
     .single()
 
   if (error) {
-    console.error('[dreamGardenService] getPlacements failed:', error)
+    console.error('[dreamGardenService] saveGardenPlacement failed:', error)
     throw error
   }
   return data as GardenPlacement
@@ -515,6 +519,7 @@ export async function updateGardenPlacement(input: UpdateGardenPlacementInput): 
   if (typeof input.x === 'number') payload.x = input.x
   if (typeof input.y === 'number') payload.y = input.y
   if (typeof input.scale === 'number') payload.scale = input.scale
+  if (typeof input.rotation === 'number') payload.rotation = input.rotation
   if (typeof input.zIndex === 'number') payload.z_index = input.zIndex
   if (typeof input.isVisible === 'boolean') payload.is_visible = input.isVisible
 
@@ -526,7 +531,7 @@ export async function updateGardenPlacement(input: UpdateGardenPlacementInput): 
     .single()
 
   if (error) {
-    console.error('[dreamGardenService] getPlacements failed:', error)
+    console.error('[dreamGardenService] updateGardenPlacement failed:', error)
     throw error
   }
   return data as GardenPlacement

@@ -1,21 +1,20 @@
-import { useEffect, useMemo, useState, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
-  Armchair,
   ChevronDown,
-  CloudSun,
   Flower2,
   Gift,
-  Gem,
   Leaf,
   Loader2,
   Lock,
-  Rabbit,
+  RefreshCw,
+  RotateCcw,
+  RotateCw,
   Sparkles,
   Sprout,
-  TreePine,
   WandSparkles,
-  Waves,
   X,
+  ZoomIn,
+  ZoomOut,
 } from 'lucide-react'
 import StudentPageShell from '../components/layout/StudentPageShell'
 import { useAuth } from '../../../shared/contexts/AuthContext'
@@ -32,38 +31,97 @@ import {
   updateGardenPlacement,
 } from '../services/dreamGardenService'
 
-type GardenSlotId =
-  | 'center_fountain'
-  | 'left_flowerbed'
-  | 'top_tree'
-  | 'right_animal'
-  | 'bottom_bench'
-  | 'pond'
-  | 'path_decoration'
-  | 'sky_magic'
+// ───────────────────────────────────────────────────────────
+// 좌표는 정원 캔버스(slots 컨테이너) 기준 비율 좌표(0~100)로 관리.
+// DB의 x,y 컬럼을 그대로 비율값으로 사용한다(픽셀 아님).
+// ───────────────────────────────────────────────────────────
+const BOUND_X_MIN = 2
+const BOUND_X_MAX = 96
+const BOUND_Y_MIN = 4
+const BOUND_Y_MAX = 92
 
-type GardenSlot = {
-  id: GardenSlotId
-  label: string
-  category: string
-  x: number
-  y: number
-  size: 'sm' | 'md' | 'lg'
-  icon: typeof Sprout
-  zIndex: number
+const SCALE_MIN = 0.5
+const SCALE_MAX = 2.0
+const SCALE_STEP = 0.1
+const ROTATION_STEP = 15
+const HIGHLIGHT_DURATION = 2600
+
+function clamp(value: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, value))
 }
 
-const gardenSlots: GardenSlot[] = [
-  { id: 'sky_magic', label: '하늘 장식', category: 'sky', x: 73, y: 15, size: 'sm', icon: CloudSun, zIndex: 7 },
-  { id: 'top_tree', label: '큰 나무', category: 'nature', x: 24, y: 24, size: 'lg', icon: TreePine, zIndex: 3 },
-  { id: 'pond', label: '연못', category: 'nature', x: 73, y: 39, size: 'lg', icon: Waves, zIndex: 2 },
-  { id: 'left_flowerbed', label: '꽃밭', category: 'nature', x: 20, y: 61, size: 'md', icon: Flower2, zIndex: 5 },
-  { id: 'center_fountain', label: '중앙 장식', category: 'decor', x: 49, y: 54, size: 'lg', icon: Gem, zIndex: 6 },
-  { id: 'right_animal', label: '동물 친구', category: 'animal', x: 82, y: 66, size: 'md', icon: Rabbit, zIndex: 7 },
-  { id: 'path_decoration', label: '길 장식', category: 'decor', x: 38, y: 76, size: 'sm', icon: Sparkles, zIndex: 8 },
-  { id: 'bottom_bench', label: '벤치', category: 'decor', x: 63, y: 80, size: 'md', icon: Armchair, zIndex: 8 },
-]
+function round1(value: number) {
+  return Math.round(value * 10) / 10
+}
 
+// 데스크톱에서 왼쪽 정보 패널이 정원 위를 덮는 폭(px).
+// 모바일(<=860px)에서는 패널이 정원 위쪽에 별도 영역으로 배치되므로 0.
+function getOverlayWidthPx() {
+  if (typeof window === 'undefined') return 0
+  const w = window.innerWidth
+  if (w <= 860) return 0
+  return w >= 1181 ? 310 : 300
+}
+
+// 왼쪽 패널에 가려지지 않도록 보장할 최소 x(%).
+function computeSafeMinXPercent(containerWidthPx: number) {
+  const overlay = getOverlayWidthPx()
+  if (overlay <= 0 || containerWidthPx <= 0) return BOUND_X_MIN
+  return Math.min(40, ((overlay + 16) / containerWidthPx) * 100)
+}
+
+// 새로 배치할 아이템의 안전한 위치 선정.
+// getAutoGardenPlacement의 테마 좌표를 기준점으로 삼고,
+// 안전 영역 안으로 클램프한 뒤 기존 배치와 가장 멀리 떨어진 후보를 고른다.
+function findAutoPosition(
+  item: GardenPlacement['item'],
+  existing: { x: number; y: number }[],
+  containerWidthPx: number
+) {
+  const base = getAutoGardenPlacement(item)
+  const safeMinX = Math.max(computeSafeMinXPercent(containerWidthPx), 30)
+  const baseX = base.x ?? 40
+  const baseY = base.y ?? 50
+
+  const candidates: { x: number; y: number }[] = []
+  const offsets = [
+    [0, 0],
+    [9, 0],
+    [-9, 0],
+    [0, 9],
+    [0, -9],
+    [16, 8],
+    [-16, 8],
+    [16, -8],
+    [-16, -8],
+    [24, 0],
+    [-24, 0],
+    [0, 18],
+    [0, -18],
+  ]
+  for (const [dx, dy] of offsets) {
+    candidates.push({ x: baseX + dx, y: baseY + dy })
+  }
+
+  let best = { x: clamp(baseX, safeMinX, BOUND_X_MAX - 2), y: clamp(baseY, BOUND_Y_MIN + 6, BOUND_Y_MAX - 4) }
+  let bestScore = -1
+  for (const c of candidates) {
+    const x = clamp(c.x, safeMinX, BOUND_X_MAX - 2)
+    const y = clamp(c.y, BOUND_Y_MIN + 6, BOUND_Y_MAX - 4)
+    let nearest = Infinity
+    for (const p of existing) {
+      const d = Math.hypot(p.x - x, p.y - y)
+      if (d < nearest) nearest = d
+    }
+    if (nearest === Infinity) nearest = 60
+    if (nearest > bestScore) {
+      bestScore = nearest
+      best = { x, y }
+    }
+  }
+
+  return { x: best.x, y: best.y, scale: base.scale ?? 1, zIndex: base.zIndex ?? 5 }
+}
 
 function getRewardMessage(result: RewardResult) {
   if (result.status === 'already_claimed') return '이미 받은 보상이에요.'
@@ -89,31 +147,31 @@ function ItemImage({ item, imgClassName, fallbackClassName }: { item?: StudentIt
   return <span className={fallbackClassName}>{getItemEmoji(item)}</span>
 }
 
-function getNearestSlot(placement: GardenPlacement, usedSlots: Set<GardenSlotId>) {
-  const availableSlots = gardenSlots.filter((slot) => !usedSlots.has(slot.id))
-  const slots = availableSlots.length > 0 ? availableSlots : gardenSlots
+type TransformPatch = { scale?: number; rotation?: number }
 
-  return slots.reduce((nearest, slot) => {
-    const nearestDistance = Math.hypot(nearest.x - placement.x, nearest.y - placement.y)
-    const slotDistance = Math.hypot(slot.x - placement.x, slot.y - placement.y)
-    return slotDistance < nearestDistance ? slot : nearest
-  }, slots[0])
-}
-
-function DraggablePlacement({
-  slot,
+function GardenPlacementItem({
   placement,
-  onSave,
+  isSelected,
+  isHighlighted,
+  onSelect,
+  onDragSave,
+  onUpdateTransform,
+  registerElement,
 }: {
-  slot: GardenSlot
   placement: GardenPlacement
-  onSave: (id: string, x: number, y: number) => Promise<void>
+  isSelected: boolean
+  isHighlighted: boolean
+  onSelect: (id: string | null) => void
+  onDragSave: (id: string, x: number, y: number) => Promise<void>
+  onUpdateTransform: (id: string, patch: TransformPatch) => void
+  registerElement: (id: string, el: HTMLElement | null) => void
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [isDragging, setIsDragging] = useState(false)
   const [pos, setPos] = useState({ x: placement.x, y: placement.y })
   const startPos = useRef({ x: 0, y: 0 })
   const startPointer = useRef({ x: 0, y: 0 })
+  const movedRef = useRef(false)
 
   useEffect(() => {
     if (!isDragging) {
@@ -121,12 +179,16 @@ function DraggablePlacement({
     }
   }, [placement.x, placement.y, isDragging])
 
+  const scale = clamp(placement.scale ?? 1, SCALE_MIN, SCALE_MAX)
+  const rotation = placement.rotation ?? 0
+
   const handlePointerDown = (e: React.PointerEvent) => {
     if (e.button !== 0 && e.pointerType === 'mouse') return
     const el = containerRef.current
     if (!el) return
     el.setPointerCapture(e.pointerId)
     setIsDragging(true)
+    movedRef.current = false
     startPos.current = { ...pos }
     startPointer.current = { x: e.clientX, y: e.clientY }
   }
@@ -136,16 +198,20 @@ function DraggablePlacement({
     const parent = containerRef.current?.parentElement
     if (!parent) return
     const rect = parent.getBoundingClientRect()
-    
+
     const dxPercent = ((e.clientX - startPointer.current.x) / rect.width) * 100
     const dyPercent = ((e.clientY - startPointer.current.y) / rect.height) * 100
-    
-    let newX = startPos.current.x + dxPercent
-    let newY = startPos.current.y + dyPercent
-    
-    newX = Math.max(2, Math.min(94, newX))
-    newY = Math.max(3, Math.min(92, newY))
-    
+
+    const newX = clamp(startPos.current.x + dxPercent, BOUND_X_MIN, BOUND_X_MAX)
+    const newY = clamp(startPos.current.y + dyPercent, BOUND_Y_MIN, BOUND_Y_MAX)
+
+    if (
+      Math.abs(e.clientX - startPointer.current.x) >= 3 ||
+      Math.abs(e.clientY - startPointer.current.y) >= 3
+    ) {
+      movedRef.current = true
+    }
+
     setPos({ x: newX, y: newY })
   }
 
@@ -154,53 +220,115 @@ function DraggablePlacement({
     setIsDragging(false)
     const el = containerRef.current
     if (el) el.releasePointerCapture(e.pointerId)
-    
-    const pxDx = Math.abs(e.clientX - startPointer.current.x)
-    const pxDy = Math.abs(e.clientY - startPointer.current.y)
-    if (pxDx < 3 && pxDy < 3) {
-      setPos(startPos.current)
+
+    // 거의 움직이지 않았다면 '클릭'으로 간주 → 선택 토글.
+    if (!movedRef.current) {
+      onSelect(isSelected ? null : placement.id)
       return
     }
-    
+
     try {
-      await onSave(placement.id, pos.x, pos.y)
-    } catch (err) {
+      await onDragSave(placement.id, pos.x, pos.y)
+    } catch {
       setPos(startPos.current)
     }
   }
 
+  const changeScale = (delta: number) => {
+    const next = clamp(round1(scale + delta), SCALE_MIN, SCALE_MAX)
+    onUpdateTransform(placement.id, { scale: next })
+  }
+  const changeRotation = (delta: number) => {
+    onUpdateTransform(placement.id, { rotation: rotation + delta })
+  }
+  const resetTransform = () => {
+    onUpdateTransform(placement.id, { scale: 1, rotation: 0 })
+  }
+
+  const zIndex = isDragging ? 200 : isSelected ? 120 : isHighlighted ? 110 : placement.z_index || 5
+
   return (
     <div
-      ref={containerRef}
-      className={`dream-garden-slot dream-garden-slot-${slot.size} dream-garden-slot-filled`}
+      ref={(el) => {
+        containerRef.current = el
+        registerElement(placement.id, el)
+      }}
+      className={[
+        'dg-item',
+        isSelected ? 'dg-item-selected' : '',
+        isHighlighted ? 'dg-item-highlighted' : '',
+        isDragging ? 'dg-item-dragging' : '',
+      ].join(' ')}
       style={{
         left: `${pos.x}%`,
         top: `${pos.y}%`,
-        zIndex: isDragging ? 100 : slot.zIndex,
+        zIndex,
         touchAction: 'none',
         userSelect: 'none',
         cursor: isDragging ? 'grabbing' : 'grab',
-        transition: isDragging ? 'none' : 'left 0.3s ease, top 0.3s ease, transform 0.2s, filter 0.2s',
-        transform: isDragging ? 'scale(1.05)' : 'none',
-        filter: isDragging ? 'drop-shadow(0 8px 16px rgba(0,0,0,0.2)) drop-shadow(0 0 2px rgba(255,255,255,0.5))' : 'none',
       }}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerUp}
+      role="button"
       tabIndex={0}
-      aria-label={placement.item?.name ?? slot.label}
-      title={placement.item?.name ?? slot.label}
+      aria-label={placement.item?.name ?? '정원 아이템'}
+      title={placement.item?.name ?? ''}
     >
-      <div className="dream-garden-slot-ground" />
-      <div className="dream-garden-slot-object" draggable={false}>
-        <ItemImage
-          item={placement.item}
-          imgClassName="dream-garden-item-img pointer-events-none"
-          fallbackClassName="dream-garden-item-emoji pointer-events-none"
-        />
-        <span className="dream-garden-item-name pointer-events-none">{placement.item?.name ?? slot.label}</span>
+      <div className="dg-item-visual" style={{ transform: `rotate(${rotation}deg) scale(${scale})` }}>
+        <div className={isHighlighted ? 'dg-item-bob dg-item-bob-active' : 'dg-item-bob'}>
+          {isHighlighted && <span className="dg-highlight-ring" aria-hidden="true" />}
+          <div className="dream-garden-slot-object" draggable={false}>
+            <ItemImage
+              item={placement.item}
+              imgClassName="dream-garden-item-img pointer-events-none"
+              fallbackClassName="dream-garden-item-emoji pointer-events-none"
+            />
+            <span className="dream-garden-item-name pointer-events-none">{placement.item?.name ?? '아이템'}</span>
+          </div>
+        </div>
       </div>
+
+      {isHighlighted && (
+        <span className="dg-here-bubble" aria-hidden="true">
+          여기에 있어요!
+        </span>
+      )}
+
+      {isSelected && !isDragging && (
+        <div
+          className="dg-edit-popover"
+          onPointerDown={(e) => e.stopPropagation()}
+          role="toolbar"
+          aria-label={`${placement.item?.name ?? '아이템'} 편집`}
+        >
+          <div className="dg-edit-head">
+            <span className="dg-edit-name">{placement.item?.name ?? '아이템'}</span>
+            <span className="dg-edit-percent">{Math.round(scale * 100)}%</span>
+          </div>
+          <div className="dg-edit-row">
+            <button type="button" className="dg-edit-btn" onClick={() => changeScale(-SCALE_STEP)} aria-label="작게" title="작게">
+              <ZoomOut />
+            </button>
+            <button type="button" className="dg-edit-btn" onClick={() => changeScale(SCALE_STEP)} aria-label="크게" title="크게">
+              <ZoomIn />
+            </button>
+            <button type="button" className="dg-edit-btn" onClick={() => changeRotation(-ROTATION_STEP)} aria-label="왼쪽으로 회전" title="왼쪽 회전">
+              <RotateCcw />
+            </button>
+            <button type="button" className="dg-edit-btn" onClick={() => changeRotation(ROTATION_STEP)} aria-label="오른쪽으로 회전" title="오른쪽 회전">
+              <RotateCw />
+            </button>
+            <button type="button" className="dg-edit-btn dg-edit-btn-reset" onClick={resetTransform} aria-label="크기와 회전 초기화" title="초기화">
+              <RefreshCw />
+            </button>
+            <button type="button" className="dg-edit-btn dg-edit-btn-close" onClick={() => onSelect(null)} aria-label="선택 해제" title="닫기">
+              <X />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -217,17 +345,67 @@ export default function StudentDreamGardenPage() {
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isAllItemsModalOpen, setIsAllItemsModalOpen] = useState(false)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [highlightId, setHighlightId] = useState<string | null>(null)
+
+  const slotsContainerRef = useRef<HTMLDivElement>(null)
+  const elementRefs = useRef<Map<string, HTMLElement>>(new Map())
+  const highlightTimer = useRef<number | null>(null)
+  const messageTimer = useRef<number | null>(null)
+  const transformSaveTimers = useRef<Record<string, number>>({})
+  const pendingTransforms = useRef<Record<string, TransformPatch>>({})
+
+  function showMessage(next: string | null, duration = 2000) {
+    setMessage(next)
+    if (messageTimer.current) window.clearTimeout(messageTimer.current)
+    if (next && duration > 0) {
+      messageTimer.current = window.setTimeout(() => setMessage(null), duration)
+    }
+  }
+
+  function registerElement(id: string, el: HTMLElement | null) {
+    if (el) {
+      elementRefs.current.set(id, el)
+    } else {
+      elementRefs.current.delete(id)
+    }
+  }
+
+  function triggerHighlight(placementId: string) {
+    setHighlightId(placementId)
+    if (highlightTimer.current) window.clearTimeout(highlightTimer.current)
+    highlightTimer.current = window.setTimeout(() => setHighlightId(null), HIGHLIGHT_DURATION)
+  }
+
+  function locatePlacement(studentItemId: string, itemId: string) {
+    setIsAllItemsModalOpen(false)
+    // 1) 클릭한 획득 기록과 동일한 인스턴스(student_item_id) 우선 탐색.
+    let target = placements.find((p) => p.student_item_id === studentItemId)
+    // 2) 없다면 같은 종류(item_id)의 배치 중 첫 번째.
+    if (!target) {
+      target = placements.find((p) => p.item_id === itemId)
+    }
+    if (!target) {
+      showMessage('아직 정원에 배치되지 않은 아이템이에요.')
+      return
+    }
+
+    const el = elementRefs.current.get(target.id)
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' })
+    }
+    setSelectedId(null)
+    triggerHighlight(target.id)
+  }
 
   async function handleSavePosition(placementId: string, x: number, y: number) {
-    setMessage('위치 저장 중...')
+    showMessage('위치 저장 중...', 0)
     try {
       await updateGardenPlacement({ placementId, x, y })
-      setMessage('위치를 저장했어요.')
-      setTimeout(() => setMessage(null), 2000)
-      
       setPlacements((prev) =>
         prev.map((p) => (p.id === placementId ? { ...p, x, y } : p))
       )
+      showMessage('위치를 저장했어요.')
     } catch (err) {
       setError('위치를 저장하지 못했어요. 다시 옮겨 주세요.')
       setTimeout(() => setError(null), 3000)
@@ -235,33 +413,42 @@ export default function StudentDreamGardenPage() {
     }
   }
 
-  const recentItems = useMemo(
-    () =>
-      [...studentItems]
-        .sort((a, b) => {
-          const aTime = new Date(a.acquired_at || a.created_at).getTime()
-          const bTime = new Date(b.acquired_at || b.created_at).getTime()
-          return bTime - aTime
-        })
-        .slice(0, 3),
-    [studentItems]
-  )
+  function handleUpdateTransform(placementId: string, patch: TransformPatch) {
+    setPlacements((prev) =>
+      prev.map((p) => (p.id === placementId ? { ...p, ...patch } : p))
+    )
+    // 크기·회전을 연달아 바꿔도 누락 없이 한 번에 저장하도록 patch를 병합한다.
+    pendingTransforms.current[placementId] = {
+      ...pendingTransforms.current[placementId],
+      ...patch,
+    }
+    showMessage('저장 중...', 0)
 
-  const slotPlacements = useMemo(() => {
-    const usedSlots = new Set<GardenSlotId>()
-    const map = new Map<GardenSlotId, GardenPlacement>()
-
-    placements
-      .filter((placement) => placement.is_visible !== false)
-      .sort((a, b) => a.z_index - b.z_index)
-      .forEach((placement) => {
-        const slot = getNearestSlot(placement, usedSlots)
-        usedSlots.add(slot.id)
-        map.set(slot.id, placement)
-      })
-
-    return map
-  }, [placements])
+    if (transformSaveTimers.current[placementId]) {
+      window.clearTimeout(transformSaveTimers.current[placementId])
+    }
+    transformSaveTimers.current[placementId] = window.setTimeout(async () => {
+      const pending = pendingTransforms.current[placementId] ?? {}
+      delete pendingTransforms.current[placementId]
+      try {
+        const updated = await updateGardenPlacement({ placementId, ...pending })
+        setPlacements((prev) =>
+          prev.map((p) =>
+            p.id === placementId
+              ? { ...p, scale: updated.scale, rotation: updated.rotation, updated_at: updated.updated_at }
+              : p
+          )
+        )
+        showMessage('저장했어요.')
+      } catch (err) {
+        setError('크기·회전 저장에 실패했어요. 다시 시도해 주세요.')
+        setTimeout(() => setError(null), 3000)
+        void loadGardenData()
+      } finally {
+        delete transformSaveTimers.current[placementId]
+      }
+    }, 450)
+  }
 
   async function loadGardenData() {
     if (!studentId) {
@@ -279,31 +466,62 @@ export default function StudentDreamGardenPage() {
         getGardenPlacements(studentId),
       ])
 
-      const unplacedAurora = itemsData.find(
-        (si) => si.item?.code === 'aurora_tree' && !placementsData.some((p) => p.item_id === si.item_id)
-      )
+      const containerWidthPx =
+        slotsContainerRef.current?.getBoundingClientRect().width ??
+        (typeof window !== 'undefined' ? window.innerWidth : 1024)
+      const safeMinX = computeSafeMinXPercent(containerWidthPx)
 
-      if (unplacedAurora && unplacedAurora.item?.is_placeable) {
-        const usedSlots = new Set<GardenSlotId>()
-        placementsData.forEach((p) => {
-          if (p.is_visible !== false) {
-            usedSlots.add(getNearestSlot(p, usedSlots).id)
-          }
-        })
-
-        if (!usedSlots.has('top_tree')) {
+      // ── 1) 기존 배치 보정: 화면 밖 / 왼쪽 패널 뒤에 가려진 좌표를 안전 영역으로. ──
+      const corrected: GardenPlacement[] = []
+      for (const p of placementsData) {
+        let x = p.x
+        let y = p.y
+        let changed = false
+        if (x < BOUND_X_MIN || x > BOUND_X_MAX) {
+          x = clamp(x, BOUND_X_MIN, BOUND_X_MAX)
+          changed = true
+        }
+        if (y < BOUND_Y_MIN || y > BOUND_Y_MAX) {
+          y = clamp(y, BOUND_Y_MIN, BOUND_Y_MAX)
+          changed = true
+        }
+        if (!changed && x < safeMinX) {
+          x = safeMinX + 1
+          changed = true
+        }
+        if (changed) {
           try {
-            const placementInfo = getAutoGardenPlacement(unplacedAurora.item)
-            const newPlacement = await saveGardenPlacement({
-              studentId,
-              studentItemId: unplacedAurora.id,
-              itemId: unplacedAurora.item_id,
-              ...placementInfo,
-            })
-            placementsData = [...placementsData, newPlacement]
-          } catch (err) {
-            console.error('[StudentDreamGardenPage] aurora tree recovery failed:', err)
+            const updated = await updateGardenPlacement({ placementId: p.id, x, y })
+            corrected.push(updated)
+          } catch {
+            corrected.push({ ...p, x, y })
           }
+        } else {
+          corrected.push(p)
+        }
+      }
+      placementsData = corrected
+
+      // ── 2) 보유 아이템 중 배치가 없는 것을 개별 인스턴스로 자동 배치. ──
+      const placedInstanceIds = new Set(placementsData.map((p) => p.student_item_id))
+      const toPlace = itemsData.filter(
+        (si) => si.item?.is_placeable && !placedInstanceIds.has(si.id)
+      )
+      for (const si of toPlace) {
+        try {
+          const pos = findAutoPosition(si.item, placementsData, containerWidthPx)
+          const created = await saveGardenPlacement({
+            studentId,
+            studentItemId: si.id,
+            itemId: si.item_id,
+            x: pos.x,
+            y: pos.y,
+            scale: pos.scale,
+            zIndex: pos.zIndex,
+          })
+          placementsData = [...placementsData, created]
+        } catch (err) {
+          // 한 건 실패해도 나머지는 계속 진행.
         }
       }
 
@@ -311,7 +529,6 @@ export default function StudentDreamGardenPage() {
       setStudentItems(itemsData)
       setPlacements(placementsData)
     } catch (err) {
-      console.error('[StudentDreamGardenPage] load failed:', err)
       setError('정원 정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.')
     } finally {
       setIsLoading(false)
@@ -322,17 +539,32 @@ export default function StudentDreamGardenPage() {
     if (!authLoading) {
       void loadGardenData()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, studentId])
 
   useEffect(() => {
+    return () => {
+      if (highlightTimer.current) window.clearTimeout(highlightTimer.current)
+      if (messageTimer.current) window.clearTimeout(messageTimer.current)
+      for (const id of Object.keys(transformSaveTimers.current)) {
+        window.clearTimeout(transformSaveTimers.current[id])
+      }
+    }
+  }, [])
+
+  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isAllItemsModalOpen) {
-        setIsAllItemsModalOpen(false)
+      if (e.key === 'Escape') {
+        if (isAllItemsModalOpen) {
+          setIsAllItemsModalOpen(false)
+        } else if (selectedId) {
+          setSelectedId(null)
+        }
       }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isAllItemsModalOpen])
+  }, [isAllItemsModalOpen, selectedId])
 
   useEffect(() => {
     if (isAllItemsModalOpen) {
@@ -352,25 +584,43 @@ export default function StudentDreamGardenPage() {
 
     try {
       const result = await action()
-      setMessage(getRewardMessage(result))
+      showMessage(getRewardMessage(result))
       await loadGardenData()
     } catch (err) {
-      console.error('[StudentDreamGardenPage] reward failed:', err)
       setError('보상을 받는 중 문제가 생겼어요.')
     } finally {
       setIsWorking(false)
     }
   }
 
+  const recentItems = useMemo(
+    () =>
+      [...studentItems]
+        .sort((a, b) => {
+          const aTime = new Date(a.acquired_at || a.created_at).getTime()
+          const bTime = new Date(b.acquired_at || b.created_at).getTime()
+          return bTime - aTime
+        })
+        .slice(0, 3),
+    [studentItems]
+  )
+
   const totalItemCount = studentItems.reduce((sum, item) => sum + item.quantity, 0)
   const placedCount = placements.length
+  const ownedKindCount = studentItems.length
+
+  const handleBackgroundPointerDown = (e: React.PointerEvent) => {
+    if (e.target === e.currentTarget) {
+      setSelectedId(null)
+    }
+  }
 
   return (
     <StudentPageShell bgVariant="pastel" maxWidth="full">
       <main className="dream-garden-page">
         <section className="dream-garden-stage" aria-label="나의 꿈의 정원">
 
-          {/* ── 배경 이미지 (Stitch 시안 임시 배경) ── */}
+          {/* ── 배경 이미지 ── */}
           <div className="dg-background-image" />
 
           {/* ── 토스트 알림 ── */}
@@ -389,7 +639,7 @@ export default function StudentDreamGardenPage() {
 
           {/* ── 왼쪽 정보 오버레이 ── */}
           <aside className="dream-garden-overlay dream-garden-overlay-left" aria-label="정원 정보">
-            {/* ── UI 레이어: 제목 패널 ── */}
+            {/* ── 제목 패널 ── */}
             <div className="dream-garden-title">
               <div className="dg-title-badge">
                 <Sprout className="w-4 h-4" />
@@ -419,12 +669,12 @@ export default function StudentDreamGardenPage() {
                 <div className="dg-progress-track">
                   <div
                     className="dg-progress-fill"
-                    style={{ width: `${Math.min(100, (placedCount / gardenSlots.length) * 100)}%` }}
+                    style={{ width: `${ownedKindCount === 0 ? 0 : Math.min(100, (placedCount / ownedKindCount) * 100)}%` }}
                   />
                 </div>
                 <div className="dg-progress-labels">
-                  <span>꾸미기 진행</span>
-                  <span>{placedCount}/{gardenSlots.length}</span>
+                  <span>정원 꾸미기</span>
+                  <span>{placedCount}/{ownedKindCount}</span>
                 </div>
               </div>
             </div>
@@ -503,13 +753,18 @@ export default function StudentDreamGardenPage() {
               ) : (
                 <div className="dg-recent-list">
                   {recentItems.map((studentItem) => (
-                    <div key={studentItem.id} className="dg-recent-item">
+                    <button
+                      key={studentItem.id}
+                      type="button"
+                      className="dg-recent-item dg-clickable appearance-none"
+                      onClick={() => locatePlacement(studentItem.id, studentItem.item_id)}
+                    >
                       <ItemImage item={studentItem.item} imgClassName="dg-recent-thumb-img" fallbackClassName="dg-recent-thumb" />
                       <div className="dg-recent-info">
                         <p className="dg-recent-name">{studentItem.item?.name ?? '아이템'}</p>
-                        <p className="dg-recent-time">방금 획득</p>
+                        <p className="dg-recent-time">여기를 눌러 위치 보기</p>
                       </div>
-                    </div>
+                    </button>
                   ))}
                 </div>
               )}
@@ -522,7 +777,7 @@ export default function StudentDreamGardenPage() {
                 <p className="font-jua text-sm text-amber-900">보상 안내</p>
               </div>
               <p className="dg-reward-guide-text">
-                정원 단계를 올리면 새로운<br />아이템과 특별 보상을 받을 수 있어요! 🎁
+                정원 아이템을 누르면 크기와 회전을<br />바꿀 수 있어요! 🌿
               </p>
             </div>
 
@@ -563,38 +818,25 @@ export default function StudentDreamGardenPage() {
             )}
           </aside>
 
-          {/* ── 정원 슬롯들 ── */}
-          <div className="dream-garden-slots" aria-label="정원 꾸미기 자리">
-            {gardenSlots.map((slot) => {
-              const placement = slotPlacements.get(slot.id)
-              const SlotIcon = slot.icon
-
-              if (placement) {
-                return (
-                  <DraggablePlacement
-                    key={placement.id}
-                    slot={slot}
-                    placement={placement}
-                    onSave={handleSavePosition}
-                  />
-                )
-              }
-
-              return (
-                <div
-                  key={slot.id}
-                  className={`dream-garden-slot dream-garden-slot-${slot.size} dream-garden-slot-locked`}
-                  style={{ left: `${slot.x}%`, top: `${slot.y}%`, zIndex: slot.zIndex }}
-                >
-                  <div className="dream-garden-slot-ground" />
-                  <div className="dream-garden-slot-object">
-                    <SlotIcon className="dream-garden-slot-silhouette" />
-                    <Lock className="dream-garden-slot-lock" />
-                    <span className="dream-garden-slot-label">{slot.label}</span>
-                  </div>
-                </div>
-              )
-            })}
+          {/* ── 정원 아이템들 (저장된 비율 좌표 그대로 배치) ── */}
+          <div
+            ref={slotsContainerRef}
+            className="dream-garden-slots"
+            onPointerDown={handleBackgroundPointerDown}
+            aria-label="정원 꾸미기 자리"
+          >
+            {placements.map((placement) => (
+              <GardenPlacementItem
+                key={placement.id}
+                placement={placement}
+                isSelected={selectedId === placement.id}
+                isHighlighted={highlightId === placement.id}
+                onSelect={setSelectedId}
+                onDragSave={handleSavePosition}
+                onUpdateTransform={handleUpdateTransform}
+                registerElement={registerElement}
+              />
+            ))}
           </div>
 
 
@@ -618,7 +860,7 @@ export default function StudentDreamGardenPage() {
                   <Gift className="w-6 h-6 text-pink-500" />
                   내가 획득한 아이템
                 </h2>
-                <p className="text-slate-500 font-medium mt-1">총 {totalItemCount}개</p>
+                <p className="text-slate-500 font-medium mt-1">총 {totalItemCount}개 · 카드를 누르면 정원 위치를 보여줘요</p>
               </div>
               <button
                 type="button"
@@ -647,7 +889,12 @@ export default function StudentDreamGardenPage() {
                       return bTime - aTime
                     })
                     .map((studentItem) => (
-                      <article key={studentItem.id} className="bg-slate-50 rounded-2xl p-4 border border-slate-100 flex flex-col items-center text-center hover:shadow-md transition-shadow">
+                      <button
+                        key={studentItem.id}
+                        type="button"
+                        className="appearance-none bg-slate-50 rounded-2xl p-4 border border-slate-100 flex flex-col items-center text-center hover:shadow-md hover:border-pink-200 transition-all cursor-pointer"
+                        onClick={() => locatePlacement(studentItem.id, studentItem.item_id)}
+                      >
                         <div className="w-20 h-20 bg-white rounded-xl flex items-center justify-center shadow-sm mb-3">
                           <ItemImage item={studentItem.item} imgClassName="max-w-[4rem] max-h-[4rem] object-contain" fallbackClassName="text-3xl" />
                         </div>
@@ -668,7 +915,7 @@ export default function StudentDreamGardenPage() {
                             {new Date(studentItem.acquired_at || studentItem.created_at).toLocaleDateString('ko-KR')} 획득
                           </span>
                         </div>
-                      </article>
+                      </button>
                     ))}
                 </div>
               )}

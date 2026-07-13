@@ -1112,7 +1112,9 @@
 .dg-view-all-btn:hover{background:rgba(255,255,255,0.18);color:#ffffff;}
 .dg-empty-recent{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:12px;border-radius:14px;background:rgba(255,255,255,0.08);border:1px solid rgba(224,255,249,0.14);}
 .dg-recent-list{display:grid;gap:5px;}
-.dg-recent-item{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:12px;background:rgba(255,255,255,0.08);border:1px solid rgba(224,255,249,0.14);}
+.dg-recent-item{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:12px;background:rgba(255,255,255,0.08);border:1px solid rgba(224,255,249,0.14);width:100%;text-align:left;font:inherit;color:inherit;cursor:pointer;appearance:none;-webkit-appearance:none;transition:background .15s ease,transform .15s ease;}
+.dg-recent-item:hover{background:rgba(255,255,255,0.16);transform:translateX(2px);}
+.dg-recent-item:focus-visible{outline:2px solid rgba(255,255,255,.7);outline-offset:2px;}
 .dg-recent-thumb{font-size:18px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:10px;background:linear-gradient(145deg,#f0fdf4,#fdf2f8);}
 .dg-recent-thumb-img{width:32px;height:32px;flex:0 0 32px;object-fit:contain;border-radius:10px;}
 .dg-recent-info{min-width:0;}
@@ -1162,7 +1164,9 @@
 .dg-view-all-btn:hover{background:rgba(255,255,255,0.18);color:#ffffff;}
 .dg-empty-recent{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:12px;border-radius:14px;background:rgba(255,255,255,0.08);border:1px solid rgba(224,255,249,0.14);}
 .dg-recent-list{display:grid;gap:5px;}
-.dg-recent-item{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:12px;background:rgba(255,255,255,0.08);border:1px solid rgba(224,255,249,0.14);}
+.dg-recent-item{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:12px;background:rgba(255,255,255,0.08);border:1px solid rgba(224,255,249,0.14);width:100%;text-align:left;font:inherit;color:inherit;cursor:pointer;appearance:none;-webkit-appearance:none;transition:background .15s ease,transform .15s ease;}
+.dg-recent-item:hover{background:rgba(255,255,255,0.16);transform:translateX(2px);}
+.dg-recent-item:focus-visible{outline:2px solid rgba(255,255,255,.7);outline-offset:2px;}
 .dg-recent-thumb{font-size:18px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:10px;background:linear-gradient(145deg,#f0fdf4,#fdf2f8);}
 .dg-recent-thumb-img{width:32px;height:32px;flex:0 0 32px;object-fit:contain;border-radius:10px;}
 .dg-recent-info{min-width:0;}
@@ -1185,7 +1189,7 @@
 .dg-test-btn-purple{background:linear-gradient(180deg,#c4b5fd,#8b5cf6);color:#fff;box-shadow:0 4px 0 #6d28d9;}
 .dg-test-btn-amber{background:linear-gradient(180deg,#fcd34d,#f59e0b);color:#78350f;box-shadow:0 4px 0 #b45309;}
 
-.dream-garden-slots{position:absolute;inset:0;z-index:20;pointer-events:none;}
+.dream-garden-slots{position:absolute;inset:0;z-index:20;pointer-events:auto;}
 .dream-garden-slot{position:absolute;transform:translate(-50%,-50%);display:flex;align-items:center;justify-content:center;pointer-events:auto;}
 .dream-garden-slot-sm{width:100px;height:86px;}
 .dream-garden-slot-md{width:128px;height:108px;}
@@ -1207,6 +1211,48 @@
 .dream-garden-slot-filled:hover .dream-garden-item-name, .dream-garden-slot-filled:focus .dream-garden-item-name{opacity:1;visibility:visible;}
 
 .dream-garden-item-emoji{display:inline-flex;width:52px;height:52px;align-items:center;justify-content:center;border-radius:18px;background:linear-gradient(145deg,#ecfeff,#fdf2f8);font-size:1.5rem;box-shadow:inset 0 -3px 0 rgba(0,0,0,0.08);}
+
+/* == 정원 아이템(실좌표 배치) == */
+.dream-garden-item-img{display:block;width:clamp(56px,7vw,96px);height:auto;max-height:clamp(56px,8vw,108px);object-fit:contain;filter:drop-shadow(0 3px 4px rgba(0,0,0,0.18));}
+
+.dg-item{position:absolute;transform:translate(-50%,-50%);display:flex;align-items:center;justify-content:center;pointer-events:auto;transition:left .25s ease,top .25s ease;outline:none;}
+.dg-item:focus-visible{outline:3px solid rgba(255,255,255,.75);outline-offset:6px;border-radius:18px;}
+.dg-item-dragging{transition:none;}
+.dg-item-visual{display:flex;align-items:center;justify-content:center;transition:transform .2s ease;}
+.dg-item-bob{position:relative;display:flex;align-items:center;justify-content:center;}
+.dg-item-bob-active{animation:dg-bob 1.6s ease-in-out infinite;}
+.dg-item .dream-garden-slot-object{background:transparent;border:none;box-shadow:none;padding:0;}
+.dg-item:hover .dream-garden-slot-object{transform:translateY(-4px) scale(1.04);}
+.dg-item-dragging .dream-garden-slot-object{filter:drop-shadow(0 8px 14px rgba(0,0,0,0.25));transform:scale(1.05);}
+.dg-item-selected .dream-garden-slot-object{outline:3px dashed rgba(255,255,255,.95);outline-offset:6px;border-radius:24px;}
+
+/* 아이템 이름은 hover/선택/포커스 때만 표시 */
+.dg-item .dream-garden-item-name{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);margin-bottom:8px;opacity:0;visibility:hidden;transition:opacity .2s ease,visibility .2s ease;}
+.dg-item:hover .dream-garden-item-name,.dg-item:focus-visible .dream-garden-item-name,.dg-item-selected .dream-garden-item-name{opacity:1;visibility:visible;}
+
+/* 클릭으로 위치 찾았을 때 강조 효과 */
+.dg-highlight-ring{position:absolute;inset:-14%;border-radius:50%;border:3px solid rgba(255,255,255,.95);box-shadow:0 0 0 6px rgba(255,221,87,.45),0 0 22px 6px rgba(255,221,87,.6);pointer-events:none;animation:dg-pulse 1.2s ease-in-out infinite;}
+.dg-here-bubble{position:absolute;bottom:calc(100% + 12px);left:50%;transform:translateX(-50%);background:#fff;color:#7c3aed;font-family:var(--font-game-title);font-size:.8rem;font-weight:800;padding:.32rem .7rem;border-radius:999px;box-shadow:0 6px 16px rgba(124,58,237,.25);border:2px solid rgba(196,181,253,.7);white-space:nowrap;pointer-events:none;animation:dg-bubble-pop .3s ease-out;z-index:140;}
+
+/* 편집 팝오버(크기/회전) */
+.dg-edit-popover{position:absolute;bottom:calc(100% + 16px);left:50%;transform:translateX(-50%);background:rgba(255,255,255,.97);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1.5px solid rgba(196,181,253,.45);border-radius:18px;box-shadow:0 10px 28px rgba(15,23,42,.18);padding:.5rem;display:flex;flex-direction:column;gap:.35rem;z-index:150;min-width:210px;pointer-events:auto;}
+.dg-edit-popover::after{content:"";position:absolute;top:100%;left:50%;transform:translateX(-50%);border:7px solid transparent;border-top-color:rgba(255,255,255,.97);}
+.dg-edit-head{display:flex;align-items:center;justify-content:space-between;gap:.5rem;padding:.05rem .4rem;}
+.dg-edit-name{font-family:var(--font-game-title);font-size:.78rem;color:#334155;font-weight:800;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dg-edit-percent{font-family:var(--font-game-title);font-size:.72rem;color:#7c3aed;background:rgba(196,181,253,.18);padding:.05rem .45rem;border-radius:999px;font-weight:800;}
+.dg-edit-row{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;}
+.dg-edit-btn{display:flex;align-items:center;justify-content:center;height:34px;border-radius:10px;border:1px solid rgba(148,163,184,.25);background:#f8fafc;color:#475569;cursor:pointer;transition:transform .12s ease,background .15s ease,color .15s ease;}
+.dg-edit-btn svg{width:16px;height:16px;}
+.dg-edit-btn:hover{background:#ede9fe;color:#7c3aed;transform:translateY(-1px);}
+.dg-edit-btn:active{transform:translateY(1px);}
+.dg-edit-btn-reset{background:rgba(252,211,77,.18);color:#b45309;}
+.dg-edit-btn-reset:hover{background:rgba(252,211,77,.32);color:#b45309;}
+.dg-edit-btn-close{background:rgba(244,114,182,.15);color:#be185d;}
+.dg-edit-btn-close:hover{background:rgba(244,114,182,.28);color:#be185d;}
+
+@keyframes dg-bob{0%,100%{transform:translateY(0);}50%{transform:translateY(-8px);}}
+@keyframes dg-pulse{0%,100%{transform:scale(1);opacity:.85;}50%{transform:scale(1.08);opacity:1;}}
+@keyframes dg-bubble-pop{from{opacity:0;transform:translateX(-50%) translateY(4px);}to{opacity:1;transform:translateX(-50%) translateY(0);}}
 
 .dream-garden-mini-icon{width:38px;height:38px;flex:0 0 38px;display:inline-flex;align-items:center;justify-content:center;border-radius:13px;}
 .dream-garden-mini-emoji{width:38px;height:38px;flex:0 0 38px;display:inline-flex;align-items:center;justify-content:center;border-radius:13px;background:linear-gradient(145deg,#f0fdfa,#fdf2f8);font-size:0.8rem;font-family:var(--font-game-title);}
@@ -1243,4 +1289,8 @@
   .dream-garden-overlay-left{left:0;top:0;bottom:auto;}
   .dream-garden-slots{position:relative;flex:1;min-height:400px;}
   .dg-test-buttons{grid-template-columns:1fr;}
+  .dg-edit-popover{min-width:250px;}
+  .dg-edit-btn{height:44px;}
+  .dg-edit-btn svg{width:20px;height:20px;}
+  .dg-item-selected .dream-garden-item-name{opacity:1;visibility:visible;}
 }

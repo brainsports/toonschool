@@ -57,6 +57,7 @@ export interface GardenPlacement {
   x: number
   y: number
   scale: number
+  rotation: number
   z_index: number
   is_visible: boolean
   created_at: string
@@ -80,6 +81,7 @@ export interface SaveGardenPlacementInput {
   x?: number
   y?: number
   scale?: number
+  rotation?: number
   zIndex?: number
 }
 
@@ -88,6 +90,7 @@ export interface UpdateGardenPlacementInput {
   x?: number
   y?: number
   scale?: number
+  rotation?: number
   zIndex?: number
   isVisible?: boolean
 }
