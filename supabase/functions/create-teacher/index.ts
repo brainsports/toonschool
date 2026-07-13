@@ -1,199 +1,145 @@
+// 기관관리자/수퍼관리자 → 선생님 생성.
+// 핵심 수정: create-student와 동일하게 profiles를 upsert(onConflict:'id')로 저장하여
+// on_auth_user_created 트리거와의 PK 충돌(500)을 해소한다.
+// 소속 기관은 호출자 역할에 따라 서버에서 결정(org_admin은 자신의 기관, super_admin은 검증된 기관).
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
+import { corsHeaders, jsonHeaders } from '../_shared/cors.ts'
+import {
+  RequestError,
+  successResponse,
+  handleCaughtError,
+} from '../_shared/errors.ts'
+import {
+  createAdminClient,
+  resolveCaller,
+  getCallerProfile,
+  authorize,
+  isValidUUID,
+} from '../_shared/client.ts'
+import { safeRollback } from '../_shared/rollback.ts'
 
+const TAG = 'create-teacher'
 const PASSWORD_MIN_LENGTH = 6
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-}
-
-class RequestError extends Error {
-  status: number
-
-  constructor(message: string, status = 400) {
-    super(message)
-    this.status = status
-  }
-}
-
-const isValidDateValue = (value: unknown) => {
-  if (typeof value !== 'string' || !value.trim()) return false
-  const date = new Date(value)
-  return !Number.isNaN(date.getTime())
-}
-
-const rollback = async (label: string, action: () => Promise<unknown>) => {
-  try {
-    await action()
-  } catch (error) {
-    console.error(`[create-teacher] rollback failed: ${label}`, error)
-  }
+const isValidDateValue = (v: unknown) => {
+  if (typeof v !== 'string' || !v.trim()) return false
+  return !Number.isNaN(new Date(v).getTime())
 }
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
-
   if (req.method !== 'POST') {
     return new Response(
-      JSON.stringify({ error: '허용되지 않은 요청 방식입니다.', message: '허용되지 않은 요청 방식입니다.' }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 405 }
+      JSON.stringify({ success: false, code: 'INVALID_INPUT', message: '허용되지 않은 요청 방식입니다.' }),
+      { headers: jsonHeaders, status: 405 }
     )
   }
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    const adminClient = createAdminClient()
+    const callerUser = await resolveCaller(adminClient, req.headers.get('Authorization'))
+    const callerProfile = await getCallerProfile(adminClient, callerUser.id, 'id, role, status, organization_id')
+    authorize(callerProfile, ['super_admin', 'superadmin', 'org_admin'])
 
-    if (!supabaseUrl || !supabaseServiceKey) {
-      throw new RequestError('서버 설정이 올바르지 않습니다.', 500)
-    }
-
-    const adminClient = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    })
-
-    const authHeader = req.headers.get('Authorization')
-    if (!authHeader) {
-      throw new RequestError('로그인이 필요합니다.', 401)
-    }
-
-    const token = authHeader.replace('Bearer ', '')
-    const { data: { user: callerUser }, error: verifyError } = await adminClient.auth.getUser(token)
-
-    if (verifyError || !callerUser) {
-      throw new RequestError('로그인 정보가 유효하지 않습니다.', 401)
-    }
-
-    const { data: callerProfile, error: callerProfileError } = await adminClient
-      .from('profiles')
-      .select('id, role, organization_id')
-      .eq('id', callerUser.id)
-      .single()
-
-    if (callerProfileError || !callerProfile) {
-      throw new RequestError('호출자 권한 정보를 확인할 수 없습니다.', 403)
-    }
-
-    if (callerProfile.role !== 'super_admin' && callerProfile.role !== 'org_admin') {
-      throw new RequestError('선생님 계정을 생성할 권한이 없습니다.', 403)
-    }
-
-    const body = await req.json()
+    const body = await req.json().catch(() => ({}))
     const cleanEmail = typeof body.email === 'string' ? body.email.trim().toLowerCase() : ''
     const name = typeof body.name === 'string' ? body.name.trim() : ''
     const password = typeof body.password === 'string' ? body.password : ''
     const requestedOrgId = typeof body.organization_id === 'string' ? body.organization_id.trim() : ''
-    const licenseTotalValue = body.license_count ?? body.licenseTotal ?? body.initial_licenses ?? 0
-    const licenseTotal = Number(licenseTotalValue)
+    const licenseTotal = Number(body.license_count ?? body.licenseTotal ?? body.initial_licenses ?? 0)
     const licenseStart = body.license_start_date ?? body.licenseStart ?? null
     const licenseEnd = body.license_end_date ?? body.licenseEnd ?? null
 
-    if (!name) {
-      throw new RequestError('이름을 입력해 주세요.')
-    }
-
-    if (!cleanEmail) {
-      throw new RequestError('이메일을 입력해 주세요.')
-    }
-
-    if (!password) {
-      throw new RequestError('임시 비밀번호를 입력해 주세요.')
-    }
-
+    if (!name) throw new RequestError('이름을 입력해 주세요.')
+    if (!cleanEmail) throw new RequestError('이메일을 입력해 주세요.')
+    if (!password) throw new RequestError('임시 비밀번호를 입력해 주세요.')
     if (password.length < PASSWORD_MIN_LENGTH) {
       throw new RequestError(`임시 비밀번호는 ${PASSWORD_MIN_LENGTH}자 이상이어야 합니다.`)
     }
-
     if (!Number.isInteger(licenseTotal) || licenseTotal < 0) {
       throw new RequestError('이용권 수는 0 이상의 정수여야 합니다.')
     }
-
     if (licenseStart && !isValidDateValue(licenseStart)) {
       throw new RequestError('이용권 시작일이 올바른 날짜가 아닙니다.')
     }
-
     if (licenseEnd && !isValidDateValue(licenseEnd)) {
       throw new RequestError('이용권 종료일이 올바른 날짜가 아닙니다.')
     }
-
     if (licenseStart && licenseEnd && new Date(licenseEnd) < new Date(licenseStart)) {
       throw new RequestError('이용권 종료일은 시작일보다 빠를 수 없습니다.')
     }
 
-    let organizationId = requestedOrgId
-
+    // 소속 기관 결정. org_admin은 자신의 기관으로 강제(다른 기관 지정 차단).
+    let organizationId: string
     if (callerProfile.role === 'org_admin') {
       if (!callerProfile.organization_id) {
-        throw new RequestError('기관 정보가 없는 관리자 계정입니다.', 403)
+        throw new RequestError('기관 정보가 없는 관리자 계정입니다.', 403, 'FORBIDDEN')
       }
-
       if (requestedOrgId && requestedOrgId !== callerProfile.organization_id) {
-        throw new RequestError('다른 기관에는 선생님을 생성할 수 없습니다.', 403)
+        throw new RequestError('다른 기관에는 선생님을 생성할 수 없습니다.', 403, 'FORBIDDEN')
       }
-
       organizationId = callerProfile.organization_id
+    } else {
+      // super_admin: 클라이언트가 보낸 기관 ID를 검증 후 사용.
+      if (!requestedOrgId || !isValidUUID(requestedOrgId)) {
+        throw new RequestError('소속 기관 정보가 필요합니다.')
+      }
+      const { data: org, error: orgErr } = await adminClient
+        .from('organizations')
+        .select('id')
+        .eq('id', requestedOrgId)
+        .maybeSingle()
+      if (orgErr || !org) {
+        throw new RequestError('유효하지 않은 기관입니다.', 400)
+      }
+      organizationId = requestedOrgId
     }
 
-    if (!organizationId) {
-      throw new RequestError('소속 기관 정보가 필요합니다.')
-    }
-
-    const { data: existingProfiles, error: profileCheckError } = await adminClient
+    // 중복 이메일 사전 확인(profiles + auth 반쪽 계정) → 409
+    const { data: existing, error: dupError } = await adminClient
       .from('profiles')
       .select('id')
       .eq('email', cleanEmail)
       .limit(1)
-
-    if (profileCheckError) {
-      throw new RequestError('이메일 중복 확인 중 오류가 발생했습니다.', 500)
+    if (dupError) {
+      console.error(`[${TAG}] dup check error:`, dupError)
+      throw new RequestError('계정 생성 중 오류가 발생했습니다.', 500, 'ACCOUNT_CREATION_FAILED')
     }
-
-    if (existingProfiles && existingProfiles.length > 0) {
-      throw new RequestError('이미 가입된 이메일입니다. 다른 이메일을 입력해 주세요.', 409)
+    if (existing && existing.length > 0) {
+      throw new RequestError('이미 등록된 이메일입니다. 다른 이메일을 입력해 주세요.', 409, 'DUPLICATE_EMAIL')
     }
-
-    const { data: existingAuthUserId, error: authLookupError } = await adminClient.rpc('get_auth_user_id_by_email', {
+    const { data: existingAuthId, error: rpcError } = await adminClient.rpc('get_auth_user_id_by_email', {
       p_email: cleanEmail,
     })
-
-    if (!authLookupError && existingAuthUserId) {
-      throw new RequestError('이미 가입된 이메일입니다. 다른 이메일을 입력해 주세요.', 409)
+    if (!rpcError && existingAuthId) {
+      throw new RequestError('이미 등록된 이메일입니다. 다른 이메일을 입력해 주세요.', 409, 'DUPLICATE_EMAIL')
     }
 
-    let createdAuthUserId: string | null = null
-    let profileCreated = false
-
+    // Auth 계정 생성
     const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
       email: cleanEmail,
       password,
       email_confirm: true,
-      user_metadata: {
-        name,
-        role: 'teacher',
-      },
+      user_metadata: { name, role: 'teacher' },
     })
-
     if (authError || !authData.user) {
-      const isDuplicate = authError?.message?.toLowerCase().includes('already') || authError?.message?.toLowerCase().includes('registered')
+      console.error(`[${TAG}] auth create error:`, authError)
+      const msg = (authError?.message || '').toLowerCase()
+      const isDuplicate = msg.includes('already') || msg.includes('registered')
       throw new RequestError(
-        isDuplicate ? '이미 가입된 이메일입니다. 다른 이메일을 입력해 주세요.' : '계정 생성 중 오류가 발생했습니다.',
-        isDuplicate ? 409 : 500
+        isDuplicate ? '이미 등록된 이메일입니다. 다른 이메일을 입력해 주세요.' : '계정 생성 중 오류가 발생했습니다.',
+        isDuplicate ? 409 : 500,
+        isDuplicate ? 'DUPLICATE_EMAIL' : 'ACCOUNT_CREATION_FAILED'
       )
     }
+    const userId = authData.user.id
 
-    createdAuthUserId = authData.user.id
-
-    const { error: profileError } = await adminClient
-      .from('profiles')
-      .insert({
-        id: createdAuthUserId,
+    // profiles upsert(핵심 수정)
+    const { error: profileError } = await adminClient.from('profiles').upsert(
+      {
+        id: userId,
         email: cleanEmail,
         name,
         role: 'teacher',
@@ -201,53 +147,44 @@ serve(async (req) => {
         status: body.status || 'active',
         plan_type: 'free',
         monthly_quota: 0,
-      })
-
+        monthly_used: 0,
+      },
+      { onConflict: 'id' }
+    )
     if (profileError) {
-      await rollback('delete auth user after profile insert failure', () =>
-        adminClient.auth.admin.deleteUser(createdAuthUserId as string)
-      )
-      throw new RequestError('프로필 저장 중 오류가 발생했습니다.', 500)
+      console.error(`[${TAG}] profile upsert error:`, JSON.stringify(profileError, null, 2))
+      await safeRollback(TAG, 'delete auth user', () => adminClient.auth.admin.deleteUser(userId))
+      throw new RequestError('프로필 저장 중 오류가 발생했습니다.', 500, 'ACCOUNT_CREATION_FAILED')
     }
 
-    profileCreated = true
-
+    // 이용권 배정(선택)
     if (licenseTotal > 0 || licenseStart || licenseEnd) {
-      const { error: allocError } = await adminClient
-        .from('license_allocations')
-        .insert({
-          organization_id: organizationId,
-          from_user_id: callerUser.id,
-          to_user_id: createdAuthUserId,
-          quantity: licenseTotal,
-          license_start_date: licenseStart || null,
-          license_end_date: licenseEnd || null,
-        })
-
+      const { error: allocError } = await adminClient.from('license_allocations').insert({
+        organization_id: organizationId,
+        from_user_id: callerUser.id,
+        to_user_id: userId,
+        quantity: licenseTotal,
+        license_start_date: licenseStart || null,
+        license_end_date: licenseEnd || null,
+      })
       if (allocError) {
-        if (profileCreated) {
-          await rollback('delete profile after license allocation failure', () =>
-            adminClient.from('profiles').delete().eq('id', createdAuthUserId as string)
-          )
-        }
-        await rollback('delete auth user after license allocation failure', () =>
-          adminClient.auth.admin.deleteUser(createdAuthUserId as string)
+        console.error(`[${TAG}] license allocation error:`, JSON.stringify(allocError, null, 2))
+        // 보상 롤백
+        await safeRollback(TAG, 'delete profile', () =>
+          adminClient.from('profiles').delete().eq('id', userId)
         )
-        throw new RequestError('이용권 배정 중 오류가 발생했습니다.', 500)
+        await safeRollback(TAG, 'delete auth user', () => adminClient.auth.admin.deleteUser(userId))
+        throw new RequestError('이용권 배정 중 오류가 발생했습니다.', 500, 'ACCOUNT_CREATION_FAILED')
       }
     }
 
-    return new Response(
-      JSON.stringify({ success: true, userId: createdAuthUserId, role: 'teacher', organization_id: organizationId }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-    )
-  } catch (error: any) {
-    const status = error instanceof RequestError ? error.status : 400
-    const message = error?.message || '선생님 계정 생성 중 오류가 발생했습니다.'
-
-    return new Response(
-      JSON.stringify({ error: message, message }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status }
-    )
+    return successResponse({
+      userId,
+      role: 'teacher',
+      organization_id: organizationId,
+      message: '선생님이 등록되었습니다.',
+    })
+  } catch (error: unknown) {
+    return handleCaughtError(TAG, error, '선생님 계정 생성 중 오류가 발생했습니다.')
   }
 })

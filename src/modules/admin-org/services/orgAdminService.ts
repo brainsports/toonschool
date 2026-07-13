@@ -7,22 +7,38 @@ import type {
 
 const extractOrgFunctionError = async (error: any) => {
   let errorMessage = error?.message || '요청 처리 중 오류가 발생했습니다.'
+  let status = 0
 
   if (error?.context) {
+    const ctx = error.context
+    if (ctx.status) status = ctx.status
     try {
-      if (typeof error.context.clone === 'function') {
-        const errBody = await error.context.clone().json()
-        errorMessage = errBody?.message || errBody?.error || errorMessage
-      } else {
-        errorMessage = error.context.message || error.context.error || errorMessage
+      if (typeof ctx.clone === 'function') {
+        const errBody = await ctx.clone().json()
+        // EF 표준 오류 응답: { success:false, code, message, error }
+        if (errBody?.message) errorMessage = errBody.message
+        else if (errBody?.error) errorMessage = errBody.error
+      } else if (ctx.message || ctx.error) {
+        errorMessage = ctx.message || ctx.error
       }
     } catch {
-      // Keep the original client error message when the function body cannot be parsed.
+      // 본문 파싱 실패 시 아래 상태 코드 기반 메시지로 대체.
     }
   }
 
-  if (errorMessage === 'Edge Function returned a non-2xx status code') {
-    return '선생님 계정 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.'
+  // EF 본문을 읽지 못했거나 SDK 원문 메시지가 그대로 남은 경우 HTTP 상태로 한국어 안내.
+  const isGeneric =
+    !errorMessage ||
+    errorMessage === 'Edge Function returned a non-2xx status code' ||
+    errorMessage === '요청 처리 중 오류가 발생했습니다.'
+  if (isGeneric && status) {
+    if (status === 401) errorMessage = '관리자 로그인이 만료되었습니다. 다시 로그인해 주세요.'
+    else if (status === 403) errorMessage = '이 작업을 수행할 권한이 없습니다.'
+    else if (status === 404) errorMessage = '요청한 기능이 배포되지 않았습니다.'
+    else if (status === 409) errorMessage = '이미 등록된 정보입니다. 다른 값으로 다시 시도해 주세요.'
+    else errorMessage = '서버 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.'
+  } else if (errorMessage === 'Edge Function returned a non-2xx status code') {
+    errorMessage = '요청 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.'
   }
 
   return errorMessage
@@ -215,8 +231,9 @@ export const orgAdminService = {
       throw new Error(await extractOrgFunctionError(error))
     }
 
-    if (result?.error || result?.message) {
-      throw new Error(result.message || result.error)
+    // success 플래그로 성공/실패를 판단(표준 응답). 성공 message 를 에러로 오판하지 않도록 주의.
+    if (!result?.success || result?.error) {
+      throw new Error(result?.message || result?.error || '선생님 계정 생성에 실패했습니다.')
     }
   },
 
