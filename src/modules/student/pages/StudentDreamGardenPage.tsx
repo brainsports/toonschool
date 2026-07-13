@@ -1,15 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   ChevronDown,
-  Flower2,
   Gift,
   Leaf,
+  LocateFixed,
   Loader2,
-  Lock,
   RefreshCw,
   RotateCcw,
   RotateCw,
-  Sparkles,
   Sprout,
   WandSparkles,
   X,
@@ -729,21 +727,32 @@ export default function StudentDreamGardenPage() {
     }
   }
 
-  const recentItems = useMemo(
-    () =>
-      [...studentItems]
-        .sort((a, b) => {
-          const aTime = new Date(a.acquired_at || a.created_at).getTime()
-          const bTime = new Date(b.acquired_at || b.created_at).getTime()
-          return bTime - aTime
+  const acquiredItems = useMemo(() => {
+    const groups = new Map<string, { itemId: string; latest: StudentItem; quantity: number }>()
+    const sortedItems = [...studentItems].sort((a, b) => {
+      const aTime = new Date(a.acquired_at || a.created_at).getTime()
+      const bTime = new Date(b.acquired_at || b.created_at).getTime()
+      return bTime - aTime
+    })
+
+    for (const studentItem of sortedItems) {
+      const existing = groups.get(studentItem.item_id)
+      if (existing) {
+        existing.quantity += studentItem.quantity
+      } else {
+        groups.set(studentItem.item_id, {
+          itemId: studentItem.item_id,
+          latest: studentItem,
+          quantity: studentItem.quantity,
         })
-        .slice(0, 3),
-    [studentItems]
-  )
+      }
+    }
+
+    return Array.from(groups.values())
+  }, [studentItems])
 
   const totalItemCount = studentItems.reduce((sum, item) => sum + item.quantity, 0)
   const placedCount = placements.length
-  const ownedKindCount = studentItems.length
 
   const handleBackgroundPointerDown = (e: React.PointerEvent) => {
     if (e.target === e.currentTarget) {
@@ -793,89 +802,22 @@ export default function StudentDreamGardenPage() {
             </div>
 
             {/* 정원 단계 */}
-            <div className="dg-info-section">
+            <div className="dg-info-section dg-collection-summary">
               <div className="dg-info-header">
                 <div className="dg-info-icon dg-info-icon-green">
                   <Leaf className="w-4 h-4" />
                 </div>
-                <p className="dg-info-label">정원 단계</p>
+                <p className="dg-info-label">나의 수집 현황</p>
               </div>
-              <div className="dg-level-badge">
-                <span className="dg-level-num">{garden?.level ?? 1}단계</span>
-                <span className="dg-level-name">씨앗 뜨 정원</span>
-              </div>
-              <div className="dg-progress-bar-wrap">
-                <div className="dg-progress-track">
-                  <div
-                    className="dg-progress-fill"
-                    style={{ width: `${ownedKindCount === 0 ? 0 : Math.min(100, (placedCount / ownedKindCount) * 100)}%` }}
-                  />
-                </div>
-                <div className="dg-progress-labels">
-                  <span>정원 꾸미기</span>
-                  <span>{placedCount}/{ownedKindCount}</span>
-                </div>
+              <div className="dg-collection-counts">
+                <span>획득 <strong>{totalItemCount}개</strong></span>
+                <span>배치 <strong>{placedCount}개</strong></span>
               </div>
             </div>
 
-            {/* 아이템 종류 */}
-            <div className="dg-info-section">
-              <p className="dg-section-title">
-                <Flower2 className="w-3.5 h-3.5" />
-                아이템 종류
-              </p>
-              <div className="dg-category-grid">
-                {[
-                  { label: '정식', count: '18/45', color: '#f9a8d4' },
-                  { label: '식물', count: '16/32', color: '#86efac' },
-                  { label: '동물', count: '5/20', color: '#fcd34d' },
-                  { label: '건물', count: '3/15', color: '#93c5fd' },
-                  { label: '기타', count: '2/18', color: '#c4b5fd' },
-                ].map(({ label, count, color }) => (
-                  <div key={label} className="dg-category-chip" style={{ '--chip-color': color } as React.CSSProperties}>
-                    <span className="dg-chip-dot" style={{ background: color }} />
-                    <span className="dg-chip-label">{label}</span>
-                    <span className="dg-chip-count">{count}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* 잠금 아이템 안내 */}
-            <div className="dg-locked-info">
-              <div className="dg-locked-info-header">
-                <Lock className="w-3.5 h-3.5 text-purple-500" />
-                <p className="font-jua text-sm text-slate-700">잠금 아이템</p>
-              </div>
-              <p className="dg-locked-info-text">
-                다음 단계에서 더 많은 아이템을<br />만나보세요!
-              </p>
-              <div className="dg-locked-slots">
-                {[...Array(3)].map((_, i) => (
-                  <div key={i} className="dg-locked-slot-chip">
-                    <Lock className="w-3 h-3" />
-                  </div>
-                ))}
-              </div>
-            </div>
-            {/* 획득 아이템 수 */}
-            <div className="dg-info-section">
+            <div className="dg-info-section dg-acquired-section">
               <div className="dg-info-header">
-                <div className="dg-info-icon dg-info-icon-pink">
-                  <Gift className="w-4 h-4" />
-                </div>
-                <div>
-                  <p className="dg-info-label">내가 획득한 아이템</p>
-                  <p className="dg-big-count">{totalItemCount}개</p>
-                </div>
-              </div>
-            </div>
-
-            {/* 최근 획득 */}
-            <div className="dg-info-section">
-              <div className="dg-info-header">
-                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                <p className="dg-section-title-inline">최근 획득</p>
+                <p className="dg-section-title-inline">획득 아이템 {totalItemCount}개</p>
                 <button
                   type="button"
                   className="dg-view-all-btn"
@@ -884,43 +826,32 @@ export default function StudentDreamGardenPage() {
                   전체 보기
                 </button>
               </div>
-              {recentItems.length === 0 ? (
+              {acquiredItems.length === 0 ? (
                 <div className="dg-empty-recent">
                   <WandSparkles className="w-5 h-5 text-purple-300" />
                   <p className="font-jua text-sm text-slate-500">첫 아이템을 기다리는 중</p>
                 </div>
               ) : (
                 <div className="dg-recent-list">
-                  {recentItems.map((studentItem) => (
+                  {acquiredItems.map(({ itemId, latest, quantity }) => (
                     <button
-                      key={studentItem.id}
+                      key={itemId}
                       type="button"
                       className="dg-recent-item dg-clickable appearance-none"
-                      onClick={() => locatePlacement(studentItem.id, studentItem.item_id)}
+                      onClick={() => locatePlacement(latest.id, itemId)}
+                      title="정원에서 위치 찾기"
                     >
-                      <ItemImage item={studentItem.item} imgClassName="dg-recent-thumb-img" fallbackClassName="dg-recent-thumb" />
+                      <ItemImage item={latest.item} imgClassName="dg-recent-thumb-img" fallbackClassName="dg-recent-thumb" />
                       <div className="dg-recent-info">
-                        <p className="dg-recent-name">{studentItem.item?.name ?? '아이템'}</p>
-                        <p className="dg-recent-time">여기를 눌러 위치 보기</p>
+                        <p className="dg-recent-name">{latest.item?.name ?? '아이템'}</p>
+                        <LocateFixed className="dg-recent-location" aria-hidden="true" />
                       </div>
+                      <span className="dg-recent-quantity">{quantity}</span>
                     </button>
                   ))}
                 </div>
               )}
             </div>
-
-            {/* 보상 안내 */}
-            <div className="dg-reward-guide">
-              <div className="dg-reward-guide-header">
-                <Gift className="w-3.5 h-3.5 text-amber-600" />
-                <p className="font-jua text-sm text-amber-900">보상 안내</p>
-              </div>
-              <p className="dg-reward-guide-text">
-                정원 아이템을 누르면 크기와 회전을<br />바꿀 수 있어요! 🌿
-              </p>
-            </div>
-
-            {/* 개발 테스트 */}
             {false && (
             <details className="dream-garden-dev-panel">
               <summary>
