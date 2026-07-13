@@ -56,7 +56,7 @@ const PageWrapper = ({ children, isLeft, isRight, isSingle }: any) => {
 
   return (
     <div ref={ref} className={`flex-1 h-full bg-white relative overflow-hidden ${isSingle ? 'rounded-[12px] shadow-md border border-slate-200/50' : isLeft ? 'rounded-none border-r-0' : isRight ? 'rounded-none border-l border-black/5' : ''} shadow-[inset_0_0_40px_rgba(0,0,0,0.03)]`}>
-      <div style={{ transform: `scale(${scale})`, transformOrigin: 'top left', width: 1400, height: 1980, position: 'absolute', top: 0, left: 0 }}>
+      <div style={{ transform: `scale(${scale})`, transformOrigin: 'top left', width: 1400, height: 990, position: 'absolute', top: 0, left: 0 }}>
         <div className="relative z-10 w-full h-full bg-white">
           {children}
         </div>
@@ -76,7 +76,7 @@ export default function SharedComicViewerPage() {
   const [isMusicOn, setIsMusicOn] = useState(false)
   const [hasStarted, setHasStarted] = useState(false)
   
-  const [zoomPercent, setZoomPercent] = useState<number | null>(90)
+  const [zoomPercent, setZoomPercent] = useState<number | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 })
   const audioRef = useRef<HTMLAudioElement>(null)
@@ -215,8 +215,8 @@ export default function SharedComicViewerPage() {
     fetchSharedComic();
   }, [slug])
 
-  const BASE_WIDTH = isSinglePageMode ? 500 : 1000;
-  const BASE_HEIGHT = 707;
+  const BASE_WIDTH = isSinglePageMode ? 600 : 1200;
+  const BASE_HEIGHT = 424;
   const SCROLL_PADDING = isSinglePageMode ? 16 : 32;
   
   let fitScale = 1;
@@ -358,7 +358,7 @@ export default function SharedComicViewerPage() {
 
     return (
       <PageWrapper isLeft={isLeft} isRight={!isLeft} isSingle={isSingle}>
-         <img src={page.imageUrl} alt={`Page ${page.pageNumber}`} className="w-full h-full object-cover" />
+         <img src={page.imageUrl} alt={`${page.pageNumber}페이지`} className="w-full h-full object-contain bg-white" />
       </PageWrapper>
     )
   }

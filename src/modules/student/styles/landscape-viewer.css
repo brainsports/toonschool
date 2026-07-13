@@ -1,0 +1,36 @@
+.landscape-page{width:1400px;height:990px;display:grid;grid-template-columns:35% 65%;overflow:hidden;background:#fff;color:#253047;font-family:var(--font-game-body);}
+.landscape-info-panel{position:relative;display:flex;min-width:0;flex-direction:column;padding:64px 54px 46px;background:linear-gradient(155deg,#fffaf0 0%,#f3fbf7 55%,#edf7ff 100%);border-right:2px solid rgba(53,96,86,.12);}
+.landscape-curriculum-row{display:flex;gap:10px;min-width:0;margin-bottom:26px;color:#56716b;font-family:var(--font-game-title);font-size:18px;}
+.landscape-curriculum-row span{max-width:68%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.landscape-page-type{align-self:flex-start;padding:9px 18px;border-radius:999px;background:#174f4b;color:#fff;font-family:var(--font-game-title);font-size:20px;letter-spacing:.02em;}
+.landscape-stage-label{margin:22px 0 4px;color:#d05f3d;font-family:var(--font-game-title);font-size:19px;}
+.landscape-info-panel h2{margin:0;color:#203b39;font-family:var(--font-game-title);font-size:42px;line-height:1.18;letter-spacing:-.025em;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.landscape-description{margin:22px 0 0;color:#52645f;font-size:21px;font-weight:700;line-height:1.55;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
+.landscape-question{margin-top:28px;padding:22px 24px;border-radius:22px;background:#fff;box-shadow:0 10px 28px rgba(22,79,75,.09);border:1px solid rgba(22,79,75,.1);}
+.landscape-question span,.landscape-mission span{color:#d05f3d;font-family:var(--font-game-title);font-size:16px;}
+.landscape-question p{margin:8px 0 0;color:#243d3a;font-family:var(--font-game-title);font-size:24px;line-height:1.42;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
+.landscape-keywords{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px;}
+.landscape-keywords span{padding:7px 13px;border-radius:999px;background:#dff1eb;color:#285f58;font-family:var(--font-game-title);font-size:16px;}
+.landscape-mission{margin-top:auto;padding:17px 20px;border-radius:18px;background:rgba(255,238,183,.58);border:1px solid rgba(216,157,55,.18);}
+.landscape-mission p{margin:5px 0 0;color:#66512b;font-size:18px;font-weight:800;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.landscape-progress{display:flex;align-items:center;justify-content:space-between;margin-top:18px;color:#70827e;font-family:var(--font-game-title);font-size:16px;}
+.landscape-progress strong{color:#174f4b;font-size:18px;}
+.landscape-content-panel{position:relative;display:flex;min-width:0;min-height:0;align-items:center;justify-content:center;overflow:hidden;background:#fff;}
+.landscape-content-inner{width:100%;height:100%;padding:52px;display:flex;align-items:center;justify-content:center;box-sizing:border-box;}
+.landscape-comic-frame{position:relative;width:100%;aspect-ratio:343/251;overflow:hidden;border:10px solid #dbeafe;border-radius:30px;background:#f8fafc;box-shadow:0 18px 46px rgba(31,61,91,.15);}
+.landscape-story-content{width:100%;height:100%;padding:70px 72px;overflow:hidden;background:linear-gradient(150deg,#fff 0%,#f8fbff 100%);box-sizing:border-box;}
+.landscape-story-content h3{margin:0 0 30px;font-family:var(--font-game-title);font-size:46px;line-height:1.2;color:#26364d;}
+.landscape-story-content p{margin:0;white-space:pre-wrap;word-break:keep-all;color:#4d5d72;font-size:27px;font-weight:700;line-height:1.72;}
+.landscape-quiz-card{width:calc(100% - 100px);padding:54px;border-radius:34px;background:#f8fafc;border:3px solid #e2e8f0;box-shadow:0 18px 50px rgba(38,50,75,.1);}
+.landscape-quiz-card h3{margin:0 0 46px;color:#29364d;font-size:40px;line-height:1.5;word-break:keep-all;}
+.landscape-quiz-actions{display:grid;grid-template-columns:1fr 1fr;gap:24px;}
+.landscape-quiz-actions button{min-height:112px;border-radius:28px;border:3px solid #dbe4f0;background:#fff;font-family:var(--font-game-title);font-size:48px;color:#546379;}
+.landscape-cover,.landscape-back-cover{width:1400px;height:990px;display:grid;grid-template-columns:43% 57%;overflow:hidden;background:#fffaf1;}
+.landscape-cover-copy,.landscape-back-copy{display:flex;flex-direction:column;padding:76px 66px;background:linear-gradient(155deg,#154e4a,#246b63);color:#fff;}
+.landscape-cover-copy h1,.landscape-back-copy h1{margin:40px 0 18px;font-family:var(--font-game-title);font-size:58px;line-height:1.15;}
+.landscape-cover-copy p,.landscape-back-copy p{font-size:23px;line-height:1.55;font-weight:700;}
+.landscape-cover-art,.landscape-back-art{position:relative;display:flex;align-items:center;justify-content:center;padding:54px;background:radial-gradient(circle at 70% 25%,#fff 0,#e9f7ef 50%,#d8eee5 100%);}
+.landscape-cover-art img,.landscape-back-art img{width:100%;height:100%;object-fit:contain;border-radius:24px;}
+.landscape-meta{margin-top:auto;display:grid;gap:8px;font-size:18px;line-height:1.4;}
+@media(max-width:760px){.landscape-page{grid-template-columns:1fr;grid-template-rows:auto 1fr}.landscape-info-panel{padding:34px 38px 28px;max-height:390px}.landscape-description,.landscape-keywords,.landscape-mission{display:none}.landscape-question{margin-top:16px;padding:15px 18px}.landscape-question p{font-size:20px;-webkit-line-clamp:2}.landscape-info-panel h2{font-size:32px}.landscape-cover,.landscape-back-cover{grid-template-columns:1fr;grid-template-rows:42% 58%}.landscape-cover-copy,.landscape-back-copy{padding:42px 50px}.landscape-cover-copy h1,.landscape-back-copy h1{margin:16px 0 8px;font-size:42px}.landscape-meta{display:none}}
+@media(prefers-reduced-motion:reduce){.landscape-page *{scroll-behavior:auto!important;animation-duration:.01ms!important}}

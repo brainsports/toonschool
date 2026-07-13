@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { loadComicProjectData, loadComicCutData } from '../components/editor/utils/comicStorage'
 import type { ComicProjectData, ComicCutEditData, ComicCutElement } from '../components/editor/utils/comicStorage'
 import { projectStorage } from '../utils/projectStorage'
-import type { EditorState, CanvasElement } from '../components/editor/types'
+import type { EditorState } from '../components/editor/types'
 import StudentWorkspaceLayout from '../components/layout/StudentWorkspaceLayout'
 import StudentZoomControl from '../components/layout/StudentZoomControl'
 import SNSBackCoverPreview from '../components/back-cover/SNSBackCoverPreview'
@@ -15,6 +15,9 @@ import html2canvas from 'html2canvas'
 import { jsPDF } from 'jspdf'
 import { useAuth } from '../../../shared/contexts/AuthContext'
 import { createGrowthEvaluationForSharedComic } from '../services/studentGrowthService'
+import LandscapePageLayout, { FLIPBOOK_PAGE_HEIGHT, FLIPBOOK_PAGE_RATIO, FLIPBOOK_PAGE_WIDTH } from '../components/viewer/LandscapePageLayout'
+import { buildComicPageInfo, buildQuizPageInfo, buildStoryPageInfo, getProjectKeywords } from '../components/viewer/landscapePageInfo'
+import '../styles/landscape-viewer.css'
 const BGM_PATH = '/audio/viewer/if-i-had-a-chicken.mp3';
 
 function hexToRgba(hex: string, opacity: number) {
@@ -67,50 +70,9 @@ function ReadonlyElement({ el }: { el: ComicCutElement }) {
   )
 }
 
-function ReadonlyFrontElement({ el }: { el: CanvasElement }) {
-  if (el.visible === false) return null;
-  const isText = el.type === 'text';
-  
-  return (
-    <div
-      style={{
-        position: 'absolute',
-        left: el.x,
-        top: el.y,
-        width: el.width,
-        height: el.height,
-        transform: `rotate(${el.rotation || 0}deg)`,
-        zIndex: el.zIndex,
-        pointerEvents: 'none',
-        opacity: (el as any).opacity ?? 1,
-      }}
-    >
-      {isText && (
-        <div 
-          className="w-full h-full flex" 
-          style={{ 
-            alignItems: el.props.verticalAlign === 'middle' ? 'center' : el.props.verticalAlign === 'bottom' ? 'flex-end' : 'flex-start',
-            justifyContent: el.props.align === 'center' ? 'center' : el.props.align === 'right' ? 'flex-end' : 'flex-start',
-            fontFamily: el.props.fontFamily || 'sans-serif',
-            fontSize: el.props.fontSize || 24,
-            fontWeight: el.props.fontWeight || 'normal',
-            color: el.props.fill || '#000',
-            WebkitTextStroke: el.props.textStrokeWidth ? `${el.props.textStrokeWidth}px ${el.props.textStrokeColor}` : undefined,
-            lineHeight: el.props.lineHeight || 1.2,
-            textAlign: el.props.align || 'left',
-            whiteSpace: 'pre-wrap'
-          }}
-        >
-          {el.props.text}
-        </div>
-      )}
-    </div>
-  )
-}
-
-const PDF_PAGE_WIDTH = 794;
-const PDF_PAGE_HEIGHT = 1123;
-const PDF_SCALE = PDF_PAGE_WIDTH / 1400;
+const PDF_PAGE_WIDTH = 1123;
+const PDF_PAGE_HEIGHT = 794;
+const PDF_SCALE = PDF_PAGE_WIDTH / FLIPBOOK_PAGE_WIDTH;
 
 const pdfPageBaseStyle: React.CSSProperties = {
   width: `${PDF_PAGE_WIDTH}px`,
@@ -125,45 +87,6 @@ const pdfPageBaseStyle: React.CSSProperties = {
   boxSizing: 'border-box',
 };
 
-function ReadonlyPdfFrontElement({ el }: { el: CanvasElement }) {
-  if (el.visible === false) return null;
-  const isText = el.type === 'text';
-  
-  return (
-    <div
-      style={{
-        position: 'absolute',
-        left: el.x * PDF_SCALE,
-        top: el.y * PDF_SCALE,
-        width: el.width * PDF_SCALE,
-        height: el.height * PDF_SCALE,
-        zIndex: el.zIndex,
-        opacity: (el as any).opacity ?? 1,
-      }}
-    >
-      {isText && (
-        <div 
-          style={{ 
-            width: '100%', height: '100%', display: 'flex',
-            alignItems: el.props.verticalAlign === 'middle' ? 'center' : el.props.verticalAlign === 'bottom' ? 'flex-end' : 'flex-start',
-            justifyContent: el.props.align === 'center' ? 'center' : el.props.align === 'right' ? 'flex-end' : 'flex-start',
-            fontFamily: el.props.fontFamily || 'sans-serif',
-            fontSize: (el.props.fontSize || 24) * PDF_SCALE,
-            fontWeight: el.props.fontWeight || 'normal',
-            color: el.props.fill || '#000000',
-            WebkitTextStroke: el.props.textStrokeWidth ? `${el.props.textStrokeWidth * PDF_SCALE}px ${el.props.textStrokeColor}` : undefined,
-            lineHeight: el.props.lineHeight || 1.2,
-            textAlign: el.props.align || 'left',
-            whiteSpace: 'pre-wrap'
-          }}
-        >
-          {el.props.text}
-        </div>
-      )}
-    </div>
-  )
-}
-
 const PageWrapper = ({ children, isLeft, isRight, isSingle, showNumber, pageNum }: any) => {
   const ref = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
@@ -172,7 +95,7 @@ const PageWrapper = ({ children, isLeft, isRight, isSingle, showNumber, pageNum 
     if (!ref.current) return;
     const resize = () => {
       if (ref.current) {
-        setScale(ref.current.clientWidth / 1400); 
+        setScale(ref.current.clientWidth / FLIPBOOK_PAGE_WIDTH);
       }
     };
     resize();
@@ -183,7 +106,7 @@ const PageWrapper = ({ children, isLeft, isRight, isSingle, showNumber, pageNum 
 
   return (
     <div ref={ref} className={`flex-1 h-full bg-white relative overflow-hidden ${isSingle ? 'rounded-none shadow-lg border border-slate-200' : isLeft ? 'rounded-none border-r-0' : isRight ? 'rounded-none border-l border-black/5' : ''} shadow-[inset_0_0_40px_rgba(0,0,0,0.03)]`}>
-      <div style={{ transform: `scale(${scale})`, transformOrigin: 'top left', width: 1400, height: 1980, position: 'absolute', top: 0, left: 0 }}>
+      <div style={{ transform: `scale(${scale})`, transformOrigin: 'top left', width: FLIPBOOK_PAGE_WIDTH, height: FLIPBOOK_PAGE_HEIGHT, position: 'absolute', top: 0, left: 0 }}>
         {pageNum !== undefined && pageNum >= 2 && pageNum <= 15 && (
           <div 
             className="absolute pointer-events-none page-doodle-border"
@@ -280,12 +203,13 @@ export default function StudentComicViewerPage() {
   const [shareModalData, setShareModalData] = useState<{ url: string } | null>(null)
   const pdfCaptureRef = useRef<HTMLDivElement>(null)
 
-  const [zoomPercent, setZoomPercent] = useState<number | null>(90)
+  const [zoomPercent, setZoomPercent] = useState<number | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 })
   const audioRef = useRef<HTMLAudioElement>(null)
 
   const [projectData, setProjectData] = useState<ComicProjectData | null>(null)
+  const [quizAnswers, setQuizAnswers] = useState<Record<number, 'O' | 'X'>>({})
 
   const [showMenu, setShowMenu] = useState(false)
   const [isAutoFlip, setIsAutoFlip] = useState(false)
@@ -379,17 +303,18 @@ export default function StudentComicViewerPage() {
     for (let i = 1; i <= 6; i++) {
       const cutData = loadComicCutData(currentProjectId, i);
       const scriptCut = storedProjectData?.script?.cuts?.find(c => c.cutNumber === i);
-      newPages.push({ type: 'comic-cut', cutNum: i, data: cutData, scriptCut });
+      if (cutData || scriptCut) newPages.push({ type: 'comic-cut', cutNum: i, data: cutData, scriptCut });
     }
 
     // 8~10. 생활속 이야기
-    newPages.push({ type: 'story-history', data: storedSummary?.stories?.history || null });
-    newPages.push({ type: 'story-current', data: storedSummary?.stories?.latest || null });
-    newPages.push({ type: 'story-life', data: storedSummary?.stories?.life || null });
+    if (storedSummary?.stories?.history) newPages.push({ type: 'story-history', data: storedSummary.stories.history });
+    if (storedSummary?.stories?.latest) newPages.push({ type: 'story-current', data: storedSummary.stories.latest });
+    if (storedSummary?.stories?.life) newPages.push({ type: 'story-life', data: storedSummary.stories.life });
 
     // 11~15. OX 문제
     for (let i = 0; i < 5; i++) {
-      newPages.push({ type: 'ox-quiz', questionNum: i + 1, data: storedSummary?.questions?.[i] || null });
+      const question = storedSummary?.questions?.[i];
+      if (question) newPages.push({ type: 'ox-quiz', questionNum: i + 1, data: question });
     }
 
     // 16. 뒤표지
@@ -400,8 +325,8 @@ export default function StudentComicViewerPage() {
 
 
   // --- Zoom Logic ---
-  const BASE_WIDTH = 1000;
-  const BASE_HEIGHT = 707;
+  const BASE_WIDTH = 1200;
+  const BASE_HEIGHT = BASE_WIDTH / (FLIPBOOK_PAGE_RATIO * 2);
   const SCROLL_PADDING = 80;
   
   let fitScale = 1;
@@ -409,7 +334,7 @@ export default function StudentComicViewerPage() {
     const scaleW = (containerSize.width - SCROLL_PADDING * 2) / BASE_WIDTH;
     const scaleH = (containerSize.height - SCROLL_PADDING * 2) / BASE_HEIGHT;
     fitScale = Math.min(scaleW, scaleH);
-    fitScale = Math.max(0.6, fitScale); // Minimum 60%
+    fitScale = Math.max(0.3, fitScale);
   }
   
   const currentZoom = zoomPercent !== null ? zoomPercent : (containerSize.width > 0 ? Math.round(fitScale * 100) : 100);
@@ -538,352 +463,158 @@ export default function StudentComicViewerPage() {
     )
   }
 
-  // --- Render Page Type ---
-  const renderPage = (page: ViewerPage | null, isLeft: boolean, isSingle: boolean = false) => {
-    if (!page) {
-      return (
-        <PageWrapper isLeft={isLeft} isRight={!isLeft} isSingle={isSingle} showNumber={false}>
-          <div className="w-full h-full flex flex-col items-center justify-center bg-slate-50"></div>
-        </PageWrapper>
-      )
-    }
-
-    const pageIndex = pages.indexOf(page);
-    const pageNum = pageIndex + 1;
+  // --- Landscape page rendering ---
+  const renderLandscapeContent = (page: ViewerPage, pageNum: number) => {
+    const backCover = pages.find((candidate) => candidate.type === 'back-cover')
+    const backData = backCover?.type === 'back-cover' ? backCover.data : null
+    const subject = backData?.subjectName || projectData.subject
+    const unit = backData?.unitName || projectData.subUnit || projectData.mainUnit
 
     if (page.type === 'front-cover') {
-      const state = page.data;
-      if (!state) return (
-        <PageWrapper isLeft={isLeft} isRight={!isLeft} isSingle={isSingle} showNumber={false}>
-          <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 bg-slate-50 text-4xl font-bold">아직 앞표지가 저장되지 않았어요.</div>
-        </PageWrapper>
-      );
-      const bgTemplate = COMMON_COVER_TEMPLATES.find(t => t.id === state.coverTemplateId) || COMMON_COVER_TEMPLATES.find(t => t.id === DEFAULT_COVER_TEMPLATE_ID);
-      const bgUrl = state.background || bgTemplate?.imageUrl;
+      const state = page.data
+      const bgTemplate = COMMON_COVER_TEMPLATES.find((template) => template.id === state?.coverTemplateId)
+        || COMMON_COVER_TEMPLATES.find((template) => template.id === DEFAULT_COVER_TEMPLATE_ID)
+      const coverImage = projectData.cover?.imageUrl || state?.background || bgTemplate?.imageUrl || projectData.fullComic?.imageUrl
+      const keywords = getProjectKeywords(projectData)
       return (
-        <PageWrapper isLeft={isLeft} isRight={!isLeft} isSingle={isSingle} showNumber={false}>
-           <div className="w-full h-full relative bg-white">
-             {bgUrl && <img src={bgUrl} className="w-full h-full object-cover" alt="cover bg" />}
-             {state.elements.map(el => <ReadonlyFrontElement key={el.id} el={el} />)}
-           </div>
-        </PageWrapper>
-      )
-    }
-
-    if (page.type === 'comic-cut') {
-      const data = page.data;
-      if (!data) return (
-        <PageWrapper isLeft={isLeft} isRight={!isLeft} isSingle={isSingle} showNumber={true} pageNum={pageNum}>
-          <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 bg-transparent text-4xl font-bold">아직 {page.cutNum}컷이 저장되지 않았어요.</div>
-        </PageWrapper>
-      );
-      return (
-        <PageWrapper isLeft={isLeft} isRight={!isLeft} isSingle={isSingle} showNumber={true} pageNum={pageNum}>
-           <div className="w-full h-full flex flex-col items-center bg-transparent comic-cut-page-content" style={{ paddingTop: '100px', paddingBottom: '48px', paddingLeft: '80px', paddingRight: '80px' }}>
-             <div className="text-[50px] font-jua text-[#303442] mb-[14px] bg-[#f3f4f7] py-8 px-12 rounded-[40px] w-[90%] max-w-[1200px] border border-[#d9deea] break-keep comic-cut-description">
-               {page.cutNum}컷. {page.scriptCut?.sceneDescription || '장면'}
-             </div>
-             <div 
-               className="w-[90%] max-w-[1200px] bg-white shadow-xl border-[12px] border-[#dbeafe] rounded-[40px] relative overflow-hidden shrink-0 comic-read-cut-frame"
-               style={{ width: '100%', height: 'auto', aspectRatio: '343 / 251' }}
-             >
-                {data.backgroundImageUrl ? (
-                  <img src={data.backgroundImageUrl} className="absolute inset-0 w-full h-full object-contain block mx-auto" alt="cut bg" />
-                ) : (
-                  <div className="absolute inset-0 w-full h-full flex items-center justify-center text-[50px] text-slate-400 font-bold bg-slate-50">그림 없음</div>
-                )}
-                <div className="absolute inset-0 w-full h-full pointer-events-none">
-                   <div style={{ transform: `scale(${1176 / 1400})`, transformOrigin: 'top left', width: 1400, height: 1400 * 251 / 343, position: 'absolute', top: 0, left: 0 }}>
-                     {data.elements?.map(el => <ReadonlyElement key={el.id} el={el} />)}
-                   </div>
-                </div>
-             </div>
-           </div>
-        </PageWrapper>
-      )
-    }
-
-    if (page.type.startsWith('story-')) {
-      const data = page.data;
-      const typeLabel = page.type === 'story-history' ? '역사 이야기' : page.type === 'story-current' ? '최신 이야기' : '생활 연결';
-      const colorClass = page.type === 'story-history' ? 'bg-purple-50 text-purple-600 border-purple-200' : page.type === 'story-current' ? 'bg-sky-50 text-sky-600 border-sky-200' : 'bg-teal-50 text-teal-600 border-teal-200';
-      
-      if (!data) return (
-        <PageWrapper isLeft={isLeft} isRight={!isLeft} isSingle={isSingle} showNumber={true} pageNum={pageNum}>
-          <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 bg-transparent text-4xl font-bold">아직 {typeLabel}가 없어요.</div>
-        </PageWrapper>
-      );
-      return (
-        <PageWrapper isLeft={isLeft} isRight={!isLeft} isSingle={isSingle} showNumber={true} pageNum={pageNum}>
-           <div className="w-full h-full flex flex-col bg-transparent" style={{ paddingTop: '100px', paddingLeft: '80px', paddingRight: '80px', paddingBottom: '64px' }}>
-             <div className={`text-[45px] font-jua mb-12 py-4 px-10 rounded-full self-start border-[3px] ${colorClass}`}>
-               세상 속 이야기 - {typeLabel}
-             </div>
-             <h2 className="text-[60px] font-jua text-[#303442] mb-10 leading-tight break-keep w-full">{data.title}</h2>
-             <p className="text-[36px] text-[#555b6b] leading-[1.8] font-medium whitespace-pre-wrap break-keep w-full">{data.content}</p>
-           </div>
-        </PageWrapper>
-      )
-    }
-
-    if (page.type === 'ox-quiz') {
-      const data = page.data;
-      if (!data) return (
-        <PageWrapper isLeft={isLeft} isRight={!isLeft} isSingle={isSingle} showNumber={true} pageNum={pageNum}>
-          <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 bg-transparent text-4xl font-bold">아직 OX 문제 {page.questionNum}가 없어요.</div>
-        </PageWrapper>
-      );
-      return (
-        <PageWrapper isLeft={isLeft} isRight={!isLeft} isSingle={isSingle} showNumber={true} pageNum={pageNum}>
-           <div className="w-full h-full flex flex-col bg-transparent relative" style={{ paddingTop: '100px', paddingLeft: '80px', paddingRight: '80px', paddingBottom: '100px' }}>
-             <div className="text-[45px] font-jua mb-12 py-4 px-10 rounded-full self-start border-[3px] bg-pink-50 text-pink-600 border-pink-200">
-               팡팡! OX 퀴즈 {page.questionNum}
-             </div>
-             <div className="w-full bg-[#f8f9fc] rounded-[40px] p-[60px] border-[4px] border-[#d9deea] flex-1 flex flex-col quiz-card">
-                <h2 className="text-[54px] font-bold text-[#303442] mb-auto leading-[1.6] break-keep">Q. {data.question}</h2>
-                <div className="mt-auto flex flex-col gap-8">
-                  <div className="text-[40px] font-bold text-[#8b909e] text-center border-t-[3px] border-dashed border-[#d9deea] pt-12 pb-4">
-                    아래 영역을 확인해보세요!
-                  </div>
-                  <div className="bg-white rounded-[30px] p-8 border-2 border-[#e2e8f0] shadow-sm">
-                    <p className="text-[32px] font-bold">정답: <span className={data.answer === 'O' ? 'text-blue-500' : 'text-red-500'}>{data.answer}</span></p>
-                  </div>
-                </div>
-             </div>
-           </div>
-        </PageWrapper>
-      )
-    }
-
-    if (page.type === 'back-cover') {
-      const data = page.data;
-      if (!data) return (
-        <PageWrapper isLeft={isLeft} isRight={!isLeft} isSingle={isSingle} showNumber={false}>
-          <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 bg-slate-50 text-4xl font-bold">아직 뒤표지가 저장되지 않았어요.</div>
-        </PageWrapper>
-      );
-      
-      const bgColor = data.bgColor || '#f3f4f7';
-      const bgOpacity = data.bgOpacity ?? 1;
-      const rgbaBg = hexToRgba(bgColor, bgOpacity);
-
-      return (
-        <PageWrapper isLeft={isLeft} isRight={!isLeft} isSingle={isSingle} showNumber={false}>
-           <div className="w-full h-full bg-white flex flex-col">
-             <SNSBackCoverPreview
-               studentName={data.authorName || '-'}
-               gradeClass={data.gradeClassInfo || '-'}
-               completionDate={data.createdDate || '-'}
-               subject={data.subjectName || '-'}
-               unit={data.unitName || '-'}
-               topic={data.topicName || '-'}
-               backgroundColor={rgbaBg}
-             />
-           </div>
-        </PageWrapper>
-      )
-    }
-
-    return null;
-  }
-
-  const renderPdfPage = (page: ViewerPage | null, pageNum: number) => {
-    if (!page) {
-      return <div style={pdfPageBaseStyle}></div>
-    }
-
-    if (page.type === 'front-cover') {
-      const state = page.data;
-      if (!state) return (
-        <div style={{ ...pdfPageBaseStyle, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', color: '#94a3b8' }}>아직 앞표지가 저장되지 않았어요.</div>
-      );
-      const bgTemplate = COMMON_COVER_TEMPLATES.find(t => t.id === state.coverTemplateId) || COMMON_COVER_TEMPLATES.find(t => t.id === DEFAULT_COVER_TEMPLATE_ID);
-      const bgUrl = state.background || bgTemplate?.imageUrl;
-      return (
-        <div style={{ ...pdfPageBaseStyle }}>
-           <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-             {bgUrl && <img src={bgUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="cover bg" />}
-             {state.elements.map(el => <ReadonlyPdfFrontElement key={el.id} el={el} />)}
-           </div>
-        </div>
-      )
-    }
-
-    if (page.type === 'comic-cut') {
-      const data = page.data;
-      if (!data) return (
-        <div style={{ ...pdfPageBaseStyle, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', color: '#94a3b8' }}>아직 {page.cutNum}컷이 저장되지 않았어요.</div>
-      );
-      
-      const pt = 100 * PDF_SCALE;
-      const px = 80 * PDF_SCALE;
-      const pb = 48 * PDF_SCALE;
-      const frameWidth = PDF_PAGE_WIDTH - (px * 2);
-      const frameHeight = frameWidth * (44 / 67);
-      const innerScale = frameWidth / 1400;
-
-      return (
-        <div style={{ ...pdfPageBaseStyle, display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: `${pt}px`, paddingLeft: `${px}px`, paddingRight: `${px}px`, paddingBottom: `${pb}px`, backgroundColor: '#ffffff' }}>
-          {pageNum >= 2 && pageNum <= 15 && (
-            <img src="/images/toonschool/flipbook/page-border-doodle.png" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0.05, objectFit: 'fill', zIndex: 0 }} alt="" />
-          )}
-          <div style={{ position: 'relative', zIndex: 1, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <div style={{ fontSize: `${50 * PDF_SCALE}px`, fontFamily: 'Jua, sans-serif', color: '#303442', marginBottom: `${14 * PDF_SCALE}px`, backgroundColor: '#f3f4f7', padding: `${32 * PDF_SCALE}px ${48 * PDF_SCALE}px`, borderRadius: `${40 * PDF_SCALE}px`, width: '100%', border: '1px solid #d9deea', wordBreak: 'keep-all', boxSizing: 'border-box' }}>
-              {page.cutNum}컷. {page.scriptCut?.sceneDescription || '장면'}
+        <article className="landscape-cover">
+          <section className="landscape-cover-copy">
+            <span className="landscape-page-type">TOONSCHOOL · {subject}</span>
+            <h1>{projectData.topicTitle || '나의 학습 만화'}</h1>
+            <p>{unit || projectData.selectedStoryDescription}</p>
+            {!!keywords.length && <div className="landscape-keywords">{keywords.map((keyword) => <span key={keyword}>{keyword}</span>)}</div>}
+            <div className="landscape-meta">
+              {projectData.grade && <span>{projectData.grade}</span>}
+              {backData?.authorName && <span>지은이 {backData.authorName}</span>}
+              {backData?.gradeClassInfo && <span>{backData.gradeClassInfo}</span>}
+              {backData?.createdDate && <span>{backData.createdDate}</span>}
             </div>
-            
-            <div style={{ width: `${frameWidth}px`, height: `${frameHeight}px`, backgroundColor: '#ffffff', border: `${12 * PDF_SCALE}px solid #dbeafe`, borderRadius: `${40 * PDF_SCALE}px`, position: 'relative', overflow: 'hidden', boxSizing: 'border-box' }}>
-              {data.backgroundImageUrl ? (
-                <img src={data.backgroundImageUrl} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} alt="cut bg" />
+          </section>
+          <section className="landscape-cover-art">
+            {coverImage ? <img src={coverImage} alt={`${projectData.topicTitle} 표지`} /> : <div className="text-6xl" aria-label="표지 이미지 없음">📖</div>}
+          </section>
+        </article>
+      )
+    }
+
+    if (page.type === 'comic-cut') {
+      const info = buildComicPageInfo(projectData, page.cutNum)
+      const sceneScale = 806 / 1400
+      return (
+        <LandscapePageLayout info={info} subject={subject} unit={unit} pageNumber={pageNum} totalPages={pages.length} tone="comic">
+          <div className="landscape-content-inner">
+            <div className="landscape-comic-frame">
+              {page.data?.backgroundImageUrl ? (
+                <img src={page.data.backgroundImageUrl} className="absolute inset-0 w-full h-full object-contain" alt={`${page.cutNum}컷 만화 장면`} />
               ) : (
-                <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: `${50 * PDF_SCALE}px`, color: '#94a3b8', backgroundColor: '#f8fafc' }}>그림 없음</div>
+                <div className="absolute inset-0 flex items-center justify-center text-3xl font-jua text-slate-400">그림 준비 중</div>
               )}
-              
-              <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
-                {data.elements?.map(el => (
-                   <div key={el.id} style={{
-                     position: 'absolute',
-                     left: el.x * innerScale,
-                     top: el.y * innerScale,
-                     width: el.width * innerScale,
-                     height: el.height * innerScale,
-                     zIndex: el.zIndex
-                   }}>
-                     {el.type === 'character' && el.imageUrl && (
-                       <img src={el.imageUrl} alt="character" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                     )}
-                     {el.type === 'speechBubble' && (
-                       <div style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                         <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#ffffff', border: `${4 * innerScale}px solid #1e293b`, borderRadius: `${24 * innerScale}px` }} />
-                         <p style={{ position: 'relative', zIndex: 10, color: '#1e293b', fontWeight: 'bold', textAlign: 'center', padding: `0 ${16 * innerScale}px`, margin: 0, fontSize: `${(el.style?.fontSize || 16) * innerScale}px`, wordBreak: 'keep-all', lineHeight: 1.4 }}>
-                           {el.text}
-                         </p>
-                       </div>
-                     )}
-                   </div>
-                ))}
+              <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                <div style={{ transform: `scale(${sceneScale})`, transformOrigin: 'top left', width: 1400, height: 1025 }}>
+                  {page.data?.elements?.map((element) => <ReadonlyElement key={element.id} el={element} />)}
+                </div>
               </div>
             </div>
           </div>
-          <div style={{ position: 'absolute', bottom: `${24 * PDF_SCALE}px`, right: `${32 * PDF_SCALE}px`, color: '#94a3b8', fontWeight: 'bold', fontFamily: 'Jua, sans-serif', fontSize: '12pt', zIndex: 2 }}>
-            - {pageNum} -
-          </div>
-        </div>
+        </LandscapePageLayout>
       )
     }
 
     if (page.type.startsWith('story-')) {
-      const data = page.data;
-      const typeLabel = page.type === 'story-history' ? '역사 이야기' : page.type === 'story-current' ? '최신 이야기' : '생활 연결';
-      const isHistory = page.type === 'story-history';
-      const isCurrent = page.type === 'story-current';
-      const bgColor = isHistory ? '#f5f3ff' : isCurrent ? '#f0f9ff' : '#f0fdfa';
-      const textColor = isHistory ? '#9333ea' : isCurrent ? '#0284c7' : '#0d9488';
-      const borderColor = isHistory ? '#e9d5ff' : isCurrent ? '#bae6fd' : '#ccfbf1';
-      
-      if (!data) return (
-        <div style={{ ...pdfPageBaseStyle, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', color: '#94a3b8' }}>아직 {typeLabel}가 없어요.</div>
-      );
-
-      const pt = 100 * PDF_SCALE;
-      const px = 80 * PDF_SCALE;
-      const pb = 64 * PDF_SCALE;
-
+      const storyType: WorldStory['type'] = page.type === 'story-history' ? 'history' : page.type === 'story-current' ? 'latest' : 'life'
+      const data = page.data
+      if (!data) return null
+      const info = buildStoryPageInfo(projectData, storyType, data)
       return (
-        <div style={{ ...pdfPageBaseStyle, display: 'flex', flexDirection: 'column', paddingTop: `${pt}px`, paddingLeft: `${px}px`, paddingRight: `${px}px`, paddingBottom: `${pb}px`, backgroundColor: '#ffffff', boxSizing: 'border-box' }}>
-          {pageNum >= 2 && pageNum <= 15 && (
-            <img src="/images/toonschool/flipbook/page-border-doodle.png" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0.05, objectFit: 'fill', zIndex: 0 }} alt="" />
-          )}
-          <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column' }}>
-            <div style={{ fontSize: `${45 * PDF_SCALE}px`, fontFamily: 'Jua, sans-serif', marginBottom: `${48 * PDF_SCALE}px`, padding: `${16 * PDF_SCALE}px ${40 * PDF_SCALE}px`, borderRadius: '9999px', alignSelf: 'flex-start', border: `3px solid ${borderColor}`, backgroundColor: bgColor, color: textColor }}>
-              세상 속 이야기 - {typeLabel}
-            </div>
-            <h2 style={{ fontSize: `${60 * PDF_SCALE}px`, fontFamily: 'Jua, sans-serif', color: '#303442', marginBottom: `${40 * PDF_SCALE}px`, lineHeight: 1.2, wordBreak: 'keep-all', margin: 0 }}>{data.title}</h2>
-            <p style={{ fontSize: `${36 * PDF_SCALE}px`, color: '#555b6b', lineHeight: 1.8, fontWeight: 500, whiteSpace: 'pre-wrap', wordBreak: 'keep-all', margin: 0 }}>{data.content}</p>
+        <LandscapePageLayout info={info} subject={subject} unit={unit} pageNumber={pageNum} totalPages={pages.length} tone={storyType === 'latest' ? 'current' : storyType}>
+          <div className="landscape-story-content">
+            <h3>{data.title}</h3>
+            <p>{data.content}</p>
           </div>
-          <div style={{ position: 'absolute', bottom: `${24 * PDF_SCALE}px`, right: `${32 * PDF_SCALE}px`, color: '#94a3b8', fontWeight: 'bold', fontFamily: 'Jua, sans-serif', fontSize: '12pt', zIndex: 2 }}>
-            - {pageNum} -
-          </div>
-        </div>
+        </LandscapePageLayout>
       )
     }
 
     if (page.type === 'ox-quiz') {
-      const data = page.data;
-      if (!data) return (
-        <div style={{ ...pdfPageBaseStyle, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', color: '#94a3b8' }}>아직 OX 문제 {page.questionNum}가 없어요.</div>
-      );
-      
-      const pt = 100 * PDF_SCALE;
-      const px = 80 * PDF_SCALE;
-      const pb = 100 * PDF_SCALE;
-
+      const data = page.data
+      if (!data) return null
+      const info = buildQuizPageInfo(projectData, page.questionNum)
+      const selected = quizAnswers[page.questionNum]
       return (
-        <div style={{ ...pdfPageBaseStyle, display: 'flex', flexDirection: 'column', paddingTop: `${pt}px`, paddingLeft: `${px}px`, paddingRight: `${px}px`, paddingBottom: `${pb}px`, backgroundColor: '#ffffff', boxSizing: 'border-box' }}>
-          {pageNum >= 2 && pageNum <= 15 && (
-            <img src="/images/toonschool/flipbook/page-border-doodle.png" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0.05, objectFit: 'fill', zIndex: 0 }} alt="" />
-          )}
-          <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
-            <div style={{ fontSize: `${45 * PDF_SCALE}px`, fontFamily: 'Jua, sans-serif', marginBottom: `${48 * PDF_SCALE}px`, padding: `${16 * PDF_SCALE}px ${40 * PDF_SCALE}px`, borderRadius: '9999px', alignSelf: 'flex-start', border: `3px solid #fbcfe8`, backgroundColor: '#fdf2f8', color: '#db2777' }}>
-              팡팡! OX 퀴즈 {page.questionNum}
+        <LandscapePageLayout info={info} subject={subject} unit={unit} pageNumber={pageNum} totalPages={pages.length} tone="quiz">
+          <div className="landscape-quiz-card">
+            <h3>Q. {data.question}</h3>
+            <div className="landscape-quiz-actions">
+              {(['O', 'X'] as const).map((answer) => (
+                <button
+                  key={answer}
+                  type="button"
+                  aria-label={`${answer} 선택`}
+                  className={selected === answer ? (answer === data.answer ? '!border-emerald-400 !bg-emerald-50 !text-emerald-600' : '!border-rose-400 !bg-rose-50 !text-rose-600') : ''}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    setQuizAnswers((current) => ({ ...current, [page.questionNum]: answer }))
+                  }}
+                >
+                  {answer}
+                </button>
+              ))}
             </div>
-            
-            <div style={{ backgroundColor: '#f8f9fc', borderRadius: `${40 * PDF_SCALE}px`, padding: `${60 * PDF_SCALE}px`, border: `${4 * PDF_SCALE}px solid #d9deea`, flex: 1, display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }}>
-               <h2 style={{ fontSize: `${54 * PDF_SCALE}px`, fontWeight: 'bold', color: '#303442', marginBottom: 'auto', lineHeight: 1.6, wordBreak: 'keep-all', margin: 0 }}>Q. {data.question}</h2>
-               
-               <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: `${32 * PDF_SCALE}px` }}>
-                 <div style={{ fontSize: `${40 * PDF_SCALE}px`, fontWeight: 'bold', color: '#8b909e', textAlign: 'center', borderTop: `${3 * PDF_SCALE}px dashed #d9deea`, paddingTop: `${48 * PDF_SCALE}px`, paddingBottom: `${16 * PDF_SCALE}px` }}>
-                   아래 영역을 확인해보세요!
-                 </div>
-                 <div style={{ backgroundColor: '#ffffff', borderRadius: `${30 * PDF_SCALE}px`, padding: `${32 * PDF_SCALE}px`, border: `${2 * PDF_SCALE}px solid #e2e8f0` }}>
-                   <p style={{ fontSize: `${32 * PDF_SCALE}px`, fontWeight: 'bold', margin: 0 }}>정답: <span style={{ color: data.answer === 'O' ? '#3b82f6' : '#ef4444' }}>{data.answer}</span></p>
-                 </div>
-               </div>
-            </div>
+            {selected && <p className={`mt-8 text-center text-2xl font-jua ${selected === data.answer ? 'text-emerald-600' : 'text-rose-600'}`}>{selected === data.answer ? '정답이에요!' : '한 번 더 생각해 보세요.'}</p>}
           </div>
-          <div style={{ position: 'absolute', bottom: `${24 * PDF_SCALE}px`, right: `${32 * PDF_SCALE}px`, color: '#94a3b8', fontWeight: 'bold', fontFamily: 'Jua, sans-serif', fontSize: '12pt', zIndex: 2 }}>
-            - {pageNum} -
-          </div>
-        </div>
+        </LandscapePageLayout>
       )
     }
 
-    if (page.type === 'back-cover') {
-      const data = page.data;
-      if (!data) return (
-        <div style={{ ...pdfPageBaseStyle, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', color: '#94a3b8' }}>아직 뒤표지가 저장되지 않았어요.</div>
-      );
-      
-      const bgColor = data.bgColor || '#f3f4f7';
-      const bgOpacity = data.bgOpacity ?? 1;
-      const rgbaBg = hexToRgba(bgColor, bgOpacity);
-
-      const infoParts = [
-        data.authorName && `지은이 : ${data.authorName}`,
-        data.gradeClassInfo && `학년 : ${data.gradeClassInfo}`,
-        data.subjectName && `과목 : ${data.subjectName}`,
-        data.unitName && `단원 : ${data.unitName}`,
-        data.topicName && `주제 : ${data.topicName}`,
-        data.createdDate && `발행일 : ${data.createdDate}`
-      ].filter(Boolean);
-
-      return (
-        <div style={{ ...pdfPageBaseStyle, backgroundColor: rgbaBg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ width: '95%', height: '95%', position: 'relative' }}>
-             <img src="/images/toonschool/back-covers/back-cover-sns-default.webp" style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="back cover template" />
-             <div style={{ position: 'absolute', left: '4%', right: '4%', bottom: '11.5%', display: 'flex', justifyContent: 'center' }}>
-               <div style={{ fontSize: '12px', color: '#1e293b', fontWeight: 500, textAlign: 'center', whiteSpace: 'nowrap' }}>
-                 {infoParts.join(' | ')}
-               </div>
-             </div>
+    const data = page.data || {}
+    const backgroundColor = hexToRgba(data.bgColor || '#e9f7ef', data.bgOpacity ?? 1)
+    return (
+      <article className="landscape-back-cover" style={{ backgroundColor }}>
+        <section className="landscape-back-copy">
+          <span className="landscape-page-type">학습 마무리</span>
+          <h1>오늘의 배움을 완성했어요</h1>
+          <p>{projectData.topicTitle || data.topicName || '나의 학습 만화'}</p>
+          <div className="landscape-meta">
+            {data.authorName && <span>{data.authorName}</span>}
+            {data.gradeClassInfo && <span>{data.gradeClassInfo}</span>}
+            {data.createdDate && <span>{data.createdDate}</span>}
+            <span>친구와 작품을 나누고 다시 읽어 보세요.</span>
           </div>
-        </div>
-      )
-    }
-
-    return <div style={pdfPageBaseStyle}></div>;
+        </section>
+        <section className="landscape-back-art">
+          <SNSBackCoverPreview
+            studentName={data.authorName || '-'}
+            gradeClass={data.gradeClassInfo || '-'}
+            completionDate={data.createdDate || '-'}
+            subject={data.subjectName || subject || '-'}
+            unit={data.unitName || unit || '-'}
+            topic={data.topicName || projectData.topicTitle || '-'}
+            backgroundColor={backgroundColor}
+          />
+        </section>
+      </article>
+    )
   }
 
+  const renderPage = (page: ViewerPage | null, isLeft: boolean, isSingle = false) => {
+    if (!page) {
+      return <PageWrapper isLeft={isLeft} isRight={!isLeft} isSingle={isSingle} showNumber={false}><div className="w-full h-full bg-slate-50" /></PageWrapper>
+    }
+    const pageNum = pages.indexOf(page) + 1
+    return (
+      <PageWrapper isLeft={isLeft} isRight={!isLeft} isSingle={isSingle} showNumber={false} pageNum={pageNum}>
+        {renderLandscapeContent(page, pageNum)}
+      </PageWrapper>
+    )
+  }
+
+  const renderPdfPage = (page: ViewerPage, pageNum: number) => (
+    <div style={pdfPageBaseStyle}>
+      <div style={{ width: FLIPBOOK_PAGE_WIDTH, height: FLIPBOOK_PAGE_HEIGHT, transform: `scale(${PDF_SCALE})`, transformOrigin: 'top left' }}>
+        {renderLandscapeContent(page, pageNum)}
+      </div>
+    </div>
+  )
   const renderHalf = (pageIndex: number | null, isLeft: boolean) => {
     if (pageIndex === null) {
       return <div className={`w-full h-full ${isLeft ? 'rounded-none' : 'rounded-none'} bg-transparent`} />;
@@ -928,9 +659,9 @@ export default function StudentComicViewerPage() {
       }
 
       const pdf = new jsPDF({
-        orientation: 'portrait',
+        orientation: 'landscape',
         unit: 'px',
-        format: [794, 1123],
+        format: [PDF_PAGE_WIDTH, PDF_PAGE_HEIGHT],
         compress: true,
       });
 
@@ -958,10 +689,10 @@ export default function StudentComicViewerPage() {
         const imgData = canvas.toDataURL('image/jpeg', 0.95);
 
         if (i > 0) {
-          pdf.addPage([794, 1123], 'portrait');
+          pdf.addPage([PDF_PAGE_WIDTH, PDF_PAGE_HEIGHT], 'landscape');
         }
 
-        pdf.addImage(imgData, 'JPEG', 0, 0, 794, 1123);
+        pdf.addImage(imgData, 'JPEG', 0, 0, PDF_PAGE_WIDTH, PDF_PAGE_HEIGHT);
       }
 
       pdf.save(safeFileName);
@@ -1440,7 +1171,7 @@ export default function StudentComicViewerPage() {
           position: 'fixed',
           left: '-99999px',
           top: 0,
-          width: '794px',
+          width: '1123px',
           pointerEvents: 'none',
           zIndex: -1
         }}
@@ -1450,8 +1181,8 @@ export default function StudentComicViewerPage() {
             key={`pdf-page-${index}`}
             data-pdf-page="true"
             style={{
-              width: '794px',
-              height: '1123px',
+              width: '1123px',
+              height: '794px',
               overflow: 'hidden',
               position: 'relative',
               backgroundColor: '#ffffff'
