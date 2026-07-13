@@ -153,6 +153,15 @@ serve(async (req) => {
     await cleanup('source_documents.uploaded_by', () =>
       adminClient.from('source_documents').update({ uploaded_by: null }).eq('uploaded_by', targetUserId))
 
+    // 학생 부가 데이터 정리(delete-student-by-teacher 와 동일 체계).
+    // 대부분 profiles CASCADE 로 자동 정리되나, auth 없는 고아 상태 등을 대비해 명시 정리.
+    for (const t of ['student_gardens', 'student_items', 'student_attendance_logs', 'student_growth_evaluations', 'reward_logs']) {
+      await cleanup(`student_extra(${t})`, () =>
+        adminClient.from(t).delete().eq('student_id', targetUserId))
+    }
+    await cleanup('toon_projects(user_id)', () =>
+      adminClient.from('toon_projects').delete().eq('user_id', targetUserId))
+
     // students.id 는 profiles 과 FK 가 없으므로 별도 삭제
     await cleanup('students', () =>
       adminClient.from('students').delete().eq('id', targetUserId))

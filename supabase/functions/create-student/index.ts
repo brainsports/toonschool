@@ -122,6 +122,8 @@ serve(async (req) => {
     }
 
     // students 행 추가(LMS 조회용). students.id 는 profiles 과 FK가 없으므로 별도 저장.
+    // created_by 에 생성한 선생님(호출자) ID를 저장 — 이 값이 학생 소유권 신호가 되어
+    // student-by-teacher 조회에서 선생님별 격리에 사용된다.
     const validClassId = classId && isValidUUID(classId) ? classId : null
     const { error: studentError } = await adminClient.from('students').insert({
       id: userId,
@@ -132,6 +134,7 @@ serve(async (req) => {
       grade: `${grade}학년`,
       center_id: centerId,
       organization_id: organizationId,
+      created_by: callerUser.id,
       status: 'active',
     })
     if (studentError) {

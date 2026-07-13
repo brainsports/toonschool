@@ -68,6 +68,42 @@ export async function fetchStudentsByScopeAndGrade(scope: StudentScope, grade: n
   return fetchStudentsByCenterAndGrade(scope.centerId, grade, scope.organizationId)
 }
 
+// 선생님별 격리된 학생 목록 조회(student-by-teacher Edge Function 사용).
+// 서버가 호출자 역할에 따라 스코핑한다(teacher: 본인 생성/담당학급, org_admin: 기관, super_admin: 전체).
+// center_id 가 없어도 기관 전체로 누수되지 않는다. 신규 선생님은 빈 목록.
+export async function fetchStudentsByTeacher(grade: number): Promise<Student[]> {
+  const { data, error } = await supabase.functions.invoke('student-by-teacher', {
+    body: { grade },
+  })
+
+  if (error) {
+    let errorMessage = '학생 목록을 불러오지 못했습니다.'
+    let status = 0
+    try {
+      const ctx = (error as any)?.context
+      if (ctx?.status) status = ctx.status
+      if (ctx && typeof ctx.clone === 'function') {
+        const errBody = await ctx.clone().json()
+        errorMessage = errBody?.message || errBody?.error || errorMessage
+      }
+    } catch { /* ignore */ }
+
+    if (errorMessage === 'Edge Function returned a non-2xx status code' || !errorMessage) {
+      if (status === 401) errorMessage = '로그인이 만료되었습니다. 다시 로그인해 주세요.'
+      else if (status === 403) errorMessage = '조회 권한이 없습니다.'
+      else errorMessage = '학생 목록을 불러오는 중 오류가 발생했습니다.'
+    }
+    console.error(`[fetchStudentsByTeacher] Error (${status}):`, errorMessage)
+    throw new Error(errorMessage)
+  }
+
+  if (!data?.success) {
+    throw new Error(data?.message || '학생 목록을 불러오지 못했습니다.')
+  }
+
+  return (data.students || []) as Student[]
+}
+
 export async function createStudent(data: Omit<Student, 'id' | 'createdAt'>): Promise<Student> {
   const { data: responseData, error } = await supabase.functions.invoke('create-student', {
     body: {
