@@ -54,6 +54,34 @@ function round1(value: number) {
   return Math.round(value * 10) / 10
 }
 
+type PlacementTransform = { scale: number; rotation: number; x: number; y: number }
+
+// DB에서 온 placement 값이 undefined/문자열이어도 항상 안전한 숫자가 되도록 정규화.
+// rotation 컬럼이 아직 없는 DB에서 rotation이 undefined로 내려오는 경우를 방어한다.
+function normalizePlacement(p: GardenPlacement): GardenPlacement {
+  const scale = Number(p.scale)
+  const rotation = Number(p.rotation)
+  const x = Number(p.x)
+  const y = Number(p.y)
+  return {
+    ...p,
+    scale: Number.isFinite(scale) ? scale : 1,
+    rotation: Number.isFinite(rotation) ? rotation : 0,
+    x: Number.isFinite(x) ? x : 40,
+    y: Number.isFinite(y) ? y : 50,
+  }
+}
+
+// 마지막으로 서버에 저장 확정된 값(롤백 기준).
+function snapshotPlacement(p: GardenPlacement): PlacementTransform {
+  return {
+    scale: Number(p.scale) || 1,
+    rotation: Number(p.rotation) || 0,
+    x: Number(p.x) || 40,
+    y: Number(p.y) || 50,
+  }
+}
+
 // 데스크톱에서 왼쪽 정보 패널이 정원 위를 덮는 폭(px).
 // 모바일(<=860px)에서는 패널이 정원 위쪽에 별도 영역으로 배치되므로 0.
 function getOverlayWidthPx() {
@@ -239,7 +267,10 @@ function GardenPlacementItem({
     onUpdateTransform(placement.id, { scale: next })
   }
   const changeRotation = (delta: number) => {
-    onUpdateTransform(placement.id, { rotation: rotation + delta })
+    // 시각적으로 동일한 각도로 -180~180 범위에 정규화.
+    // 저장값이 DB CHECK 제약(rotation ∈ [-360,360])을 벗어나 저장이 실패하는 것을 막는다.
+    const next = ((((rotation + delta + 180) % 360) + 360) % 360) - 180
+    onUpdateTransform(placement.id, { rotation: Math.round(next) })
   }
   const resetTransform = () => {
     onUpdateTransform(placement.id, { scale: 1, rotation: 0 })
@@ -352,8 +383,9 @@ export default function StudentDreamGardenPage() {
   const elementRefs = useRef<Map<string, HTMLElement>>(new Map())
   const highlightTimer = useRef<number | null>(null)
   const messageTimer = useRef<number | null>(null)
-  const transformSaveTimers = useRef<Record<string, number>>({})
-  const pendingTransforms = useRef<Record<string, TransformPatch>>({})
+  const fieldSaveTimers = useRef<Record<string, number>>({})
+  const pendingFields = useRef<Record<string, number>>({})
+  const committedRef = useRef<Map<string, PlacementTransform>>(new Map())
 
   function showMessage(next: string | null, duration = 2000) {
     setMessage(next)
@@ -377,7 +409,7 @@ export default function StudentDreamGardenPage() {
     highlightTimer.current = window.setTimeout(() => setHighlightId(null), HIGHLIGHT_DURATION)
   }
 
-  function locatePlacement(studentItemId: string, itemId: string) {
+  async function locatePlacement(studentItemId: string, itemId: string) {
     setIsAllItemsModalOpen(false)
     // 1) 클릭한 획득 기록과 동일한 인스턴스(student_item_id) 우선 탐색.
     let target = placements.find((p) => p.student_item_id === studentItemId)
@@ -385,10 +417,42 @@ export default function StudentDreamGardenPage() {
     if (!target) {
       target = placements.find((p) => p.item_id === itemId)
     }
+
+    // 3) 배치가 아예 없으면 즉시 생성한 뒤 강조한다.
     if (!target) {
-      showMessage('아직 정원에 배치되지 않은 아이템이에요.')
-      return
+      const si = studentItems.find((s) => s.id === studentItemId)
+      if (si && studentId && si.item?.is_placeable) {
+        try {
+          const containerWidthPx =
+            slotsContainerRef.current?.getBoundingClientRect().width ??
+            (typeof window !== 'undefined' ? window.innerWidth : 1024)
+          const pos = findAutoPosition(si.item, placements, containerWidthPx)
+          const created = normalizePlacement(
+            await saveGardenPlacement({
+              studentId,
+              studentItemId: si.id,
+              itemId: si.item_id,
+              x: pos.x,
+              y: pos.y,
+              scale: pos.scale,
+              zIndex: pos.zIndex,
+            })
+          )
+          committedRef.current.set(created.id, snapshotPlacement(created))
+          setPlacements((prev) => [...prev, created])
+          target = created
+        } catch (err) {
+          if (import.meta.env.DEV) console.error('[DreamGarden] locate auto-place failed:', studentItemId, err)
+          showMessage('정원에 아직 놓지 못한 아이템이에요. 잠시 후 다시 시도해 주세요.')
+          return
+        }
+      } else {
+        showMessage('아직 정원에 배치할 수 없는 아이템이에요.')
+        return
+      }
     }
+
+    if (!target) return
 
     const el = elementRefs.current.get(target.id)
     if (el) {
@@ -401,53 +465,84 @@ export default function StudentDreamGardenPage() {
   async function handleSavePosition(placementId: string, x: number, y: number) {
     showMessage('위치 저장 중...', 0)
     try {
-      await updateGardenPlacement({ placementId, x, y })
+      const updated = normalizePlacement(await updateGardenPlacement({ placementId, x, y }))
+      committedRef.current.set(placementId, snapshotPlacement(updated))
+      // 위치 저장은 x,y만 반영. scale/rotation은 건드리지 않는다.
       setPlacements((prev) =>
-        prev.map((p) => (p.id === placementId ? { ...p, x, y } : p))
+        prev.map((p) => (p.id === placementId ? { ...p, x: updated.x, y: updated.y } : p))
       )
       showMessage('위치를 저장했어요.')
     } catch (err) {
+      if (import.meta.env.DEV) console.error('[DreamGarden] position save failed:', placementId, err)
+      const snap = committedRef.current.get(placementId)
+      if (snap) {
+        setPlacements((prev) =>
+          prev.map((p) => (p.id === placementId ? { ...p, x: snap.x, y: snap.y } : p))
+        )
+      }
       setError('위치를 저장하지 못했어요. 다시 옮겨 주세요.')
       setTimeout(() => setError(null), 3000)
       throw err
     }
   }
 
-  function handleUpdateTransform(placementId: string, patch: TransformPatch) {
-    setPlacements((prev) =>
-      prev.map((p) => (p.id === placementId ? { ...p, ...patch } : p))
-    )
-    // 크기·회전을 연달아 바꿔도 누락 없이 한 번에 저장하도록 patch를 병합한다.
-    pendingTransforms.current[placementId] = {
-      ...pendingTransforms.current[placementId],
-      ...patch,
-    }
+  function scheduleFieldSave(placementId: string, field: 'scale' | 'rotation', value: number) {
+    const key = `${placementId}:${field}`
+    pendingFields.current[key] = value
     showMessage('저장 중...', 0)
 
-    if (transformSaveTimers.current[placementId]) {
-      window.clearTimeout(transformSaveTimers.current[placementId])
+    if (fieldSaveTimers.current[key]) {
+      window.clearTimeout(fieldSaveTimers.current[key])
     }
-    transformSaveTimers.current[placementId] = window.setTimeout(async () => {
-      const pending = pendingTransforms.current[placementId] ?? {}
-      delete pendingTransforms.current[placementId]
+    fieldSaveTimers.current[key] = window.setTimeout(async () => {
+      const v = pendingFields.current[key]
+      delete pendingFields.current[key]
+      // 필드별로 독립 저장. scale 저장은 rotation을, rotation 저장은 scale을 덮어쓰지 않는다.
+      const payload = field === 'scale' ? { scale: v } : { rotation: v }
       try {
-        const updated = await updateGardenPlacement({ placementId, ...pending })
+        const updated = normalizePlacement(await updateGardenPlacement({ placementId, ...payload }))
+        committedRef.current.set(placementId, snapshotPlacement(updated))
         setPlacements((prev) =>
           prev.map((p) =>
             p.id === placementId
-              ? { ...p, scale: updated.scale, rotation: updated.rotation, updated_at: updated.updated_at }
+              ? {
+                  ...p,
+                  scale: Number.isFinite(Number(updated.scale)) ? Number(updated.scale) : p.scale,
+                  rotation: Number.isFinite(Number(updated.rotation)) ? Number(updated.rotation) : p.rotation,
+                  updated_at: updated.updated_at,
+                }
               : p
           )
         )
         showMessage('저장했어요.')
       } catch (err) {
+        if (import.meta.env.DEV) console.error(`[DreamGarden] ${field} save failed:`, placementId, err)
+        // 해당 필드만 마지막 저장값으로 롤백(다른 필드에 영향을 주지 않음).
+        const snap = committedRef.current.get(placementId)
+        if (snap) {
+          setPlacements((prev) =>
+            prev.map((p) => (p.id === placementId ? { ...p, [field]: snap[field] } : p))
+          )
+        }
         setError('크기·회전 저장에 실패했어요. 다시 시도해 주세요.')
         setTimeout(() => setError(null), 3000)
-        void loadGardenData()
       } finally {
-        delete transformSaveTimers.current[placementId]
+        delete fieldSaveTimers.current[key]
       }
     }, 450)
+  }
+
+  function handleUpdateTransform(placementId: string, patch: TransformPatch) {
+    // 낙관적 상태는 해당 필드만 부분 갱신(다른 필드를 덮어쓰지 않음).
+    setPlacements((prev) =>
+      prev.map((p) => (p.id === placementId ? { ...p, ...patch } : p))
+    )
+    if (typeof patch.scale === 'number') {
+      scheduleFieldSave(placementId, 'scale', patch.scale)
+    }
+    if (typeof patch.rotation === 'number') {
+      scheduleFieldSave(placementId, 'rotation', patch.rotation)
+    }
   }
 
   async function loadGardenData() {
@@ -461,10 +556,12 @@ export default function StudentDreamGardenPage() {
 
     try {
       const gardenData = await getOrCreateStudentGarden(studentId)
-      let [itemsData, placementsData] = await Promise.all([
+      const [itemsData, placementsRaw] = await Promise.all([
         getStudentItems(studentId),
         getGardenPlacements(studentId),
       ])
+      let placementsData: GardenPlacement[] = placementsRaw.map(normalizePlacement)
+      let changedByRecovery = false
 
       const containerWidthPx =
         slotsContainerRef.current?.getBoundingClientRect().width ??
@@ -491,9 +588,11 @@ export default function StudentDreamGardenPage() {
         }
         if (changed) {
           try {
-            const updated = await updateGardenPlacement({ placementId: p.id, x, y })
+            const updated = normalizePlacement(await updateGardenPlacement({ placementId: p.id, x, y }))
             corrected.push(updated)
-          } catch {
+            changedByRecovery = true
+          } catch (err) {
+            if (import.meta.env.DEV) console.error('[DreamGarden] placement correct failed:', p.id, err)
             corrected.push({ ...p, x, y })
           }
         } else {
@@ -502,33 +601,69 @@ export default function StudentDreamGardenPage() {
       }
       placementsData = corrected
 
-      // ── 2) 보유 아이템 중 배치가 없는 것을 개별 인스턴스로 자동 배치. ──
-      const placedInstanceIds = new Set(placementsData.map((p) => p.student_item_id))
-      const toPlace = itemsData.filter(
-        (si) => si.item?.is_placeable && !placedInstanceIds.has(si.id)
-      )
-      for (const si of toPlace) {
-        try {
-          const pos = findAutoPosition(si.item, placementsData, containerWidthPx)
-          const created = await saveGardenPlacement({
-            studentId,
-            studentItemId: si.id,
-            itemId: si.item_id,
-            x: pos.x,
-            y: pos.y,
-            scale: pos.scale,
-            zIndex: pos.zIndex,
-          })
-          placementsData = [...placementsData, created]
-        } catch (err) {
-          // 한 건 실패해도 나머지는 계속 진행.
+      // ── 2) 보유 아이템 중 배치가 없는 것을 개별 인스턴스로 자동 배치(한 건 실패해도 나머지 계속). ──
+      const placeMissing = async (missing: StudentItem[]) => {
+        for (const si of missing) {
+          try {
+            const pos = findAutoPosition(si.item, placementsData, containerWidthPx)
+            const created = normalizePlacement(
+              await saveGardenPlacement({
+                studentId,
+                studentItemId: si.id,
+                itemId: si.item_id,
+                x: pos.x,
+                y: pos.y,
+                scale: pos.scale,
+                zIndex: pos.zIndex,
+              })
+            )
+            placementsData = [...placementsData, created]
+            changedByRecovery = true
+          } catch (err) {
+            if (import.meta.env.DEV) console.error('[DreamGarden] auto-place failed:', si.id, si.item?.name, err)
+          }
         }
       }
+      const buildMissing = () => {
+        const placed = new Set(placementsData.map((p) => p.student_item_id))
+        return itemsData.filter((si) => si.item?.is_placeable && !placed.has(si.id))
+      }
+      await placeMissing(buildMissing())
+      // 누락이 남아 있으면 1회 재시도.
+      const stillMissing = buildMissing()
+      if (stillMissing.length > 0) {
+        await placeMissing(stillMissing)
+      }
+
+      // ── 3) 보정/생성이 있었다면 최신 DB 기준으로 한 번 더 동기화(이전 상태 덮어쓰기 방지). ──
+      if (changedByRecovery) {
+        try {
+          placementsData = (await getGardenPlacements(studentId)).map(normalizePlacement)
+        } catch (err) {
+          if (import.meta.env.DEV) console.error('[DreamGarden] re-fetch after recovery failed:', err)
+        }
+      }
+
+      // ── 4) 마지막 저장 확정값(롤백 기준) 갱신. ──
+      committedRef.current = new Map(placementsData.map((p) => [p.id, snapshotPlacement(p)]))
 
       setGarden(gardenData)
       setStudentItems(itemsData)
       setPlacements(placementsData)
+
+      // ── 5) 검증: 배치 가능 아이템 중 여전히 배치가 없으면 안내. ──
+      const finalMissing = buildMissing()
+      if (finalMissing.length > 0) {
+        setError(`아이템 ${finalMissing.length}개를 정원에 아직 못 놓았어요. 잠시 후 새로고침해 주세요.`)
+        setTimeout(() => setError(null), 5000)
+      }
+
+      if (import.meta.env.DEV) {
+        const placeableCount = itemsData.filter((si) => si.item?.is_placeable).length
+        console.info(`[DreamGarden] load ok: placeable=${placeableCount}, placements=${placementsData.length}`)
+      }
     } catch (err) {
+      if (import.meta.env.DEV) console.error('[DreamGarden] load failed:', err)
       setError('정원 정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.')
     } finally {
       setIsLoading(false)
@@ -546,8 +681,8 @@ export default function StudentDreamGardenPage() {
     return () => {
       if (highlightTimer.current) window.clearTimeout(highlightTimer.current)
       if (messageTimer.current) window.clearTimeout(messageTimer.current)
-      for (const id of Object.keys(transformSaveTimers.current)) {
-        window.clearTimeout(transformSaveTimers.current[id])
+      for (const id of Object.keys(fieldSaveTimers.current)) {
+        window.clearTimeout(fieldSaveTimers.current[id])
       }
     }
   }, [])
