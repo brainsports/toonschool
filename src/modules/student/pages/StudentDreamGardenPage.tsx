@@ -17,6 +17,7 @@ import {
   ZoomOut,
 } from 'lucide-react'
 import StudentPageShell from '../components/layout/StudentPageShell'
+import DreamGardenPetals from '../components/dream-garden/DreamGardenPetals'
 import { useAuth } from '../../../shared/contexts/AuthContext'
 import type { GardenPlacement, RewardResult, StudentGarden, StudentItem } from '../types/dreamGarden'
 import {
@@ -757,6 +758,9 @@ export default function StudentDreamGardenPage() {
 
           {/* ── 배경 이미지 ── */}
           <div className="dg-background-image" />
+
+          {/* ── 꽃비 효과 (정원이 살아있는 느낌, 매우 은은함 / 클릭·드래그 간섭 없음) ── */}
+          <DreamGardenPetals />
 
           {/* ── 토스트 알림 ── */}
           {(message || error) && (

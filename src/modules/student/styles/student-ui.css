@@ -1060,6 +1060,10 @@
   z-index: 1;
 }
 
+/* 꽃비 효과 캔버스: 배경(1)·정원 아이템(20) 위, 좌측 패널(35)·토스트(50)·편집 팝오버(150) 아래.
+   pointer-events:none으로 클릭/드래그/자동배치 등 상호작용 간섭 없음. */
+.dream-garden-petals{position:absolute;inset:0;width:100%;height:100%;z-index:25;pointer-events:none;display:block;}
+
 .dream-garden-title{position:relative;z-index:30;margin-bottom:0;}
 .dg-title-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:999px;background:rgba(209,250,229,0.14);border:1.5px solid rgba(187,247,208,0.35);backdrop-filter:blur(12px);box-shadow:0 4px 12px rgba(3,22,23,0.18);font-family:var(--font-game-title);font-size:0.875rem;color:#bbf7d0;margin-bottom:8px;}
 .dg-title-text{font-family:var(--font-game-title);font-size:clamp(1.5rem,3vw,2rem);color:#f8fffb;text-shadow:0 2px 12px rgba(0,0,0,0.22);line-height:1.2;letter-spacing:-0.01em;}
