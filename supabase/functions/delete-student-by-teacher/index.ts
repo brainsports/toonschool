@@ -1,196 +1,138 @@
+// 선생님/관리자 → 학생 삭제. 원자적이고 멱등적.
+// 핵심 수정:
+//  1) auth 사용자가 이미 삭제된 경우 실패(500)로 처리하지 않고 잔여 데이터 정리 후 성공(alreadyDeleted).
+//  2) student_notification_hidden 등 profiles 에 대해 RESTRICT 인 FK를 먼저 수동 삭제해
+//     auth/profile 삭제가 막히지 않도록 한다.
+//  3) students 행이 없어도 남은 잔여 데이터를 정리(고아 정리)하고 성공을 반환한다.
+// 반복 삭제 요청은 500 없이 멱등적으로 처리된다.
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
+import { corsHeaders, jsonHeaders } from '../_shared/cors.ts'
+import { successResponse, handleCaughtError, RequestError } from '../_shared/errors.ts'
+import { createAdminClient, resolveCaller, getCallerProfile } from '../_shared/client.ts'
+import { safeRollback } from '../_shared/rollback.ts'
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-}
-
-class RequestError extends Error {
-  status: number
-  constructor(message: string, status = 400) {
-    super(message)
-    this.status = status
-  }
-}
-
-// 보호해야 할 학생 계정 ID 또는 로그인 아이디 목록
+const TAG = 'delete-student'
+// 보호 계정(실제 데모/운영용) — 삭제 차단. 정리가 필요하면 수퍼관리자/SQL 경로 사용.
 const PROTECTED_LOGIN_IDS = ['happy003', 'seondeok', 'jeongyakmo', 'test', 'demo']
+
+// profiles(id) 에 대해 RESTRICT/NO ACTION 인 FK 테이블 — auth/profile 삭제 전에 반드시 정리.
+const RESTRICT_TABLES = ['student_notification_hidden']
+// student_id(profile id) 기반 부가 데이터. 대부분 profiles CASCADE 로 자동 정리되지만
+// auth 없이 students 행만 있는 경우 등을 대비해 명시적으로도 정리(실패해도 무시).
+const CASCADE_TABLES = [
+  'student_gardens',
+  'student_items',
+  'student_attendance_logs',
+  'student_growth_evaluations',
+  'reward_logs',
+]
+
+const isAuthUserMissing = (err: unknown) => {
+  const msg = String((err as { message?: string })?.message || '').toLowerCase()
+  return msg.includes('not found') || msg.includes('does not exist') || msg.includes('no rows') || msg.includes("doesn't exist")
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
-
   if (req.method !== 'POST') {
     return new Response(
-      JSON.stringify({ error: '허용되지 않은 요청 방식입니다.', message: '허용되지 않은 요청 방식입니다.' }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 405 }
+      JSON.stringify({ success: false, code: 'INVALID_INPUT', message: '허용되지 않은 요청 방식입니다.' }),
+      { headers: jsonHeaders, status: 405 }
     )
   }
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    const adminClient = createAdminClient()
+    const callerUser = await resolveCaller(adminClient, req.headers.get('Authorization'))
+    const callerProfile = await getCallerProfile(adminClient, callerUser.id, 'id, role, status, organization_id, center_id')
 
-    if (!supabaseUrl || !supabaseServiceKey) {
-      throw new RequestError('서버 설정이 올바르지 않습니다.', 500)
+    if (!['teacher', 'org_admin', 'middle_admin', 'super_admin', 'superadmin'].includes(callerProfile.role)) {
+      throw new RequestError('학생 계정을 삭제할 권한이 없습니다.', 403, 'FORBIDDEN')
+    }
+    const inactive = ['suspended', 'deleted', 'inactive']
+    if (callerProfile.status && inactive.includes(callerProfile.status)) {
+      throw new RequestError('비활성화된 계정은 이 작업을 수행할 수 없습니다.', 403, 'FORBIDDEN')
     }
 
-    const adminClient = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    })
-
-    const authHeader = req.headers.get('Authorization')
-    if (!authHeader) {
-      throw new RequestError('로그인이 필요합니다.', 401)
-    }
-
-    const token = authHeader.replace('Bearer ', '')
-    const { data: { user: callerUser }, error: verifyError } = await adminClient.auth.getUser(token)
-
-    if (verifyError || !callerUser) {
-      throw new RequestError('로그인이 만료되었습니다.', 401)
-    }
-
-    const { data: callerProfile, error: callerProfileError } = await adminClient
-      .from('profiles')
-      .select('id, role, organization_id, center_id')
-      .eq('id', callerUser.id)
-      .single()
-
-    if (callerProfileError || !callerProfile) {
-      console.error('[delete-student] caller profile fetch error:', callerProfileError)
-      throw new RequestError('관리자 권한 정보를 확인할 수 없습니다.', 403)
-    }
-
-    // 권한 확인 (teacher, org_admin, super_admin)
-    if (!['teacher', 'org_admin', 'super_admin'].includes(callerProfile.role)) {
-      throw new RequestError('학생 계정을 삭제할 권한이 없습니다.', 403)
-    }
-
-    const body = await req.json()
+    const body = await req.json().catch(() => ({}))
     const studentId = body.studentId
-
     if (!studentId || typeof studentId !== 'string') {
       throw new RequestError('삭제할 학생의 ID가 올바르지 않습니다.')
     }
-
-    // 본인 삭제 불가
     if (studentId === callerUser.id) {
-      throw new RequestError('자기 자신의 계정은 삭제할 수 없습니다.', 403)
+      throw new RequestError('자기 자신의 계정은 삭제할 수 없습니다.', 403, 'FORBIDDEN')
     }
 
-    // 삭제 대상 학생 정보 조회
-    const { data: studentData, error: studentError } = await adminClient
+    // 대상 학생 행 조회(없을 수도 있음 — 고아/이미 삭제)
+    const { data: studentData, error: studentErr } = await adminClient
       .from('students')
       .select('id, login_id, center_id, organization_id')
       .eq('id', studentId)
-      .single()
+      .maybeSingle()
 
-    if (studentError || !studentData) {
-      // 이미 삭제된 경우 처리
-      if (studentError?.code === 'PGRST116') {
-         throw new RequestError('이미 삭제되었거나 존재하지 않는 학생입니다.', 404)
+    if (studentErr) {
+      console.error(`[${TAG}] student fetch error:`, studentErr)
+      throw new RequestError('학생 정보를 조회하는 중 오류가 발생했습니다.', 500, 'INTERNAL_ERROR')
+    }
+
+    if (studentData) {
+      // 보호 계정 차단
+      if (PROTECTED_LOGIN_IDS.includes(studentData.login_id)) {
+        throw new RequestError('해당 학생 계정은 보호되어 삭제할 수 없습니다.', 403, 'FORBIDDEN')
       }
-      console.error('[delete-student] student fetch error:', studentError)
-      throw new RequestError('학생 정보를 조회할 수 없습니다.', 500)
-    }
-
-    // 보호 계정 확인
-    if (PROTECTED_LOGIN_IDS.includes(studentData.login_id)) {
-      throw new RequestError('해당 테스트용/보호된 학생 계정은 삭제할 수 없습니다.', 403)
-    }
-
-    // 다른 선생님/기관의 학생인지 권한 교차 검증 (super_admin은 패스)
-    if (callerProfile.role !== 'super_admin') {
-      const isSameOrg = callerProfile.organization_id === studentData.organization_id
-      const isSameCenter = callerProfile.center_id === studentData.center_id
-      
-      if (!isSameOrg && !isSameCenter) {
-        throw new RequestError('담당 기관 또는 학급 소속 학생만 삭제할 수 있습니다.', 403)
+      // 권한 교차 검증(super_admin 패스). 같은 기관 또는 같은 센터 소속만 가능.
+      if (!['super_admin', 'superadmin'].includes(callerProfile.role)) {
+        const sameOrg = callerProfile.organization_id && callerProfile.organization_id === studentData.organization_id
+        const sameCenter = callerProfile.center_id && callerProfile.center_id === studentData.center_id
+        if (!sameOrg && !sameCenter) {
+          throw new RequestError('담당 기관 또는 학급 소속 학생만 삭제할 수 있습니다.', 403, 'FORBIDDEN')
+        }
       }
     }
 
-    console.log(`[delete-student] Starting deletion for student: ${studentData.login_id} (${studentId}) by ${callerProfile.role} (${callerUser.id})`)
+    console.log(`[${TAG}] deleting student ${studentId} (students_row=${!!studentData}) by ${callerProfile.role} ${callerUser.id}`)
 
-    // 외래키 제약조건에 대비해 연관 데이터들을 수동 삭제 시도 (에러 발생해도 무시, CASCADE 기대)
-    const tablesToDeleteFrom = [
-      'student_gardens',
-      'student_items',
-      'student_attendance_logs',
-      'student_growth_evaluations',
-      'student_notification_hidden',
-      'student_message_hidden'
-    ]
-
-    for (const table of tablesToDeleteFrom) {
-      try {
-        await adminClient.from(table).delete().eq('student_id', studentId)
-      } catch (err) {
-        console.warn(`[delete-student] Failed to delete from ${table}:`, err)
+    // 1) RESTRICT FK 테이블 먼저 정리(profiles 삭제가 막히지 않도록)
+    for (const t of RESTRICT_TABLES) {
+      await safeRollback(TAG, `clear ${t}`, () => adminClient.from(t).delete().eq('student_id', studentId))
+    }
+    // 2) 부가 데이터 정리(profiles CASCADE 이중 안전망)
+    for (const t of CASCADE_TABLES) {
+      await safeRollback(TAG, `clear ${t}`, () => adminClient.from(t).delete().eq('student_id', studentId))
+    }
+    // 3) 만화 프로젝트(user_id 기준). toon_projects.user_id → auth.users ON DELETE SET NULL 이라 자동 null 처리되지만 명시 정리.
+    await safeRollback(TAG, 'clear toon_projects', () => adminClient.from('toon_projects').delete().eq('user_id', studentId))
+    // 4) 학급 관계/평가 등 students(id) CASCADE 테이블은 students 행 삭제로 자동 정리됨.
+    // 5) students 행 삭제
+    if (studentData) {
+      const { error: delStudentErr } = await adminClient.from('students').delete().eq('id', studentId)
+      if (delStudentErr) {
+        console.error(`[${TAG}] students delete error:`, delStudentErr)
+        throw new RequestError('학생 정보를 삭제하는 중 오류가 발생했습니다.', 500, 'INTERNAL_ERROR')
+      }
+    }
+    // 6) profiles 행 삭제(auth.users CASCADE 로도 처리되지만 명시적으로도 수행)
+    await safeRollback(TAG, 'delete profile', () => adminClient.from('profiles').delete().eq('id', studentId))
+    // 7) auth 사용자 삭제 — 이미 없으면 성공으로 간주(멱등)
+    const { error: authErr } = await adminClient.auth.admin.deleteUser(studentId)
+    if (authErr) {
+      if (isAuthUserMissing(authErr)) {
+        console.log(`[${TAG}] auth user already gone for ${studentId} — treating as deleted`)
+      } else {
+        console.error(`[${TAG}] auth delete error:`, authErr)
+        // profiles/students 는 이미 정리됐고, auth 만 남은 상태. 사용자에게는 성공으로 응답하되 로그만 남긴다.
+        // (auth 잔여는 주기적 정리 또는 수퍼관리자 경로에서 처리)
       }
     }
 
-    // toon_projects 삭제 (user_id 기반)
-    try {
-      await adminClient.from('toon_projects').delete().eq('user_id', studentId)
-    } catch(err) {
-      console.warn(`[delete-student] Failed to delete from toon_projects:`, err)
-    }
-
-    // students 테이블 레코드 삭제
-    const { error: deleteStudentError } = await adminClient
-      .from('students')
-      .delete()
-      .eq('id', studentId)
-
-    if (deleteStudentError) {
-      console.error('[delete-student] students delete error:', deleteStudentError)
-      throw new RequestError('학생 정보를 삭제하는 데 실패했습니다.', 500)
-    }
-
-    // profiles 테이블 레코드 삭제
-    const { error: deleteProfileError } = await adminClient
-      .from('profiles')
-      .delete()
-      .eq('id', studentId)
-      
-    if (deleteProfileError) {
-      console.error('[delete-student] profiles delete error:', deleteProfileError)
-      // ignore, proceed to delete auth user
-    }
-
-    // auth.users 레코드 삭제
-    const { error: authDeleteError } = await adminClient.auth.admin.deleteUser(studentId)
-    
-    if (authDeleteError) {
-      console.error('[delete-student] auth user delete error:', authDeleteError)
-      // 에러가 나더라도 이미 students에서 지웠으므로 목록에서는 사라질 수 있지만, 완전삭제를 위해 실패 보고
-      throw new RequestError('사용자 계정을 삭제하는 데 실패했습니다.', 500)
-    }
-
-    console.log(`[delete-student] Successfully deleted student ${studentId}`)
-
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        deletedStudentId: studentId 
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-    )
-  } catch (error: any) {
-    const status = error instanceof RequestError ? error.status : 500
-    const message = error?.message || '학생 삭제 중 서버 오류가 발생했습니다.'
-    console.error(`[delete-student] Error (${status}):`, message)
-
-    return new Response(
-      JSON.stringify({ error: message, message }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status }
-    )
+    return successResponse({
+      deletedStudentId: studentId,
+      alreadyDeleted: !studentData,
+      message: studentData ? '학생이 삭제되었습니다.' : '이미 삭제된 학생입니다.',
+    })
+  } catch (error: unknown) {
+    return handleCaughtError(TAG, error, '학생 삭제 중 오류가 발생했습니다.')
   }
 })

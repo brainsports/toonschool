@@ -14,6 +14,7 @@ export type ErrorCode =
   | 'DUPLICATE_LOGIN_ID'
   | 'DUPLICATE_EMAIL'
   | 'ACCOUNT_CREATION_FAILED'
+  | 'INTERNAL_ERROR'
   | 'SERVER_CONFIG'
 
 export class RequestError extends Error {

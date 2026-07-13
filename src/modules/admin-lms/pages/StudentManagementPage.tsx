@@ -6,7 +6,7 @@ import * as XLSX from 'xlsx'
 import { supabase } from '../../../shared/lib/supabase'
 import { useAuth } from '../../../shared/contexts/AuthContext'
 import type { Student, ClassRoom, LicenseInfo } from '../types'
-import { deleteStudents, deleteStudent, createStudent, moveStudentsToClass, fetchStudentsByCenterAndGrade } from '../services/studentService'
+import { deleteStudents, deleteStudent, createStudent, moveStudentsToClass, fetchStudentsByTeacher } from '../services/studentService'
 import { fetchLicenseInfo } from '../services/classService'
 import { createTeacherMessage, getTeacherMessagesForClass } from '../../student/services/teacherMessageService'
 import { createNotification } from '../../student/services/notificationService'
@@ -90,34 +90,24 @@ export default function StudentManagementPage() {
   }, [selectedGrade])
 
   useEffect(() => {
-    async function resolveCenterId() {
-      if (profile?.center_id) {
-        console.log('[StudentManagementPage] profile.center_id is present:', profile.center_id)
-        setActualCenterId(profile.center_id)
-      } else if (user?.email) {
-        console.log('[StudentManagementPage] profile.center_id is missing. Fetching by email:', user.email)
-        const { data, error } = await supabase.from('profiles').select('center_id').eq('email', user.email).single()
-        if (data?.center_id) {
-          console.log('[StudentManagementPage] Fetched center_id by email:', data.center_id)
-          setActualCenterId(data.center_id)
-        } else {
-          console.log('[StudentManagementPage] Failed to fetch center_id by email:', error)
-        }
-      }
-    }
-    resolveCenterId()
-  }, [profile, user])
+    // center_id 는 라이선스/엑셀 등 보조 용도로만 사용. 학생 목록은 student-by-teacher EF 가
+    // 서버에서 선생님별로 격리해 조회하므로 center_id 유무와 무관하게 동작한다.
+    setActualCenterId(profile?.center_id ?? null)
+  }, [profile])
 
   useEffect(() => {
-    if (!actualCenterId && !profile?.organization_id) return
-    fetchStudentsByCenterAndGrade(actualCenterId, selectedGrade, profile?.organization_id).then(data => {
+    // 선생님별 격리 조회. center_id 가 없어도 기관 전체로 누수되지 않는다.
+    fetchStudentsByTeacher(selectedGrade).then(data => {
       if (selectedClassId) {
         setStudents(data.filter(s => s.classId === selectedClassId))
       } else {
         setStudents(data)
       }
+    }).catch(err => {
+      console.error('[StudentManagementPage] 학생 목록 조회 실패:', err)
+      setStudents([])
     })
-  }, [selectedGrade, selectedClassId, actualCenterId, profile?.organization_id])
+  }, [selectedGrade, selectedClassId, profile?.id])
 
   useEffect(() => {
     const targetKey = selectedClassId || 'all-grades'
@@ -143,21 +133,11 @@ export default function StudentManagementPage() {
   const handleCreate = async (data: Parameters<typeof createStudent>[0]) => {
     try {
       const newStudent = await createStudent(data)
-      
-      // 목록 새로고침
-      if (actualCenterId || profile?.organization_id) {
-        const refreshedData = await fetchStudentsByCenterAndGrade(actualCenterId, selectedGrade, profile?.organization_id)
-        if (selectedClassId) {
-          setStudents(refreshedData.filter(s => s.classId === selectedClassId))
-        } else {
-          setStudents(refreshedData)
-        }
-      } else {
-        if (!selectedClassId || newStudent.classId === selectedClassId) {
-          setStudents(prev => [...prev, newStudent])
-        }
-      }
-      
+
+      // 목록 새로고침(선생님별 격리 조회)
+      const refreshedData = await fetchStudentsByTeacher(selectedGrade)
+      setStudents(selectedClassId ? refreshedData.filter(s => s.classId === selectedClassId) : refreshedData)
+
       fetchAndSetLicense()
       showToast(`${newStudent.name} 학생이 생성되었습니다.`)
     } catch (error) {
@@ -180,19 +160,11 @@ export default function StudentManagementPage() {
     setIsDeleting(true)
     try {
       await deleteStudent(singleDeleteConfirm.id)
-      
-      // 목록 새로고침
-      if (actualCenterId || profile?.organization_id) {
-        const refreshedData = await fetchStudentsByCenterAndGrade(actualCenterId, selectedGrade, profile?.organization_id)
-        if (selectedClassId) {
-          setStudents(refreshedData.filter(s => s.classId === selectedClassId))
-        } else {
-          setStudents(refreshedData)
-        }
-      } else {
-        setStudents(prev => prev.filter(s => s.id !== singleDeleteConfirm.id))
-      }
-      
+
+      // 목록 새로고침(선생님별 격리 조회)
+      const refreshedData = await fetchStudentsByTeacher(selectedGrade)
+      setStudents(selectedClassId ? refreshedData.filter(s => s.classId === selectedClassId) : refreshedData)
+
       fetchAndSetLicense()
       showToast('학생이 삭제되었습니다.')
       setSingleDeleteConfirm(null)
@@ -236,16 +208,10 @@ export default function StudentManagementPage() {
       setEditPasswordStudentId(null)
       setNewPassword('')
 
-      // Refresh list
-      if (actualCenterId || profile?.organization_id) {
-        fetchStudentsByCenterAndGrade(actualCenterId, selectedGrade, profile?.organization_id).then(data => {
-          if (selectedClassId) {
-            setStudents(data.filter(s => s.classId === selectedClassId))
-          } else {
-            setStudents(data)
-          }
-        })
-      }
+      // Refresh list(선생님별 격리 조회)
+      fetchStudentsByTeacher(selectedGrade).then(data => {
+        setStudents(selectedClassId ? data.filter(s => s.classId === selectedClassId) : data)
+      })
     } catch (err) {
       console.error('[StudentManagementPage] Unexpected error updating password:', err)
       alert('비밀번호 수정에 실패했습니다.')
@@ -500,12 +466,8 @@ export default function StudentManagementPage() {
       setIsExcelModalOpen(false)
       setParsedRows([])
 
-      fetchStudentsByCenterAndGrade(actualCenterId, selectedGrade, profile?.organization_id).then(data => {
-        if (selectedClassId) {
-          setStudents(data.filter(s => s.classId === selectedClassId))
-        } else {
-          setStudents(data)
-        }
+      fetchStudentsByTeacher(selectedGrade).then(data => {
+        setStudents(selectedClassId ? data.filter(s => s.classId === selectedClassId) : data)
       })
     } catch (err) {
       console.error(err)
