@@ -93,12 +93,14 @@ export default function SharedComicViewerPage() {
   const prevSingleModeRef = useRef(isSinglePageMode)
   const [windowWidth, setWindowWidth] = useState(window.innerWidth)
   const [isLegacyPortrait, setIsLegacyPortrait] = useState(false)
+  const [showRotateHint, setShowRotateHint] = useState(false)
 
   useEffect(() => {
     const checkMode = () => {
       const isMobileOrPortrait = window.innerWidth <= 768 || (window.innerWidth <= 1024 && window.innerHeight > window.innerWidth);
       setIsSinglePageMode(isMobileOrPortrait);
       setWindowWidth(window.innerWidth);
+      setShowRotateHint(window.innerWidth <= 768 && window.innerHeight > window.innerWidth);
     };
     checkMode();
     window.addEventListener('resize', checkMode);
@@ -336,10 +338,11 @@ export default function SharedComicViewerPage() {
 
   if (isLoading) {
     return (
-      <div className="flex h-screen w-full items-center justify-center bg-[#f3f4f7]">
+      <div className="flex h-screen w-full items-center justify-center" style={{ background: 'linear-gradient(135deg,#fff3e6 0%,#ffe9f0 55%,#f3e8ff 100%)' }}>
         <div className="text-center px-6">
-          <div className="text-6xl mb-6 animate-pulse">⏳</div>
-          <h2 className="text-2xl font-bold text-slate-800 mb-3">플립북을 불러오는 중이에요...</h2>
+          <div className="text-6xl mb-6 animate-bounce">📖</div>
+          <h2 className="text-2xl font-bold text-slate-800 mb-2">내 만화책을 펼치는 중...</h2>
+          <p className="text-slate-500 font-medium">조금만 기다려 주세요</p>
         </div>
       </div>
     )
@@ -347,9 +350,9 @@ export default function SharedComicViewerPage() {
 
   if (errorMsg || pages.length === 0) {
     return (
-      <div className="flex h-screen w-full items-center justify-center bg-[#f3f4f7]">
-        <div className="text-center px-6">
-          <div className="text-6xl mb-6">😢</div>
+      <div className="flex h-screen w-full items-center justify-center" style={{ background: 'linear-gradient(135deg,#fff3e6 0%,#ffe9f0 55%,#f3e8ff 100%)' }}>
+        <div className="text-center px-6 max-w-md">
+          <div className="text-6xl mb-6">😿</div>
           <h2 className="text-2xl font-bold text-slate-800 mb-3">{errorMsg || '공유된 책을 찾을 수 없어요.'}</h2>
           <p className="text-slate-500 mb-8">링크가 올바른지 다시 한 번 확인해 주세요.</p>
         </div>
@@ -414,8 +417,15 @@ export default function SharedComicViewerPage() {
   };
 
   return (
-    <div className="w-full h-[100dvh] relative overflow-hidden bg-[#f3f4f7] flex flex-col">
+    <div className="w-full h-[100dvh] relative overflow-hidden bg-[#fbf4ec] flex flex-col">
       <audio ref={audioRef} src={BGM_PATH} preload="auto" loop />
+
+      {showRotateHint && hasStarted && (
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[80] flex items-center gap-2 px-4 py-2 rounded-full shadow-lg" style={{ backgroundColor: 'rgba(40,25,10,0.88)', color: '#fff' }}>
+          <span className="text-sm font-bold whitespace-nowrap">📱 기기를 가로로 돌리면 만화책이 더 커 보여요</span>
+          <button type="button" onClick={() => setShowRotateHint(false)} className="ml-1 text-white/70 hover:text-white text-lg leading-none" aria-label="안내 닫기">✕</button>
+        </div>
+      )}
 
       {!hasStarted && (
         <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex flex-col items-center justify-center">
@@ -529,7 +539,7 @@ export default function SharedComicViewerPage() {
         }
       `}</style>
       <div
-        className="flex-1 w-full relative overflow-auto student-scrollbar bg-[#f3f4f7] flex flex-col items-center pt-4 pb-8 px-2 md:px-8"
+        className="flex-1 w-full relative overflow-auto student-scrollbar bg-[#fbf4ec] flex flex-col items-center pt-4 pb-8 px-2 md:px-8"
       >
 
          <div className="flex flex-col items-center my-auto shrink-0 w-full">

@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<title>만화컷 · MY TOON BOOK</title>
+<link rel="stylesheet" href="mock-base.css" />
+<link rel="stylesheet" href="../../../../src/modules/student/styles/flipbook.css" />
+</head>
+<body>
+<div class="stage">
+  <div class="fb-page">
+    <div class="fb-progress"><span style="width:37.5%"></span></div>
+    <div class="fb-chrome">
+      <div class="fb-subject-row">
+        <span class="fb-subject-dot"></span>
+        <span class="fb-subject-name">사회</span>
+        <span class="fb-unit">우리나라의 강줄기와 땅 모양</span>
+      </div>
+      <span class="fb-chip is-comic">만화컷 <span class="fb-chip-count">2 / 6</span></span>
+    </div>
+
+    <div class="fb-comic">
+      <div class="fb-scene-title">단서를 찾아요 — 강이 만든 모양</div>
+      <div class="fb-comic-stage">
+        <div class="fb-frame">
+          <img class="fb-scene-img" src="../mock-assets/real/scene-03-wide.jpg" alt="만화 장면" />
+          <div class="fb-scene-overlay"><div class="fb-scene-canvas"></div></div>
+        </div>
+      </div>
+      <div class="fb-comic-foot">
+        <div class="fb-key-point">
+          <div class="fb-key-icon">★</div>
+          <div class="fb-key-text">이 장면의 핵심 — 강줄기가 구불구불해지며 만드는 땅 모양의 규칙을 찾아보세요.</div>
+        </div>
+        <div class="fb-cut-dots">
+          <span class="fb-dot is-on"></span><span class="fb-dot is-on"></span>
+          <span class="fb-dot"></span><span class="fb-dot"></span>
+          <span class="fb-dot"></span><span class="fb-dot"></span>
+        </div>
+      </div>
+    </div>
+    <div class="fb-pageno">- 6 -</div>
+  </div>
+</div>
+<script>
+  // FlipComicPage 의 측정 로직과 동일: 1400×1025 비율 유지하며 스테이지에 맞춤
+  const stage = document.querySelector('.fb-comic-stage');
+  const frame = stage.querySelector('.fb-frame');
+  const canvas = frame.querySelector('.fb-scene-canvas');
+  function measure() {
+    const sw = stage.clientWidth, sh = stage.clientHeight;
+    if (sw <= 0 || sh <= 0) return;
+    const w = Math.min(sw, sh * (1400 / 1025));
+    frame.style.width = w + 'px';
+    frame.style.height = (w * 1025 / 1400) + 'px';
+    const scale = (w - 20) / 1400;
+    canvas.style.transform = 'scale(' + scale + ')';
+    canvas.style.transformOrigin = 'top left';
+    canvas.style.width = '1400px';
+    canvas.style.height = '1025px';
+  }
+  measure();
+  new ResizeObserver(measure).observe(stage);
+</script>
+</body>
+</html>

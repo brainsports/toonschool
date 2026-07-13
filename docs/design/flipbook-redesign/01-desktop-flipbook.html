@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>01 · 개선된 PC 플립북 전체 화면</title>
+<link rel="stylesheet" href="mock-assets/styles.css">
+<style>
+  body{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:20px;}
+  .book{width:1180px;height:836px;display:flex;background:var(--bg-shell);box-shadow:0 30px 70px rgba(15,23,42,.30);position:relative;border-radius:2px;}
+  .half{width:590px;height:836px;position:relative;overflow:hidden;background:#fff;}
+  .half.left{box-shadow:inset -14px 0 22px -10px rgba(0,0,0,.18);}
+  .half.right{box-shadow:inset 14px 0 22px -10px rgba(0,0,0,.18);}
+  .spine{position:absolute;left:50%;top:0;bottom:0;width:10px;transform:translateX(-50%);background:linear-gradient(90deg,rgba(0,0,0,.16),rgba(0,0,0,0),rgba(0,0,0,.16));z-index:6;}
+
+  /* LEFT: real cover full-bleed */
+  .cover img{width:100%;height:100%;object-fit:cover;display:block;}
+
+  /* RIGHT: compact redesigned comic */
+  .c-pad{padding:30px 34px 40px;height:100%;display:flex;flex-direction:column;position:relative;}
+  .c-title{align-self:center;font-family:'Jua','Gaegu',sans-serif;font-size:19px;color:var(--ink);background:#f3f4f7;border:1px solid var(--line);border-radius:999px;padding:8px 20px;}
+  .c-frame{flex:0 0 auto;height:472px;margin-top:12px;border-radius:18px;overflow:hidden;border:8px solid var(--frame-blue);position:relative;}
+  .c-frame img{width:100%;height:100%;object-fit:cover;display:block;}
+  .c-key{margin-top:auto;background:linear-gradient(180deg,#faf5ff,#f3e8ff);border:2px solid #e9d5ff;border-radius:16px;padding:12px 16px;display:flex;gap:12px;}
+  .c-key .b{width:6px;border-radius:999px;background:var(--purple);}
+  .c-key h4{font-family:'Jua','Gaegu',sans-serif;font-size:16px;margin:0 0 4px;color:var(--ink);}
+  .c-key p{font-size:13px;line-height:1.5;color:var(--ink-soft);margin:0;font-weight:500;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+  .pn{position:absolute;bottom:12px;left:0;right:0;text-align:center;font-family:'Jua','Gaegu',sans-serif;color:var(--ink-faint);font-size:13px;}
+
+  /* keep book dominant; bar is compact */
+  .stage{display:flex;flex-direction:column;align-items:center;gap:16px;}
+</style>
+</head>
+<body>
+  <div class="stage">
+    <div class="book">
+      <div class="half left cover"><img src="mock-assets/real/page-01.jpg" alt="실제 표지"></div>
+
+      <div class="half right">
+        <div class="c-pad">
+          <div class="c-title">2컷 · 갯벌에서 만난 친구들</div>
+          <div class="c-frame"><img src="mock-assets/real/scene-03.jpg" alt="만화 장면"></div>
+          <div class="c-key">
+            <div class="b"></div>
+            <div><h4>💡 이번 장면 핵심</h4><p>갯벌에는 조개·게·갯지렁이 등 다양한 생물이 살아요. 자연의 소중함을 알게 돼요.</p></div>
+          </div>
+          <div class="pn">- 2 -</div>
+        </div>
+      </div>
+
+      <div class="spine"></div>
+    </div>
+
+    <!-- compact, narrower control bar -->
+    <div class="bar2">
+      <button class="b2" title="목차"><svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3.5" cy="6" r="1"/><circle cx="3.5" cy="12" r="1"/><circle cx="3.5" cy="18" r="1"/></svg></button>
+      <button class="b2" title="처음"><svg viewBox="0 0 24 24"><path d="m11 17-5-5 5-5"/><path d="m18 17-5-5 5-5"/></svg></button>
+      <button class="b2" title="이전"><svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></button>
+      <div class="pill2">1-2 / 16</div>
+      <button class="b2" title="다음"><svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></button>
+      <button class="b2" title="마지막"><svg viewBox="0 0 24 24"><path d="m13 17 5-5-5-5"/><path d="m6 17 5-5-5-5"/></svg></button>
+      <div class="div2"></div>
+      <button class="b2" title="축소"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg></button>
+      <span class="zpct">90%</span>
+      <button class="b2" title="확대"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg></button>
+      <button class="b2" title="화면 맞춤"><svg viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg></button>
+      <button class="b2" title="전체화면"><svg viewBox="0 0 24 24"><path d="M3 8V5a2 2 0 0 1 2-2h3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M21 16v3a2 2 0 0 1-2 2h-3"/><path d="M8 21H5a2 2 0 0 1-2-2v-3"/></svg></button>
+      <div class="div2"></div>
+      <!-- 부가 기능은 더보기 메뉴로 -->
+      <div class="more-wrap">
+        <button class="b2" title="더보기"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg></button>
+        <div class="more-menu">
+          <div class="mi"><svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>음악 켜기</div>
+          <div class="mi"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>자동 넘김</div>
+          <div class="mi"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>링크 복사</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

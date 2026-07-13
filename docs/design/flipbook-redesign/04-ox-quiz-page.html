@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>04 · 개선된 OX 퀴즈 페이지</title>
+<link rel="stylesheet" href="mock-assets/styles.css">
+<style>
+  body{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:30px;}
+  .pad4{padding:54px 64px 62px;height:100%;display:flex;flex-direction:column;position:relative;z-index:2;}
+  .qcard{margin-top:18px;background:#f8f9fc;border:3px solid var(--line);border-radius:24px;padding:22px 28px;}
+  .qtext{font-family:'Jua','Gaegu',sans-serif;font-size:34px;line-height:1.4;color:var(--ink);margin:0;}
+  .ox-row{margin-top:18px;}
+  .ans-card{margin-top:16px;}
+</style>
+</head>
+<body>
+  <div class="page">
+    <div class="doodle"></div>
+    <div class="pad4">
+      <div class="chip chip-pink">팡팡! OX 퀴즈 1</div>
+
+      <div class="qcard">
+        <p class="qtext">Q. 갯벌에는 다양한 생물이 살고 있다.</p>
+      </div>
+
+      <!-- O/X (정적: 선택 후 상태를 미리 보여줌) -->
+      <div class="ox-row">
+        <div class="ox-btn ox-o sel">O<span class="lab">맞아요</span><span class="pick">내 선택</span></div>
+        <div class="ox-btn ox-x">X<span class="lab">아니에요</span></div>
+      </div>
+      <div class="ox-selnote">● 선택하면 아래에 정답과 해설이 나타나요 (선택 후 화면)</div>
+
+      <!-- 정답·해설: O/X 바로 아래 -->
+      <div class="ans-card">
+        <div class="ans-badge">O</div>
+        <div>
+          <div class="ans-title">정답 : O <span style="color:var(--blue);font-size:18px">✔</span></div>
+          <div class="ans-sub">정답 확인 · 해설</div>
+        </div>
+      </div>
+      <p class="ans-body" style="margin-top:10px">갯벌은 조개·게·갯지렁이·철새 등 수많은 생물의 보금자리예요. 갯벌이 있어야 생물도, 사람도 함께 살아갈 수 있답니다.</p>
+    </div>
+    <div class="pagenum">- 11 -</div>
+  </div>
+</body>
+</html>

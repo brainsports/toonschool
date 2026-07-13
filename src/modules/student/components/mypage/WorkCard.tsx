@@ -39,10 +39,9 @@ const getSubjectColorClasses = (subject: string) => {
 
 export default function WorkCard({ work }: { work: MyWork }) {
   const navigate = useNavigate();
-  const [error, setError] = useState(false);
 
   const defaultThumbnail = getSubjectDefaultThumbnail(work.subject);
-  const displaySrc = defaultThumbnail; // 모든 마이페이지 작품 카드는 과목별 기본 썸네일 사용
+  const [imgSrc, setImgSrc] = useState(work.thumbnailUrl?.trim() ? work.thumbnailUrl : defaultThumbnail);
   const colors = getSubjectColorClasses(work.subject);
 
   const handleClick = () => {
@@ -64,21 +63,15 @@ export default function WorkCard({ work }: { work: MyWork }) {
 
   return (
     <div className="flex flex-col gap-2 relative">
-      <div 
+      <div
         className={`aspect-[4/3] rounded-xl overflow-hidden bg-slate-100 border border-slate-200 cursor-pointer ${colors.border} transition-colors relative group`}
         onClick={handleClick}
       >
-        <img 
-          src={displaySrc} 
-          alt={work.title} 
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform" 
-          onError={(e) => {
-            if (!error) {
-              setError(true);
-            } else {
-              (e.target as HTMLImageElement).src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-            }
-          }}
+        <img
+          src={imgSrc}
+          alt={work.title}
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+          onError={() => { if (imgSrc !== defaultThumbnail) setImgSrc(defaultThumbnail); }}
         />
         
         <div className="absolute bottom-2 right-2 z-10 flex items-center gap-1.5">

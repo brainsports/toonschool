@@ -78,7 +78,15 @@ export async function getStudentWorks({
     const projectsData = projectsResult.data || [];
     const sharedData = sharedResult.data || [];
 
-    const worksMap = new Map<string, MyWork>();
+    // ISO/Date -> 타임스탬프. 없으면 0(정렬 시 맨 뒤).
+    const ts = (v: any): number => {
+      if (!v) return 0;
+      const t = typeof v === 'string' ? Date.parse(v) : v instanceof Date ? v.getTime() : NaN;
+      return Number.isFinite(t) ? t : 0;
+    };
+
+    type WorkEntry = { work: MyWork; primary: number; secondary: number };
+    const worksMap = new Map<string, WorkEntry>();
 
     // Map toon_projects
     projectsData.forEach((project: any) => {
@@ -91,30 +99,37 @@ export async function getStudentWorks({
           ? 100
           : 50;
 
+      const primary = ts(project.created_at) || ts(project.updated_at);
+      const secondary = ts(project.updated_at) || ts(project.created_at);
+
       worksMap.set(project.id, {
-        id: project.id,
-        subject,
-        title: project.title || '제목 없는 작품',
-        progress,
-        status:
-          project.status === 'completed' ||
-          project.status === 'published' ||
-          content.status === 'completed'
-            ? 'completed'
-            : 'in-progress',
-        thumbnailUrl: project.thumbnail_url || content.thumbnailUrl || content.coverImage || '',
-        editorPath: `/student/select-unit?projectId=${project.id}`,
-        previewPath: `/student/comic/read?projectId=${project.id}`,
-        shareUrl: `${window.location.origin}/student/comic/read?projectId=${project.id}`,
+        primary,
+        secondary,
+        work: {
+          id: project.id,
+          subject,
+          title: project.title || '제목 없는 작품',
+          progress,
+          status:
+            project.status === 'completed' ||
+            project.status === 'published' ||
+            content.status === 'completed'
+              ? 'completed'
+              : 'in-progress',
+          thumbnailUrl: project.thumbnail_url || content.thumbnailUrl || content.coverImage || '',
+          editorPath: `/student/select-unit?projectId=${project.id}`,
+          previewPath: `/student/comic/read?projectId=${project.id}`,
+          shareUrl: `${window.location.origin}/student/comic/read?projectId=${project.id}`,
+        },
       });
     });
 
     // Map shared_comic_books and override/add
     sharedData.forEach((shared: any) => {
       const workId = shared.project_id || shared.id;
-      
+
       const existingProject = projectsData.find((p: any) => p.id === shared.project_id);
-      
+
       let subject = shared.subject;
       if (!subject && existingProject?.content) {
         subject = existingProject.content.subject || existingProject.content.curriculum?.subject || existingProject.content.curriculum?.subjectName;
@@ -139,20 +154,36 @@ export async function getStudentWorks({
       ];
       let title = possibleTitles.find(t => t && typeof t === 'string' && t.trim() !== '' && t !== '툰스쿨 만화' && t !== '제목 없는 작품') || '제목 없는 작품';
 
+      const primary = ts(shared.created_at) || ts(shared.updated_at);
+      const secondary = ts(shared.updated_at) || ts(shared.created_at);
+
       worksMap.set(workId, {
-        id: workId,
-        subject,
-        title,
-        progress: 100,
-        status: 'shared',
-        thumbnailUrl: '', // 마이페이지에서는 과목별 기본 썸네일을 사용하도록 빈 값 처리
-        editorPath: `/book/${shared.slug}`,
-        previewPath: `/book/${shared.slug}`,
-        shareUrl: `https://toonschool.kr/book/${shared.slug}`,
+        primary,
+        secondary,
+        work: {
+          id: workId,
+          subject,
+          title,
+          progress: 100,
+          status: 'shared',
+          // 공유 작품은 실제 표지 썸네일을 사용(없으면 WorkCard에서 과목 기본값 폴백)
+          thumbnailUrl: shared.thumbnail_url || '',
+          editorPath: `/book/${shared.slug}`,
+          previewPath: `/book/${shared.slug}`,
+          shareUrl: `https://toonschool.kr/book/${shared.slug}`,
+        },
       });
     });
 
-    return Array.from(worksMap.values());
+    // 최신순 정렬: 1) 생성/공유일 내림차순, 2) 동일일 경우 수정일 내림차순.
+    // 날짜가 없는 작품은 0이 되어 자연스럽게 맨 뒤로(stable).
+    const entries = Array.from(worksMap.values());
+    entries.sort((a, b) => {
+      if (a.primary !== b.primary) return b.primary - a.primary;
+      if (a.secondary !== b.secondary) return b.secondary - a.secondary;
+      return 0;
+    });
+    return entries.map((entry) => entry.work);
   } catch (err) {
     console.error('[studentWorkService] 예외 발생:', err);
     return [];

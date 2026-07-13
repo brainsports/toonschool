@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, type ReactNode } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { loadComicProjectData, loadComicCutData } from '../components/editor/utils/comicStorage'
-import type { ComicProjectData, ComicCutEditData, ComicCutElement } from '../components/editor/utils/comicStorage'
+import type { ComicProjectData, ComicCutEditData } from '../components/editor/utils/comicStorage'
 import { projectStorage } from '../utils/projectStorage'
 import type { EditorState } from '../components/editor/types'
 import StudentWorkspaceLayout from '../components/layout/StudentWorkspaceLayout'
@@ -14,60 +14,15 @@ import html2canvas from 'html2canvas'
 import { jsPDF } from 'jspdf'
 import { useAuth } from '../../../shared/contexts/AuthContext'
 import { createGrowthEvaluationForSharedComic } from '../services/studentGrowthService'
-import LandscapePageLayout, { FLIPBOOK_PAGE_HEIGHT, FLIPBOOK_PAGE_RATIO, FLIPBOOK_PAGE_WIDTH } from '../components/viewer/LandscapePageLayout'
+import { FLIPBOOK_PAGE_HEIGHT, FLIPBOOK_PAGE_RATIO, FLIPBOOK_PAGE_WIDTH } from '../components/viewer/LandscapePageLayout'
 import { buildComicPageInfo, buildQuizPageInfo, buildStoryPageInfo, getProjectKeywords } from '../components/viewer/landscapePageInfo'
-import '../styles/landscape-viewer.css'
+import FlipCoverPage from '../components/viewer/pages/FlipCoverPage'
+import FlipComicPage from '../components/viewer/pages/FlipComicPage'
+import FlipStoryPage from '../components/viewer/pages/FlipStoryPage'
+import FlipQuizPage from '../components/viewer/pages/FlipQuizPage'
+import FlipBackCoverPage from '../components/viewer/pages/FlipBackCoverPage'
+import '../styles/flipbook.css'
 const BGM_PATH = '/audio/viewer/if-i-had-a-chicken.mp3';
-
-function hexToRgba(hex: string, opacity: number) {
-  const normalized = hex.replace('#', '');
-  if (normalized.length !== 6 && normalized.length !== 3) return hex;
-  let r, g, b;
-  if (normalized.length === 3) {
-    r = parseInt(normalized[0] + normalized[0], 16);
-    g = parseInt(normalized[1] + normalized[1], 16);
-    b = parseInt(normalized[2] + normalized[2], 16);
-  } else {
-    const bigint = parseInt(normalized, 16);
-    r = (bigint >> 16) & 255;
-    g = (bigint >> 8) & 255;
-    b = bigint & 255;
-  }
-  return `rgba(${r}, ${g}, ${b}, ${opacity})`;
-}
-
-function ReadonlyElement({ el }: { el: ComicCutElement }) {
-  const isBubble = el.type === 'speechBubble'
-  const isChar = el.type === 'character'
-
-  return (
-    <div
-      style={{
-        position: 'absolute',
-        left: el.x,
-        top: el.y,
-        width: el.width,
-        height: el.height,
-        transform: `rotate(${el.rotation || 0}deg) ${el.flipX ? 'scaleX(-1)' : ''}`,
-        zIndex: el.zIndex,
-        pointerEvents: 'none',
-      }}
-    >
-      {isChar && el.imageUrl && (
-        <img src={el.imageUrl} alt="character" className="w-full h-full object-contain" />
-      )}
-      {isBubble && (
-        <div className="relative w-full h-full flex items-center justify-center">
-          <div className="absolute inset-0 bg-white border-4 border-slate-800 rounded-3xl shadow-md" />
-          <p className="relative z-10 text-slate-800 font-bold text-center px-4 leading-snug break-keep"
-             style={{ fontSize: el.style?.fontSize || 16 }}>
-            {el.text}
-          </p>
-        </div>
-      )}
-    </div>
-  )
-}
 
 const PDF_PAGE_WIDTH = 1123;
 const PDF_PAGE_HEIGHT = 794;
@@ -86,7 +41,7 @@ const pdfPageBaseStyle: React.CSSProperties = {
   boxSizing: 'border-box',
 };
 
-const PageWrapper = ({ children, isLeft, isRight, isSingle, showNumber, pageNum }: any) => {
+const PageWrapper = ({ children, isSingle }: { children: ReactNode; isSingle?: boolean }) => {
   const ref = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
 
@@ -104,35 +59,10 @@ const PageWrapper = ({ children, isLeft, isRight, isSingle, showNumber, pageNum 
   }, []);
 
   return (
-    <div ref={ref} className={`flex-1 h-full bg-white relative overflow-hidden ${isSingle ? 'rounded-none shadow-lg border border-slate-200' : isLeft ? 'rounded-none border-r-0' : isRight ? 'rounded-none border-l border-black/5' : ''} shadow-[inset_0_0_40px_rgba(0,0,0,0.03)]`}>
+    <div ref={ref} className={`flex-1 h-full bg-white relative overflow-hidden ${isSingle ? 'rounded-none shadow-lg border border-slate-200' : ''} shadow-[inset_0_0_40px_rgba(0,0,0,0.03)]`}>
       <div style={{ transform: `scale(${scale})`, transformOrigin: 'top left', width: FLIPBOOK_PAGE_WIDTH, height: FLIPBOOK_PAGE_HEIGHT, position: 'absolute', top: 0, left: 0 }}>
-        {pageNum !== undefined && pageNum >= 2 && pageNum <= 15 && (
-          <div 
-            className="absolute pointer-events-none page-doodle-border"
-            style={{
-              inset: '-24px',
-              backgroundImage: 'url("/images/toonschool/flipbook/page-border-doodle.png")',
-              backgroundSize: '100% 100%',
-              backgroundRepeat: 'no-repeat',
-              backgroundPosition: 'center',
-              zIndex: 0,
-              opacity: 0.05
-            }}
-          />
-        )}
-        
-        <div className="relative z-10 w-full h-full">
-          {children}
-        </div>
+        {children}
       </div>
-      {showNumber && pageNum !== undefined && (
-        <div 
-          className={`absolute ${isSingle ? 'left-1/2 -translate-x-1/2 bottom-6' : isLeft ? 'left-8 bottom-6' : 'right-8 bottom-6'} text-slate-400 font-bold font-jua select-none page-number`}
-          style={{ fontSize: '12pt', zIndex: 2 }}
-        >
-          - {pageNum} -
-        </div>
-      )}
     </div>
   )
 }
@@ -439,62 +369,54 @@ export default function StudentComicViewerPage() {
     )
   }
 
-  // --- Landscape page rendering ---
-  const renderLandscapeContent = (page: ViewerPage, pageNum: number) => {
+  // --- Flipbook page rendering (MY TOON BOOK) ---
+  const renderFlipPage = (page: ViewerPage, pageNum: number) => {
     const backCover = pages.find((candidate) => candidate.type === 'back-cover')
     const backData = backCover?.type === 'back-cover' ? backCover.data : null
     const subject = backData?.subjectName || projectData.subject
     const unit = backData?.unitName || projectData.subUnit || projectData.mainUnit
     const firstComicPage = pages.find((candidate) => candidate.type === 'comic-cut' && candidate.data?.backgroundImageUrl)
     const firstComicImage = firstComicPage?.type === 'comic-cut' ? firstComicPage.data?.backgroundImageUrl : undefined
+    const keywords = getProjectKeywords(projectData)
+    const comicCuts = pages.filter((candidate) => candidate.type === 'comic-cut')
+    const quizPages = pages.filter((candidate) => candidate.type === 'ox-quiz')
+    const totalPages = pages.length
 
     if (page.type === 'front-cover') {
       const state = page.data
       const bgTemplate = COMMON_COVER_TEMPLATES.find((template) => template.id === state?.coverTemplateId)
         || COMMON_COVER_TEMPLATES.find((template) => template.id === DEFAULT_COVER_TEMPLATE_ID)
       const coverImage = state?.background || firstComicImage || bgTemplate?.imageUrl || projectData.cover?.imageUrl
-      const keywords = getProjectKeywords(projectData)
       return (
-        <article className="landscape-cover">
-          <section className="landscape-cover-copy">
-            <span className="landscape-page-type">TOONSCHOOL · {subject}</span>
-            <h1>{projectData.topicTitle || '나의 학습 만화'}</h1>
-            <p>{unit || projectData.selectedStoryDescription}</p>
-            {!!keywords.length && <div className="landscape-keywords">{keywords.map((keyword) => <span key={keyword}>{keyword}</span>)}</div>}
-            <div className="landscape-meta">
-              {projectData.grade && <span>{projectData.grade}</span>}
-              {backData?.authorName && <span>지은이 {backData.authorName}</span>}
-              {backData?.gradeClassInfo && <span>{backData.gradeClassInfo}</span>}
-              {backData?.createdDate && <span>{backData.createdDate}</span>}
-            </div>
-          </section>
-          <section className="landscape-cover-art">
-            {coverImage ? <img src={coverImage} alt={`${projectData.topicTitle} 표지`} /> : <div className="text-6xl" aria-label="표지 이미지 없음">📖</div>}
-          </section>
-        </article>
+        <FlipCoverPage
+          subject={subject}
+          title={projectData.topicTitle || '나의 학습 만화'}
+          subtitle={unit || projectData.selectedStoryDescription}
+          keywords={keywords}
+          authorName={backData?.authorName}
+          gradeClassInfo={backData?.gradeClassInfo}
+          createdDate={backData?.createdDate}
+          grade={projectData.grade}
+          coverImage={coverImage}
+        />
       )
     }
 
     if (page.type === 'comic-cut') {
       const info = buildComicPageInfo(projectData, page.cutNum)
-      const sceneScale = 806 / 1400
+      const order = comicCuts.findIndex((candidate) => candidate === page) + 1
       return (
-        <LandscapePageLayout info={info} subject={subject} unit={unit} pageNumber={pageNum} totalPages={pages.length} tone="comic">
-          <div className="landscape-content-inner">
-            <div className="landscape-comic-frame">
-              {page.data?.backgroundImageUrl ? (
-                <img src={page.data.backgroundImageUrl} className="absolute inset-0 w-full h-full object-contain" alt={`${page.cutNum}컷 만화 장면`} />
-              ) : (
-                <div className="absolute inset-0 flex items-center justify-center text-3xl font-jua text-slate-400">그림 준비 중</div>
-              )}
-              <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                <div style={{ transform: `scale(${sceneScale})`, transformOrigin: 'top left', width: 1400, height: 1025 }}>
-                  {page.data?.elements?.map((element) => <ReadonlyElement key={element.id} el={element} />)}
-                </div>
-              </div>
-            </div>
-          </div>
-        </LandscapePageLayout>
+        <FlipComicPage
+          subject={subject}
+          unit={unit}
+          sceneTitle={info.title || `만화컷 ${page.cutNum}`}
+          keyPoint={info.keyQuestion}
+          cutNum={order || page.cutNum}
+          totalCuts={comicCuts.length || 6}
+          data={page.data}
+          pageNumber={pageNum}
+          totalPages={totalPages}
+        />
       )
     }
 
@@ -503,13 +425,21 @@ export default function StudentComicViewerPage() {
       const data = page.data
       if (!data) return null
       const info = buildStoryPageInfo(projectData, storyType, data)
+      const icon = storyType === 'history' ? '📜' : storyType === 'latest' ? '🛰️' : '🏠'
       return (
-        <LandscapePageLayout info={info} subject={subject} unit={unit} pageNumber={pageNum} totalPages={pages.length} tone={storyType === 'latest' ? 'current' : storyType}>
-          <div className="landscape-story-content">
-            <h3>{data.title}</h3>
-            <p>{data.content}</p>
-          </div>
-        </LandscapePageLayout>
+        <FlipStoryPage
+          subject={subject}
+          unit={unit}
+          chipLabel={info.pageType}
+          icon={icon}
+          title={data.title || info.title}
+          content={data.content}
+          highlightLabel={info.missionLabel}
+          highlightText={info.mission}
+          questionText={info.keyQuestion}
+          pageNumber={pageNum}
+          totalPages={totalPages}
+        />
       )
     }
 
@@ -517,68 +447,43 @@ export default function StudentComicViewerPage() {
       const data = page.data
       if (!data) return null
       const info = buildQuizPageInfo(projectData, page.questionNum)
-      const selected = quizAnswers[page.questionNum]
       return (
-        <LandscapePageLayout info={info} subject={subject} unit={unit} pageNumber={pageNum} totalPages={pages.length} tone="quiz">
-          <div className="landscape-quiz-card">
-            <h3>Q. {data.question}</h3>
-            <div className="landscape-quiz-actions">
-              {(['O', 'X'] as const).map((answer) => (
-                <button
-                  key={answer}
-                  type="button"
-                  aria-label={`${answer} 선택`}
-                  className={selected === answer ? (answer === data.answer ? '!border-emerald-400 !bg-emerald-50 !text-emerald-600' : '!border-rose-400 !bg-rose-50 !text-rose-600') : ''}
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    setQuizAnswers((current) => ({ ...current, [page.questionNum]: answer }))
-                  }}
-                >
-                  {answer}
-                </button>
-              ))}
-            </div>
-            {selected && <p className={`mt-8 text-center text-2xl font-jua ${selected === data.answer ? 'text-emerald-600' : 'text-rose-600'}`}>{selected === data.answer ? '정답이에요!' : '한 번 더 생각해 보세요.'}</p>}
-          </div>
-        </LandscapePageLayout>
+        <FlipQuizPage
+          subject={subject}
+          unit={unit}
+          questionNum={page.questionNum}
+          totalQuestions={quizPages.length || 5}
+          question={data.question}
+          correctAnswer={data.answer}
+          selectedAnswer={quizAnswers[page.questionNum]}
+          explanation={info.mission}
+          onSelect={(answer) => setQuizAnswers((current) => ({ ...current, [page.questionNum]: answer }))}
+          pageNumber={pageNum}
+          totalPages={totalPages}
+        />
       )
     }
 
     const data = page.data || {}
-    const backgroundColor = hexToRgba(data.bgColor || '#e9f7ef', data.bgOpacity ?? 1)
     return (
-      <article className="landscape-back-cover" style={{ backgroundColor }}>
-        <section className="landscape-back-copy">
-          <span className="landscape-page-type">학습 마무리</span>
-          <h1>오늘의 배움을 완성했어요</h1>
-          <p>{projectData.topicTitle || data.topicName || '나의 학습 만화'}</p>
-          <div className="landscape-meta">
-            {data.authorName && <span>{data.authorName}</span>}
-            {data.gradeClassInfo && <span>{data.gradeClassInfo}</span>}
-            {data.createdDate && <span>{data.createdDate}</span>}
-            <span>친구와 작품을 나누고 다시 읽어 보세요.</span>
-          </div>
-        </section>
-        <section className="landscape-back-art">
-          {firstComicImage && <img className="landscape-back-hero" src={firstComicImage} alt="작품 대표 만화 장면" />}
-          <div className="landscape-back-share">
-            <strong>TOONSCHOOL</strong>
-            <p>작품 링크를 공유하고 다시 감상해 보세요.</p>
-            <img src="/images/toonschool/back-covers/back-cover-sns-default.webp" alt="작품 공유 QR 카드" />
-          </div>
-        </section>
-      </article>
+      <FlipBackCoverPage
+        workTitle={projectData.topicTitle || data.topicName || '나의 학습 만화'}
+        authorName={data.authorName}
+        gradeClassInfo={data.gradeClassInfo}
+        createdDate={data.createdDate}
+        heroImage={firstComicImage}
+      />
     )
   }
 
-  const renderPage = (page: ViewerPage | null, isLeft: boolean, isSingle = false) => {
+  const renderPage = (page: ViewerPage | null, _isLeft: boolean, isSingle = false) => {
     if (!page) {
-      return <PageWrapper isLeft={isLeft} isRight={!isLeft} isSingle={isSingle} showNumber={false}><div className="w-full h-full bg-slate-50" /></PageWrapper>
+      return <PageWrapper isSingle={isSingle}><div className="w-full h-full bg-slate-50" /></PageWrapper>
     }
     const pageNum = pages.indexOf(page) + 1
     return (
-      <PageWrapper isLeft={isLeft} isRight={!isLeft} isSingle={isSingle} showNumber={false} pageNum={pageNum}>
-        {renderLandscapeContent(page, pageNum)}
+      <PageWrapper isSingle={isSingle}>
+        {renderFlipPage(page, pageNum)}
       </PageWrapper>
     )
   }
@@ -586,7 +491,7 @@ export default function StudentComicViewerPage() {
   const renderPdfPage = (page: ViewerPage, pageNum: number) => (
     <div style={pdfPageBaseStyle}>
       <div style={{ width: FLIPBOOK_PAGE_WIDTH, height: FLIPBOOK_PAGE_HEIGHT, transform: `scale(${PDF_SCALE})`, transformOrigin: 'top left' }}>
-        {renderLandscapeContent(page, pageNum)}
+        {renderFlipPage(page, pageNum)}
       </div>
     </div>
   )
