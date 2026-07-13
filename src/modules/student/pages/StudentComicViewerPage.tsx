@@ -6,7 +6,6 @@ import { projectStorage } from '../utils/projectStorage'
 import type { EditorState } from '../components/editor/types'
 import StudentWorkspaceLayout from '../components/layout/StudentWorkspaceLayout'
 import StudentZoomControl from '../components/layout/StudentZoomControl'
-import SNSBackCoverPreview from '../components/back-cover/SNSBackCoverPreview'
 import { Volume2, VolumeX, ArrowLeft, ArrowRight, BookOpen, MoreVertical, ZoomIn, ZoomOut, Maximize, LayoutGrid, PlayCircle, Monitor } from 'lucide-react'
 import { COMMON_COVER_TEMPLATES, DEFAULT_COVER_TEMPLATE_ID } from '../data/coverTemplates'
 import type { WorldStory, OXQuestion } from '../services/studentUnitSummaryService'
@@ -150,30 +149,7 @@ type ViewerPage =
 type Spread = { pages: [number | null, number | null] };
 
 const getSpreads = (totalCount: number): Spread[] => {
-  if (totalCount === 0) return [];
-  if (totalCount === 1) return [{ pages: [null, 0] }];
-  
-  const spreads: Spread[] = [];
-  // First page (front cover)
-  spreads.push({ pages: [null, 0] });
-  
-  let i = 1;
-  while (i < totalCount - 1) {
-    if (i + 1 < totalCount - 1) {
-      spreads.push({ pages: [i, i + 1] });
-      i += 2;
-    } else {
-      spreads.push({ pages: [i, null] });
-      i += 1;
-    }
-  }
-  
-  // Last page (back cover)
-  if (i === totalCount - 1) {
-    spreads.push({ pages: [totalCount - 1, null] });
-  }
-  
-  return spreads;
+  return Array.from({ length: totalCount }, (_, pageIndex) => ({ pages: [pageIndex, null] }));
 };
 
 const getPublicSiteUrl = () => {
@@ -326,7 +302,7 @@ export default function StudentComicViewerPage() {
 
   // --- Zoom Logic ---
   const BASE_WIDTH = 1200;
-  const BASE_HEIGHT = BASE_WIDTH / (FLIPBOOK_PAGE_RATIO * 2);
+  const BASE_HEIGHT = BASE_WIDTH / FLIPBOOK_PAGE_RATIO;
   const SCROLL_PADDING = 80;
   
   let fitScale = 1;
@@ -469,12 +445,14 @@ export default function StudentComicViewerPage() {
     const backData = backCover?.type === 'back-cover' ? backCover.data : null
     const subject = backData?.subjectName || projectData.subject
     const unit = backData?.unitName || projectData.subUnit || projectData.mainUnit
+    const firstComicPage = pages.find((candidate) => candidate.type === 'comic-cut' && candidate.data?.backgroundImageUrl)
+    const firstComicImage = firstComicPage?.type === 'comic-cut' ? firstComicPage.data?.backgroundImageUrl : undefined
 
     if (page.type === 'front-cover') {
       const state = page.data
       const bgTemplate = COMMON_COVER_TEMPLATES.find((template) => template.id === state?.coverTemplateId)
         || COMMON_COVER_TEMPLATES.find((template) => template.id === DEFAULT_COVER_TEMPLATE_ID)
-      const coverImage = projectData.cover?.imageUrl || state?.background || bgTemplate?.imageUrl || projectData.fullComic?.imageUrl
+      const coverImage = state?.background || firstComicImage || bgTemplate?.imageUrl || projectData.cover?.imageUrl
       const keywords = getProjectKeywords(projectData)
       return (
         <article className="landscape-cover">
@@ -582,15 +560,12 @@ export default function StudentComicViewerPage() {
           </div>
         </section>
         <section className="landscape-back-art">
-          <SNSBackCoverPreview
-            studentName={data.authorName || '-'}
-            gradeClass={data.gradeClassInfo || '-'}
-            completionDate={data.createdDate || '-'}
-            subject={data.subjectName || subject || '-'}
-            unit={data.unitName || unit || '-'}
-            topic={data.topicName || projectData.topicTitle || '-'}
-            backgroundColor={backgroundColor}
-          />
+          {firstComicImage && <img className="landscape-back-hero" src={firstComicImage} alt="작품 대표 만화 장면" />}
+          <div className="landscape-back-share">
+            <strong>TOONSCHOOL</strong>
+            <p>작품 링크를 공유하고 다시 감상해 보세요.</p>
+            <img src="/images/toonschool/back-covers/back-cover-sns-default.webp" alt="작품 공유 QR 카드" />
+          </div>
         </section>
       </article>
     )
@@ -616,36 +591,19 @@ export default function StudentComicViewerPage() {
     </div>
   )
   const renderHalf = (pageIndex: number | null, isLeft: boolean) => {
-    if (pageIndex === null) {
-      return <div className={`w-full h-full ${isLeft ? 'rounded-none' : 'rounded-none'} bg-transparent`} />;
-    }
+    if (pageIndex === null) return <div className="w-full h-full bg-transparent" />;
     return (
-      <div className={`w-full h-full relative bg-white ${isLeft ? 'rounded-none border-r border-black/10' : 'rounded-none border-l border-black/5'} overflow-hidden`}>
+      <div className="w-full h-full relative bg-white overflow-hidden">
         {renderPage(pages[pageIndex], isLeft, false)}
-        {/* Spine shadow */}
-        <div className={`absolute top-0 ${isLeft ? 'right-0 bg-gradient-to-l' : 'left-0 bg-gradient-to-r'} w-12 h-full from-black/10 to-transparent pointer-events-none mix-blend-multiply opacity-50`} />
       </div>
     );
   };
 
   const getPageIndicatorText = () => {
     if (spreads.length === 0) return '0 / 0';
-    const spread = spreads[currentSpreadIndex];
-    if (!spread) return '';
-    
-    const p1 = spread.pages[0];
-    const p2 = spread.pages[1];
-    
-    if (p1 === null && p2 !== null) {
-      return `${p2 + 1} / ${pages.length}`;
-    } else if (p1 !== null && p2 === null) {
-      return `${p1 + 1} / ${pages.length}`;
-    } else if (p1 !== null && p2 !== null) {
-      return `${p1 + 1}-${p2 + 1} / ${pages.length}`;
-    }
-    return '';
+    const pageIndex = spreads[currentSpreadIndex]?.pages[0];
+    return pageIndex === null || pageIndex === undefined ? '' : `${pageIndex + 1} / ${pages.length}`;
   };
-
   const handleDownloadPdf = async () => {
     if (isPdfDownloading) return;
 
@@ -1014,89 +972,39 @@ export default function StudentComicViewerPage() {
                 opacity: hasStarted ? 1 : 0.5,
              }}
            >
-              {/* flipBookStage: perspective 컨테이너 */}
-              <div className="w-full h-full relative rounded-none book-shell" style={{ perspective: '2400px' }}>
-                {/* Base Layer: Target Spread (Always visible behind) */}
+              <div className="w-full h-full relative book-shell" style={{ perspective: '2400px' }}>
                 {isFlipping && targetSpreadIndex !== null && (
-                  <div className="absolute inset-0 flex rounded-none book-spread">
-                    <div className="w-1/2 h-full book-page-left">
-                      {renderHalf(spreads[targetSpreadIndex].pages[0], true)}
-                    </div>
-                    <div className="w-1/2 h-full book-page-right">
-                      {renderHalf(spreads[targetSpreadIndex].pages[1], false)}
-                    </div>
+                  <div className="absolute inset-0">
+                    {renderHalf(spreads[targetSpreadIndex].pages[0], true)}
                   </div>
                 )}
 
-                {/* Middle Layer: Current Spread */}
-                <div className="absolute inset-0 flex rounded-none pointer-events-auto book-spread">
-                  {/* Left Side */}
-                  <div 
-                    className={`w-1/2 h-full relative book-page book-page-left ${isFlipping ? 'cursor-progress' : (currentSpreadIndex > 0 ? 'cursor-pointer' : 'cursor-default')}`} 
-                    onClick={(e) => { e.stopPropagation(); if (!isFlipping) handlePrev(); }}
-                    title={currentSpreadIndex > 0 ? "이전 페이지로 이동" : undefined}
-                    aria-label={currentSpreadIndex > 0 ? "이전 페이지로 이동" : undefined}
-                  >
-                    {(!isFlipping || flipDirection === 'next') && renderHalf(spreads[currentSpreadIndex].pages[0], true)}
+                {!isFlipping && (
+                  <div className="absolute inset-0">
+                    {renderHalf(spreads[currentSpreadIndex].pages[0], true)}
                   </div>
-                  
-                  {/* Right Side */}
-                  <div 
-                    className={`w-1/2 h-full relative book-page book-page-right ${isFlipping ? 'cursor-progress' : (currentSpreadIndex < spreads.length - 1 ? 'cursor-pointer' : 'cursor-default')}`}
-                    onClick={(e) => { e.stopPropagation(); if (!isFlipping) handleNext(); }}
-                    title={currentSpreadIndex < spreads.length - 1 ? "다음 페이지로 이동" : undefined}
-                    aria-label={currentSpreadIndex < spreads.length - 1 ? "다음 페이지로 이동" : undefined}
-                  >
-                    {(!isFlipping || flipDirection === 'prev') && renderHalf(spreads[currentSpreadIndex].pages[1], false)}
-                  </div>
-                </div>
+                )}
 
-                {/* Flipping Layer */}
                 {isFlipping && targetSpreadIndex !== null && (
                   <div className="absolute inset-0 pointer-events-none z-30">
-                    {flipDirection === 'next' && (
-                      <div 
-                        className="absolute right-0 w-1/2 h-full flipping-page flipping-next"
-                        style={{ transformOrigin: 'left center', transformStyle: 'preserve-3d' }}
-                      >
-                        <div className="absolute inset-0 bg-white rounded-none page-curl-wrapper-next overflow-hidden" style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
-                          {renderHalf(spreads[currentSpreadIndex].pages[1], false)}
-                          <div className="page-curl-overlay next-curl-overlay"></div>
-                          <div className="page-curl-overlay next-curl-shadow"></div>
-                          <div className="page-curl-overlay next-curl-highlight"></div>
-                        </div>
-                        <div className="absolute inset-0 bg-white rounded-none overflow-hidden" style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}>
-                          {renderHalf(spreads[targetSpreadIndex].pages[0], true)}
-                          <div className="page-shadow-overlay-right"></div>
-                        </div>
+                    <div
+                      className={`absolute inset-0 flipping-page ${flipDirection === 'next' ? 'flipping-next' : 'flipping-prev'}`}
+                      style={{
+                        transformOrigin: flipDirection === 'next' ? 'left center' : 'right center',
+                        transformStyle: 'preserve-3d',
+                      }}
+                    >
+                      <div className="absolute inset-0 bg-white overflow-hidden" style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
+                        {renderHalf(spreads[currentSpreadIndex].pages[0], true)}
                       </div>
-                    )}
-                    
-                    {flipDirection === 'prev' && (
-                      <div 
-                        className="absolute left-0 w-1/2 h-full flipping-page flipping-prev"
-                        style={{ transformOrigin: 'right center', transformStyle: 'preserve-3d' }}
-                      >
-                        <div className="absolute inset-0 bg-white rounded-none page-curl-wrapper-prev overflow-hidden" style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
-                          {renderHalf(spreads[currentSpreadIndex].pages[0], true)}
-                          <div className="page-curl-overlay prev-curl-overlay"></div>
-                          <div className="page-curl-overlay prev-curl-shadow"></div>
-                          <div className="page-curl-overlay prev-curl-highlight"></div>
-                        </div>
-                        <div className="absolute inset-0 bg-white rounded-none overflow-hidden" style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'rotateY(-180deg)' }}>
-                          {renderHalf(spreads[targetSpreadIndex].pages[1], false)}
-                          <div className="page-shadow-overlay"></div>
-                        </div>
+                      <div className="absolute inset-0 bg-white overflow-hidden" style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}>
+                        {renderHalf(spreads[targetSpreadIndex].pages[0], true)}
                       </div>
-                    )}
+                    </div>
                   </div>
                 )}
-
-                {/* Center Spine Shadow (Static) */}
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-full bg-gradient-to-r from-black/10 via-transparent to-black/10 z-40 pointer-events-none mix-blend-multiply opacity-60" />
               </div>
            </div>
-
            {/* Bottom Player Bar */}
            {hasStarted && (
              <div className="mt-8 flex items-center gap-2 px-4 py-2 rounded-full shadow-lg z-50 transition-all shrink-0 playerWrapper" style={{ backgroundColor: 'rgba(40, 25, 10, 0.88)' }}>

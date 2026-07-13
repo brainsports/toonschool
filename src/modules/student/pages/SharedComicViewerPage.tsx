@@ -37,7 +37,7 @@ const getSpreads = (totalCount: number, isSingle: boolean): Spread[] => {
   return spreads;
 };
 
-const PageWrapper = ({ children, isLeft, isRight, isSingle }: any) => {
+const PageWrapper = ({ children, isLeft, isRight, isSingle, isLegacyPortrait }: any) => {
   const ref = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
 
@@ -45,7 +45,7 @@ const PageWrapper = ({ children, isLeft, isRight, isSingle }: any) => {
     if (!ref.current) return;
     const resize = () => {
       if (ref.current) {
-        setScale(ref.current.clientWidth / 1400); 
+        setScale(ref.current.clientWidth / 1400);
       }
     };
     resize();
@@ -56,7 +56,7 @@ const PageWrapper = ({ children, isLeft, isRight, isSingle }: any) => {
 
   return (
     <div ref={ref} className={`flex-1 h-full bg-white relative overflow-hidden ${isSingle ? 'rounded-[12px] shadow-md border border-slate-200/50' : isLeft ? 'rounded-none border-r-0' : isRight ? 'rounded-none border-l border-black/5' : ''} shadow-[inset_0_0_40px_rgba(0,0,0,0.03)]`}>
-      <div style={{ transform: `scale(${scale})`, transformOrigin: 'top left', width: 1400, height: 990, position: 'absolute', top: 0, left: 0 }}>
+      <div style={{ transform: `scale(${scale})`, transformOrigin: 'top left', width: 1400, height: isLegacyPortrait ? 1980 : 990, position: 'absolute', top: 0, left: 0 }}>
         <div className="relative z-10 w-full h-full bg-white">
           {children}
         </div>
@@ -67,15 +67,15 @@ const PageWrapper = ({ children, isLeft, isRight, isSingle }: any) => {
 
 export default function SharedComicViewerPage() {
   const { slug } = useParams()
-  
+
   const [pages, setPages] = useState<SharedPage[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [errorMsg, setErrorMsg] = useState('')
-  
+
   const [currentSpreadIndex, setCurrentSpreadIndex] = useState(0)
   const [isMusicOn, setIsMusicOn] = useState(false)
   const [hasStarted, setHasStarted] = useState(false)
-  
+
   const [zoomPercent, setZoomPercent] = useState<number | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 })
@@ -92,6 +92,7 @@ export default function SharedComicViewerPage() {
   const [isSinglePageMode, setIsSinglePageMode] = useState(false)
   const prevSingleModeRef = useRef(isSinglePageMode)
   const [windowWidth, setWindowWidth] = useState(window.innerWidth)
+  const [isLegacyPortrait, setIsLegacyPortrait] = useState(false)
 
   useEffect(() => {
     const checkMode = () => {
@@ -104,7 +105,16 @@ export default function SharedComicViewerPage() {
     return () => window.removeEventListener('resize', checkMode);
   }, []);
 
-  const spreads = getSpreads(pages.length, isSinglePageMode)
+  const useSinglePageMode = isSinglePageMode || !isLegacyPortrait
+  const spreads = getSpreads(pages.length, useSinglePageMode)
+
+  useEffect(() => {
+    const firstPageUrl = pages[0]?.imageUrl
+    if (!firstPageUrl) return
+    const image = new Image()
+    image.onload = () => setIsLegacyPortrait(image.naturalHeight > image.naturalWidth)
+    image.src = firstPageUrl
+  }, [pages])
 
   const currentSpreadIndexRef = useRef(currentSpreadIndex)
   currentSpreadIndexRef.current = currentSpreadIndex
@@ -194,12 +204,12 @@ export default function SharedComicViewerPage() {
           .eq('slug', slug)
           .eq('is_public', true)
           .single();
-          
+
         if (error || !data) {
           setErrorMsg('공유된 책을 찾을 수 없어요.');
           return;
         }
-        
+
         if (data.pages && Array.isArray(data.pages)) {
           setPages(data.pages);
         } else {
@@ -211,14 +221,14 @@ export default function SharedComicViewerPage() {
         setIsLoading(false);
       }
     };
-    
+
     fetchSharedComic();
   }, [slug])
 
-  const BASE_WIDTH = isSinglePageMode ? 600 : 1200;
-  const BASE_HEIGHT = 424;
-  const SCROLL_PADDING = isSinglePageMode ? 16 : 32;
-  
+  const BASE_WIDTH = useSinglePageMode ? (isLegacyPortrait ? 500 : 1200) : 1000;
+  const BASE_HEIGHT = isLegacyPortrait ? 707 : 849;
+  const SCROLL_PADDING = useSinglePageMode ? 16 : 32;
+
   let fitScale = 1;
   if (containerSize.width > 0 && containerSize.height > 0) {
     const scaleW = (containerSize.width - SCROLL_PADDING * 2) / BASE_WIDTH;
@@ -226,7 +236,7 @@ export default function SharedComicViewerPage() {
     fitScale = Math.min(scaleW, scaleH);
     fitScale = Math.max(0.3, fitScale);
   }
-  
+
   const currentZoom = zoomPercent !== null ? zoomPercent : (containerSize.width > 0 ? Math.round(fitScale * 100) : 100);
 
   useEffect(() => {
@@ -234,7 +244,7 @@ export default function SharedComicViewerPage() {
     if (!el) return;
     const handleWheel = (e: WheelEvent) => {
       if (e.ctrlKey || e.metaKey) {
-        e.preventDefault(); 
+        e.preventDefault();
         const delta = e.deltaY > 0 ? -5 : 5;
         let newZoom = currentZoom + delta;
         newZoom = Math.max(25, Math.min(300, newZoom));
@@ -350,14 +360,14 @@ export default function SharedComicViewerPage() {
   const renderPage = (page: SharedPage | null, isLeft: boolean, isSingle: boolean = false) => {
     if (!page) {
       return (
-        <PageWrapper isLeft={isLeft} isRight={!isLeft} isSingle={isSingle}>
+        <PageWrapper isLeft={isLeft} isRight={!isLeft} isSingle={isSingle} isLegacyPortrait={isLegacyPortrait}>
           <div className="w-full h-full flex flex-col items-center justify-center bg-slate-50"></div>
         </PageWrapper>
       )
     }
 
     return (
-      <PageWrapper isLeft={isLeft} isRight={!isLeft} isSingle={isSingle}>
+      <PageWrapper isLeft={isLeft} isRight={!isLeft} isSingle={isSingle} isLegacyPortrait={isLegacyPortrait}>
          <img src={page.imageUrl} alt={`${page.pageNumber}페이지`} className="w-full h-full object-contain bg-white" />
       </PageWrapper>
     )
@@ -379,8 +389,8 @@ export default function SharedComicViewerPage() {
     if (spreads.length === 0) return '0 / 0';
     const spread = spreads[currentSpreadIndex];
     if (!spread) return '';
-    
-    if (isSinglePageMode) {
+
+    if (useSinglePageMode) {
        const p = spread.pages[0];
        if (p === null) return `0 / ${pages.length}`;
        return `${p + 1} / ${pages.length}`;
@@ -413,7 +423,7 @@ export default function SharedComicViewerPage() {
             <h1 className="text-[#303442] text-[36px] font-jua mb-8 leading-normal">
               친구가 만든 만화책이<br/>도착했어요!
             </h1>
-            <button 
+            <button
               className="bg-purple-600 hover:bg-purple-700 text-white border-0 py-6 px-16 rounded-full text-4xl font-jua cursor-pointer shadow-[0_12px_30px_rgba(147,51,234,0.4)] transition-transform hover:scale-105 active:scale-95 flex items-center gap-4"
               onClick={startViewer}
             >
@@ -518,12 +528,12 @@ export default function SharedComicViewerPage() {
           animation: spineShadowAnim 1100ms cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
         }
       `}</style>
-      <div 
+      <div
         className="flex-1 w-full relative overflow-auto student-scrollbar bg-[#f3f4f7] flex flex-col items-center pt-4 pb-8 px-2 md:px-8"
       >
-         
+
          <div className="flex flex-col items-center my-auto shrink-0 w-full">
-           <div 
+           <div
              ref={containerRef}
              className="relative shadow-2xl bg-[#e2e8f0] rounded-none shrink-0 viewerCanvas"
              style={{
@@ -536,31 +546,31 @@ export default function SharedComicViewerPage() {
               <div className="w-full h-full relative rounded-none book-shell" style={{ perspective: '2400px' }}>
                 {isFlipping && targetSpreadIndex !== null && (
                   <div className="absolute inset-0 flex rounded-none book-spread">
-                    <div className={`${isSinglePageMode ? 'w-full' : 'w-1/2'} h-full book-page-left`}>
-                      {renderHalf(spreads[targetSpreadIndex].pages[0], true, isSinglePageMode)}
+                    <div className={`${useSinglePageMode ? 'w-full' : 'w-1/2'} h-full book-page-left`}>
+                      {renderHalf(spreads[targetSpreadIndex].pages[0], true, useSinglePageMode)}
                     </div>
-                    {!isSinglePageMode && (
+                    {!useSinglePageMode && (
                       <div className="w-1/2 h-full book-page-right">
-                        {renderHalf(spreads[targetSpreadIndex].pages[1], false, isSinglePageMode)}
+                        {renderHalf(spreads[targetSpreadIndex].pages[1], false, useSinglePageMode)}
                       </div>
                     )}
                   </div>
                 )}
 
                 <div className="absolute inset-0 flex rounded-none pointer-events-auto book-spread">
-                  <div 
-                    className={`${isSinglePageMode ? 'w-full' : 'w-1/2'} h-full relative book-page book-page-left ${isFlipping ? 'cursor-progress' : (currentSpreadIndex > 0 ? 'cursor-pointer' : 'cursor-default')}`} 
+                  <div
+                    className={`${useSinglePageMode ? 'w-full' : 'w-1/2'} h-full relative book-page book-page-left ${isFlipping ? 'cursor-progress' : (currentSpreadIndex > 0 ? 'cursor-pointer' : 'cursor-default')}`}
                     onClick={(e) => { e.stopPropagation(); if (!isFlipping) handlePrev(); }}
                   >
-                    {(!isFlipping || flipDirection === 'next') && renderHalf(spreads[currentSpreadIndex].pages[0], true, isSinglePageMode)}
+                    {(!isFlipping || flipDirection === 'next') && renderHalf(spreads[currentSpreadIndex].pages[0], true, useSinglePageMode)}
                   </div>
-                  
-                  {!isSinglePageMode && (
-                    <div 
+
+                  {!useSinglePageMode && (
+                    <div
                       className={`w-1/2 h-full relative book-page book-page-right ${isFlipping ? 'cursor-progress' : (currentSpreadIndex < spreads.length - 1 ? 'cursor-pointer' : 'cursor-default')}`}
                       onClick={(e) => { e.stopPropagation(); if (!isFlipping) handleNext(); }}
                     >
-                      {(!isFlipping || flipDirection === 'prev') && renderHalf(spreads[currentSpreadIndex].pages[1], false, isSinglePageMode)}
+                      {(!isFlipping || flipDirection === 'prev') && renderHalf(spreads[currentSpreadIndex].pages[1], false, useSinglePageMode)}
                     </div>
                   )}
                 </div>
@@ -568,44 +578,44 @@ export default function SharedComicViewerPage() {
                 {isFlipping && targetSpreadIndex !== null && (
                   <div className="absolute inset-0 pointer-events-none z-30 flex justify-center">
                     {flipDirection === 'next' && (
-                      <div 
-                        className={`absolute ${isSinglePageMode ? 'w-full right-0' : 'w-1/2 right-0'} h-full flipping-page flipping-next`}
-                        style={{ transformOrigin: isSinglePageMode ? 'center center' : 'left center', transformStyle: 'preserve-3d' }}
+                      <div
+                        className={`absolute ${useSinglePageMode ? 'w-full right-0' : 'w-1/2 right-0'} h-full flipping-page flipping-next`}
+                        style={{ transformOrigin: useSinglePageMode ? 'center center' : 'left center', transformStyle: 'preserve-3d' }}
                       >
                         <div className="absolute inset-0 bg-white rounded-none page-curl-wrapper-next overflow-hidden" style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
-                          {renderHalf(spreads[currentSpreadIndex].pages[isSinglePageMode ? 0 : 1], false, isSinglePageMode)}
+                          {renderHalf(spreads[currentSpreadIndex].pages[useSinglePageMode ? 0 : 1], false, useSinglePageMode)}
                           <div className="page-curl-overlay next-curl-overlay"></div>
                           <div className="page-curl-overlay next-curl-shadow"></div>
                           <div className="page-curl-overlay next-curl-highlight"></div>
                         </div>
                         <div className="absolute inset-0 bg-white rounded-none overflow-hidden" style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}>
-                          {renderHalf(spreads[targetSpreadIndex].pages[0], true, isSinglePageMode)}
-                          {!isSinglePageMode && <div className="page-shadow-overlay-right"></div>}
+                          {renderHalf(spreads[targetSpreadIndex].pages[0], true, useSinglePageMode)}
+                          {!useSinglePageMode && <div className="page-shadow-overlay-right"></div>}
                         </div>
                       </div>
                     )}
-                    
+
                     {flipDirection === 'prev' && (
-                      <div 
-                        className={`absolute ${isSinglePageMode ? 'w-full left-0' : 'w-1/2 left-0'} h-full flipping-page flipping-prev`}
-                        style={{ transformOrigin: isSinglePageMode ? 'center center' : 'right center', transformStyle: 'preserve-3d' }}
+                      <div
+                        className={`absolute ${useSinglePageMode ? 'w-full left-0' : 'w-1/2 left-0'} h-full flipping-page flipping-prev`}
+                        style={{ transformOrigin: useSinglePageMode ? 'center center' : 'right center', transformStyle: 'preserve-3d' }}
                       >
                         <div className="absolute inset-0 bg-white rounded-none page-curl-wrapper-prev overflow-hidden" style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
-                          {renderHalf(spreads[currentSpreadIndex].pages[0], true, isSinglePageMode)}
+                          {renderHalf(spreads[currentSpreadIndex].pages[0], true, useSinglePageMode)}
                           <div className="page-curl-overlay prev-curl-overlay"></div>
                           <div className="page-curl-overlay prev-curl-shadow"></div>
                           <div className="page-curl-overlay prev-curl-highlight"></div>
                         </div>
                         <div className="absolute inset-0 bg-white rounded-none overflow-hidden" style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'rotateY(-180deg)' }}>
-                          {renderHalf(spreads[targetSpreadIndex].pages[isSinglePageMode ? 0 : 1], false, isSinglePageMode)}
-                          {!isSinglePageMode && <div className="page-shadow-overlay"></div>}
+                          {renderHalf(spreads[targetSpreadIndex].pages[useSinglePageMode ? 0 : 1], false, useSinglePageMode)}
+                          {!useSinglePageMode && <div className="page-shadow-overlay"></div>}
                         </div>
                       </div>
                     )}
                   </div>
                 )}
 
-                {!isSinglePageMode && <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-full bg-gradient-to-r from-black/10 via-transparent to-black/10 z-40 pointer-events-none mix-blend-multiply opacity-60" />}
+                {!useSinglePageMode && <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-full bg-gradient-to-r from-black/10 via-transparent to-black/10 z-40 pointer-events-none mix-blend-multiply opacity-60" />}
               </div>
            </div>
 
@@ -630,9 +640,9 @@ export default function SharedComicViewerPage() {
                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m13 17 5-5-5-5"/><path d="m6 17 5-5-5-5"/><path d="M20 17V7"/></svg>
                  </button>
                )}
-               
+
                <div className="w-[1px] h-4 md:h-5 bg-white/20 mx-1"></div>
-               
+
                {windowWidth > 600 && (
                  <>
                    <button onClick={() => setZoomPercent(Math.min(300, currentZoom + 10))} className="p-1.5 md:p-2 hover:bg-white/10 rounded-full text-white transition-colors" title="확대">
