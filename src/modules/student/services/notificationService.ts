@@ -47,6 +47,54 @@ async function getHiddenNotificationIds(studentId?: string | null): Promise<Reco
   return result;
 }
 
+// 기관 알림(org_notifications) 조회 + 매핑. 학생이 숨긴 항목은 제외.
+// getNotificationsForTarget / getNotificationsForStudent 양쪽에서 공유(중복 방지).
+async function fetchOrgNotifications(
+  profile: any,
+  hiddenIds: Record<StudentNotificationSourceType, Set<string>>,
+): Promise<StudentNotification[]> {
+  if (!profile?.organization_id) return [];
+
+  const { data: orgData, error: orgError } = await supabase
+    .from('org_notifications')
+    .select('*, organizations(name)')
+    .eq('organization_id', profile.organization_id)
+    .eq('is_public', true)
+    .is('deleted_at', null)
+    .order('notice_date', { ascending: false });
+
+  if (orgError || !orgData) return [];
+
+  const filteredOrgData = orgData.filter((noti: any) => {
+    if (noti.target_type === 'all_students' || noti.target_type === 'student' || noti.target_type === 'all') return true;
+    if (noti.target_type === 'specific_class' && profile.center_id && noti.target_teacher_id === profile.center_id) return true;
+    if (noti.target_type === 'specific_student' && noti.target_user_id === profile.id) return true;
+    return false;
+  });
+
+  return filteredOrgData
+    .filter((noti: any) => !hiddenIds.org_notification.has(noti.id))
+    .map((noti: any) => {
+      const orgName = noti.organizations?.name || '기관관리자';
+      const senderName = noti.sender_role === 'org_admin' ? `${orgName} / 기관관리자` : '기관관리자';
+      return {
+        id: noti.id,
+        target_key: noti.target_type,
+        sender_id: noti.sender_id,
+        sender_role: senderName,
+        category: noti.category || 'notice',
+        title: noti.title,
+        content: noti.message,
+        notice_date: noti.notice_date || noti.created_at,
+        is_published: noti.is_public,
+        priority: noti.priority,
+        created_at: noti.created_at,
+        updated_at: noti.created_at,
+        source_type: 'org_notification' as const,
+      };
+    });
+}
+
 /**
  * 특정 대상의 공개 알림 목록을 최신순으로 조회합니다. 현재 학생이 숨긴 알림은 제외합니다.
  */
@@ -73,53 +121,93 @@ export async function getNotificationsForTarget(targetKey: string, profile?: any
       ];
     }
 
-    if (profile?.organization_id) {
-      const { data: orgData, error: orgError } = await supabase
-        .from('org_notifications')
-        .select('*, organizations(name)')
-        .eq('organization_id', profile.organization_id)
-        .eq('is_public', true)
-        .is('deleted_at', null)
-        .order('notice_date', { ascending: false });
-
-      if (!orgError && orgData) {
-        const filteredOrgData = orgData.filter((noti: any) => {
-          if (noti.target_type === 'all_students' || noti.target_type === 'student' || noti.target_type === 'all') return true;
-          if (noti.target_type === 'specific_class' && profile.center_id && noti.target_teacher_id === profile.center_id) return true;
-          if (noti.target_type === 'specific_student' && noti.target_user_id === profile.id) return true;
-          return false;
-        });
-
-        const orgMapped = filteredOrgData
-          .filter((noti: any) => !hiddenIds.org_notification.has(noti.id))
-          .map((noti: any) => {
-            const orgName = noti.organizations?.name || '기관관리자';
-            const senderName = noti.sender_role === 'org_admin' ? `${orgName} / 기관관리자` : '기관관리자';
-            return {
-              id: noti.id,
-              target_key: noti.target_type,
-              sender_id: noti.sender_id,
-              sender_role: senderName,
-              category: noti.category || 'notice',
-              title: noti.title,
-              content: noti.message,
-              notice_date: noti.notice_date || noti.created_at,
-              is_published: noti.is_public,
-              priority: noti.priority,
-              created_at: noti.created_at,
-              updated_at: noti.created_at,
-              source_type: 'org_notification' as const,
-            };
-          });
-        allNotis = [...allNotis, ...orgMapped];
-      }
-    }
+    allNotis = [...allNotis, ...(await fetchOrgNotifications(profile, hiddenIds))];
 
     allNotis.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
     return allNotis;
   } catch (err) {
     console.error('[notificationService] getNotificationsForTarget exception:', err);
+    return [];
+  }
+}
+
+// 학년 문자열('5학년') 또는 숫자(5) -> 발송 키 'grade-5'.
+function gradeToKey(grade: string | number | null | undefined): string | null {
+  const n =
+    typeof grade === 'number'
+      ? grade
+      : Number.parseInt(String(grade ?? '').replace(/[^0-9]/g, ''), 10);
+  return Number.isFinite(n) && n > 0 ? `grade-${n}` : null;
+}
+
+// 학생 본인의 students 행에서 수신 스코핑 문맥(class_id, grade, created_by) 조회.
+async function fetchStudentNotiContext(studentId: string): Promise<{
+  class_id: string | null;
+  grade: string | null;
+  created_by: string | null;
+} | null> {
+  const { data, error } = await supabase
+    .from('students')
+    .select('class_id, grade, created_by')
+    .eq('id', studentId)
+    .maybeSingle();
+
+  if (error) {
+    console.error('[notificationService] fetchStudentNotiContext error:', error);
+    return null;
+  }
+  return data as { class_id: string | null; grade: string | null; created_by: string | null } | null;
+}
+
+/**
+ * 학생용: 본인 담당 선생님(created_by)이 보낸 알림 + 기관 알림을 조회.
+ * 학생 알림은 sender_id = 학생의 created_by 로 스코핑하여 타 선생님 알림이 노출되지 않는다.
+ * 수신 키: 본인 학급(class_id), 전체('all-grades'), 본인 학년('grade-N'), 본인 개인(studentId).
+ * 기관 알림(org_notifications)은 기존 기준 유지(기관 단위广播).
+ */
+export async function getNotificationsForStudent(
+  studentId: string | null | undefined,
+  profile?: any,
+): Promise<StudentNotification[]> {
+  if (!studentId) return [];
+
+  try {
+    const hiddenIds = await getHiddenNotificationIds(profile?.id);
+    let allNotis: StudentNotification[] = [];
+
+    const ctx = await fetchStudentNotiContext(studentId);
+    if (ctx?.created_by) {
+      const gradeKey = gradeToKey(ctx.grade);
+      const keys = ['all-grades', ctx.class_id, gradeKey, studentId].filter(Boolean) as string[];
+
+      const { data: studentData, error: studentError } = await supabase
+        .from('student_notifications')
+        .select('*')
+        .eq('sender_id', ctx.created_by)
+        .in('target_key', keys)
+        .eq('is_published', true)
+        .order('notice_date', { ascending: false });
+
+      if (!studentError && studentData) {
+        allNotis = [
+          ...allNotis,
+          ...(studentData as StudentNotification[])
+            .filter((noti) => !hiddenIds.student_notification.has(noti.id))
+            .map((noti) => ({ ...noti, source_type: 'student_notification' as const })),
+        ];
+      }
+    }
+
+    if (profile?.organization_id) {
+      allNotis = [...allNotis, ...(await fetchOrgNotifications(profile, hiddenIds))];
+    }
+
+    allNotis.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+    return allNotis;
+  } catch (err) {
+    console.error('[notificationService] getNotificationsForStudent exception:', err);
     return [];
   }
 }
@@ -173,7 +261,7 @@ export async function getSentNotifications(
     let query = supabase
       .from('student_notifications')
       .select('*')
-      .in('target_key', [classKey, 'all-grades']);
+      .eq('target_key', classKey);
 
     if (senderId) {
       query = query.eq('sender_id', senderId);

@@ -91,8 +91,9 @@ export async function getTeacherMessagesForClass(classKey: string, studentId?: s
 
 /**
  * 관리자/선생님 기능: 본인이 보낸 선생님 말씀만 조회(teacher_id = 본인).
- * getTeacherMessagesForClass(학생용, 공개 전체)와 달리 발송자 기준으로 격리하여
- * 타 선생님의 'all-grades' 말씀이 선생님 화면에 노출되지 않는다.
+ * 선택한 발송 범위(targetKey)와 정확히 일치하는 class_key 만 조회한다
+ * (전체='all-grades', 학년='grade-N', 학급=class_id).
+ * 타 선생님의 말씀이 선생님 화면에 노출되지 않도록 격리.
  */
 export async function getMySentTeacherMessages(
   teacherId: string | null | undefined,
@@ -105,7 +106,7 @@ export async function getMySentTeacherMessages(
       .from('teacher_messages')
       .select('*')
       .eq('teacher_id', teacherId)
-      .in('class_key', [classKey, 'all-grades'])
+      .eq('class_key', classKey)
       .eq('is_published', true)
       .order('message_date', { ascending: false })
       .order('created_at', { ascending: false });
@@ -119,6 +120,82 @@ export async function getMySentTeacherMessages(
     console.error('[teacherMessageService] getMySentTeacherMessages exception:', err);
     return [];
   }
+}
+
+// 학년 문자열('5학년') 또는 숫자(5) -> 발송 키 'grade-5'.
+function gradeToKey(grade: string | number | null | undefined): string | null {
+  const n =
+    typeof grade === 'number'
+      ? grade
+      : Number.parseInt(String(grade ?? '').replace(/[^0-9]/g, ''), 10);
+  return Number.isFinite(n) && n > 0 ? `grade-${n}` : null;
+}
+
+// 학생 본인의 students 행에서 수신 스코핑 문맥(class_id, grade, created_by) 조회.
+// students.id = auth.uid 이므로 studentId 로 본인 행을 안전하게 조회한다.
+async function fetchStudentMessageContext(studentId: string): Promise<{
+  class_id: string | null;
+  grade: string | null;
+  created_by: string | null;
+} | null> {
+  const { data, error } = await supabase
+    .from('students')
+    .select('class_id, grade, created_by')
+    .eq('id', studentId)
+    .maybeSingle();
+
+  if (error) {
+    console.error('[teacherMessageService] fetchStudentMessageContext error:', error);
+    return null;
+  }
+  return data as { class_id: string | null; grade: string | null; created_by: string | null } | null;
+}
+
+/**
+ * 학생용: 본인 담당 선생님(created_by)이 보낸 말씀만 조회.
+ * teacher_id = 학생의 created_by 로 스코핑하여 타 선생님의 'all-grades'/'grade-N' 말씀이
+ * 노출되지 않는다. 수신 키: 본인 학급(class_id), 전체('all-grades'), 본인 학년('grade-N').
+ * (기존 resolveStudentClassKey stub 'class-5' 를 대체 — 실제 class_id 로 학급별 수신이 동작.)
+ */
+export async function getTeacherMessagesForStudent(
+  studentId: string | null | undefined,
+): Promise<TeacherMessage[]> {
+  if (!studentId) return [];
+
+  try {
+    const ctx = await fetchStudentMessageContext(studentId);
+    if (!ctx || !ctx.created_by) return []; // 담당 선생님 없으면 수신 대상 없음
+
+    const gradeKey = gradeToKey(ctx.grade);
+    const keys = ['all-grades', ctx.class_id, gradeKey].filter(Boolean) as string[];
+
+    const { data, error } = await supabase
+      .from('teacher_messages')
+      .select('*')
+      .eq('teacher_id', ctx.created_by)
+      .in('class_key', keys)
+      .eq('is_published', true)
+      .order('message_date', { ascending: false })
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('[teacherMessageService] getTeacherMessagesForStudent error:', error);
+      return [];
+    }
+
+    const hiddenIds = await getHiddenTeacherMessageIds(studentId);
+    return filterHiddenMessages((data ?? []) as TeacherMessage[], hiddenIds);
+  } catch (err) {
+    console.error('[teacherMessageService] getTeacherMessagesForStudent exception:', err);
+    return [];
+  }
+}
+
+export async function getLatestTeacherMessageForStudent(
+  studentId: string | null | undefined,
+): Promise<TeacherMessage | null> {
+  const messages = await getTeacherMessagesForStudent(studentId);
+  return messages[0] ?? null;
 }
 
 export async function hideTeacherMessageForStudent(studentId: string, messageId: string): Promise<boolean> {

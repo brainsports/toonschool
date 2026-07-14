@@ -14,8 +14,8 @@ import AllNotificationsModal from '../components/mypage/AllNotificationsModal'
 
 import { useAuth } from '../../../shared/contexts/AuthContext'
 import { getStudentWorks } from '../services/studentWorkService'
-import { getLatestTeacherMessageForClass, getTeacherMessagesForClass, resolveStudentClassKey, type TeacherMessage } from '../services/teacherMessageService'
-import { getNotificationsForTarget, type StudentNotification } from '../services/notificationService'
+import { getLatestTeacherMessageForStudent, getTeacherMessagesForStudent, type TeacherMessage } from '../services/teacherMessageService'
+import { getNotificationsForStudent, type StudentNotification } from '../services/notificationService'
 import { ensureTodayAttendance, getCurrentAttendanceMonth, getMonthlyAttendance, getTotalAttendanceCount } from '../services/studentAttendanceService'
 import { getStudentGrowthDashboard } from '../services/studentGrowthService'
 import { grantAttendanceReward } from '../services/dreamGardenService'
@@ -94,12 +94,11 @@ export default function StudentMyPage() {
     }
 
     async function loadTeacherMessageAndNotifications() {
-      const classKey = resolveStudentClassKey(profile, user);
-      
-      const msg = await getLatestTeacherMessageForClass(classKey, user?.id);
+      // 학생 본인의 담당 선생님(created_by) 기준으로 격리 조회.
+      const msg = await getLatestTeacherMessageForStudent(user?.id);
       setLatestMessage(msg);
 
-      const notis = await getNotificationsForTarget(classKey, profile);
+      const notis = await getNotificationsForStudent(user?.id, profile);
       setNotifications(notis);
     }
 
@@ -156,11 +155,10 @@ export default function StudentMyPage() {
   }, [user, profile]);
 
   const refreshMessagesAndNotifications = async () => {
-    const classKey = resolveStudentClassKey(profile, user);
-
+    // 학생 본인의 담당 선생님(created_by) 기준으로 격리 조회.
     const [msg, notis] = await Promise.all([
-      getLatestTeacherMessageForClass(classKey, user?.id),
-      getNotificationsForTarget(classKey, profile),
+      getLatestTeacherMessageForStudent(user?.id),
+      getNotificationsForStudent(user?.id, profile),
     ]);
 
     setLatestMessage(msg);
@@ -169,8 +167,7 @@ export default function StudentMyPage() {
 
   const handleOpenTeacherMessages = async () => {
     setIsTeacherMessageModalOpen(true);
-    const classKey = resolveStudentClassKey(profile, user);
-    const msgs = await getTeacherMessagesForClass(classKey, user?.id);
+    const msgs = await getTeacherMessagesForStudent(user?.id);
     setAllMessages(msgs);
   };
 
