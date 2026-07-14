@@ -661,10 +661,11 @@ export const superAdminService = {
     return data
   },
 
-  async createResource(resourceData: { 
-    title: string; 
-    description: string; 
-    target_role: string; 
+  async createResource(resourceData: {
+    title: string;
+    description: string;
+    target_role: string;
+    target_roles?: string[]; // 복수 공개 대상(source of truth)
     status: string;
     importance: string;
     file_path: string;
@@ -673,12 +674,32 @@ export const superAdminService = {
     file_type: string;
   }) {
     const { data: userData } = await supabase.auth.getUser()
+    const base = {
+      title: resourceData.title,
+      description: resourceData.description,
+      target_role: resourceData.target_role,
+      status: resourceData.status,
+      importance: resourceData.importance,
+      file_path: resourceData.file_path,
+      file_name: resourceData.file_name,
+      file_size: resourceData.file_size,
+      file_type: resourceData.file_type,
+      created_by: userData.user?.id,
+    }
+    // 1차: target_roles 포함 저장(마이그레이션 적용 후 정상).
+    if (resourceData.target_roles && resourceData.target_roles.length > 0) {
+      const { data, error } = await supabase
+        .from('admin_resources')
+        .insert([{ ...base, target_roles: resourceData.target_roles }])
+        .select()
+        .single()
+      if (!error) return data
+      // 2차(방어): target_roles 컬럼 미지원 시 target_role(레거시)만으로 재시도
+      console.warn('[superAdminService] createResource with target_roles failed, retry without it:', error)
+    }
     const { data, error } = await supabase
       .from('admin_resources')
-      .insert([{
-        ...resourceData,
-        created_by: userData.user?.id
-      }])
+      .insert([base])
       .select()
       .single()
     if (error) throw error
@@ -686,16 +707,28 @@ export const superAdminService = {
   },
 
   async updateResource(resourceId: string, resourceData: any) {
+    const now = new Date().toISOString()
+    // 1차: target_roles 포함
+    if (resourceData.target_roles) {
+      const { data, error } = await supabase
+        .from('admin_resources')
+        .update({ ...resourceData, updated_at: now })
+        .eq('id', resourceId)
+        .select()
+        .single()
+      if (!error) return data
+      console.warn('[superAdminService] updateResource with target_roles failed, retry without it:', error)
+    }
+    // 2차(방어): target_roles 제외
+    const rest = { ...resourceData }
+    if ('target_roles' in rest) delete rest.target_roles
     const { data, error } = await supabase
       .from('admin_resources')
-      .update({
-        ...resourceData,
-        updated_at: new Date().toISOString()
-      })
+      .update({ ...rest, updated_at: now })
       .eq('id', resourceId)
       .select()
       .single()
-    
+
     if (error) throw error
     return data
   },
