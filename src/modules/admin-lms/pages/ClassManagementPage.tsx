@@ -4,13 +4,11 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../../shared/contexts/AuthContext'
 import type { ClassRoom, LicenseInfo, UnitSetting } from '../types'
-import { fetchLicenseInfo, updateUnitSetting, deleteClasses, fetchClassesByOrganizationAndGrade, createClassService } from '../services/classService'
+import { fetchLicenseInfo, updateUnitSetting, deleteClasses, fetchClassesByOrganizationAndGrade, createClassService, countStudentsInClasses } from '../services/classService'
 import { CURRICULUM_UNITS } from '../data/mockClasses'
 import LicenseCard from '../components/LicenseCard'
 import UnitSettingModal from '../components/UnitSettingModal'
 import ConfirmModal from '../../../shared/components/ConfirmModal'
-import TeacherMessageModal from '../components/TeacherMessageModal'
-import NotificationWriteModal from '../components/NotificationWriteModal'
 import CreateClassModal from '../components/CreateClassModal'
 
 const GRADES = [1, 2, 3, 4, 5, 6]
@@ -22,22 +20,28 @@ export default function ClassManagementPage() {
   const [selectedGrade, setSelectedGrade] = useState(1)
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set())
   const [unitModalClass, setUnitModalClass] = useState<ClassRoom | null>(null)
-  const [messageModalClass, setMessageModalClass] = useState<ClassRoom | null>(null)
-  const [notificationModalClass, setNotificationModalClass] = useState<ClassRoom | null>(null)
-  const [deleteConfirm, setDeleteConfirm] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState(false)             // 선택(다중) 삭제 확인
+  const [deleteTargetClass, setDeleteTargetClass] = useState<ClassRoom | null>(null) // 단일 학급 삭제 대상
   const [isDeleting, setIsDeleting] = useState(false)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [toast, setToast] = useState('')
 
   useEffect(() => {
     if (profile?.id) {
-      fetchLicenseInfo(profile.id, profile.center_id || undefined).then(setLicense)
+      fetchLicenseInfo(profile.id, profile.center_id || undefined, profile.role).then(setLicense)
     }
-  }, [profile?.id, profile?.center_id])
+  }, [profile?.id, profile?.center_id, profile?.role])
+
+  const showToast = (msg: string) => {
+    setToast(msg)
+    setTimeout(() => setToast(''), 2500)
+  }
 
   const loadClasses = () => {
     if (!profile?.organization_id) return
-    fetchClassesByOrganizationAndGrade(profile.organization_id, selectedGrade)
+    // 선생님은 본인 소유 학급(teacher_id=본인)만 조회. 서버(DB) 단에서 격리.
+    const teacherId = profile.role === 'teacher' ? profile.id : undefined
+    fetchClassesByOrganizationAndGrade(profile.organization_id, selectedGrade, teacherId)
       .then(classes => setGradeClasses(classes))
       .catch(err => {
         console.error('Failed to load classes:', err)
@@ -48,11 +52,6 @@ export default function ClassManagementPage() {
   useEffect(() => {
     loadClasses()
   }, [profile?.organization_id, selectedGrade])
-
-  const showToast = (msg: string) => {
-    setToast(msg)
-    setTimeout(() => setToast(''), 2500)
-  }
 
   const toggleCheck = (id: string) => {
     setCheckedIds(prev => {
@@ -77,16 +76,56 @@ export default function ClassManagementPage() {
     showToast('단원 설정이 저장되었습니다.')
   }
 
+  // 학급 삭제 공통 로직: 학생 소속 여부 확인 -> 소유권 강제 소프트 삭제.
+  // 학생이 한 명이라도 소속된 학급은 삭제를 차단하고 안내한다(학생 데이터 보호).
+  // 삭제는 classes.status 를 'inactive' 로 변경하는 소프트 삭제이며 학생/작품/평가/보상/출결은 전혀 건드리지 않는다.
+  const removeClasses = async (ids: string[], successMsg: string) => {
+    if (!ids.length) return
+    const studentCount = await countStudentsInClasses(ids)
+    if (studentCount > 0) {
+      showToast('이 학급에 소속된 학생이 있습니다. 학생을 다른 학급으로 이동하거나 학급 배정을 해제한 뒤 삭제해 주세요.')
+      return
+    }
+    const teacherId = profile?.role === 'teacher' ? profile.id : undefined
+    const deleted = await deleteClasses(ids, teacherId)
+    if (deleted === 0) {
+      showToast('학급을 삭제할 권한이 없거나 이미 삭제되었습니다.')
+      return
+    }
+    setGradeClasses(prev => prev.filter(c => !ids.includes(c.id)))
+    setCheckedIds(prev => {
+      const next = new Set(prev)
+      ids.forEach(id => next.delete(id))
+      return next
+    })
+    showToast(successMsg)
+  }
+
   const handleDelete = async () => {
     setIsDeleting(true)
     try {
-      await deleteClasses([...checkedIds])
-      setGradeClasses(prev => prev.filter(c => !checkedIds.has(c.id)))
-      setCheckedIds(new Set())
-      showToast('선택한 학급이 삭제되었습니다.')
+      await removeClasses([...checkedIds], '선택한 학급이 삭제되었습니다.')
+    } catch (err) {
+      console.error('Failed to delete classes:', err)
+      showToast('학급 삭제 중 오류가 발생했습니다.')
     } finally {
       setIsDeleting(false)
       setDeleteConfirm(false)
+    }
+  }
+
+  const handleDeleteClass = async () => {
+    if (!deleteTargetClass) return
+    const target = deleteTargetClass
+    setIsDeleting(true)
+    try {
+      await removeClasses([target.id], `'${target.name}' 학급이 삭제되었습니다.`)
+    } catch (err) {
+      console.error('Failed to delete class:', err)
+      showToast('학급 삭제 중 오류가 발생했습니다.')
+    } finally {
+      setIsDeleting(false)
+      setDeleteTargetClass(null)
     }
   }
 
@@ -211,20 +250,15 @@ export default function ClassManagementPage() {
               </div>
               <div style={{ textAlign: 'center', display: 'flex', gap: 8, justifyContent: 'center' }}>
                 <button onClick={() => setUnitModalClass(cls)} style={{
-                  padding: '6px 10px', borderRadius: 8, fontSize: 13, fontWeight: 600,
+                  padding: '6px 12px', borderRadius: 8, fontSize: 13, fontWeight: 600,
                   background: '#fff0f6', color: '#ff2778', border: '1px solid #ffc6de', cursor: 'pointer',
                   whiteSpace: 'nowrap',
                 }}>단원 설정</button>
-                <button onClick={() => setMessageModalClass(cls)} style={{
-                  padding: '6px 10px', borderRadius: 8, fontSize: 13, fontWeight: 600,
-                  background: '#f0f9ff', color: '#0ea5e9', border: '1px solid #bae6fd', cursor: 'pointer',
+                <button onClick={() => setDeleteTargetClass(cls)} style={{
+                  padding: '6px 12px', borderRadius: 8, fontSize: 13, fontWeight: 600,
+                  background: '#fee2e2', color: '#ef4444', border: '1px solid #fca5a5', cursor: 'pointer',
                   whiteSpace: 'nowrap',
-                }}>선생님 말씀</button>
-                <button onClick={() => setNotificationModalClass(cls)} style={{
-                  padding: '6px 10px', borderRadius: 8, fontSize: 13, fontWeight: 600,
-                  background: '#f3e8ff', color: '#8b5cf6', border: '1px solid #ddd6fe', cursor: 'pointer',
-                  whiteSpace: 'nowrap',
-                }}>알림함 쓰기</button>
+                }}>학급 삭제</button>
               </div>
             </div>
           ))
@@ -242,37 +276,28 @@ export default function ClassManagementPage() {
         />
       )}
 
-      {/* 선생님 말씀 모달 */}
-      {messageModalClass && (
-        <TeacherMessageModal
-          classRoom={messageModalClass}
-          onClose={() => setMessageModalClass(null)}
-          onSaved={() => {
-            setMessageModalClass(null);
-            showToast('선생님 말씀이 저장되었습니다.');
-          }}
-        />
-      )}
-
-      {/* 알림함 쓰기 모달 */}
-      {notificationModalClass && (
-        <NotificationWriteModal
-          classRoom={notificationModalClass}
-          onClose={() => setNotificationModalClass(null)}
-          onSaved={() => {
-            setNotificationModalClass(null);
-            showToast('알림이 저장되었습니다.');
-          }}
-        />
-      )}
-
+      {/* 선택(다중) 학급 삭제 확인 */}
       <ConfirmModal
         open={deleteConfirm}
-        title="학급 삭제"
-        description={`선택한 ${checkedIds.size}개의 학급을 삭제하시겠습니까?\n실제 데이터는 비활성화(inactive) 처리됩니다.`}
-        confirmText={isDeleting ? '삭제 중...' : '삭제'}
+        title="학급을 삭제할까요?"
+        description={`선택한 ${checkedIds.size}개 학급을 삭제합니다. 삭제한 학급은 복구하기 어렵습니다.`}
+        confirmText={isDeleting ? '삭제 중...' : '학급 삭제'}
+        cancelText="취소"
         onConfirm={handleDelete}
         onCancel={() => !isDeleting && setDeleteConfirm(false)}
+        variant="danger"
+        loading={isDeleting}
+      />
+
+      {/* 단일 학급 삭제 확인 */}
+      <ConfirmModal
+        open={!!deleteTargetClass}
+        title="학급을 삭제할까요?"
+        description={deleteTargetClass ? `'${deleteTargetClass.name}' 학급을 삭제합니다. 삭제한 학급은 복구하기 어렵습니다.` : ''}
+        confirmText={isDeleting ? '삭제 중...' : '학급 삭제'}
+        cancelText="취소"
+        onConfirm={handleDeleteClass}
+        onCancel={() => !isDeleting && setDeleteTargetClass(null)}
         variant="danger"
         loading={isDeleting}
       />

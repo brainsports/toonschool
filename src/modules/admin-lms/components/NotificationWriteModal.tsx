@@ -35,7 +35,8 @@ export default function NotificationWriteModal({ classRoom, onClose, onSaved }: 
 
   const loadNotifications = async () => {
     setIsLoadingNotifications(true);
-    const notis = await getSentNotifications(classRoom.id);
+    // 본인이 보낸 알림만 조회(sender_id = 본인). 타 선생님 'all-grades' 알림 격리.
+    const notis = await getSentNotifications(classRoom.id, user?.id);
     setNotifications(notis);
     setIsLoadingNotifications(false);
   };

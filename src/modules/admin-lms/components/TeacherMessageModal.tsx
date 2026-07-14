@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { ClassRoom } from '../types';
-import { createTeacherMessage, getTeacherMessagesForClass, deleteTeacherMessage, type TeacherMessage } from '../../student/services/teacherMessageService';
+import { createTeacherMessage, getMySentTeacherMessages, deleteTeacherMessage, type TeacherMessage } from '../../student/services/teacherMessageService';
 import { useAuth } from '../../../shared/contexts/AuthContext';
 
 interface Props {
@@ -30,7 +30,8 @@ export default function TeacherMessageModal({ classRoom, onClose, onSaved }: Pro
 
   const loadMessages = async () => {
     setIsLoadingMessages(true);
-    const msgs = await getTeacherMessagesForClass(classRoom.id);
+    // 본인이 보낸 말씀만 조회(teacher_id = 본인). 타 선생님 'all-grades' 말씀 격리.
+    const msgs = await getMySentTeacherMessages(user?.id, classRoom.id);
     setMessages(msgs);
     setIsLoadingMessages(false);
   };

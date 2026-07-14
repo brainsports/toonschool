@@ -62,6 +62,8 @@ import AdminStudentManagementPage from '../modules/admin-lms/pages/StudentManage
 import AssessmentPage from '../modules/admin-lms/pages/AssessmentPage'
 import TeacherManagementPage from '../modules/admin-lms/pages/TeacherManagementPage'
 import AdminProfilePage from '../modules/admin-lms/pages/AdminProfilePage'
+import TeacherMessagePage from '../modules/admin-lms/pages/TeacherMessagePage'
+import NotificationWritePage from '../modules/admin-lms/pages/NotificationWritePage'
 
 // 기관관리자 라우트
 import OrgAdminDashboard from '../modules/admin-org/pages/OrgAdminDashboard'
@@ -140,6 +142,8 @@ export default function AppRouter() {
         <Route path="classes" element={<ClassManagementPage />} />
         <Route path="students" element={<AdminStudentManagementPage />} />
         <Route path="assessments" element={<AssessmentPage />} />
+        <Route path="teacher-message" element={<TeacherMessagePage />} />
+        <Route path="notifications/write" element={<NotificationWritePage />} />
         <Route path="teachers" element={<TeacherManagementPage />} />
         <Route path="profile" element={<AdminProfilePage />} />
         <Route path="resources" element={<ResourceInbox />} />
