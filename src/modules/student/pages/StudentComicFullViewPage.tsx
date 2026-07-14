@@ -16,8 +16,8 @@ import { getErrorMessageByCode } from '../../../shared/lib/geminiLogger';
 const IS_DEBUG_MODE = false; // 관리자/디버그 모드용 플래그 (true시 시간 및 상세 메시지 표시)
 
 // "모든 배경 생성" 동시 실행 컷 수.
-// 워커(MAX_CONCURRENT_IMAGE_JOBS)와 같은 값으로 맞춤. 429 발생 시 2로 내려 조정.
-const COMIC_GENERATE_ALL_CONCURRENCY = 3;
+// VITE_COMIC_CONCURRENCY 환경변수로 운영 조정(기본 3, 1~6). 429/실패율 증가 시 2로 낮춤.
+const COMIC_GENERATE_ALL_CONCURRENCY = Math.min(6, Math.max(1, Number(import.meta.env.VITE_COMIC_CONCURRENCY) || 3));
 
 
 import ComicCanvas from '../components/comic-editor/ComicCanvas';
