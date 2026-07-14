@@ -8,7 +8,7 @@ import { useAuth } from '../../../shared/contexts/AuthContext'
 import type { Student, ClassRoom, LicenseInfo } from '../types'
 import { deleteStudents, deleteStudent, createStudent, moveStudentsToClass, fetchStudentsByTeacher } from '../services/studentService'
 import { fetchLicenseInfo } from '../services/classService'
-import { createTeacherMessage, getTeacherMessagesForClass } from '../../student/services/teacherMessageService'
+import { createTeacherMessage, getMySentTeacherMessages } from '../../student/services/teacherMessageService'
 import { createNotification } from '../../student/services/notificationService'
 import LicenseCard from '../components/LicenseCard'
 import CreateStudentModal from '../components/CreateStudentModal'
@@ -62,7 +62,7 @@ export default function StudentManagementPage() {
 
   const fetchAndSetLicense = () => {
     if (profile?.id) {
-      fetchLicenseInfo(profile.id, actualCenterId || profile.center_id || undefined).then(setLicense)
+      fetchLicenseInfo(profile.id, actualCenterId || profile.center_id || undefined, profile.role).then(setLicense)
     }
   }
 
@@ -111,10 +111,11 @@ export default function StudentManagementPage() {
 
   useEffect(() => {
     const targetKey = selectedClassId || 'all-grades'
-    getTeacherMessagesForClass(targetKey).then(msgs => {
+    // 본인이 보낸 말씀만 표시(teacher_id = 본인).
+    getMySentTeacherMessages(user?.id, targetKey).then(msgs => {
       setRecentTeacherMsg(msgs[0] || null)
     }).catch(() => null)
-  }, [selectedClassId])
+  }, [selectedClassId, user?.id])
 
   const gradeClasses = allClasses.filter(c => c.grade === selectedGrade)
 

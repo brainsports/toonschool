@@ -161,15 +161,25 @@ export async function hideOrgNotification(studentId: string, notificationId: str
 
 /**
  * 관리자/선생님 기능: 자신이 보낸 알림 목록을 최신순으로 조회합니다.
+ * senderId 를 넘기면 본인이 보낸 알림만 조회(타 선생님 'all-grades' 알림 격리).
  */
-export async function getSentNotifications(classKey: string): Promise<StudentNotification[]> {
+export async function getSentNotifications(
+  classKey: string,
+  senderId?: string | null,
+): Promise<StudentNotification[]> {
   if (!classKey) return [];
 
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from('student_notifications')
       .select('*')
-      .in('target_key', [classKey, 'all-grades'])
+      .in('target_key', [classKey, 'all-grades']);
+
+    if (senderId) {
+      query = query.eq('sender_id', senderId);
+    }
+
+    const { data, error } = await query
       .order('notice_date', { ascending: false })
       .order('created_at', { ascending: false });
 

@@ -89,6 +89,38 @@ export async function getTeacherMessagesForClass(classKey: string, studentId?: s
   }
 }
 
+/**
+ * 관리자/선생님 기능: 본인이 보낸 선생님 말씀만 조회(teacher_id = 본인).
+ * getTeacherMessagesForClass(학생용, 공개 전체)와 달리 발송자 기준으로 격리하여
+ * 타 선생님의 'all-grades' 말씀이 선생님 화면에 노출되지 않는다.
+ */
+export async function getMySentTeacherMessages(
+  teacherId: string | null | undefined,
+  classKey: string,
+): Promise<TeacherMessage[]> {
+  if (!classKey || !teacherId) return [];
+
+  try {
+    const { data, error } = await supabase
+      .from('teacher_messages')
+      .select('*')
+      .eq('teacher_id', teacherId)
+      .in('class_key', [classKey, 'all-grades'])
+      .eq('is_published', true)
+      .order('message_date', { ascending: false })
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('[teacherMessageService] getMySentTeacherMessages error:', error);
+      return [];
+    }
+    return (data ?? []) as TeacherMessage[];
+  } catch (err) {
+    console.error('[teacherMessageService] getMySentTeacherMessages exception:', err);
+    return [];
+  }
+}
+
 export async function hideTeacherMessageForStudent(studentId: string, messageId: string): Promise<boolean> {
   try {
     const { error } = await supabase
