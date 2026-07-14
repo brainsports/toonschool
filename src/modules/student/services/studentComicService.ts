@@ -15,6 +15,7 @@ import {
 export const IMAGE_GENERATION_POLL_TIMEOUT_MS = 180000;
 export const SINGLE_CUT_TIMEOUT_MS = 180000;
 export const FULL_COMIC_TIMEOUT_MS = 480000;
+export const POLL_INTERVAL_MS = 1500;
 
 const COMIC_ASSETS_PUBLIC_PATH_PREFIX = '/storage/v1/object/public/comic_assets/';
 
@@ -489,7 +490,7 @@ export const generateFullComic = async (
           throw Object.assign(new Error(pollData.error_message || '서버 이미지 생성 실패'), { errorCode });
         }
 
-        await new Promise(r => setTimeout(r, 3000));
+        await new Promise(r => setTimeout(r, POLL_INTERVAL_MS));
       }
 
       if (!isCompleted) {
@@ -860,7 +861,7 @@ const doGenerateSingleComicCut = async (
         throw Object.assign(new Error(pollData.error_message || '서버 이미지 생성 실패'), { errorCode });
       }
 
-      await new Promise(r => setTimeout(r, 3000));
+      await new Promise(r => setTimeout(r, POLL_INTERVAL_MS));
     }
 
     if (!isCompleted) {

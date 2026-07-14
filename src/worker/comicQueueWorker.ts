@@ -41,7 +41,10 @@ if (!SUPABASE_URL || !SUPABASE_KEY || !GEMINI_API_KEY) {
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-const MAX_CONCURRENT_IMAGE_JOBS = 1; // 안정적 처리를 위해 1로 제한
+// 동시에 처리할 이미지 job 수.
+// 6컷 "모든 배경 생성"이 프론트에서 동시성 제한(3)으로 enqueue되므로, 워커도 3개까지 병렬 처리.
+// 429(rate limit) 발생 시 이 값을 2로 내려 조정하세요. atomic status update(.eq('status','queued'))로 다중 픽업 race는 이미 방어됨.
+const MAX_CONCURRENT_IMAGE_JOBS = 3;
 const RETRY_DELAYS = [10000, 20000, 40000]; // 10초, 20초, 40초
 
 let currentJobs = 0;

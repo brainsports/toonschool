@@ -15,6 +15,10 @@ import { getErrorMessageByCode } from '../../../shared/lib/geminiLogger';
 
 const IS_DEBUG_MODE = false; // 관리자/디버그 모드용 플래그 (true시 시간 및 상세 메시지 표시)
 
+// "모든 배경 생성" 동시 실행 컷 수.
+// 워커(MAX_CONCURRENT_IMAGE_JOBS)와 같은 값으로 맞춤. 429 발생 시 2로 내려 조정.
+const COMIC_GENERATE_ALL_CONCURRENCY = 3;
+
 
 import ComicCanvas from '../components/comic-editor/ComicCanvas';
 import CharacterToolPanel from '../components/comic-editor/CharacterToolPanel';
@@ -642,22 +646,35 @@ export default function StudentComicFullViewPage() {
 
   const handleGenerateAll = async () => {
     setGenAllState({ isRunning: true, completedCount: Object.values(cutsData).filter(c => c.backgroundImageUrl).length, startedAt: Date.now(), elapsedMs: 0 });
-    
+
+    // 생성이 필요한 컷 목록 수집 (기존 필터 조건 유지)
+    const pendingCuts: number[] = [];
     for (let i = 1; i <= 6; i++) {
       if (!cutsData[i]?.backgroundImageUrl && genStates[i]?.status !== 'generating') {
-        try {
-          await handleGenerateCut(i);
-          setGenAllState(prev => ({ ...prev, completedCount: prev.completedCount + 1 }));
-          if (i < 6) {
-            const delay = Math.floor(Math.random() * 1000) + 1500;
-            await new Promise(r => setTimeout(r, delay));
-          }
-        } catch (e) {
-          console.error(`[StudentComicFullViewPage] handleGenerateCut error for cut ${i}`, e);
-          break; // 실패 시 순차 생성 즉시 중단
-        }
+        pendingCuts.push(i);
       }
     }
+
+    // 동시성 제한 풀: 한 번에 최대 COMIC_GENERATE_ALL_CONCURRENCY 컷까지 병렬 처리.
+    // 완료된 컷부터 즉시 completedCount 갱신. 개별 컷 실패는 해당 컷에 에러 상태로 표시되고 나머지는 계속 진행.
+    let nextIndex = 0;
+    const runWorker = async () => {
+      while (true) {
+        const idx = nextIndex++;
+        if (idx >= pendingCuts.length) return;
+        const cutNumber = pendingCuts[idx];
+        try {
+          await handleGenerateCut(cutNumber);
+          setGenAllState(prev => ({ ...prev, completedCount: prev.completedCount + 1 }));
+        } catch (e) {
+          console.error(`[StudentComicFullViewPage] handleGenerateCut error for cut ${cutNumber}`, e);
+        }
+      }
+    };
+
+    const workerCount = Math.min(COMIC_GENERATE_ALL_CONCURRENCY, pendingCuts.length);
+    await Promise.all(Array.from({ length: workerCount }, () => runWorker()));
+
     setGenAllState(prev => ({ ...prev, isRunning: false }));
   };
 
