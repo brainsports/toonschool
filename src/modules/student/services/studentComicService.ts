@@ -1,6 +1,7 @@
 import { geminiClient, GeminiError } from '../../../shared/lib/gemini';
 import { supabase } from '../../../shared/lib/supabase';
 import { logStage, startTimer, getErrorMessageByCode } from '../../../shared/lib/geminiLogger';
+import { invokeGenerateComicBackground } from '../../../shared/lib/comicEdge';
 import type { GeneratedComicScript } from './studentScriptService';
 import type { ComicProjectData } from '../components/editor/utils/comicStorage';
 import { findCachedComicBackground, saveComicBackgroundToCache } from './comicBackgroundCacheService';
@@ -16,6 +17,12 @@ export const IMAGE_GENERATION_POLL_TIMEOUT_MS = 180000;
 export const SINGLE_CUT_TIMEOUT_MS = 180000;
 export const FULL_COMIC_TIMEOUT_MS = 480000;
 export const POLL_INTERVAL_MS = 1500;
+
+// 만화 배경 생성 경로 전환 기능 플래그.
+// true  → Supabase Edge Function(generate-comic-background) 직접 호출 (운영 권장, 로컬 워커 불필요)
+// false → 기존 generation_jobs INSERT + 폴링 + 로컬 comicQueueWorker 경로 (롤백/비교 테스트용 보존)
+// Vercel 환경변수 VITE_USE_COMIC_EF 로 운영 제어. 429/실패율 증가 시 false 로 즉시 롤백.
+export const USE_COMIC_EF = import.meta.env.VITE_USE_COMIC_EF === 'true';
 
 const COMIC_ASSETS_PUBLIC_PATH_PREFIX = '/storage/v1/object/public/comic_assets/';
 
@@ -775,6 +782,49 @@ const doGenerateSingleComicCut = async (
     console.log(`[ToonSchool Background] SINGLE_CUT_PROMPT:\n${fullPrompt}`);
     logStage({ cutNumber, stage: 'buildSingleCutPrompt', status: 'success' });
 
+    // ── [신규 경로] Edge Function 직접 호출 (USE_COMIC_EF=true) ──────────────────
+    // 한 컷당 1회 EF 호출. 완료된 컷부터 즉시 표시(호출자 handleGenerateAll 이 동시성 3 풀로 제어).
+    // 기존 enqueue+폴링+로컬 워커 경로는 USE_COMIC_EF=false 일 때 그대로 동작(롤백/비교용 보존).
+    if (USE_COMIC_EF) {
+      updateState({ progress: 70, message: '그림을 그리는 중이에요...' });
+      logStage({ cutNumber, stage: 'comicEdgeCall', status: 'start' });
+      const efResult = await invokeGenerateComicBackground({
+        projectId: projectData.projectId,
+        cutNumber,
+        prompt: fullPrompt,
+        cache: {
+          grade: projectData.grade,
+          subject: projectData.subject,
+          semester: projectData.semester,
+          unitId: projectData.mainUnit,
+          subunitId: projectData.subUnit,
+          topicTitle: projectData.topicTitle,
+          styleKey: cacheParams.styleKey,
+          backgroundPrompt: cacheParams.backgroundPrompt,
+        },
+        requestId: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : undefined,
+      });
+
+      if (!efResult.success || !efResult.resultUrl) {
+        const errorCode = (efResult.code as any) || 'PROVIDER_ERROR';
+        logStage({ cutNumber, stage: 'comicEdgeCall', status: 'error', errorCode, note: efResult.message?.slice(0, 60) });
+        throw Object.assign(new Error(efResult.message || '서버 이미지 생성 실패'), { errorCode });
+      }
+
+      logStage({ cutNumber, stage: 'comicEdgeCall', status: 'success', elapsedMs: efResult.elapsedMs, note: `cacheHit=${efResult.cacheHit}` });
+
+      if (!cutData) cutData = { cutNumber, elements: [], updatedAt: new Date().toISOString() };
+      cutData.backgroundImageUrl = efResult.resultUrl;
+      cutData.originalBackgroundPrompt = originalBackgroundPrompt;
+      cutData.updatedAt = new Date().toISOString();
+      saveComicCutData(projectData.projectId, cutNumber, cutData);
+
+      console.log(`[ToonSchool Background] EF done cut=${cutNumber} cacheHit=${efResult.cacheHit} reusedJob=${!!efResult.reusedJob} elapsed=${efResult.elapsedMs}ms gemini=${efResult.geminiMs ?? '-'}ms`);
+      updateState({ status: 'success', progress: 100, message: '완료!', elapsedMs: efResult.elapsedMs });
+      return efResult.resultUrl;
+    }
+
+    // ── [기존 경로] enqueueJob + 폴링 (USE_COMIC_EF=false) ───────────────────────
     // ── enqueueJob ────────────────────────────────────────────────────────────
     updateState({ progress: 60, message: '서버 대기열에 등록 중...' });
     logStage({ cutNumber, stage: 'enqueueJob', status: 'start' });

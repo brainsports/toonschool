@@ -24,3 +24,8 @@ entrypoint = "./functions/generate-topics-from-question/index.ts"
 [functions.create-student]
 verify_jwt = true
 
+[functions.generate-comic-background]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/generate-comic-background/index.ts"
+

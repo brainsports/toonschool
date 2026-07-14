@@ -11,7 +11,8 @@ export type GenerationStage =
   | 'buildSingleCutPrompt'
   | 'enqueueJob'
   | 'pollImageJob'
-  | 'saveCutResult';
+  | 'saveCutResult'
+  | 'comicEdgeCall';
 
 export type StageStatus = 'start' | 'success' | 'error' | 'fallback' | 'skip';
 
