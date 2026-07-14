@@ -99,6 +99,44 @@ const userMessage = (code: string): string => {
     default: return '배경 생성 중 문제가 발생했어요. 잠시 후 다시 시도해 주세요.'
   }
 }
+
+type GenerationTask = {
+  admin: ReturnType<typeof createAdminClient>
+  jobId: string
+  cutNumber: number
+  cacheKey: string
+  cacheInput: ComicBackgroundCacheInput
+  prompt: string
+  startedAt: number
+}
+
+const completeGeneration = async ({ admin, jobId, cutNumber, cacheKey, cacheInput, prompt, startedAt }: GenerationTask) => {
+  try {
+    const { base64, mime, elapsedMs: geminiMs } = await generateImage(prompt, cutNumber, jobId)
+    const bytes = base64ToBytes(base64)
+    const cachePath = createCacheStoragePath(cacheInput, cacheKey, mime.includes('png') ? 'png' : 'jpg')
+    const { error: uploadError } = await admin.storage.from(CACHE_BUCKET).upload(cachePath, bytes, { contentType: mime, upsert: true })
+    if (uploadError) throw Object.assign(new Error('storage'), { code: 'STORAGE_ERROR' })
+    const resultUrl = admin.storage.from(CACHE_BUCKET).getPublicUrl(cachePath).data.publicUrl
+    const { error: cacheError } = await admin.from('comic_background_cache').upsert({
+      cache_key: cacheKey, grade: cacheInput.grade, subject: cacheInput.subject, semester: cacheInput.semester,
+      unit_id: cacheInput.unitId, subunit_id: cacheInput.subunitId, topic_title: cacheInput.topicTitle,
+      cut_no: cutNumber, style_key: cacheInput.styleKey || 'toonschool-v2',
+      normalized_prompt: normalizeBackgroundPrompt(cacheInput.backgroundPrompt), background_prompt: cacheInput.backgroundPrompt,
+      storage_bucket: CACHE_BUCKET, storage_path: cachePath, public_url: resultUrl, mime_type: mime, last_used_at: new Date().toISOString(),
+    }, { onConflict: 'cache_key' })
+    if (cacheError) throw Object.assign(new Error('cache'), { code: 'DB_ERROR' })
+    const elapsedMs = Date.now() - startedAt
+    const { error: completeError } = await admin.from('generation_jobs').update({ status: 'completed', result_url: resultUrl, completed_at: new Date().toISOString(), elapsed_ms: elapsedMs }).eq('id', jobId)
+    if (completeError) throw Object.assign(new Error('job complete'), { code: 'DB_ERROR' })
+    log('done', { cut: cutNumber, elapsedMs, geminiMs, jobId: jobId.slice(0, 8) })
+  } catch (err: any) {
+    const code = err?.code || 'INTERNAL_ERROR'
+    const elapsedMs = Date.now() - startedAt
+    log('backgroundError', { cut: cutNumber, code, elapsedMs, jobId: jobId.slice(0, 8) })
+    await admin.from('generation_jobs').update({ status: 'failed', error_message: code, completed_at: new Date().toISOString(), elapsed_ms: elapsedMs }).eq('id', jobId).catch(() => {})
+  }
+}
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
   if (req.method !== 'POST') return fail('허용되지 않은 요청 방식입니다.', 'INVALID_INPUT')
@@ -174,40 +212,12 @@ serve(async (req) => {
     jobId = inserted.id
     log('jobClaimed', { cut: cutNumber, jobId: String(jobId).slice(0, 8) })
 
-    // 7) Gemini 이미지 생성
-    const { base64, mime, elapsedMs: geminiMs } = await generateImage(prompt, cutNumber, String(jobId))
-
-    // 8) 캐시 버킷 업로드 → 정규 URL
-    //    라이브 프런트 경로(doGenerateSingleComicCut)와 동일하게 캐시 버킷(toonschool-generated-backgrounds)
-    //    의 public URL 을 정규 저장 URL 로 사용. comic_assets 는 라이브 경로가 임시/삭제 취급하므로 EF 에서는 생략.
-    const bytes = base64ToBytes(base64)
-    const cachePath = createCacheStoragePath(cacheInput, cacheKey, mime.includes('png') ? 'png' : 'jpg')
-    const { error: upErr } = await admin.storage.from(CACHE_BUCKET)
-      .upload(cachePath, bytes, { contentType: mime, upsert: true })
-    if (upErr) {
-      log('storageUploadFailed', { cut: cutNumber, err: upErr.message?.slice(0, 60), jobId: String(jobId).slice(0, 8) })
-      throw Object.assign(new Error('storage'), { code: 'STORAGE_ERROR' })
-    }
-    const resultUrl = admin.storage.from(CACHE_BUCKET).getPublicUrl(cachePath).data.publicUrl
-
-    // 9) 캐시 DB 행 upsert (public_url = resultUrl) — 같은 조건 재사용(HIT) 보장
-    await admin.from('comic_background_cache').upsert({
-      cache_key: cacheKey, grade: cacheInput.grade, subject: cacheInput.subject, semester: cacheInput.semester,
-      unit_id: cacheInput.unitId, subunit_id: cacheInput.subunitId, topic_title: cacheInput.topicTitle,
-      cut_no: cutNumber, style_key: cacheInput.styleKey || 'toonschool-v2',
-      normalized_prompt: normalizeBackgroundPrompt(cacheInput.backgroundPrompt), background_prompt: cacheInput.backgroundPrompt,
-      storage_bucket: CACHE_BUCKET, storage_path: cachePath, public_url: resultUrl,
-      mime_type: mime, last_used_at: new Date().toISOString(),
-    }, { onConflict: 'cache_key' }).catch((e) => log('cacheDbFailed', { cut: cutNumber, err: String(e).slice(0, 60) }))
-
-    // 10) job completed (result_url = 캐시 버킷 정규 URL)
-    const elapsedMs = Date.now() - t0
-    await admin.from('generation_jobs').update({
-      status: 'completed', result_url: resultUrl, completed_at: new Date().toISOString(), elapsed_ms: elapsedMs,
-    }).eq('id', jobId)
-
-    log('done', { cut: cutNumber, elapsedMs, geminiMs, cacheHit: false, jobId: String(jobId).slice(0, 8) })
-    return ok({ cutNumber, resultUrl, cacheHit: false, elapsedMs, geminiMs, jobId })
+    // Acknowledge before Gemini's image response exceeds the HTTP gateway limit.
+    // waitUntil keeps generation server-side; the browser polls generation_jobs.
+    EdgeRuntime.waitUntil(completeGeneration({
+      admin, jobId: String(jobId), cutNumber, cacheKey, cacheInput, prompt, startedAt: t0,
+    }))
+    return ok({ cutNumber, jobId, cacheHit: false, processing: true, elapsedMs: Date.now() - t0 })
   } catch (err: any) {
     const code = err?.code || 'INTERNAL_ERROR'
     const elapsedMs = Date.now() - t0

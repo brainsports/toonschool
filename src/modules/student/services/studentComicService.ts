@@ -1,7 +1,7 @@
 import { geminiClient, GeminiError } from '../../../shared/lib/gemini';
 import { supabase } from '../../../shared/lib/supabase';
 import { logStage, startTimer, getErrorMessageByCode } from '../../../shared/lib/geminiLogger';
-import { invokeGenerateComicBackground } from '../../../shared/lib/comicEdge';
+import { invokeGenerateComicBackground, waitForComicBackgroundJob } from '../../../shared/lib/comicEdge';
 import type { GeneratedComicScript } from './studentScriptService';
 import type { ComicProjectData } from '../components/editor/utils/comicStorage';
 import { findCachedComicBackground, saveComicBackgroundToCache } from './comicBackgroundCacheService';
@@ -788,7 +788,7 @@ const doGenerateSingleComicCut = async (
     if (USE_COMIC_EF) {
       updateState({ progress: 70, message: '그림을 그리는 중이에요...' });
       logStage({ cutNumber, stage: 'comicEdgeCall', status: 'start' });
-      const efResult = await invokeGenerateComicBackground({
+      let efResult = await invokeGenerateComicBackground({
         projectId: projectData.projectId,
         cutNumber,
         prompt: fullPrompt,
@@ -804,6 +804,11 @@ const doGenerateSingleComicCut = async (
         },
         requestId: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : undefined,
       });
+
+      if (efResult.success && efResult.processing && efResult.jobId) {
+        updateState({ progress: 80, message: '그림을 그리고 있어요...' });
+        efResult = await waitForComicBackgroundJob(efResult.jobId, cutNumber, FULL_COMIC_TIMEOUT_MS);
+      }
 
       if (!efResult.success || !efResult.resultUrl) {
         const errorCode = (efResult.code as any) || 'PROVIDER_ERROR';

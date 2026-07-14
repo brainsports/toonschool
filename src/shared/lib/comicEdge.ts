@@ -28,6 +28,7 @@ export interface GenerateComicBackgroundResult {
   cutNumber: number;
   resultUrl: string;
   cacheHit: boolean;
+  processing?: boolean;
   elapsedMs?: number;
   geminiMs?: number;
   jobId?: string;
@@ -36,6 +37,30 @@ export interface GenerateComicBackgroundResult {
   message?: string;   // 사용자 노출용 메시지
 }
 
+
+/** Polls the asynchronous Edge Function job; no local worker is required. */
+export async function waitForComicBackgroundJob(
+  jobId: string,
+  cutNumber: number,
+  timeoutMs = 300_000,
+): Promise<GenerateComicBackgroundResult> {
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < timeoutMs) {
+    const { data, error } = await supabase
+      .from('generation_jobs')
+      .select('status,result_url,elapsed_ms,error_message')
+      .eq('id', jobId)
+      .single();
+    if (!error && data?.status === 'completed' && data.result_url) {
+      return { success: true, cutNumber, resultUrl: data.result_url, cacheHit: false, elapsedMs: data.elapsed_ms ?? Date.now() - startedAt, jobId };
+    }
+    if (!error && data?.status === 'failed') {
+      return { success: false, cutNumber, resultUrl: '', cacheHit: false, jobId, code: 'PROVIDER_ERROR', message: data.error_message || '서버 이미지 생성에 실패했어요.' };
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+  }
+  return { success: false, cutNumber, resultUrl: '', cacheHit: false, jobId, code: 'POLL_TIMEOUT', message: '그림 생성 시간이 오래 걸리고 있어요. 잠시 후 다시 시도해 주세요.' };
+}
 const RETRYABLE_CODES = new Set([
   'RATE_LIMITED', 'IN_PROGRESS', 'PROVIDER_5XX', 'PROVIDER_ERROR',
 ]);
