@@ -1,17 +1,16 @@
 // ──────────────────────────────────────────────
-// 선생님 말씀 메뉴 페이지 (학급관리에서 이동)
-// 본인 소유 학급만 선택 가능. 작성 로직은 기존 TeacherMessageModal 을 그대로 재사용.
+// 선생님 말씀 메뉴 페이지
+// 본문에서 발송 대상(전체/학년/학급)을 먼저 선택하고 작성 모달을 연다.
+// 대상 선택은 TeacherRecipientSelector 공통 컴포넌트가 담당(본인 학급/학생만).
 // ──────────────────────────────────────────────
-import { useState, useEffect } from 'react'
+import { useState, useCallback } from 'react'
 import { useAuth } from '../../../shared/contexts/AuthContext'
-import type { ClassRoom } from '../types'
-import { fetchClassesByTeacher } from '../services/classService'
+import TeacherRecipientSelector, { type Recipient } from '../components/TeacherRecipientSelector'
 import TeacherMessageModal from '../components/TeacherMessageModal'
 
 export default function TeacherMessagePage() {
   const { profile } = useAuth()
-  const [classes, setClasses] = useState<ClassRoom[]>([])
-  const [selectedClassId, setSelectedClassId] = useState('')
+  const [recipient, setRecipient] = useState<Recipient | null>(null)
   const [openModal, setOpenModal] = useState(false)
   const [toast, setToast] = useState('')
 
@@ -20,22 +19,9 @@ export default function TeacherMessagePage() {
     setTimeout(() => setToast(''), 2500)
   }
 
-  useEffect(() => {
-    // 선생님 본인 소유 학급만 조회(teacher_id=본인, DB 단 격리).
-    if (profile?.id && profile.role === 'teacher') {
-      fetchClassesByTeacher(profile.id)
-        .then(list => {
-          setClasses(list)
-          if (list.length > 0) setSelectedClassId(list[0].id)
-        })
-        .catch(err => {
-          console.error('Failed to load classes:', err)
-          showToast('학급 목록을 불러오지 못했습니다.')
-        })
-    }
-  }, [profile?.id, profile?.role])
+  const handleChange = useCallback((r: Recipient | null) => setRecipient(r), [])
 
-  const selectedClass = classes.find(c => c.id === selectedClassId) || null
+  const canWrite = !!recipient && recipient.count > 0
 
   return (
     <div>
@@ -48,42 +34,41 @@ export default function TeacherMessagePage() {
         }}>{toast}</div>
       )}
 
-      <div style={{ background: 'white', borderRadius: 16, padding: '24px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', marginBottom: 24 }}>
+      <div style={{ background: 'white', borderRadius: 16, padding: '24px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', marginBottom: 16 }}>
         <h2 style={{ fontSize: 20, fontWeight: 800, color: '#1a1a2e', margin: '0 0 6px' }}>💬 선생님 말씀</h2>
-        <p style={{ fontSize: 14, color: '#888', margin: 0 }}>담당 학급에 전할 말씀을 작성합니다. 본인 학급만 선택할 수 있어요.</p>
+        <p style={{ fontSize: 14, color: '#888', margin: 0 }}>
+          담당 학생에게 전달할 선생님 말씀을 작성합니다. 전체, 학년 또는 학급별로 대상을 선택할 수 있습니다.
+        </p>
       </div>
 
-      {classes.length === 0 ? (
-        <div style={{ padding: 48, textAlign: 'center', color: '#bbb', fontSize: 15, background: 'white', borderRadius: 16, boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
-          담당 학급이 없습니다. 학급관리에서 학급을 먼저 생성해 주세요.
-        </div>
+      {profile?.id && profile.role === 'teacher' ? (
+        <>
+          <TeacherRecipientSelector teacherId={profile.id} accent="pink" onChange={handleChange} />
+
+          <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end' }}>
+            <button
+              onClick={() => setOpenModal(true)}
+              disabled={!canWrite}
+              style={{
+                padding: '12px 28px', borderRadius: 12, fontWeight: 700, fontSize: 15, border: 'none', cursor: canWrite ? 'pointer' : 'not-allowed',
+                background: canWrite ? 'linear-gradient(90deg,#ff2778,#ff6baf)' : '#e5e7eb',
+                color: 'white', boxShadow: canWrite ? '0 4px 12px rgba(255,39,120,0.3)' : 'none',
+                transition: 'all 0.2s',
+              }}
+            >
+              말씀 작성하기
+            </button>
+          </div>
+        </>
       ) : (
-        <div style={{ background: 'white', borderRadius: 16, padding: 24, boxShadow: '0 2px 12px rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-          <label style={{ fontSize: 14, fontWeight: 600, color: '#555' }}>학급 선택</label>
-          <select
-            value={selectedClassId}
-            onChange={e => setSelectedClassId(e.target.value)}
-            style={{ padding: '10px 16px', borderRadius: 10, border: '1.5px solid #e5e7eb', fontSize: 14, cursor: 'pointer', background: 'white' }}
-          >
-            {classes.map(c => <option key={c.id} value={c.id}>{c.grade}학년 {c.name}</option>)}
-          </select>
-          <button
-            onClick={() => setOpenModal(true)}
-            disabled={!selectedClass}
-            style={{
-              padding: '10px 20px', borderRadius: 10, fontWeight: 600, fontSize: 14, border: 'none', cursor: 'pointer',
-              background: selectedClass ? 'linear-gradient(90deg,#ff2778,#ff6baf)' : '#e5e7eb',
-              color: 'white', boxShadow: selectedClass ? '0 4px 12px rgba(255,39,120,0.3)' : 'none',
-            }}
-          >
-            작성하기
-          </button>
+        <div style={{ padding: 48, textAlign: 'center', color: '#bbb', fontSize: 15, background: 'white', borderRadius: 16, boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+          선생님 계정에서만 사용할 수 있습니다.
         </div>
       )}
 
-      {openModal && selectedClass && (
+      {openModal && recipient && (
         <TeacherMessageModal
-          classRoom={selectedClass}
+          recipient={recipient}
           onClose={() => setOpenModal(false)}
           onSaved={() => {
             setOpenModal(false)
