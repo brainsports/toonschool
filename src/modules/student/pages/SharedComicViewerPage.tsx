@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, type ReactNode } from 'react'
 import { useParams } from 'react-router-dom'
 import { Volume2, VolumeX, ArrowLeft, ArrowRight, BookOpen, MoreVertical, ZoomIn, ZoomOut, Maximize, PlayCircle, Monitor, Copy } from 'lucide-react'
 import { supabase } from '../../../shared/lib/supabase'
@@ -37,34 +37,27 @@ const getSpreads = (totalCount: number, isSingle: boolean): Spread[] => {
   return spreads;
 };
 
-const PageWrapper = ({ children, isLeft, isRight, isSingle, isLegacyPortrait }: any) => {
-  const ref = useRef<HTMLDivElement>(null);
-  const [scale, setScale] = useState(1);
+const LEGACY_PAGE_DISPLAY_WIDTH = 500;
+const LEGACY_PAGE_DISPLAY_HEIGHT = 707;
+const LANDSCAPE_PAGE_DISPLAY_WIDTH = 1600;
+const LANDSCAPE_PAGE_DISPLAY_HEIGHT = 900;
 
-  useEffect(() => {
-    if (!ref.current) return;
-    const resize = () => {
-      if (ref.current) {
-        setScale(ref.current.clientWidth / 1400);
-      }
-    };
-    resize();
-    const obs = new ResizeObserver(resize);
-    obs.observe(ref.current);
-    return () => obs.disconnect();
-  }, []);
+type PageWrapperProps = {
+  children: ReactNode;
+  isLeft: boolean;
+  isRight: boolean;
+  isSingle: boolean;
+};
 
+const PageWrapper = ({ children, isLeft, isRight, isSingle }: PageWrapperProps) => {
   return (
-    <div ref={ref} className={`flex-1 h-full bg-white relative overflow-hidden ${isSingle ? 'rounded-[12px] shadow-md border border-slate-200/50' : isLeft ? 'rounded-none border-r-0' : isRight ? 'rounded-none border-l border-black/5' : ''} shadow-[inset_0_0_40px_rgba(0,0,0,0.03)]`}>
-      <div style={{ transform: `scale(${scale})`, transformOrigin: 'top left', width: 1400, height: isLegacyPortrait ? 1980 : 990, position: 'absolute', top: 0, left: 0 }}>
-        <div className="relative z-10 w-full h-full bg-white">
-          {children}
-        </div>
+    <div className={`flex-1 h-full bg-white relative overflow-hidden ${isSingle ? 'rounded-[18px] shadow-md border border-white/70' : isLeft ? 'rounded-none border-r-0' : isRight ? 'rounded-none border-l border-black/5' : ''} shadow-[inset_0_0_40px_rgba(0,0,0,0.03)]`}>
+      <div className="relative z-10 w-full h-full bg-white">
+        {children}
       </div>
     </div>
   )
 }
-
 export default function SharedComicViewerPage() {
   const { slug } = useParams()
 
@@ -107,7 +100,7 @@ export default function SharedComicViewerPage() {
     return () => window.removeEventListener('resize', checkMode);
   }, []);
 
-  const useSinglePageMode = isSinglePageMode || !isLegacyPortrait
+  const useSinglePageMode = isSinglePageMode
   const spreads = getSpreads(pages.length, useSinglePageMode)
 
   useEffect(() => {
@@ -227,9 +220,11 @@ export default function SharedComicViewerPage() {
     fetchSharedComic();
   }, [slug])
 
-  const BASE_WIDTH = useSinglePageMode ? (isLegacyPortrait ? 500 : 1200) : 1000;
-  const BASE_HEIGHT = isLegacyPortrait ? 707 : 849;
-  const SCROLL_PADDING = useSinglePageMode ? 16 : 32;
+  const pageDisplayWidth = isLegacyPortrait ? LEGACY_PAGE_DISPLAY_WIDTH : LANDSCAPE_PAGE_DISPLAY_WIDTH;
+  const pageDisplayHeight = isLegacyPortrait ? LEGACY_PAGE_DISPLAY_HEIGHT : LANDSCAPE_PAGE_DISPLAY_HEIGHT;
+  const BASE_WIDTH = useSinglePageMode ? pageDisplayWidth : pageDisplayWidth * 2;
+  const BASE_HEIGHT = pageDisplayHeight;
+  const SCROLL_PADDING = useSinglePageMode ? 16 : 48;
 
   let fitScale = 1;
   if (containerSize.width > 0 && containerSize.height > 0) {
@@ -360,17 +355,17 @@ export default function SharedComicViewerPage() {
     )
   }
 
-  const renderPage = (page: SharedPage | null, isLeft: boolean, isSingle: boolean = false) => {
+  const renderPage = (page: SharedPage | null, isLeft: boolean, isSingle = false) => {
     if (!page) {
       return (
-        <PageWrapper isLeft={isLeft} isRight={!isLeft} isSingle={isSingle} isLegacyPortrait={isLegacyPortrait}>
+        <PageWrapper isLeft={isLeft} isRight={!isLeft} isSingle={isSingle}>
           <div className="w-full h-full flex flex-col items-center justify-center bg-slate-50"></div>
         </PageWrapper>
       )
     }
 
     return (
-      <PageWrapper isLeft={isLeft} isRight={!isLeft} isSingle={isSingle} isLegacyPortrait={isLegacyPortrait}>
+      <PageWrapper isLeft={isLeft} isRight={!isLeft} isSingle={isSingle}>
          <img src={page.imageUrl} alt={`${page.pageNumber}페이지`} className="w-full h-full object-contain bg-white" />
       </PageWrapper>
     )

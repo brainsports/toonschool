@@ -42,6 +42,7 @@ import SharedComicViewerPage from '../modules/student/pages/SharedComicViewerPag
 import StudentMyPage from '../modules/student/pages/StudentMyPage'
 import StudentResourcePage from '../modules/student/pages/StudentResourcePage'
 import StudentDreamGardenPage from '../modules/student/pages/StudentDreamGardenPage'
+import FlipbookLandscapePreviewPage from '../modules/student/pages/FlipbookLandscapePreviewPage'
 
 import ResourceInbox from '../modules/resources/pages/ResourceInbox'
 
@@ -134,6 +135,9 @@ export default function AppRouter() {
         <Route path="/student/dream-garden" element={<StudentDreamGardenPage />} />
       </Route>
       <Route path="/book/:slug" element={<SharedComicViewerPage />} />
+
+      {/* Stage 2 검증용 16:9 파스텔 플립북 미리보기(공개/임시). Stage 5 이후 정리. */}
+      <Route path="/flipbook/preview" element={<FlipbookLandscapePreviewPage />} />
 
       {/* 관리 LMS 라우트 */}
       <Route path="/admin/lms" element={<AdminPortalLayout />}>
