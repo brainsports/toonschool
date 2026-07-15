@@ -11,16 +11,15 @@ export default defineConfig(({ mode }) => {
       react(), 
       tailwindcss(),
       VitePWA({
-        registerType: 'autoUpdate',
+        registerType: 'prompt',
         // 수동 등록(src/app/pwa/registerAutoUpdate.ts)으로 전환:
         // 새 SW 활성화 후 자동 새로고침 + 무한 새로고침 방지를 직접 제어하기 위함.
         injectRegister: null,
         workbox: {
           globPatterns: ['**/*.{js,css,html,ico,png,svg,otf,ttf,woff,woff2,jpg,jpeg,json}'],
           maximumFileSizeToCacheInBytes: 30000000, // 30MB로 캐싱 한도 상향 (큰 이미지, 폰트용)
-          // 새 배포 즉시 반영: 대기 없이 새 SW 활성화 + 모든 탭 제어 + 구 프리캐시 삭제.
-          skipWaiting: true,
-          clientsClaim: true,
+          // 새 배포 즉시 반영을 위해 Workbox 자동 처리를 끄고 수동(registerSW)으로 제어.
+          // skipWaiting: false (기본값), clientsClaim: false (기본값)
           cleanupOutdatedCaches: true,
         },
         manifest: {
