@@ -372,6 +372,295 @@
 }
 .flp-capture-preview img { width: 100%; height: auto; border-radius: 6px; display: block; }
 
+/* ============================================================
+   만화(comic) 페이지 레이아웃 — 03-comic-reference.png 기준
+   ============================================================ */
+.flp-comic {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  gap: 24px;
+  min-height: 0;
+}
+
+/* ---------- 왼쪽 안내 영역(~30%) ---------- */
+.flp-comic-side {
+  flex: 0 0 29%;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+.flp-stage-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.flp-stage-icon { font-size: 40px; line-height: 1; }
+.flp-stage-name {
+  font-family: var(--font-game-title), "SeoulAlim", sans-serif;
+  font-size: 60px;
+  line-height: 1;
+  color: var(--flp-title-blue);
+}
+.flp-stage-desc {
+  margin: 0;
+  font-size: 23px;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--flp-text);
+  background: var(--flp-card-soft);
+  border: 1.5px solid var(--flp-card-border);
+  border-radius: var(--flp-radius-md);
+  padding: 14px 18px;
+  word-break: keep-all;
+}
+.flp-side-card {
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+}
+.flp-side-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-game-title), "SeoulAlim", sans-serif;
+  font-size: 24px;
+  color: var(--flp-deep-blue);
+}
+.flp-dialogue {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow: hidden;
+}
+.flp-dialogue-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 10px;
+  border-radius: var(--flp-radius-sm);
+  background: rgba(223, 244, 255, 0.6);
+}
+.flp-dialogue-speaker {
+  font-family: var(--font-game-title), "SeoulAlim", sans-serif;
+  font-size: 18px;
+  color: var(--flp-blue);
+}
+.flp-dialogue-text {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--flp-text);
+  word-break: keep-all;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.flp-dialogue-empty { margin: 0; font-size: 19px; color: var(--flp-muted); }
+.flp-keypoint {
+  margin: 0;
+  font-size: 21px;
+  font-weight: 700;
+  color: var(--flp-text);
+  word-break: keep-all;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ---------- 오른쪽 만화 영역(~70%) ---------- */
+.flp-comic-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+  min-height: 0;
+}
+.flp-comic-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 22px;
+}
+.flp-cut-badge {
+  flex: 0 0 auto;
+  font-family: var(--font-game-title), "SeoulAlim", sans-serif;
+  font-size: 28px;
+  color: var(--flp-title-blue);
+  white-space: nowrap;
+}
+.flp-comic-instr {
+  flex: 1;
+  font-size: 21px;
+  font-weight: 600;
+  color: var(--flp-muted);
+  word-break: keep-all;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* 만화 씬 스테이지(프레임은 씬 비율 1400:1025 유지) */
+.flp-comic-stage {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+}
+.flp-comic-frame {
+  position: relative;
+  border: 10px solid var(--flp-sky-deep);
+  border-radius: var(--flp-radius-md);
+  background: #cfeafc;
+  overflow: hidden;
+  box-shadow: var(--flp-shadow);
+}
+.flp-scene-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.flp-scene-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--flp-deep-blue);
+  font-size: 22px;
+  font-weight: 700;
+  text-align: center;
+  padding: 20px;
+}
+.flp-scene-empty span:first-child { font-size: 60px; }
+.flp-scene-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* 만화 요소(캐릭터/이미지) */
+.flp-char-img,
+.flp-elem-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+/* 말풍선(pastel, DOM) */
+.flp-bubble {
+  width: 100%;
+  height: 100%;
+  border: 4px solid #4a6b8a;
+  border-radius: 28px;
+  background: #fff;
+  color: #24466f;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 14px 16px;
+  text-align: center;
+  box-shadow: 0 6px 14px rgba(36, 70, 111, 0.18);
+  box-sizing: border-box;
+  word-break: keep-all;
+}
+.flp-bubble-speaker {
+  font-family: var(--font-game-title), "SeoulAlim", sans-serif;
+  font-size: 14px;
+  color: var(--flp-blue);
+  background: rgba(77, 148, 232, 0.14);
+  padding: 1px 10px;
+  border-radius: 999px;
+}
+.flp-bubble-text {
+  font-weight: 800;
+  line-height: 1.25;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+}
+.flp-bubble--thought { border-style: dashed; border-radius: 36px; }
+.flp-bubble--emphasis { border-width: 6px; }
+.flp-bubble--explain { border-radius: 14px; }
+
+/* 캡션 + 컷 진행점 */
+.flp-comic-caption {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 22px;
+}
+.flp-caption-icon { font-size: 24px; }
+.flp-caption-text {
+  flex: 1;
+  font-size: 21px;
+  font-weight: 600;
+  color: var(--flp-text);
+  word-break: keep-all;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.flp-cut-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex: 0 0 auto;
+}
+.flp-dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: rgba(72, 130, 176, 0.25);
+}
+.flp-dot.is-on { background: var(--flp-blue); }
+
+/* 미리보기 탭 */
+.flp-preview-tabs {
+  position: fixed;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  display: flex;
+  gap: 6px;
+  background: rgba(15, 23, 42, 0.82);
+  padding: 6px 8px;
+  border-radius: 999px;
+}
+.flp-preview-tab {
+  border: none;
+  background: transparent;
+  color: #cbd5e1;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.flp-preview-tab.is-active { background: var(--flp-blue); color: #fff; }
+
 @media (prefers-reduced-motion: reduce) {
   .flp-page { transition: none !important; }
 }
