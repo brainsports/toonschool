@@ -6,6 +6,7 @@
  */
 import type { ComicProjectData, ComicCutEditData, ComicCutElement } from '../components/editor/utils/comicStorage'
 import type { ViewerPageLike, FlipbookMapContext } from '../components/viewer/flipbookPageMapper'
+import type { WorldStory, OXQuestion } from '../services/studentUnitSummaryService'
 import sceneImg from '../../../assets/flipbook/sample-comic-scene.jpg'
 
 type ScriptCut = ComicProjectData['script']['cuts'][number]
@@ -229,11 +230,51 @@ const cuts: Array<{ script: ScriptCut; edit: ComicCutEditData }> = [
   },
 ]
 
-/** 미리보기용 페이지 배열(표지 + 만화 1~6컷). */
+// --- 세상 속 이야기 3종(짧은/긴(2줄 제목+3문장)/중간) ---
+const sampleStories: Record<'history' | 'latest' | 'life', WorldStory> = {
+  history: {
+    type: 'history',
+    title: '옛날 사람들의 물길',
+    content: '옛날에는 강물이 넘치지 않게 하천을 돌과 흙으로 막아 물길을 만들었어요. 사람들은 강물을 마시고 농사에 이용했답니다.',
+  },
+  latest: {
+    type: 'latest',
+    title: '오늘날 위성 사진으로 보는 강줄기의 비밀',
+    content:
+      '오늘날 위성 사진으로 보면 강이 구불구불 흐르는 모습이 선명해요. 강이 굽이칠 때 바깥쪽을 깎고 안쪽에 모래를 쌓아 평야를 만듭니다. 이런 모습은 최신 지도에서도 쉽게 찾을 수 있어요.',
+  },
+  life: {
+    type: 'life',
+    title: '우리 동네 냇가의 모래사장',
+    content: '학교 앞 작은 하천에도 강줄기가 만든 모래사장이 있어요. 비가 오면 물길이 살짝 바뀌기도 한답니다.',
+  },
+}
+
+// --- OX 퀴즈 5종(정답 O/X, 긴 문제, 빈 문제, 정답 정규화 소문자/빈값 검증) ---
+// q3/q5 answer 는 의도적으로 비정상 값(소문자/빈 문자열)을 주어 normalizeOxAnswer 런타임을 검증.
+// OXQuestion.answer 타입('O'|'X')을 만장하기 위해 느슨한 배열을 한 번 OXQuestion[] 로 변환한다(임시 샘플).
+const sampleQuestionsRaw: Array<{ id: string; answer: string; question: string }> = [
+  { id: 'q1', answer: 'O', question: '강은 굽이치며 흐를 때 안쪽보다 바깥쪽을 더 깎아 낸다.' },
+  { id: 'q2', answer: 'X', question: '강이 곧게 흐를수록 산지를 더 깊게 파내며 지형을 크게 바꾼다. 이 설명이 맞을까요? 한 번 더 생각해 보세요.' },
+  { id: 'q3', answer: 'o', question: '우리 동네 냇가에서도 강줄기가 만든 모래사장을 찾을 수 있다.' },
+  { id: 'q4', answer: 'X', question: '' },
+  { id: 'q5', answer: '', question: '강줄기는 땅 모양을 바꾸는 중요한 역할을 한다.' },
+]
+const sampleQuestions = sampleQuestionsRaw as unknown as OXQuestion[]
+
+/**
+ * 미리보기용 페이지 배열(표지 + 만화 1~6 + 스토리 1~3 + 퀴즈 1~5 + 뒤표지).
+ * 순서는 운영 조립(cover→comic6→story3→quiz5→back)을 따른다.
+ */
 export function buildSampleViewerPages(): ViewerPageLike[] {
   const pages: ViewerPageLike[] = [{ type: 'front-cover', data: null }]
   for (const c of cuts) {
     pages.push({ type: 'comic-cut', cutNum: c.script.cutNumber, data: c.edit, scriptCut: c.script })
   }
+  pages.push({ type: 'story-history', data: sampleStories.history })
+  pages.push({ type: 'story-current', data: sampleStories.latest })
+  pages.push({ type: 'story-life', data: sampleStories.life })
+  sampleQuestions.forEach((q, i) => pages.push({ type: 'ox-quiz', questionNum: i + 1, data: q }))
+  pages.push({ type: 'back-cover', data: sampleCtx.backCover })
   return pages
 }

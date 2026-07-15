@@ -21,6 +21,7 @@ import {
   buildQuizPageInfo,
   getProjectKeywords,
 } from './landscapePageInfo'
+import { normalizeOxAnswer } from './flipbookOxQuiz'
 import type {
   FlipbookPage,
   FlipbookCoverPage,
@@ -198,7 +199,7 @@ function mapQuiz(
     type: 'quiz',
     quizNumber: questionNum,
     question: data.question || '',
-    answer: data.answer || 'O',
+    answer: normalizeOxAnswer(data.answer),
     // hint 는 현재 데이터에 없음 → 1차 미제공(2차). explanation 은 풀이 팁 프리셋 사용.
     explanation: info?.mission || undefined,
   }

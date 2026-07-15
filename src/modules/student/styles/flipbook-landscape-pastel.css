@@ -661,6 +661,338 @@
 }
 .flp-preview-tab.is-active { background: var(--flp-blue); color: #fff; }
 
+/* ============================================================
+   세상 속 이야기(story) 페이지 — 04-story-reference.png 기준
+   ============================================================ */
+.flp-story {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  gap: 22px;
+  min-height: 0;
+}
+.flp-story-side {
+  flex: 0 0 32%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+.flp-story-badge {
+  align-self: flex-start;
+  font-family: var(--font-game-title), "SeoulAlim", sans-serif;
+  font-size: 28px;
+  color: #fff;
+  background: var(--flp-green);
+  padding: 8px 20px;
+  border-radius: 999px;
+  box-shadow: var(--flp-shadow-sm);
+}
+.flp-story-no { font-size: 19px; font-weight: 700; color: var(--flp-muted); }
+.flp-story-types { display: flex; flex-direction: column; gap: 8px; }
+.flp-story-type {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px;
+  border-radius: var(--flp-radius-sm);
+  background: var(--flp-card-soft);
+  border: 1.5px solid var(--flp-card-border);
+  font-size: 21px;
+  font-weight: 700;
+  color: var(--flp-muted);
+}
+.flp-story-type.is-active {
+  background: #fff;
+  color: var(--flp-deep-blue);
+  border-color: var(--flp-blue);
+  box-shadow: var(--flp-shadow-sm);
+}
+.flp-story-purpose {
+  margin: 0;
+  font-size: 21px;
+  font-weight: 700;
+  color: var(--flp-text);
+  line-height: 1.4;
+  word-break: keep-all;
+}
+.flp-story-helper {
+  margin-top: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: var(--flp-radius-md);
+  background: rgba(255, 213, 106, 0.28);
+  border: 1.5px dashed var(--flp-yellow);
+  font-size: 19px;
+  font-weight: 600;
+  color: var(--flp-text);
+  line-height: 1.4;
+  word-break: keep-all;
+}
+.flp-story-helper-icon { font-size: 24px; line-height: 1; }
+
+.flp-story-main { flex: 1; min-width: 0; min-height: 0; }
+.flp-story-card { padding: 24px 28px; height: 100%; display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+.flp-story-title {
+  margin: 0;
+  font-family: var(--font-game-title), "SeoulAlim", sans-serif;
+  font-size: 50px;
+  line-height: 1.1;
+  color: var(--flp-green);
+  word-break: keep-all;
+}
+.flp-story-image {
+  flex: 0 0 auto;
+  width: 100%;
+  height: 200px;
+  border-radius: var(--flp-radius-md);
+  overflow: hidden;
+  background: linear-gradient(135deg, #e8f6ff, #eafaf0);
+}
+.flp-story-image img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.flp-story-image-empty {
+  width: 100%; height: 100%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  color: var(--flp-deep-blue);
+  font-size: 20px; font-weight: 700;
+}
+.flp-story-image-empty span:first-child { font-size: 46px; }
+.flp-story-body {
+  margin: 0;
+  font-size: 23px;
+  font-weight: 600;
+  line-height: 1.55;
+  color: var(--flp-text);
+  word-break: keep-all;
+  overflow: hidden;
+}
+.flp-story-body.is-empty { color: var(--flp-muted); }
+.flp-story-facts {
+  list-style: none; margin: 0; padding: 0;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.flp-story-fact {
+  display: flex; align-items: baseline; gap: 12px;
+  padding: 8px 14px;
+  border-radius: var(--flp-radius-sm);
+  background: rgba(223, 244, 216, 0.6);
+}
+.flp-story-fact-no {
+  flex: 0 0 auto;
+  font-family: var(--font-game-title), "SeoulAlim", sans-serif;
+  font-size: 18px; color: var(--flp-green);
+}
+.flp-story-fact-text { font-size: 21px; font-weight: 600; color: var(--flp-text); word-break: keep-all; line-height: 1.4; }
+.flp-story-think {
+  margin-top: auto;
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 12px 16px;
+  border-radius: var(--flp-radius-md);
+  background: rgba(246, 164, 194, 0.2);
+  border: 1.5px dashed var(--flp-pink);
+}
+.flp-story-think-badge {
+  align-self: flex-start;
+  font-family: var(--font-game-title), "SeoulAlim", sans-serif;
+  font-size: 18px; color: #d6477e;
+}
+.flp-story-think-text { margin: 0; font-size: 20px; font-weight: 600; color: var(--flp-text); word-break: keep-all; line-height: 1.4; }
+
+/* ============================================================
+   OX 퀴즈(quiz) 페이지 — 05-quiz-reference.png 기준
+   ============================================================ */
+.flp-quiz {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  gap: 24px;
+  min-height: 0;
+}
+.flp-quiz-side {
+  flex: 0 0 30%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+.flp-quiz-title {
+  margin: 6px 0 0;
+  font-family: var(--font-game-title), "SeoulAlim", sans-serif;
+  font-size: 64px;
+  line-height: 1.05;
+}
+.flp-quiz-title-green { color: var(--flp-green); }
+.flp-quiz-title-blue { color: var(--flp-blue); }
+.flp-quiz-title-red { color: #e0566b; }
+.flp-quiz-sub { margin: 0; font-size: 21px; font-weight: 600; color: var(--flp-muted); word-break: keep-all; }
+.flp-quiz-progress {
+  align-self: flex-start;
+  font-family: var(--font-game-title), "SeoulAlim", sans-serif;
+  font-size: 30px;
+  color: var(--flp-deep-blue);
+  background: var(--flp-card-soft);
+  border: 1.5px solid var(--flp-card-border);
+  border-radius: 999px;
+  padding: 6px 22px;
+}
+.flp-quiz-progress-total { font-size: 20px; color: var(--flp-muted); }
+.flp-quiz-helper {
+  margin-top: auto;
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 12px 16px;
+  border-radius: var(--flp-radius-md);
+  background: rgba(223, 244, 255, 0.7);
+  border: 1.5px dashed var(--flp-blue);
+  font-size: 19px; font-weight: 600; color: var(--flp-text);
+  word-break: keep-all; line-height: 1.4;
+}
+.flp-quiz-helper-icon { font-size: 24px; }
+
+.flp-quiz-main { flex: 1; display: flex; flex-direction: column; gap: 14px; min-width: 0; min-height: 0; }
+.flp-quiz-qcard { padding: 22px 28px; }
+.flp-quiz-qbadge {
+  display: inline-flex; align-items: center; gap: 6px;
+  align-self: flex-start;
+  font-family: var(--font-game-title), "SeoulAlim", sans-serif;
+  font-size: 20px; color: #fff;
+  background: var(--flp-blue);
+  padding: 5px 16px; border-radius: 999px;
+}
+.flp-quiz-question {
+  margin: 14px 0 0;
+  font-size: 34px; font-weight: 800; line-height: 1.4;
+  color: var(--flp-text); word-break: keep-all;
+}
+.flp-quiz-question.is-empty { color: var(--flp-muted); }
+.flp-quiz-hint {
+  margin-top: 12px;
+  display: flex; align-items: center; gap: 10px;
+  font-size: 19px; color: var(--flp-muted);
+}
+.flp-quiz-hint-badge {
+  font-family: var(--font-game-title), "SeoulAlim", sans-serif;
+  font-size: 16px; color: #fff;
+  background: var(--flp-sky-deep);
+  padding: 3px 12px; border-radius: 999px;
+}
+
+.flp-quiz-ox { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.flp-quiz-choice {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  height: 150px;
+  border-radius: var(--flp-radius-lg);
+  border: 5px solid var(--flp-card-border);
+  background: #fff;
+  box-shadow: var(--flp-shadow-sm);
+  cursor: pointer;
+  transition: transform 0.05s ease;
+}
+.flp-quiz-choice:disabled { cursor: default; }
+.flp-quiz-choice:not(:disabled):hover { transform: translateY(-2px); }
+.flp-quiz-choice.is-o { border-color: var(--flp-blue); }
+.flp-quiz-choice.is-x { border-color: var(--flp-pink); }
+.flp-quiz-choice.is-correct { background: rgba(121,191,85,0.18); border-color: var(--flp-green); }
+.flp-quiz-choice.is-wrong { background: rgba(239,68,68,0.12); border-color: #ef4444; opacity: 0.85; }
+.flp-quiz-choice-letter { font-size: 78px; font-weight: 900; line-height: 1; }
+.flp-quiz-choice.is-o .flp-quiz-choice-letter { color: var(--flp-blue); }
+.flp-quiz-choice.is-x .flp-quiz-choice-letter { color: #e0566b; }
+.flp-quiz-choice-lab { font-size: 20px; font-weight: 700; color: var(--flp-muted); }
+
+.flp-quiz-result {
+  display: flex; align-items: center; gap: 16px;
+  padding: 14px 22px;
+  min-height: 96px;
+}
+.flp-quiz-verdict-badge {
+  flex: 0 0 auto;
+  width: 52px; height: 52px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 30px; font-weight: 900; color: #fff;
+}
+.flp-quiz-verdict-badge.is-correct { background: var(--flp-green); }
+.flp-quiz-verdict-badge.is-wrong { background: #ef4444; }
+.flp-quiz-result-body { min-width: 0; }
+.flp-quiz-verdict { font-size: 23px; font-weight: 800; }
+.flp-quiz-verdict.is-correct { color: var(--flp-green); }
+.flp-quiz-verdict.is-wrong { color: #e0566b; }
+.flp-quiz-explain { margin: 4px 0 0; font-size: 19px; font-weight: 600; color: var(--flp-text); line-height: 1.45; word-break: keep-all; }
+.flp-quiz-result-prompt-badge { flex: 0 0 auto; font-size: 40px; }
+.flp-quiz-result-prompt { display: flex; flex-direction: column; gap: 2px; }
+.flp-quiz-result-prompt strong { font-size: 22px; color: var(--flp-green); }
+.flp-quiz-result-prompt span { font-size: 19px; color: var(--flp-muted); }
+
+/* ============================================================
+   뒤표지(back-cover) 페이지 — 06-back-cover-reference.png 기준
+   ============================================================ */
+.flp-back {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  gap: 24px;
+  min-height: 0;
+}
+.flp-back-side {
+  flex: 0 0 30%;
+  display: flex; flex-direction: column; gap: 12px;
+  min-width: 0;
+}
+.flp-back-title {
+  margin: 6px 0 0;
+  font-family: var(--font-game-title), "SeoulAlim", sans-serif;
+  font-size: 90px; line-height: 1; color: var(--flp-title-blue);
+}
+.flp-back-desc { margin: 0; font-size: 24px; font-weight: 700; color: var(--flp-text); line-height: 1.45; word-break: keep-all; }
+.flp-back-cheer {
+  margin-top: auto;
+  padding: 14px 18px;
+  border-radius: var(--flp-radius-md);
+  background: rgba(255, 213, 106, 0.3);
+  border: 1.5px dashed var(--flp-yellow);
+  font-size: 20px; font-weight: 700; color: var(--flp-text);
+  line-height: 1.4; word-break: keep-all;
+}
+.flp-back-brand {
+  font-family: var(--font-game-title), "SeoulAlim", sans-serif;
+  font-size: 22px; color: var(--flp-muted); letter-spacing: 0.04em;
+}
+
+.flp-back-main { flex: 1; display: flex; flex-direction: column; gap: 12px; min-width: 0; min-height: 0; }
+.flp-back-worktitle {
+  font-family: var(--font-game-title), "SeoulAlim", sans-serif;
+  font-size: 30px; color: var(--flp-deep-blue);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.flp-back-card { padding: 14px 20px; }
+.flp-back-card-head {
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--font-game-title), "SeoulAlim", sans-serif;
+  font-size: 22px; color: var(--flp-deep-blue);
+}
+.flp-back-card-icon { font-size: 22px; }
+.flp-back-list { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.flp-back-list li { position: relative; padding-left: 22px; font-size: 20px; font-weight: 600; color: var(--flp-text); word-break: keep-all; }
+.flp-back-list li::before { content: "•"; position: absolute; left: 6px; color: var(--flp-blue); font-weight: 900; }
+.flp-back-empty { margin: 6px 0 0; font-size: 18px; color: var(--flp-muted); }
+.flp-back-keywords { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 8px; }
+.flp-back-keyword {
+  font-size: 19px; font-weight: 700; color: var(--flp-green);
+  background: rgba(121,191,85,0.16);
+  padding: 4px 14px; border-radius: 999px;
+}
+.flp-back-pledge { margin: 6px 0 0; font-size: 21px; font-weight: 700; color: var(--flp-text); word-break: keep-all; }
+.flp-back-pledge.is-empty { color: var(--flp-muted); font-weight: 600; }
+.flp-back-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.flp-back-meta { margin-top: 6px; display: flex; flex-direction: column; gap: 3px; }
+.flp-back-meta-row { display: flex; gap: 10px; font-size: 18px; }
+.flp-back-meta-label { flex: 0 0 56px; font-weight: 700; color: var(--flp-purple); }
+.flp-back-meta-value { color: var(--flp-text); font-weight: 600; word-break: keep-all; }
+.flp-back-note-line { margin: 6px 0 0; font-size: 18px; font-weight: 600; color: var(--flp-text); word-break: keep-all; line-height: 1.4; }
+.flp-back-note-line.is-empty { color: var(--flp-muted); }
+.flp-back-note-line.is-next { color: var(--flp-deep-blue); }
+
 @media (prefers-reduced-motion: reduce) {
   .flp-page { transition: none !important; }
+  .flp-quiz-choice { transition: none !important; }
 }
