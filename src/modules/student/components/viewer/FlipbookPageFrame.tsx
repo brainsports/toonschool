@@ -22,6 +22,11 @@ export interface FlipbookPageFrameProps {
   backgroundVariant?: FlipbookBackgroundVariant
   /** true 면 1600×900 고정 캡처용 렌더(scaling 없음). */
   captureMode?: boolean
+  /**
+   * 'fixed' 면 1600×900 고정 렌더(self-fit 없음). 라이브 뷰어(양면 펼침)처럼
+   * 외부(스프레드 컨테이너)가 단일 scale을 제공할 때 사용. 미리보기는 기본 'self'.
+   */
+  fitMode?: 'self' | 'fixed'
 }
 
 export default function FlipbookPageFrame({
@@ -29,14 +34,16 @@ export default function FlipbookPageFrame({
   className,
   backgroundVariant = 'default',
   captureMode = false,
+  fitMode = 'self',
 }: FlipbookPageFrameProps) {
+  const fixedMode = captureMode || fitMode === 'fixed'
   const rootRef = useRef<HTMLDivElement>(null)
   // 측정 전엔 0 → 첫 paint 에서 1600×900 이 오버플로우하는 것을 막는다.
   // useLayoutEffect 가 paint 전에 실제 scale 로 덮어쓴다.
   const [scale, setScale] = useState(0)
 
   useLayoutEffect(() => {
-    if (captureMode) return
+    if (fixedMode) return
     const el = rootRef.current
     if (!el) return
     const compute = () => {
@@ -49,9 +56,9 @@ export default function FlipbookPageFrame({
     const ro = new ResizeObserver(compute)
     ro.observe(el)
     return () => ro.disconnect()
-  }, [captureMode])
+  }, [fixedMode])
 
-  if (captureMode) {
+  if (fixedMode) {
     return (
       <div
         ref={rootRef}

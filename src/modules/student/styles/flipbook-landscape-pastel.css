@@ -992,6 +992,34 @@
 .flp-back-note-line.is-empty { color: var(--flp-muted); }
 .flp-back-note-line.is-next { color: var(--flp-deep-blue); }
 
+/* ============================================================
+   양면 스프레드(라이브 뷰어) 보조
+   ============================================================ */
+.flp-spine {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 30px;
+  transform: translateX(-50%);
+  background: linear-gradient(
+    to right,
+    rgba(15, 23, 42, 0.16) 0%,
+    rgba(15, 23, 42, 0) 45%,
+    rgba(15, 23, 42, 0) 55%,
+    rgba(15, 23, 42, 0.16) 100%
+  );
+  pointer-events: none;
+  z-index: 6;
+}
+.flp-blank-page {
+  width: 100%;
+  height: 100%;
+}
+.flp-turn-face {
+  background: #fff;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .flp-page { transition: none !important; }
   .flp-quiz-choice { transition: none !important; }

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, type ReactNode } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { loadComicProjectData, loadComicCutData } from '../components/editor/utils/comicStorage'
 import type { ComicProjectData, ComicCutEditData } from '../components/editor/utils/comicStorage'
@@ -14,14 +14,24 @@ import html2canvas from 'html2canvas'
 import { jsPDF } from 'jspdf'
 import { useAuth } from '../../../shared/contexts/AuthContext'
 import { createGrowthEvaluationForSharedComic } from '../services/studentGrowthService'
-import { FLIPBOOK_PAGE_HEIGHT, FLIPBOOK_PAGE_RATIO, FLIPBOOK_PAGE_WIDTH } from '../components/viewer/LandscapePageLayout'
+import { FLIPBOOK_PAGE_HEIGHT, FLIPBOOK_PAGE_WIDTH } from '../components/viewer/LandscapePageLayout'
 import { buildComicPageInfo, buildQuizPageInfo, buildStoryPageInfo, getProjectKeywords } from '../components/viewer/landscapePageInfo'
 import FlipCoverPage from '../components/viewer/pages/FlipCoverPage'
 import FlipComicPage from '../components/viewer/pages/FlipComicPage'
 import FlipStoryPage from '../components/viewer/pages/FlipStoryPage'
 import FlipQuizPage from '../components/viewer/pages/FlipQuizPage'
 import FlipBackCoverPage from '../components/viewer/pages/FlipBackCoverPage'
+import FlipbookPageFrame from '../components/viewer/FlipbookPageFrame'
+import FlipCoverPagePastel from '../components/viewer/pages/FlipCoverPagePastel'
+import FlipComicPagePastel from '../components/viewer/pages/FlipComicPagePastel'
+import FlipStoryPagePastel from '../components/viewer/pages/FlipStoryPagePastel'
+import FlipQuizPagePastel from '../components/viewer/pages/FlipQuizPagePastel'
+import FlipBackCoverPagePastel from '../components/viewer/pages/FlipBackCoverPagePastel'
+import { mapViewerPage } from '../components/viewer/flipbookPageMapper'
+import type { FlipbookMapContext } from '../components/viewer/flipbookPageMapper'
+import type { FlipbookPage as FlipbookPageModel } from '../components/viewer/flipbookPageModel'
 import '../styles/flipbook.css'
+import '../styles/flipbook-landscape-pastel.css'
 const BGM_PATH = '/audio/viewer/if-i-had-a-chicken.mp3';
 
 const PDF_PAGE_WIDTH = 1123;
@@ -41,31 +51,13 @@ const pdfPageBaseStyle: React.CSSProperties = {
   boxSizing: 'border-box',
 };
 
-const PageWrapper = ({ children, isSingle }: { children: ReactNode; isSingle?: boolean }) => {
-  const ref = useRef<HTMLDivElement>(null);
-  const [scale, setScale] = useState(1);
-
-  useEffect(() => {
-    if (!ref.current) return;
-    const resize = () => {
-      if (ref.current) {
-        setScale(ref.current.clientWidth / FLIPBOOK_PAGE_WIDTH);
-      }
-    };
-    resize();
-    const obs = new ResizeObserver(resize);
-    obs.observe(ref.current);
-    return () => obs.disconnect();
-  }, []);
-
-  return (
-    <div ref={ref} className={`flex-1 h-full bg-white relative overflow-hidden ${isSingle ? 'rounded-none shadow-lg border border-slate-200' : ''} shadow-[inset_0_0_40px_rgba(0,0,0,0.03)]`}>
-      <div style={{ transform: `scale(${scale})`, transformOrigin: 'top left', width: FLIPBOOK_PAGE_WIDTH, height: FLIPBOOK_PAGE_HEIGHT, position: 'absolute', top: 0, left: 0 }}>
-        {children}
-      </div>
-    </div>
-  )
-}
+// 16:9 파스텔 단일 페이지 논리 크기(양면 펼침 기준)
+const PASTEL_PAGE_WIDTH = 1600
+const PASTEL_PAGE_HEIGHT = 900
+// 양면 펼침 논리 크기(좌·우 두 페이지)
+const SPREAD_WIDTH = PASTEL_PAGE_WIDTH * 2
+const SPREAD_HEIGHT = PASTEL_PAGE_HEIGHT
+const SPREAD_PAD = 48
 
 type ViewerPage =
   | { type: 'front-cover'; data: EditorState | null }
@@ -79,8 +71,21 @@ type ViewerPage =
 type Spread = { pages: [number | null, number | null] };
 
 const getSpreads = (totalCount: number): Spread[] => {
-  return Array.from({ length: totalCount }, (_, pageIndex) => ({ pages: [pageIndex, null] }));
-};
+  if (totalCount <= 0) return []
+  // 표지는 책 앞표지처럼 단독(우측 면). 본문은 2면 펼침. 마지막 홀수 페이지는 단독.
+  const spreads: Spread[] = [{ pages: [null, 0] }]
+  let i = 1
+  while (i < totalCount) {
+    if (i + 1 < totalCount) {
+      spreads.push({ pages: [i, i + 1] })
+      i += 2
+    } else {
+      spreads.push({ pages: [i, null] })
+      i += 1
+    }
+  }
+  return spreads
+}
 
 const getPublicSiteUrl = () => {
   return (
@@ -126,6 +131,22 @@ export default function StudentComicViewerPage() {
   const [targetSpreadIndex, setTargetSpreadIndex] = useState<number | null>(null)
 
   const spreads = getSpreads(pages.length)
+
+  // 신규 파스텔 페이지 모델(원본 ViewerPage[] 와 1:1 정렬, 원본 데이터 불변)
+  const pastelCtx = useMemo<FlipbookMapContext>(() => {
+    const backCoverPage = pages.find((p) => p.type === 'back-cover')
+    const firstComicPage = pages.find((p) => p.type === 'comic-cut' && p.data?.backgroundImageUrl)
+    return {
+      project: projectData,
+      backCover: backCoverPage && backCoverPage.type === 'back-cover' ? backCoverPage.data ?? null : null,
+      firstComicImageUrl:
+        firstComicPage && firstComicPage.type === 'comic-cut' ? firstComicPage.data?.backgroundImageUrl : undefined,
+    }
+  }, [projectData, pages])
+  const pastelPages = useMemo<(FlipbookPageModel | null)[]>(
+    () => pages.map((p) => mapViewerPage(p, pastelCtx)),
+    [pages, pastelCtx],
+  )
 
   const currentSpreadIndexRef = useRef(currentSpreadIndex)
   currentSpreadIndexRef.current = currentSpreadIndex
@@ -230,20 +251,19 @@ export default function StudentComicViewerPage() {
   }, [location.state])
 
 
-  // --- Zoom Logic ---
-  const BASE_WIDTH = 1200;
-  const BASE_HEIGHT = BASE_WIDTH / FLIPBOOK_PAGE_RATIO;
-  const SCROLL_PADDING = 80;
-  
+  // --- Zoom Logic (양면 펼침 단일 scale) ---
+  const SCROLL_PADDING = SPREAD_PAD;
+
   let fitScale = 1;
   if (containerSize.width > 0 && containerSize.height > 0) {
-    const scaleW = (containerSize.width - SCROLL_PADDING * 2) / BASE_WIDTH;
-    const scaleH = (containerSize.height - SCROLL_PADDING * 2) / BASE_HEIGHT;
+    const scaleW = (containerSize.width - SCROLL_PADDING * 2) / SPREAD_WIDTH;
+    const scaleH = (containerSize.height - SCROLL_PADDING * 2) / SPREAD_HEIGHT;
     fitScale = Math.min(scaleW, scaleH);
-    fitScale = Math.max(0.3, fitScale);
+    fitScale = Math.max(0.2, fitScale);
   }
-  
+
   const currentZoom = zoomPercent !== null ? zoomPercent : (containerSize.width > 0 ? Math.round(fitScale * 100) : 100);
+  const spreadScale = currentZoom / 100;
 
   useEffect(() => {
     const el = containerRef.current;
@@ -476,15 +496,54 @@ export default function StudentComicViewerPage() {
     )
   }
 
-  const renderPage = (page: ViewerPage | null, _isLeft: boolean, isSingle = false) => {
-    if (!page) {
-      return <PageWrapper isSingle={isSingle}><div className="w-full h-full bg-slate-50" /></PageWrapper>
+  // 신규 파스텔 페이지 렌더(화면 전용). 캡처/PDF/공유는 기존 renderFlipPage 경로 유지(5A 미수정).
+  const comicCutCount = pages.filter((p) => p.type === 'comic-cut').length || 6
+  const storyCount = pages.filter((p) => p.type.startsWith('story-')).length || 3
+  const quizCount = pages.filter((p) => p.type === 'ox-quiz').length || 5
+
+  const renderPastelModel = (model: FlipbookPageModel, storyNumber: number) => {
+    switch (model.type) {
+      case 'cover':
+        return <FlipCoverPagePastel model={model} />
+      case 'comic':
+        return <FlipComicPagePastel model={model} totalCuts={comicCutCount} />
+      case 'story':
+        return <FlipStoryPagePastel model={model} storyNumber={storyNumber} totalStories={storyCount} />
+      case 'quiz':
+        return (
+          <FlipQuizPagePastel
+            model={model}
+            totalQuestions={quizCount}
+            selectedAnswer={quizAnswers[model.quizNumber]}
+            onSelect={(a) => setQuizAnswers((c) => ({ ...c, [model.quizNumber]: a }))}
+          />
+        )
+      case 'back-cover':
+        return <FlipBackCoverPagePastel model={model} />
+      default:
+        return null
     }
-    const pageNum = pages.indexOf(page) + 1
+  }
+
+  const renderPageSlot = (pageIndex: number | null) => {
+    const blank = (
+      <FlipbookPageFrame fitMode="fixed" backgroundVariant="quiet">
+        <div className="flp-blank-page" aria-hidden="true" />
+      </FlipbookPageFrame>
+    )
+    if (pageIndex === null) return blank
+    const page = pages[pageIndex]
+    const model = pageIndex < pastelPages.length ? pastelPages[pageIndex] : null
+    if (!page || !model) return blank
+    const variant = page.type === 'front-cover' || page.type === 'back-cover' ? 'cover' : 'content'
+    let storyNumber = 1
+    if (page.type.startsWith('story-')) {
+      storyNumber = pages.filter((p, i) => p.type.startsWith('story-') && i <= pageIndex).length
+    }
     return (
-      <PageWrapper isSingle={isSingle}>
-        {renderFlipPage(page, pageNum)}
-      </PageWrapper>
+      <FlipbookPageFrame fitMode="fixed" backgroundVariant={variant}>
+        {renderPastelModel(model, storyNumber)}
+      </FlipbookPageFrame>
     )
   }
 
@@ -495,20 +554,31 @@ export default function StudentComicViewerPage() {
       </div>
     </div>
   )
-  const renderHalf = (pageIndex: number | null, isLeft: boolean) => {
-    if (pageIndex === null) return <div className="w-full h-full bg-transparent" />;
-    return (
-      <div className="w-full h-full relative bg-white overflow-hidden">
-        {renderPage(pages[pageIndex], isLeft, false)}
-      </div>
-    );
-  };
 
   const getPageIndicatorText = () => {
     if (spreads.length === 0) return '0 / 0';
-    const pageIndex = spreads[currentSpreadIndex]?.pages[0];
-    return pageIndex === null || pageIndex === undefined ? '' : `${pageIndex + 1} / ${pages.length}`;
+    const sp = spreads[currentSpreadIndex]?.pages;
+    const left = sp?.[0];
+    const right = sp?.[1];
+    const total = pages.length;
+    const hasL = left !== null && left !== undefined;
+    const hasR = right !== null && right !== undefined;
+    if (!hasL && !hasR) return '';
+    if (!hasL) return `${(right ?? 0) + 1} / ${total}`;
+    if (!hasR) return `${(left ?? 0) + 1} / ${total}`;
+    return `${(left ?? 0) + 1}-${(right ?? 0) + 1} / ${total}`;
   };
+
+  // 플립 중 베이스 스프레드: 넘어가는 면 아래에 깔리는 좌·우(실제 책 넘김)
+  const currentSpread: Spread = spreads[currentSpreadIndex] ?? { pages: [null, null] }
+  const targetSpread: Spread | null =
+    targetSpreadIndex !== null ? spreads[targetSpreadIndex] ?? null : null
+  const baseSpread: Spread =
+    isFlipping && targetSpread
+      ? flipDirection === 'next'
+        ? { pages: [currentSpread.pages[0], targetSpread.pages[1]] }
+        : { pages: [targetSpread.pages[0], currentSpread.pages[1]] }
+      : currentSpread
   const handleDownloadPdf = async () => {
     if (isPdfDownloading) return;
 
@@ -871,40 +941,63 @@ export default function StudentComicViewerPage() {
              ref={containerRef}
              className="relative shadow-2xl bg-[#e2e8f0] rounded-none shrink-0 viewerCanvas"
              style={{
-                width: BASE_WIDTH * (currentZoom / 100),
-                height: BASE_HEIGHT * (currentZoom / 100),
+                width: SPREAD_WIDTH * spreadScale,
+                height: SPREAD_HEIGHT * spreadScale,
                 overflow: 'visible',
                 opacity: hasStarted ? 1 : 0.5,
+                perspective: '2400px',
              }}
            >
-              <div className="w-full h-full relative book-shell" style={{ perspective: '2400px' }}>
-                {isFlipping && targetSpreadIndex !== null && (
-                  <div className="absolute inset-0">
-                    {renderHalf(spreads[targetSpreadIndex].pages[0], true)}
+              <div
+                className="relative"
+                style={{
+                  width: SPREAD_WIDTH,
+                  height: SPREAD_HEIGHT,
+                  transform: `scale(${spreadScale})`,
+                  transformOrigin: 'top left',
+                  transformStyle: 'preserve-3d',
+                }}
+              >
+                {/* 베이스 스프레드: 좌·우 두 페이지(각 1600×900 고정) */}
+                <div className="absolute inset-0 flex">
+                  <div style={{ width: PASTEL_PAGE_WIDTH, height: PASTEL_PAGE_HEIGHT }}>
+                    {renderPageSlot(baseSpread.pages[0])}
                   </div>
-                )}
-
-                {!isFlipping && (
-                  <div className="absolute inset-0">
-                    {renderHalf(spreads[currentSpreadIndex].pages[0], true)}
+                  <div style={{ width: PASTEL_PAGE_WIDTH, height: PASTEL_PAGE_HEIGHT }}>
+                    {renderPageSlot(baseSpread.pages[1])}
                   </div>
-                )}
+                </div>
 
-                {isFlipping && targetSpreadIndex !== null && (
-                  <div className="absolute inset-0 pointer-events-none z-30">
+                {/* 중앙 책등 섀도우 */}
+                <div className="flp-spine" aria-hidden="true" />
+
+                {/* 실제 책 넘김: 종이 한 장이 회전(앞면=현재 면, 뒷면=넘어갈 면) */}
+                {isFlipping && targetSpread && (
+                  <div
+                    className={`flp-turn ${flipDirection === 'next' ? 'flipping-next' : 'flipping-prev'}`}
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: flipDirection === 'next' ? PASTEL_PAGE_WIDTH : 0,
+                      width: PASTEL_PAGE_WIDTH,
+                      height: PASTEL_PAGE_HEIGHT,
+                      transformOrigin: flipDirection === 'next' ? 'left center' : 'right center',
+                      transformStyle: 'preserve-3d',
+                      zIndex: 30,
+                      pointerEvents: 'none',
+                    }}
+                  >
                     <div
-                      className={`absolute inset-0 flipping-page ${flipDirection === 'next' ? 'flipping-next' : 'flipping-prev'}`}
-                      style={{
-                        transformOrigin: flipDirection === 'next' ? 'left center' : 'right center',
-                        transformStyle: 'preserve-3d',
-                      }}
+                      className="flp-turn-face flp-turn-front"
+                      style={{ position: 'absolute', inset: 0, backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', overflow: 'hidden' }}
                     >
-                      <div className="absolute inset-0 bg-white overflow-hidden" style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
-                        {renderHalf(spreads[currentSpreadIndex].pages[0], true)}
-                      </div>
-                      <div className="absolute inset-0 bg-white overflow-hidden" style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}>
-                        {renderHalf(spreads[targetSpreadIndex].pages[0], true)}
-                      </div>
+                      {renderPageSlot(flipDirection === 'next' ? currentSpread.pages[1] : currentSpread.pages[0])}
+                    </div>
+                    <div
+                      className="flp-turn-face flp-turn-back"
+                      style={{ position: 'absolute', inset: 0, backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'rotateY(180deg)', overflow: 'hidden' }}
+                    >
+                      {renderPageSlot(flipDirection === 'next' ? targetSpread.pages[0] : targetSpread.pages[1])}
                     </div>
                   </div>
                 )}
