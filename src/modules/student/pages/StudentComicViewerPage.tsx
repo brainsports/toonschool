@@ -7,21 +7,13 @@ import type { EditorState } from '../components/editor/types'
 import StudentWorkspaceLayout from '../components/layout/StudentWorkspaceLayout'
 import StudentZoomControl from '../components/layout/StudentZoomControl'
 import { Volume2, VolumeX, ArrowLeft, ArrowRight, BookOpen, MoreVertical, ZoomIn, ZoomOut, Maximize, LayoutGrid, PlayCircle, Monitor } from 'lucide-react'
-import { COMMON_COVER_TEMPLATES, DEFAULT_COVER_TEMPLATE_ID } from '../data/coverTemplates'
 import type { WorldStory, OXQuestion } from '../services/studentUnitSummaryService'
 import { supabase } from '../../../shared/lib/supabase'
 import html2canvas from 'html2canvas'
 import { jsPDF } from 'jspdf'
 import { useAuth } from '../../../shared/contexts/AuthContext'
 import { createGrowthEvaluationForSharedComic } from '../services/studentGrowthService'
-import { FLIPBOOK_PAGE_HEIGHT, FLIPBOOK_PAGE_WIDTH } from '../components/viewer/LandscapePageLayout'
-import { buildComicPageInfo, buildQuizPageInfo, buildStoryPageInfo, getProjectKeywords } from '../components/viewer/landscapePageInfo'
-import FlipCoverPage from '../components/viewer/pages/FlipCoverPage'
-import FlipComicPage from '../components/viewer/pages/FlipComicPage'
-import FlipStoryPage from '../components/viewer/pages/FlipStoryPage'
-import FlipQuizPage from '../components/viewer/pages/FlipQuizPage'
-import FlipBackCoverPage from '../components/viewer/pages/FlipBackCoverPage'
-import FlipbookPageFrame from '../components/viewer/FlipbookPageFrame'
+import FlipbookPageFrame, { FLIPBOOK_LANDSCAPE_HEIGHT, FLIPBOOK_LANDSCAPE_WIDTH } from '../components/viewer/FlipbookPageFrame'
 import FlipCoverPagePastel from '../components/viewer/pages/FlipCoverPagePastel'
 import FlipComicPagePastel from '../components/viewer/pages/FlipComicPagePastel'
 import FlipStoryPagePastel from '../components/viewer/pages/FlipStoryPagePastel'
@@ -34,22 +26,8 @@ import '../styles/flipbook.css'
 import '../styles/flipbook-landscape-pastel.css'
 const BGM_PATH = '/audio/viewer/if-i-had-a-chicken.mp3';
 
-const PDF_PAGE_WIDTH = 1123;
-const PDF_PAGE_HEIGHT = 794;
-const PDF_SCALE = PDF_PAGE_WIDTH / FLIPBOOK_PAGE_WIDTH;
-
-const pdfPageBaseStyle: React.CSSProperties = {
-  width: `${PDF_PAGE_WIDTH}px`,
-  height: `${PDF_PAGE_HEIGHT}px`,
-  overflow: 'hidden',
-  backgroundColor: '#ffffff',
-  color: '#111827',
-  border: 'none',
-  boxShadow: 'none',
-  transform: 'none',
-  position: 'relative',
-  boxSizing: 'border-box',
-};
+const PDF_PAGE_WIDTH = FLIPBOOK_LANDSCAPE_WIDTH;
+const PDF_PAGE_HEIGHT = FLIPBOOK_LANDSCAPE_HEIGHT;
 
 // 16:9 파스텔 단일 페이지 논리 크기(양면 펼침 기준)
 const PASTEL_PAGE_WIDTH = 1600
@@ -389,114 +367,7 @@ export default function StudentComicViewerPage() {
     )
   }
 
-  // --- Flipbook page rendering (MY TOON BOOK) ---
-  const renderFlipPage = (page: ViewerPage, pageNum: number) => {
-    const backCover = pages.find((candidate) => candidate.type === 'back-cover')
-    const backData = backCover?.type === 'back-cover' ? backCover.data : null
-    const subject = backData?.subjectName || projectData.subject
-    const unit = backData?.unitName || projectData.subUnit || projectData.mainUnit
-    const firstComicPage = pages.find((candidate) => candidate.type === 'comic-cut' && candidate.data?.backgroundImageUrl)
-    const firstComicImage = firstComicPage?.type === 'comic-cut' ? firstComicPage.data?.backgroundImageUrl : undefined
-    const keywords = getProjectKeywords(projectData)
-    const comicCuts = pages.filter((candidate) => candidate.type === 'comic-cut')
-    const quizPages = pages.filter((candidate) => candidate.type === 'ox-quiz')
-    const totalPages = pages.length
-
-    if (page.type === 'front-cover') {
-      const state = page.data
-      const bgTemplate = COMMON_COVER_TEMPLATES.find((template) => template.id === state?.coverTemplateId)
-        || COMMON_COVER_TEMPLATES.find((template) => template.id === DEFAULT_COVER_TEMPLATE_ID)
-      const coverImage = state?.background || firstComicImage || bgTemplate?.imageUrl || projectData.cover?.imageUrl
-      return (
-        <FlipCoverPage
-          subject={subject}
-          title={projectData.topicTitle || '나의 학습 만화'}
-          subtitle={unit || projectData.selectedStoryDescription}
-          keywords={keywords}
-          authorName={backData?.authorName}
-          gradeClassInfo={backData?.gradeClassInfo}
-          createdDate={backData?.createdDate}
-          grade={projectData.grade}
-          coverImage={coverImage}
-        />
-      )
-    }
-
-    if (page.type === 'comic-cut') {
-      const info = buildComicPageInfo(projectData, page.cutNum)
-      const order = comicCuts.findIndex((candidate) => candidate === page) + 1
-      return (
-        <FlipComicPage
-          subject={subject}
-          unit={unit}
-          sceneTitle={info.title || `만화컷 ${page.cutNum}`}
-          keyPoint={info.keyQuestion}
-          cutNum={order || page.cutNum}
-          totalCuts={comicCuts.length || 6}
-          data={page.data}
-          pageNumber={pageNum}
-          totalPages={totalPages}
-        />
-      )
-    }
-
-    if (page.type.startsWith('story-')) {
-      const storyType: WorldStory['type'] = page.type === 'story-history' ? 'history' : page.type === 'story-current' ? 'latest' : 'life'
-      const data = page.data
-      if (!data) return null
-      const info = buildStoryPageInfo(projectData, storyType, data)
-      const icon = storyType === 'history' ? '📜' : storyType === 'latest' ? '🛰️' : '🏠'
-      return (
-        <FlipStoryPage
-          subject={subject}
-          unit={unit}
-          chipLabel={info.pageType}
-          icon={icon}
-          title={data.title || info.title}
-          content={data.content}
-          highlightLabel={info.missionLabel}
-          highlightText={info.mission}
-          questionText={info.keyQuestion}
-          pageNumber={pageNum}
-          totalPages={totalPages}
-        />
-      )
-    }
-
-    if (page.type === 'ox-quiz') {
-      const data = page.data
-      if (!data) return null
-      const info = buildQuizPageInfo(projectData, page.questionNum)
-      return (
-        <FlipQuizPage
-          subject={subject}
-          unit={unit}
-          questionNum={page.questionNum}
-          totalQuestions={quizPages.length || 5}
-          question={data.question}
-          correctAnswer={data.answer}
-          selectedAnswer={quizAnswers[page.questionNum]}
-          explanation={info.mission}
-          onSelect={(answer) => setQuizAnswers((current) => ({ ...current, [page.questionNum]: answer }))}
-          pageNumber={pageNum}
-          totalPages={totalPages}
-        />
-      )
-    }
-
-    const data = page.data || {}
-    return (
-      <FlipBackCoverPage
-        workTitle={projectData.topicTitle || data.topicName || '나의 학습 만화'}
-        authorName={data.authorName}
-        gradeClassInfo={data.gradeClassInfo}
-        createdDate={data.createdDate}
-        heroImage={firstComicImage}
-      />
-    )
-  }
-
-  // 신규 파스텔 페이지 렌더(화면 전용). 캡처/PDF/공유는 기존 renderFlipPage 경로 유지(5A 미수정).
+  // Stage 5B: 화면, PDF, 공유 캡처 모두 같은 파스텔 16:9 페이지 모델을 사용한다.
   const comicCutCount = pages.filter((p) => p.type === 'comic-cut').length || 6
   const storyCount = pages.filter((p) => p.type.startsWith('story-')).length || 3
   const quizCount = pages.filter((p) => p.type === 'ox-quiz').length || 5
@@ -546,14 +417,6 @@ export default function StudentComicViewerPage() {
       </FlipbookPageFrame>
     )
   }
-
-  const renderPdfPage = (page: ViewerPage, pageNum: number) => (
-    <div style={pdfPageBaseStyle}>
-      <div style={{ width: FLIPBOOK_PAGE_WIDTH, height: FLIPBOOK_PAGE_HEIGHT, transform: `scale(${PDF_SCALE})`, transformOrigin: 'top left' }}>
-        {renderFlipPage(page, pageNum)}
-      </div>
-    </div>
-  )
 
   const getPageIndicatorText = () => {
     if (spreads.length === 0) return '0 / 0';
@@ -1077,24 +940,24 @@ export default function StudentComicViewerPage() {
           position: 'fixed',
           left: '-99999px',
           top: 0,
-          width: '1123px',
+          width: `${PDF_PAGE_WIDTH}px`,
           pointerEvents: 'none',
           zIndex: -1
         }}
       >
-        {pages.map((page, index) => (
+        {pages.map((_, index) => (
           <div
             key={`pdf-page-${index}`}
             data-pdf-page="true"
             style={{
-              width: '1123px',
-              height: '794px',
+              width: `${PDF_PAGE_WIDTH}px`,
+              height: `${PDF_PAGE_HEIGHT}px`,
               overflow: 'hidden',
               position: 'relative',
               backgroundColor: '#ffffff'
             }}
           >
-            {renderPdfPage(page, index + 1)}
+            {renderPageSlot(index)}
           </div>
         ))}
       </div>
