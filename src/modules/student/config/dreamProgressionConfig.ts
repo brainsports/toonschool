@@ -191,6 +191,35 @@ export const THEME_GRADIENTS: Record<string, string> = {
 /** level 1(꿈의 궁전)은 기존 정원 webp 배경을 쓰므로 그라디언트 대상에서 제외. */
 export const DEFAULT_BACKGROUND_LEVEL = 1
 
+/**
+ * 레벨별 꿈의 정원 배경 이미지 경로(public 기준 절대경로).
+ *
+ * - 레벨1: 기존 정원 배경(student-ui.css .dg-background-image 가 사용 중인 webp). 경로/파일 변경 금지.
+ * - 레벨2~5: /public/images 에 준비된 실제 이미지.
+ * - 레벨6~10: 아직 이미지가 없어 매핑에서 제외. getGardenBackgroundUrl() 이 레벨1 배경으로 폴백.
+ *   새 이미지가 준비되면 이 맵에 한 줄 추가만 하면 자동 반영된다(임의 배경 연결 금지).
+ *
+ * 배경은 오직 '학생의 실제 레벨 값 하나'만 기준으로 자동 선택된다(수동 선택 아님).
+ */
+export const GARDEN_BACKGROUND_BY_LEVEL: Record<number, string> = {
+  1: '/images/student_garden_bg.webp',
+  2: '/images/level-2-starlight-garden.png',
+  3: '/images/level-3-cloud-library.png',
+  4: '/images/level-4-magic-forest.png',
+  5: '/images/level-5-adventure-island.png',
+}
+
+/** 기본(레벨1) 배경 이미지 URL — 로딩 실패/미지원 레벨 폴백용. */
+export const GARDEN_BACKGROUND_FALLBACK = GARDEN_BACKGROUND_BY_LEVEL[1]
+
+/**
+ * 레벨별 배경 이미지 URL 반환.
+ * 이미지가 없는 레벨(6~10)이거나 범위 밖이면 레벨1 배경으로 폴백한다.
+ */
+export function getGardenBackgroundUrl(level: number): string {
+  return GARDEN_BACKGROUND_BY_LEVEL[level] ?? GARDEN_BACKGROUND_FALLBACK
+}
+
 /** 아이템 등급 → 기본 점수. symbol(레벨 상징)은 0점. */
 export const RARITY_BASE_POINTS: Record<ItemRarity, number> = {
   common: 50,

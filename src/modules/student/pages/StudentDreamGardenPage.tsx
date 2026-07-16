@@ -30,7 +30,6 @@ import {
   grantLuckyRewardIfNeeded,
   saveGardenPlacement,
   updateGardenPlacement,
-  updateGardenBackground,
 } from '../services/dreamGardenService'
 import { useDreamProgress } from '../components/dream/useDreamProgress'
 import DreamRankingModal from '../components/dream/DreamRankingModal'
@@ -40,8 +39,8 @@ import {
   DEFAULT_BACKGROUND_LEVEL,
   RARITY_BASE_POINTS,
   RARITY_LABEL,
-  THEME_GRADIENTS,
-  getChapter,
+  GARDEN_BACKGROUND_FALLBACK,
+  getGardenBackgroundUrl,
 } from '../config/dreamProgressionConfig'
 import { getUnlockedLevels } from '../services/dreamScoreService'
 import '../styles/dream-progression.css'
@@ -379,6 +378,29 @@ function GardenPlacementItem({
   )
 }
 
+/**
+ * 현재 레벨에 해당하는 정원 배경 이미지 URL을 결정한다.
+ * - 레벨은 '학생의 실제 레벨(dream.level)' 하나만 기준.
+ * - 이미지를 미리 로드(preload)해 보고, 로딩 실패/404 시 레벨1 배경으로 안전 폴백.
+ *   → 단색 빈 화면이 되는 것을 방지.
+ */
+function useGardenBackgroundUrl(level: number): string {
+  const target = getGardenBackgroundUrl(level)
+  const [url, setUrl] = useState<string>(target)
+  useEffect(() => {
+    setUrl(target)
+    const img = new Image()
+    img.src = target
+    img.onload = () => setUrl(target)
+    img.onerror = () => setUrl(GARDEN_BACKGROUND_FALLBACK)
+    return () => {
+      img.onload = null
+      img.onerror = null
+    }
+  }, [target])
+  return url
+}
+
 export default function StudentDreamGardenPage() {
   const { user, profile, loading: authLoading } = useAuth()
   const studentId = profile?.role === 'student' ? profile.id : user?.id
@@ -394,7 +416,6 @@ export default function StudentDreamGardenPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [highlightId, setHighlightId] = useState<string | null>(null)
   const [unlockedLevels, setUnlockedLevels] = useState<number[]>([DEFAULT_BACKGROUND_LEVEL])
-  const [selectedBgLevel, setSelectedBgLevel] = useState<number>(DEFAULT_BACKGROUND_LEVEL)
   const [isRankingOpen, setIsRankingOpen] = useState(false)
   const navigate = useNavigate()
   const { progress: dream } = useDreamProgress(studentId, { showLevelUpModal: false })
@@ -785,30 +806,9 @@ export default function StudentDreamGardenPage() {
       })
   }, [studentId, dream.level])
 
-  // garden.background_code → 선택 배경 레벨 동기화
-  useEffect(() => {
-    if (garden?.background_code) {
-      const ch = DREAM_CHAPTERS.find((c) => c.backgroundKey === garden.background_code)
-      if (ch) setSelectedBgLevel(ch.level)
-    }
-  }, [garden?.background_code])
-
-  const selectedChapter = getChapter(selectedBgLevel)
-  const dreamChapter = getChapter(dream.level)
-  const isDefaultBg = selectedBgLevel === DEFAULT_BACKGROUND_LEVEL
-  const bgStyle = isDefaultBg ? undefined : { backgroundImage: THEME_GRADIENTS[selectedChapter.themeKey] }
-
-  async function handleSelectBackground(level: number) {
-    if (!unlockedLevels.includes(level)) return // 잠긴 배경 선택 불가
-    setSelectedBgLevel(level)
-    if (!studentId) return
-    const ch = getChapter(level)
-    try {
-      await updateGardenBackground(studentId, ch.backgroundKey)
-    } catch {
-      /* 저장 실패해도 시각적 전환은 유지 */
-    }
-  }
+  // 배경은 '학생의 실제 레벨(dream.level)' 하나만 기준으로 자동 선택.
+  // 이미지 preload 실패/404 시 useGardenBackgroundUrl 이 레벨1 배경으로 폴백한다.
+  const bgUrl = useGardenBackgroundUrl(dream.level)
 
   const handleBackgroundPointerDown = (e: React.PointerEvent) => {
     if (e.target === e.currentTarget) {
@@ -821,27 +821,16 @@ export default function StudentDreamGardenPage() {
       <main className="dream-garden-page">
         <section className="dream-garden-stage" aria-label="나의 꿈의 정원">
 
-          {/* ── 배경 이미지 (레벨1=기존 정원 webp, 레벨2~10=테마 그라디언트) ── */}
-          <div className="dg-background-image" style={bgStyle} />
+          {/* ── 배경 이미지: 학생의 실제 레벨(dream.level) 기준 자동 선택.
+                레벨1=기존 정원 webp(경로 유지), 레벨2~5=준비된 이미지, 6~10/로딩실패=레벨1 폴백 ── */}
+          <div className="dg-background-image" style={{ backgroundImage: `url(${bgUrl})` }} />
 
-          {/* ── 상단 정보바: 레벨/꿈점수/장면/진행률/보물지도/랭킹 ── */}
+          {/* ── 상태바: LV / 꿈점수(P) / 보물지도 / 랭킹 (단순화) ── */}
           <div className="dg-topbar">
             <div className="dg-topbar-level">LV.{dream.level}</div>
             <div className="dg-topbar-score">
               <Trophy className="w-4 h-4" />
-              <strong>{dream.dreamScore.toLocaleString()}</strong> 꿈점수
-            </div>
-            <div className="dg-topbar-scene" title={dreamChapter.chapterTitle}>
-              <span className="dg-topbar-scene-emoji">{dreamChapter.symbolEmoji}</span>
-              <span className="dg-topbar-scene-name">{dreamChapter.chapterTitle}</span>
-            </div>
-            <div className="dg-topbar-progress">
-              <div className="dg-topbar-progress-bar">
-                <span style={{ width: `${Math.round(dream.levelProgressRate * 100)}%` }} />
-              </div>
-              <span className="dg-topbar-progress-text">
-                {dream.level >= 10 ? '최고 레벨 🎉' : `다음 장면까지 ${dream.pointsToNextLevel.toLocaleString()}점`}
-              </span>
+              <span><strong>{dream.dreamScore.toLocaleString()}</strong>P</span>
             </div>
             <button type="button" className="dg-topbar-btn" onClick={() => navigate('/student/treasure-map')} title="보물지도">
               <MapIcon className="w-4 h-4" /><span className="hidden lg:inline">보물지도</span>
@@ -849,28 +838,6 @@ export default function StudentDreamGardenPage() {
             <button type="button" className="dg-topbar-btn" onClick={() => setIsRankingOpen(true)} title="우리 반 랭킹">
               <Trophy className="w-4 h-4" /><span className="hidden lg:inline">랭킹</span>
             </button>
-          </div>
-
-          {/* ── 배경 전환기(해제된 장면만 선택 가능) ── */}
-          <div className="dg-bg-switcher" role="group" aria-label="장면 배경 선택">
-            {DREAM_CHAPTERS.map((ch) => {
-              const unlocked = unlockedLevels.includes(ch.level)
-              const active = ch.level === selectedBgLevel
-              return (
-                <button
-                  key={ch.level}
-                  type="button"
-                  disabled={!unlocked}
-                  onClick={() => handleSelectBackground(ch.level)}
-                  className={`dg-bg-chip${active ? ' dg-bg-chip-active' : ''}${unlocked ? '' : ' dg-bg-chip-locked'}`}
-                  title={unlocked ? ch.chapterTitle : `${ch.chapterTitle} (활동점수 ${ch.minActivityScore.toLocaleString()}점 필요)`}
-                >
-                  <span className="dg-bg-chip-emoji">{ch.symbolEmoji}</span>
-                  <span className="dg-bg-chip-level">{ch.level}</span>
-                  {!unlocked && <span className="dg-bg-chip-lock">🔒</span>}
-                </button>
-              )
-            })}
           </div>
 
           {/* ── 꽃비 효과 (정원이 살아있는 느낌, 매우 은은함 / 클릭·드래그 간섭 없음) ── */}
