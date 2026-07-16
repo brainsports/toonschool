@@ -20,6 +20,7 @@ import { ensureTodayAttendance, getCurrentAttendanceMonth, getMonthlyAttendance,
 import { getStudentGrowthDashboard } from '../services/studentGrowthService'
 import { grantAttendanceReward } from '../services/dreamGardenService'
 import type { StudentGrowthDashboardData } from '../types/studentGrowth'
+import DreamPalaceDashboardCard from '../components/dream/DreamPalaceDashboardCard'
 
 
 
@@ -200,12 +201,16 @@ export default function StudentMyPage() {
                   <span>툰스쿨 에디터 입장</span>
                 </button>
               </div>
-              <img 
-                src="/images/toonschool/login-hero.png" 
-                alt="Study Hero" 
+              <img
+                src="/images/toonschool/login-hero.png"
+                alt="Study Hero"
                 className="absolute right-0 bottom-0 h-[90%] md:h-[95%] object-contain object-right-bottom transform translate-x-4 opacity-90"
               />
             </div>
+
+            {/* 꿈의 궁전 요약 카드 (레벨/점수/진행/바로가기) */}
+            <DreamPalaceDashboardCard studentId={profile?.id ?? user?.id} />
+
             {/* Stats Cards & Growth Chart */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Card 1: 완성 작품 */}

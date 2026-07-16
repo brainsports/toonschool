@@ -369,7 +369,7 @@ export async function grantAttendanceReward(studentId: string): Promise<RewardRe
   if (existingReward) {
     return {
       status: 'already_claimed',
-      message: '?대? 諛쏆? 蹂댁긽?댁뿉??',
+      message: '오늘은 이미 출석 보상을 받았어요.',
       item: null,
       studentItem: null,
       rewardType: 'attendance',

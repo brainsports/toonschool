@@ -195,11 +195,10 @@ export const DEFAULT_BACKGROUND_LEVEL = 1
  * 레벨별 꿈의 정원 배경 이미지 경로(public 기준 절대경로).
  *
  * - 레벨1: 기존 정원 배경(student-ui.css .dg-background-image 가 사용 중인 webp). 경로/파일 변경 금지.
- * - 레벨2~5: /public/images 에 준비된 실제 이미지.
- * - 레벨6~10: 아직 이미지가 없어 매핑에서 제외. getGardenBackgroundUrl() 이 레벨1 배경으로 폴백.
- *   새 이미지가 준비되면 이 맵에 한 줄 추가만 하면 자동 반영된다(임의 배경 연결 금지).
+ * - 레벨2~10: /public/images 에 준비된 실제 이미지(level-N-*.png). 1~10 전 레벨 실제 이미지 매핑.
  *
  * 배경은 오직 '학생의 실제 레벨 값 하나'만 기준으로 자동 선택된다(수동 선택 아님).
+ * useGardenBackgroundUrl() 이 이미지를 preload 한 뒤 로딩 실패/404 시 레벨1 배경으로 폴백한다.
  */
 export const GARDEN_BACKGROUND_BY_LEVEL: Record<number, string> = {
   1: '/images/student_garden_bg.webp',
@@ -207,6 +206,11 @@ export const GARDEN_BACKGROUND_BY_LEVEL: Record<number, string> = {
   3: '/images/level-3-cloud-library.png',
   4: '/images/level-4-magic-forest.png',
   5: '/images/level-5-adventure-island.png',
+  6: '/images/level-6-time-museum.png',
+  7: '/images/level-7-star-promise.png',
+  8: '/images/level-8-invention-city.png',
+  9: '/images/level-9-sky-castle-gate.png',
+  10: '/images/level-10-dream-storybook.png',
 }
 
 /** 기본(레벨1) 배경 이미지 URL — 로딩 실패/미지원 레벨 폴백용. */
@@ -214,10 +218,177 @@ export const GARDEN_BACKGROUND_FALLBACK = GARDEN_BACKGROUND_BY_LEVEL[1]
 
 /**
  * 레벨별 배경 이미지 URL 반환.
- * 이미지가 없는 레벨(6~10)이거나 범위 밖이면 레벨1 배경으로 폴백한다.
+ * 매핑이 없는 범위 밖 레벨이면 레벨1 배경으로 폴백한다.
  */
 export function getGardenBackgroundUrl(level: number): string {
   return GARDEN_BACKGROUND_BY_LEVEL[level] ?? GARDEN_BACKGROUND_FALLBACK
+}
+
+// ─────────────────────────────────────────────────────────────────
+// 레벨별 아이템 카탈로그 (레벨 2~10).
+// 레벨 1의 30개 아이템은 기존 시드(출석/만화 보상)로 지급되므로 여기서 제외.
+// 각 레벨 달성 시 해당 레벨 아이템이 자동 지급된다(dreamLevelItemService.ensureLevelItems).
+//
+// - code: DB items.code (전역 unique). 레벨1과 충돌하지 않도록 lv{N}_ 접두어.
+// - image: 파일명만. 실제 경로는 getLevelItemImageUrl(level, image) 로 조합.
+// - category/rarity: DB CHECK 제약(items_category_check / items_rarity_check) 준수.
+// ─────────────────────────────────────────────────────────────────
+export type ItemCategory = 'nature' | 'animal' | 'spirit' | 'decor' | 'sky' | 'legend'
+export type GrantableRarity = Exclude<ItemRarity, 'symbol'>
+
+export interface LevelItemSpec {
+  code: string
+  name: string
+  category: ItemCategory
+  rarity: GrantableRarity
+  description: string
+  /** 파일명(예: 'firefly.png'). 경로는 getLevelItemImageUrl 로 조합. */
+  image: string
+  /** 정원 자동 배치 기본 크기(미지정 시 1). */
+  defaultScale?: number
+}
+
+const li = (
+  level: number,
+  slug: string,
+  name: string,
+  category: ItemCategory,
+  rarity: GrantableRarity,
+  description: string,
+  defaultScale = 0.9,
+): LevelItemSpec => ({
+  code: `lv${level}_${slug.replace(/-/g, '_')}`,
+  name,
+  category,
+  rarity,
+  description,
+  image: `${slug}.png`,
+  defaultScale,
+})
+
+/**
+ * 레벨 2~10 의 아이템 목록. 각 10개씩.
+ * 레벨이 오를수록 등급이 높은(희귀/전설) 아이템 비중이 커진다.
+ */
+export const LEVEL_ITEM_CATALOG: Record<number, LevelItemSpec[]> = {
+  2: [
+    li(2, 'small-flower-seed', '별빛 씨앗', 'nature', 'common', '별빛 정원에 처음 심는 씨앗이에요.'),
+    li(2, 'sparkling-grass', '반짝 별풀', 'nature', 'common', '별빛을 머금고 반짝이는 풀이에요.'),
+    li(2, 'pink-flower', '별빛 꽃', 'nature', 'common', '별빛 아래 피어난 분홍 꽃이에요.'),
+    li(2, 'small-star-piece', '작은 별조각', 'sky', 'common', '밤하늘에서 떨어진 별조각이에요.'),
+    li(2, 'yellow-butterfly', '별빛 나비', 'animal', 'common', '별빛을 따라 날아다니는 나비예요.'),
+    li(2, 'flower-path', '별빛 꽃길', 'decor', 'uncommon', '정원을 예쁘게 이어 주는 꽃길이에요.'),
+    li(2, 'moonlight-mushroom', '달빛 버섯', 'nature', 'uncommon', '달빛을 머금고 빛나는 버섯이에요.'),
+    li(2, 'firefly', '반딧불', 'animal', 'uncommon', '어둠을 밝혀 주는 반딧불이에요.'),
+    li(2, 'waterdrop-spirit', '물방울 정령', 'spirit', 'rare', '맑은 물방울에서 태어난 정령이에요.'),
+    li(2, 'aurora-tree', '오로라 나무', 'nature', 'epic', '하늘빛 오로라를 품은 특별한 나무예요.'),
+  ],
+  3: [
+    li(3, 'tiny-telescope', '작은 망원경', 'decor', 'common', '멀리 있는 것을 보게 해 주는 망원경이에요.'),
+    li(3, 'feather-quill', '깃펜', 'decor', 'common', '이야기를 적을 때 쓰는 깃펜이에요.'),
+    li(3, 'cloud-desk', '구름 책상', 'decor', 'common', '구름으로 만든 포근한 책상이에요.'),
+    li(3, 'cloud-bookshelf', '구름 책장', 'decor', 'uncommon', '책을 가득 담은 구름 책장이에요.'),
+    li(3, 'magic-magnifier', '마법 돋보기', 'decor', 'uncommon', '숨겨진 것을 찾아주는 돋보기예요.'),
+    li(3, 'sky-globe', '하늘 지구본', 'sky', 'uncommon', '하늘의 모양을 담은 지구본이에요.'),
+    li(3, 'wisdom-bookmark', '지혜의 책갈피', 'decor', 'rare', '읽던 자리를 기억하는 책갈피예요.'),
+    li(3, 'flying-book', '날아다니는 책', 'spirit', 'rare', '스스로 날아다니는 신비한 책이에요.'),
+    li(3, 'sentence-fragments', '사라진 문장', 'spirit', 'epic', '도서관에서 잃어버린 문장 조각이에요.'),
+    li(3, 'golden-book', '황금책', 'legend', 'legendary', '모든 지혜를 담은 전설의 책이에요.'),
+  ],
+  4: [
+    li(4, 'tiny-treehouse', '작은 나무집', 'decor', 'common', '나무 위에 지은 아담한 집이에요.'),
+    li(4, 'mushroom-lamp', '버섯 램프', 'decor', 'common', '버섯 모양의 포근한 램프예요.'),
+    li(4, 'helping-leaf', '도움의 나뭇잎', 'nature', 'common', '친구를 돕고 싶게 만드는 나뭇잎이에요.'),
+    li(4, 'flower-bridge', '꽃다리', 'decor', 'uncommon', '꽃으로 만든 예쁜 다리예요.'),
+    li(4, 'forest-mailbox', '숲 우체통', 'decor', 'uncommon', '숲 친구들에게 편지를 받는 우체통이에요.'),
+    li(4, 'crystal-pond', '수정 연못', 'nature', 'uncommon', '맑은 수정빛 연못이에요.'),
+    li(4, 'glowing-stone', '빛나는 돌', 'nature', 'rare', '어둠 속에서도 빛나는 돌이에요.'),
+    li(4, 'fox-spirit', '여우 정령', 'spirit', 'rare', '숲을 지켜 주는 여우 정령이에요.'),
+    li(4, 'wisdom-tree', '지혜의 나무', 'nature', 'epic', '오래된 지혜를 품은 나무예요.'),
+    li(4, 'golden-deer', '황금 사슴', 'animal', 'legendary', '숲 깊은 곳의 전설의 사슴이에요.'),
+  ],
+  5: [
+    li(5, 'sandcastle', '모래성', 'decor', 'common', '해변에 쌓은 멋진 모래성이에요.'),
+    li(5, 'palm-tree', '야자수', 'nature', 'common', '바닷가에 서 있는 야자수예요.'),
+    li(5, 'lifebuoy', '구명튜브', 'decor', 'common', '안전을 지켜 주는 구명튜브예요.'),
+    li(5, 'small-lighthouse', '작은 등대', 'decor', 'uncommon', '배 길을 밝혀 주는 등대예요.'),
+    li(5, 'sea-map', '바다 지도', 'decor', 'uncommon', '보물을 찾아주는 바다 지도예요.'),
+    li(5, 'whale-fountain', '고래 분수', 'animal', 'uncommon', '물을 뿜어 올리는 고래 분수예요.'),
+    li(5, 'explorer-compass', '탐험가 나침반', 'decor', 'rare', '길을 잃지 않게 해 주는 나침반이에요.'),
+    li(5, 'adventure-ship', '탐험선', 'decor', 'epic', '넓은 바다를 누비는 탐험선이에요.'),
+    li(5, 'golden-anchor', '황금 닻', 'legend', 'legendary', '어떤 폭풍도 견디는 전설의 닻이에요.'),
+    li(5, 'treasure-chest', '보물상자', 'legend', 'legendary', '비밀 지도 끝의 보물상자예요.'),
+  ],
+  6: [
+    li(6, 'clock-fragment', '시계 조각', 'decor', 'common', '멈춘 시계에서 떨어진 조각이에요.'),
+    li(6, 'time-key', '시간의 열쇠', 'decor', 'common', '시간의 문을 여는 열쇠예요.'),
+    li(6, 'museum-lantern', '박물관 등불', 'decor', 'common', '박물관을 밝히는 오래된 등불이에요.'),
+    li(6, 'memory-frame', '추억 액자', 'decor', 'uncommon', '소중한 추억을 담는 액자예요.'),
+    li(6, 'hourglass-bottle', '모래시계 병', 'decor', 'uncommon', '시간이 담긴 신비한 병이에요.'),
+    li(6, 'time-bell', '시간의 종', 'decor', 'uncommon', '시간을 알려 주는 종이에요.'),
+    li(6, 'crystal-pendulum', '수정 진자', 'spirit', 'rare', '시간의 흐름을 보여 주는 수정이에요.'),
+    li(6, 'golden-gear', '황금 톱니바퀴', 'decor', 'rare', '오래도록 굴러가는 황금 톱니예요.'),
+    li(6, 'mini-clock-tower', '미니 시계탑', 'decor', 'epic', '박물관 한가운데의 시계탑이에요.'),
+    li(6, 'time-crown', '시간의 왕관', 'legend', 'legendary', '시간을 다스리는 전설의 왕관이에요.'),
+  ],
+  7: [
+    li(7, 'star-lantern', '별빛 등불', 'sky', 'common', '별빛을 모은 등불이에요.'),
+    li(7, 'moon-ribbon', '달빛 리본', 'decor', 'common', '달빛으로 짠 부드러운 리본이에요.'),
+    li(7, 'stardust-bottle', '별가루 병', 'decor', 'common', '별가루를 담은 반짝이는 병이에요.'),
+    li(7, 'promise-star', '약속의 별', 'sky', 'uncommon', '약속을 기억하게 해 주는 별이에요.'),
+    li(7, 'moon-cradle', '달 요람', 'decor', 'uncommon', '달빛 아래 포근한 요람이에요.'),
+    li(7, 'constellation-ring', '별자리 반지', 'decor', 'uncommon', '별자리 무늬의 반지예요.'),
+    li(7, 'nebula-orb', '성운 구슬', 'sky', 'rare', '우주의 성운을 담은 구슬이에요.'),
+    li(7, 'galaxy-swing', '은하 그네', 'decor', 'rare', '은하 속에서 높이 뜨는 그네예요.'),
+    li(7, 'comet-bridge', '혜성 다리', 'sky', 'epic', '혜성이 만들어 낸 반짝이는 다리예요.'),
+    li(7, 'promise-crown', '약속의 왕관', 'legend', 'legendary', '별들 사이의 약속을 새긴 왕관이에요.'),
+  ],
+  8: [
+    li(8, 'spring-chair', '스프링 의자', 'decor', 'common', '통통 튀어 오르는 의자예요.'),
+    li(8, 'windmill-cart', '풍차 수레', 'decor', 'common', '바람으로 움직이는 수레예요.'),
+    li(8, 'gear-flower', '톱니바퀴 꽃', 'nature', 'common', '톱니바퀴로 피어난 꽃이에요.'),
+    li(8, 'idea-bulb', '아이디어 전구', 'decor', 'uncommon', '반짝 떠오른 생각을 담은 전구예요.'),
+    li(8, 'mini-robot', '미니 로봇', 'decor', 'uncommon', '도움을 주는 작은 로봇이에요.'),
+    li(8, 'inventor-toolbox', '발명가 도구상자', 'decor', 'uncommon', '온갖 도구가 든 상자예요.'),
+    li(8, 'steam-fountain', '증기 분수', 'decor', 'rare', '증기를 뿜어 올리는 분수예요.'),
+    li(8, 'moving-bridge', '움직이는 다리', 'decor', 'rare', '스스로 열리고 닫히는 다리예요.'),
+    li(8, 'tiny-airship', '작은 비행선', 'sky', 'epic', '하늘을 나는 멋진 비행선이에요.'),
+    li(8, 'invention-core', '발명의 핵심', 'legend', 'legendary', '도시를 움직이는 전설의 동력이에요.'),
+  ],
+  9: [
+    li(9, 'door-lantern', '문 등불', 'decor', 'common', '큰 문을 밝히는 등불이에요.'),
+    li(9, 'cloud-pillar', '구름 기둥', 'decor', 'common', '하늘성을 떠받치는 기둥이에요.'),
+    li(9, 'sky-crystal', '하늘 수정', 'sky', 'common', '투명하게 빛나는 하늘 수정이에요.'),
+    li(9, 'crystal-banner', '수정 깃발', 'decor', 'uncommon', '빛으로 수놓은 깃발이에요.'),
+    li(9, 'guardian-bell', '수호의 종', 'decor', 'uncommon', '성을 지키는 종이에요.'),
+    li(9, 'floating-stair', '떠다니는 계단', 'decor', 'uncommon', '공중에 떠 있는 신비한 계단이에요.'),
+    li(9, 'light-shield', '빛의 방패', 'decor', 'rare', '빛으로 만든 든든한 방패예요.'),
+    li(9, 'royal-emblem', '왕가의 문장', 'decor', 'rare', '하늘성 왕가의 문장이에요.'),
+    li(9, 'sky-key', '하늘의 열쇠', 'decor', 'epic', '마지막 문을 여는 열쇠예요.'),
+    li(9, 'final-lock', '마지막 자물쇠', 'legend', 'legendary', '용기 있는 자만 여는 자물쇠예요.'),
+  ],
+  10: [
+    li(10, 'magic-page', '마법의 페이지', 'decor', 'uncommon', '스스로 글자가 써지는 페이지예요.'),
+    li(10, 'memory-feather', '추억의 깃털', 'animal', 'uncommon', '소중한 기억을 담은 깃털이에요.'),
+    li(10, 'story-lamp', '이야기 등불', 'decor', 'uncommon', '이야기를 비추는 따뜻한 등불이에요.'),
+    li(10, 'golden-bookmark', '황금 책갈피', 'decor', 'rare', '완성된 책의 황금 책갈피예요.'),
+    li(10, 'star-seal', '별의 인장', 'decor', 'rare', '완성된 이야기를 인증하는 인장이에요.'),
+    li(10, 'dream-orb', '꿈의 구슬', 'spirit', 'rare', '모든 꿈이 담긴 반짝이는 구슬이에요.'),
+    li(10, 'book-garden', '책 정원', 'nature', 'epic', '책 속에서 피어난 정원이에요.'),
+    li(10, 'final-star-tree', '마지막 별나무', 'nature', 'epic', '별빛을 가득 머금은 나무예요.'),
+    li(10, 'story-crown', '이야기의 왕관', 'legend', 'legendary', '완성된 이야기책의 왕관이에요.'),
+    li(10, 'dream-book', '꿈의 책', 'legend', 'legendary', '모든 꿈이 하나로 묶인 전설의 책이에요.'),
+  ],
+}
+
+/** 레벨 범위 보정 후 해당 레벨 아이템 목록 반환(없으면 빈 배열). */
+export function getLevelItems(level: number): LevelItemSpec[] {
+  return LEVEL_ITEM_CATALOG[level] ?? []
+}
+
+/** 레벨 아이템의 public 이미지 경로 조합. */
+export function getLevelItemImageUrl(level: number, image: string): string {
+  return `/images/toonschool/dream-garden/items/level-${level}/${image}`
 }
 
 /** 아이템 등급 → 기본 점수. symbol(레벨 상징)은 0점. */
@@ -271,6 +442,8 @@ export const DreamIdempotencyKeys = {
   levelBonus: (level: number) => `dream:level:${level}`,
   /** 레벨 상징 아이템(0점) — 학생당 레벨별 1회 */
   levelSymbol: (level: number) => `dream:symbol:${level}`,
+  /** 레벨 달성 아이템(0점, 정원 배치용) — 학생당 (레벨,아이템코드) 별 1회 */
+  levelItem: (level: number, code: string) => `dream:item:${level}:${code}`,
   /** 특별 미션 */
   specialMission: (missionId: string) => `dream:special:${missionId}`,
   /** 선생님 칭찬 — teacher_messages.id 를 자연 멱등키로 사용 */
@@ -282,6 +455,7 @@ export const EVENT_SOURCE_PREFIX = {
   streak5: 'dream:streak5:',
   level: 'dream:level:',
   symbol: 'dream:symbol:',
+  item: 'dream:item:',
   special: 'dream:special:',
 } as const
 

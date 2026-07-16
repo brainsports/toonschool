@@ -718,6 +718,15 @@ export default function StudentDreamGardenPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, studentId])
 
+  // 레벨업 등으로 새 아이템이 지급되면 정원 데이터를 다시 불러와 즉시 반영.
+  useEffect(() => {
+    if (!studentId) return
+    const handler = () => void loadGardenData()
+    window.addEventListener('studentLootItemsChanged', handler)
+    return () => window.removeEventListener('studentLootItemsChanged', handler)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [studentId])
+
   useEffect(() => {
     return () => {
       if (highlightTimer.current) window.clearTimeout(highlightTimer.current)

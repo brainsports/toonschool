@@ -19,6 +19,7 @@ import {
   MIN_LEVEL,
 } from '../config/dreamProgressionConfig'
 import { computeDreamScore, type DreamScoreBreakdown, type RewardLogRow } from '../utils/dreamScore'
+import { ensureLevelItems } from './dreamLevelItemService'
 
 /** 본인 reward_logs(+items rarity join) 조회. */
 export async function fetchRewardLogRows(studentId: string): Promise<RewardLogRow[]> {
@@ -221,7 +222,21 @@ async function computeDreamProgress(studentId: string): Promise<DreamProgressRes
   rows = await fetchRewardLogRows(studentId)
   breakdown = computeDreamScore(rows)
 
-  // 5) denorm 동기화(best-effort) — 랭킹/교사 조회용. 컬럼 미존재 시 무시.
+  // 5) 레벨 달성 아이템 지급(새 레벨). 점수 0, student_items 만 기록.
+  //    DB items 에 레벨 아이템이 없으면(시드 미적용) 조용히 스킵된다.
+  if (levelUp.newLevels.length > 0) {
+    try {
+      const granted = await ensureLevelItems(studentId, levelUp.newLevels)
+      if (granted.length > 0 && typeof window !== 'undefined') {
+        // 정원·마이페이지가 새 아이템을 즉시 반영하도록 알림.
+        window.dispatchEvent(new Event('studentLootItemsChanged'))
+      }
+    } catch (err) {
+      if (import.meta.env.DEV) console.info('[dreamScoreService] ensureLevelItems failed:', err)
+    }
+  }
+
+  // 6) denorm 동기화(best-effort) — 랭킹/교사 조회용. 컬럼 미존재 시 무시.
   void syncDreamStats(studentId, breakdown)
 
   const result = { ...breakdown, newlyAchievedLevels: levelUp.newLevels }
