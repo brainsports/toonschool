@@ -851,6 +851,11 @@
 .flp-quiz-helper-icon { font-size: 24px; }
 
 .flp-quiz-main { flex: 1; display: flex; flex-direction: column; gap: 14px; min-width: 0; min-height: 0; }
+/* 답안 영역 안정성: 문제가 길어져도 O/X 버튼과 해설 카드가 눌리거나 겹치지 않도록 보호.
+   (일반 길이에서는 시각 변화 없음 — 본래 여유가 있어 줄어들지 않음) */
+.flp-quiz-qcard { flex: 0 1 auto; min-height: 0; overflow: hidden; }
+.flp-quiz-ox { flex: 0 0 auto; }
+.flp-quiz-result { flex: 0 0 auto; }
 .flp-quiz-qcard { padding: 22px 28px; }
 .flp-quiz-qbadge {
   display: inline-flex; align-items: center; gap: 6px;
