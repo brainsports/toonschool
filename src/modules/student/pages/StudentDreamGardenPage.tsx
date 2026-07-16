@@ -5,10 +5,12 @@ import {
   Leaf,
   LocateFixed,
   Loader2,
+  MapIcon,
   RefreshCw,
   RotateCcw,
   RotateCw,
   Sprout,
+  Trophy,
   WandSparkles,
   X,
   ZoomIn,
@@ -28,7 +30,21 @@ import {
   grantLuckyRewardIfNeeded,
   saveGardenPlacement,
   updateGardenPlacement,
+  updateGardenBackground,
 } from '../services/dreamGardenService'
+import { useDreamProgress } from '../components/dream/useDreamProgress'
+import DreamRankingModal from '../components/dream/DreamRankingModal'
+import { useNavigate } from 'react-router-dom'
+import {
+  DREAM_CHAPTERS,
+  DEFAULT_BACKGROUND_LEVEL,
+  RARITY_BASE_POINTS,
+  RARITY_LABEL,
+  THEME_GRADIENTS,
+  getChapter,
+} from '../config/dreamProgressionConfig'
+import { getUnlockedLevels } from '../services/dreamScoreService'
+import '../styles/dream-progression.css'
 
 // ───────────────────────────────────────────────────────────
 // 좌표는 정원 캔버스(slots 컨테이너) 기준 비율 좌표(0~100)로 관리.
@@ -377,6 +393,11 @@ export default function StudentDreamGardenPage() {
   const [isAllItemsModalOpen, setIsAllItemsModalOpen] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [highlightId, setHighlightId] = useState<string | null>(null)
+  const [unlockedLevels, setUnlockedLevels] = useState<number[]>([DEFAULT_BACKGROUND_LEVEL])
+  const [selectedBgLevel, setSelectedBgLevel] = useState<number>(DEFAULT_BACKGROUND_LEVEL)
+  const [isRankingOpen, setIsRankingOpen] = useState(false)
+  const navigate = useNavigate()
+  const { progress: dream } = useDreamProgress(studentId, { showLevelUpModal: false })
 
   const slotsContainerRef = useRef<HTMLDivElement>(null)
   const elementRefs = useRef<Map<string, HTMLElement>>(new Map())
@@ -754,6 +775,41 @@ export default function StudentDreamGardenPage() {
   const totalItemCount = studentItems.reduce((sum, item) => sum + item.quantity, 0)
   const placedCount = placements.length
 
+  // 해제된 레벨(배경 선택 가능 목록) 동기화 — 점수/레벨 변화 시마다
+  useEffect(() => {
+    if (!studentId) return
+    getUnlockedLevels(studentId)
+      .then(setUnlockedLevels)
+      .catch(() => {
+        /* fallback: 기본 레벨만 */
+      })
+  }, [studentId, dream.level])
+
+  // garden.background_code → 선택 배경 레벨 동기화
+  useEffect(() => {
+    if (garden?.background_code) {
+      const ch = DREAM_CHAPTERS.find((c) => c.backgroundKey === garden.background_code)
+      if (ch) setSelectedBgLevel(ch.level)
+    }
+  }, [garden?.background_code])
+
+  const selectedChapter = getChapter(selectedBgLevel)
+  const dreamChapter = getChapter(dream.level)
+  const isDefaultBg = selectedBgLevel === DEFAULT_BACKGROUND_LEVEL
+  const bgStyle = isDefaultBg ? undefined : { backgroundImage: THEME_GRADIENTS[selectedChapter.themeKey] }
+
+  async function handleSelectBackground(level: number) {
+    if (!unlockedLevels.includes(level)) return // 잠긴 배경 선택 불가
+    setSelectedBgLevel(level)
+    if (!studentId) return
+    const ch = getChapter(level)
+    try {
+      await updateGardenBackground(studentId, ch.backgroundKey)
+    } catch {
+      /* 저장 실패해도 시각적 전환은 유지 */
+    }
+  }
+
   const handleBackgroundPointerDown = (e: React.PointerEvent) => {
     if (e.target === e.currentTarget) {
       setSelectedId(null)
@@ -765,8 +821,57 @@ export default function StudentDreamGardenPage() {
       <main className="dream-garden-page">
         <section className="dream-garden-stage" aria-label="나의 꿈의 정원">
 
-          {/* ── 배경 이미지 ── */}
-          <div className="dg-background-image" />
+          {/* ── 배경 이미지 (레벨1=기존 정원 webp, 레벨2~10=테마 그라디언트) ── */}
+          <div className="dg-background-image" style={bgStyle} />
+
+          {/* ── 상단 정보바: 레벨/꿈점수/장면/진행률/보물지도/랭킹 ── */}
+          <div className="dg-topbar">
+            <div className="dg-topbar-level">LV.{dream.level}</div>
+            <div className="dg-topbar-score">
+              <Trophy className="w-4 h-4" />
+              <strong>{dream.dreamScore.toLocaleString()}</strong> 꿈점수
+            </div>
+            <div className="dg-topbar-scene" title={dreamChapter.chapterTitle}>
+              <span className="dg-topbar-scene-emoji">{dreamChapter.symbolEmoji}</span>
+              <span className="dg-topbar-scene-name">{dreamChapter.chapterTitle}</span>
+            </div>
+            <div className="dg-topbar-progress">
+              <div className="dg-topbar-progress-bar">
+                <span style={{ width: `${Math.round(dream.levelProgressRate * 100)}%` }} />
+              </div>
+              <span className="dg-topbar-progress-text">
+                {dream.level >= 10 ? '최고 레벨 🎉' : `다음 장면까지 ${dream.pointsToNextLevel.toLocaleString()}점`}
+              </span>
+            </div>
+            <button type="button" className="dg-topbar-btn" onClick={() => navigate('/student/treasure-map')} title="보물지도">
+              <MapIcon className="w-4 h-4" /><span className="hidden lg:inline">보물지도</span>
+            </button>
+            <button type="button" className="dg-topbar-btn" onClick={() => setIsRankingOpen(true)} title="우리 반 랭킹">
+              <Trophy className="w-4 h-4" /><span className="hidden lg:inline">랭킹</span>
+            </button>
+          </div>
+
+          {/* ── 배경 전환기(해제된 장면만 선택 가능) ── */}
+          <div className="dg-bg-switcher" role="group" aria-label="장면 배경 선택">
+            {DREAM_CHAPTERS.map((ch) => {
+              const unlocked = unlockedLevels.includes(ch.level)
+              const active = ch.level === selectedBgLevel
+              return (
+                <button
+                  key={ch.level}
+                  type="button"
+                  disabled={!unlocked}
+                  onClick={() => handleSelectBackground(ch.level)}
+                  className={`dg-bg-chip${active ? ' dg-bg-chip-active' : ''}${unlocked ? '' : ' dg-bg-chip-locked'}`}
+                  title={unlocked ? ch.chapterTitle : `${ch.chapterTitle} (활동점수 ${ch.minActivityScore.toLocaleString()}점 필요)`}
+                >
+                  <span className="dg-bg-chip-emoji">{ch.symbolEmoji}</span>
+                  <span className="dg-bg-chip-level">{ch.level}</span>
+                  {!unlocked && <span className="dg-bg-chip-lock">🔒</span>}
+                </button>
+              )
+            })}
+          </div>
 
           {/* ── 꽃비 효과 (정원이 살아있는 느낌, 매우 은은함 / 클릭·드래그 간섭 없음) ── */}
           <DreamGardenPetals />
@@ -812,6 +917,27 @@ export default function StudentDreamGardenPage() {
               <div className="dg-collection-counts">
                 <span>획득 <strong>{totalItemCount}개</strong></span>
                 <span>배치 <strong>{placedCount}개</strong></span>
+              </div>
+            </div>
+
+            {/* 레벨 상징 아이템(해제한 레벨) */}
+            <div className="dg-info-section dg-symbols-section">
+              <div className="dg-info-header">
+                <p className="dg-section-title-inline">해제한 레벨 상징 {unlockedLevels.length}/10</p>
+              </div>
+              <div className="dg-symbols-grid">
+                {DREAM_CHAPTERS.map((ch) => {
+                  const unlocked = unlockedLevels.includes(ch.level)
+                  return (
+                    <span
+                      key={ch.level}
+                      className={`dg-symbol-chip${unlocked ? '' : ' dg-symbol-locked'}`}
+                      title={unlocked ? `LV.${ch.level} · ${ch.symbolName}` : `LV.${ch.level} (잠김)`}
+                    >
+                      {unlocked ? ch.symbolEmoji : '🔒'}
+                    </span>
+                  )
+                })}
               </div>
             </div>
 
@@ -981,6 +1107,9 @@ export default function StudentDreamGardenPage() {
                             {studentItem.item?.category === 'legend' && '전설'}
                             {!['nature', 'sky', 'animal', 'decor', 'spirit', 'legend'].includes(studentItem.item?.category ?? '') && (studentItem.item?.category ?? '기타')}
                           </span>
+                          <span className="px-2 py-0.5 rounded-full text-xs font-bold dg-rarity-badge">
+                            {(RARITY_LABEL as Record<string, string>)[studentItem.item?.rarity ?? 'common'] ?? '일반'} · {(RARITY_BASE_POINTS as Record<string, number>)[studentItem.item?.rarity ?? 'common'] ?? 50}점
+                          </span>
                           <span className="text-xs">
                             {new Date(studentItem.acquired_at || studentItem.created_at).toLocaleDateString('ko-KR')} 획득
                           </span>
@@ -992,6 +1121,10 @@ export default function StudentDreamGardenPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {isRankingOpen && studentId && (
+        <DreamRankingModal studentId={studentId} progress={dream} onClose={() => setIsRankingOpen(false)} />
       )}
     </StudentPageShell>
   )

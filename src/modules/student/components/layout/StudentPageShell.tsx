@@ -1,10 +1,11 @@
 // 학생 UI 전체 페이지를 감싸는 공통 레이아웃 컴포넌트
 import React, { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { LogOut, Home, Gift, X, Calendar, Sprout } from 'lucide-react'
+import { LogOut, Home, Gift, X, Sprout, Map, Trophy } from 'lucide-react'
 import { mockStudentProfile } from '../../data/studentMockData'
 import StudentSpaceBackground from './StudentSpaceBackground'
 import '../../styles/student-ui.css'
+import '../../styles/dream-progression.css'
 import { useAuth } from '../../../../shared/contexts/AuthContext'
 import { supabase } from '../../../../shared/lib/supabase'
 import AllWorksModal from '../mypage/AllWorksModal'
@@ -13,6 +14,11 @@ import { getStudentWorks } from '../../services/studentWorkService'
 import { getStudentItems } from '../../services/dreamGardenService'
 import { getAttendanceRewardItemCount } from '../../services/studentAttendanceService'
 import type { StudentItem } from '../../types/dreamGarden'
+import { useDreamProgress } from '../dream/useDreamProgress'
+import { getChapter } from '../../config/dreamProgressionConfig'
+import DreamScoreDetailModal from '../dream/DreamScoreDetailModal'
+import DreamRankingModal from '../dream/DreamRankingModal'
+import LevelUpModal from '../dream/LevelUpModal'
 
 interface StudentPageShellProps {
   children: React.ReactNode
@@ -72,7 +78,10 @@ export default function StudentPageShell({
   const [hasLoadedItems, setHasLoadedItems] = useState(false)
   const [isLoadingItems, setIsLoadingItems] = useState(false)
   const [attendanceRewardCount, setAttendanceRewardCount] = useState(0)
+  const [isScoreDetailOpen, setIsScoreDetailOpen] = useState(false)
+  const [isRankingOpen, setIsRankingOpen] = useState(false)
   const studentId = authProfile?.role === 'student' ? (authProfile.id ?? user?.id) : user?.id
+  const { progress: dream, levelUpLevel, dismissLevelUp } = useDreamProgress(studentId, { showLevelUpModal: true })
 
   const loadLootItems = useCallback(async () => {
     if (!studentId) {
@@ -175,6 +184,8 @@ export default function StudentPageShell({
   const isFull = maxWidth === 'full';
   const totalLootCount = studentItems.reduce((sum, item) => sum + item.quantity, 0)
   const recentLootItems = studentItems.slice(0, 5)
+  const dreamChapter = getChapter(dream.level)
+  const dreamIsMax = dream.level >= 10
 
   return (
     <div className={`${isFull ? 'h-[100dvh] overflow-hidden' : 'min-h-screen overflow-x-hidden'} flex flex-col ${isFull ? 'pb-0' : 'pb-12'} bg-gradient-to-tr ${bgOverlays[bgVariant as keyof typeof bgOverlays] || bgOverlays.default} relative`}>
@@ -193,7 +204,7 @@ export default function StudentPageShell({
               >
                 <span className="text-3xl select-none">{profile.avatarEmoji}</span>
                 <div className="absolute -bottom-1 -right-1 bg-yellow-400 text-amber-950 border-2 border-white font-jua text-[10px] px-2 py-0.5 rounded-full shadow-sm">
-                  LV.5
+                  LV.{dream.level}
                 </div>
               </div>
               <div>
@@ -242,25 +253,67 @@ export default function StudentPageShell({
               </button>
             </div>
 
-            {/* 우측: 재화 및 액션 */}
-            <div className="flex items-center gap-3">
-              {/* 득템 현황 */}
+            {/* 우측: 꿈점수·레벨·진행률·랭킹·보물지도 (기존 득템/출석보상은 상세 모달로 이동) */}
+            <div className="flex items-center gap-2">
+              {/* 꿈점수 (클릭 → 상세 모달) */}
+              <button
+                type="button"
+                onClick={() => setIsScoreDetailOpen(true)}
+                className="dream-hud-chip dream-hud-chip--score"
+                title="내 꿈점수 상세 보기"
+                aria-label="내 꿈점수 상세 보기"
+              >
+                <Trophy className="w-4 h-4" />
+                <span><span className="dream-hud-score-num">{dream.dreamScore.toLocaleString()}</span> 꿈점수</span>
+              </button>
+
+              {/* 현재 장면 + 진행률 + 남은 점수 */}
+              <button
+                type="button"
+                onClick={() => setIsScoreDetailOpen(true)}
+                className="dream-hud-chip dream-hud-chip--plain"
+                style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '0.1rem', cursor: 'pointer' }}
+                title={`${dreamChapter.chapterTitle} · ${dreamIsMax ? '최고 레벨' : `다음 장면까지 활동점수 ${dream.pointsToNextLevel.toLocaleString()}점`}`}
+              >
+                <span className="dream-hud-scene">{dreamChapter.chapterTitle}</span>
+                <span className="dream-hud-progress"><span style={{ width: `${Math.round(dream.levelProgressRate * 100)}%` }} /></span>
+                <span style={{ fontSize: '0.6rem', color: '#8a6c8a', lineHeight: 1 }}>
+                  {dreamIsMax ? '최고 레벨 🎉' : `다음 장면까지 ${dream.pointsToNextLevel.toLocaleString()}점`}
+                </span>
+              </button>
+
+              {/* 보물지도 */}
+              <button
+                type="button"
+                onClick={() => navigate('/student/treasure-map')}
+                className="dream-hud-chip dream-hud-chip--level"
+                title="보물지도 — 열개의 빛과 꿈의 책"
+                aria-label="보물지도"
+              >
+                <Map className="w-4 h-4" /><span className="hidden lg:inline">보물지도</span>
+              </button>
+
+              {/* 우리 반 랭킹 */}
+              <button
+                type="button"
+                onClick={() => setIsRankingOpen(true)}
+                className="dream-hud-chip dream-hud-chip--plain"
+                title="우리 반 성장랭킹"
+                aria-label="우리 반 성장랭킹"
+              >
+                <Trophy className="w-4 h-4" /><span className="hidden lg:inline">랭킹</span>
+              </button>
+
+              {/* 기존 득템(모달) — 출석보상 개수는 상세 모달에서 확인 */}
               <button
                 type="button"
                 onClick={handleOpenLootModal}
-                className="flex items-center gap-1.5 bg-yellow-50 border-2 border-yellow-200 px-4 py-1.5 rounded-full text-yellow-700 font-jua text-sm shadow-sm hover:scale-105 transition-transform"
-                title="나의 득템 현황"
+                className="dream-hud-chip dream-hud-chip--plain"
+                title={`나의 득템 ${totalLootCount}개 · 출석보상 ${attendanceRewardCount}개`}
                 aria-label="나의 득템 현황"
               >
-                <Gift className="w-5 h-5 stroke-yellow-600 stroke-2" />
-                <span className="tracking-wide mt-0.5">🎁 득템 {totalLootCount}개</span>
+                <Gift className="w-4 h-4" /><span className="hidden lg:inline">🎒{totalLootCount}</span>
               </button>
-
-              {/* 출석 보상 */}
-              <div className="flex items-center gap-1.5 bg-sky-50 border-2 border-sky-200 px-3 py-1.5 rounded-full text-sky-700 font-jua text-sm shadow-sm">
-                <Calendar className="w-5 h-5 fill-sky-400 stroke-sky-500 stroke-2" />
-                <span className="tracking-wide mt-0.5">출석보상 {attendanceRewardCount}개</span>
-              </div>
 
               {/* 로그아웃 버튼 */}
               <button
@@ -348,6 +401,34 @@ export default function StudentPageShell({
             </div>
           </div>
         </div>
+      )}
+
+      {isScoreDetailOpen && (
+        <DreamScoreDetailModal
+          progress={dream}
+          totalLootCount={totalLootCount}
+          attendanceRewardCount={attendanceRewardCount}
+          onClose={() => setIsScoreDetailOpen(false)}
+        />
+      )}
+
+      {isRankingOpen && studentId && (
+        <DreamRankingModal
+          studentId={studentId}
+          progress={dream}
+          onClose={() => setIsRankingOpen(false)}
+        />
+      )}
+
+      {levelUpLevel !== null && (
+        <LevelUpModal
+          level={levelUpLevel}
+          onGoToScene={() => {
+            dismissLevelUp()
+            navigate('/student/treasure-map')
+          }}
+          onLater={dismissLevelUp}
+        />
       )}
     </div>
   )

@@ -1,0 +1,400 @@
+/* ==========================================================================
+   꿈의 궁전 성장형 보상 시스템 — 보물지도/모달/헤더 스타일
+   ========================================================================== */
+
+/* ── 장면별 배경 테마(외부 이미지 없이 CSS 그라디언트) ── */
+.dream-bg--palace    { background: linear-gradient(160deg, #fde7f3 0%, #f4d9f0 45%, #e8c9ee 100%); }
+.dream-bg--starlight { background: linear-gradient(160deg, #e7ecff 0%, #d9e2ff 50%, #c9d6ff 100%); }
+.dream-bg--cloud     { background: linear-gradient(160deg, #f3f7ff 0%, #e7f0ff 50%, #dfeaff 100%); }
+.dream-bg--forest    { background: linear-gradient(160deg, #e6f7e8 0%, #d3efdc 50%, #c2e6cd 100%); }
+.dream-bg--ocean     { background: linear-gradient(160deg, #e2f4fb 0%, #c9e9f6 50%, #b3ddf2 100%); }
+.dream-bg--time      { background: linear-gradient(160deg, #f5efe6 0%, #ece1cf 50%, #e0d0b6 100%); }
+.dream-bg--space     { background: linear-gradient(160deg, #e9e3ff 0%, #d8ccff 50%, #c3b0ff 100%); }
+.dream-bg--invention { background: linear-gradient(160deg, #fff2e0 0%, #ffe3c2 50%, #ffd49d 100%); }
+.dream-bg--sky       { background: linear-gradient(160deg, #eaf6ff 0%, #cfe9ff 50%, #b5dcff 100%); }
+.dream-bg--book      { background: linear-gradient(160deg, #fde7f0 0%, #ffd9e5 40%, #ffe9cf 100%); }
+
+/* ==========================================================================
+   학생 헤더 — 꿈점수 패널
+   ========================================================================== */
+.dream-hud-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: 9999px;
+  font-family: 'Jua', system-ui, sans-serif;
+  font-size: 0.8rem;
+  border: 2px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 1px 3px rgba(80, 40, 80, 0.12);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+  white-space: nowrap;
+}
+.dream-hud-chip:hover { transform: scale(1.04); }
+.dream-hud-chip--level { background: #fff3c4; color: #8a6d1a; border-color: #ffe49a; }
+.dream-hud-chip--score { background: #ffe3ef; color: #a8347a; border-color: #ffc6dc; }
+.dream-hud-chip--plain { cursor: default; background: #eef2ff; color: #42506e; border-color: #d7def5; }
+
+.dream-hud-score-num { font-size: 1rem; font-weight: 700; }
+.dream-hud-scene { font-size: 0.7rem; opacity: 0.85; max-width: 9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.dream-hud-progress {
+  width: 5.5rem;
+  height: 0.4rem;
+  background: rgba(255,255,255,0.6);
+  border-radius: 9999px;
+  overflow: hidden;
+}
+.dream-hud-progress > span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #f59ec0, #c879ff);
+  border-radius: 9999px;
+  transition: width 0.4s ease;
+}
+
+/* ==========================================================================
+   보물지도 — 열개의 빛과 꿈의 책
+   ========================================================================== */.treasure-map-page { padding: 1rem 0 3rem; }
+.treasure-map-title { text-align: center; margin-bottom: 0.25rem; }
+.treasure-map-title h1 { font-family: 'Jua', system-ui; font-size: 1.6rem; color: #6b3f6e; }
+.treasure-map-title p { color: #8a6c8a; font-size: 0.85rem; }
+
+.treasure-map-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 1.5rem 1rem 2rem;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+.treasure-map-scroll::-webkit-scrollbar { height: 8px; }
+.treasure-map-scroll::-webkit-scrollbar-thumb { background: #e0b8d6; border-radius: 9999px; }
+
+.treasure-map-grid {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(9.5rem, 11rem));
+  grid-auto-rows: 9.5rem;
+  gap: 1.75rem 0.75rem;
+  min-width: 42rem;
+  margin: 0 auto;
+  width: max-content;
+}
+
+/* ㄹ자 배치: 4열 그리드에서 각 레벨 카드의 위치 강제
+   행1: 1 2 3 .   행2: 7 6 5 4   행3: 8 9 10 .  (→ 경로는 1..10 순서) */
+.tm-card { position: relative; z-index: 2; }
+.tm-card[data-tm-level="1"]  { grid-area: 1 / 1; }
+.tm-card[data-tm-level="2"]  { grid-area: 1 / 2; }
+.tm-card[data-tm-level="3"]  { grid-area: 1 / 3; }
+.tm-card[data-tm-level="4"]  { grid-area: 2 / 4; }
+.tm-card[data-tm-level="5"]  { grid-area: 2 / 3; }
+.tm-card[data-tm-level="6"]  { grid-area: 2 / 2; }
+.tm-card[data-tm-level="7"]  { grid-area: 2 / 1; }
+.tm-card[data-tm-level="8"]  { grid-area: 3 / 1; }
+.tm-card[data-tm-level="9"]  { grid-area: 3 / 2; }
+.tm-card[data-tm-level="10"] { grid-area: 3 / 3; }
+
+/* 구불구불 점선 경로(SVG)는 그리드 뒤에 절대 배치 */
+.tm-path-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none;
+  overflow: visible;
+}
+.tm-path-done {
+  fill: none;
+  stroke: #f59ec0;
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-dasharray: 2 9;
+  opacity: 0.95;
+}
+.tm-path-locked {
+  fill: none;
+  stroke: #c9b6c9;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-dasharray: 2 9;
+  opacity: 0.55;
+}
+
+/* 장면 카드 */
+.tm-scene {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  border-radius: 1.25rem;
+  padding: 0.75rem 0.6rem;
+  min-height: 9rem;
+  border: 3px solid transparent;
+  background: #fff;
+  box-shadow: 0 4px 14px rgba(120, 80, 120, 0.12);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  font-family: 'Jua', system-ui, sans-serif;
+}
+.tm-scene-emoji {
+  width: 3.2rem; height: 3.2rem;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.9rem;
+  border-radius: 9999px;
+  margin-bottom: 0.35rem;
+  background: rgba(255,255,255,0.75);
+  box-shadow: inset 0 0 0 2px rgba(0,0,0,0.04);
+}
+.tm-scene-level { font-size: 0.7rem; color: #9a7e9a; letter-spacing: 0.05em; }
+.tm-scene-title { font-size: 0.92rem; color: #5b3b5e; line-height: 1.2; margin-top: 0.15rem; }
+.tm-scene-symbol { font-size: 0.7rem; color: #8a6c8a; margin-top: 0.25rem; }
+.tm-scene-badge { position: absolute; top: -0.55rem; right: -0.4rem; font-size: 0.95rem; }
+
+/* 완료된 장면 */
+.tm-scene--done { border-color: #ffd36e; }
+.tm-scene--done .tm-scene-emoji { background: #fff6da; }
+
+/* 현재 장면: 반짝이는 테두리 */
+.tm-scene--current { border-color: #f59ec0; animation: tm-pulse 1.8s ease-in-out infinite; }
+.tm-scene--current .tm-scene-emoji { background: #ffe3ef; }
+@keyframes tm-pulse {
+  0%, 100% { box-shadow: 0 4px 14px rgba(245, 158, 192, 0.35), 0 0 0 0 rgba(245, 158, 192, 0.5); }
+  50%      { box-shadow: 0 4px 18px rgba(245, 158, 192, 0.5), 0 0 0 8px rgba(245, 158, 192, 0); }
+}
+.tm-scene-here {
+  position: absolute;
+  bottom: -0.5rem; left: 50%; transform: translateX(-50%);
+  background: #f59ec0; color: #fff;
+  font-size: 0.62rem; padding: 0.15rem 0.5rem; border-radius: 9999px;
+  white-space: nowrap;
+}
+
+/* 잠긴 장면 */
+.tm-scene--locked { filter: grayscale(0.7) brightness(0.92); opacity: 0.8; cursor: not-allowed; }
+.tm-scene--locked .tm-scene-emoji { background: #e6e0e6; }
+.tm-scene-lock { font-size: 1.1rem; }
+.tm-scene-need { font-size: 0.66rem; color: #a98aa9; margin-top: 0.3rem; line-height: 1.2; }
+
+/* ==========================================================================
+   공통 모달
+   ========================================================================== */
+.dream-modal-backdrop {
+  position: fixed; inset: 0; z-index: 120;
+  display: flex; align-items: center; justify-content: center;
+  padding: 1rem;
+  background: rgba(40, 20, 40, 0.55);
+  backdrop-filter: blur(4px);
+  animation: dream-fade 0.2s ease;
+}
+.dream-modal {
+  background: #fff;
+  border-radius: 1.75rem;
+  width: 100%;
+  max-width: 30rem;
+  max-height: 88vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(60, 30, 60, 0.3);
+  animation: dream-pop 0.22s ease;
+}
+.dream-modal--wide { max-width: 42rem; }
+@keyframes dream-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes dream-pop { from { opacity: 0; transform: scale(0.94) translateY(8px); } to { opacity: 1; transform: none; } }
+
+.dream-modal-header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  padding: 1.25rem 1.5rem; border-bottom: 1px solid #f3e8f3;
+}
+.dream-modal-header h2 { font-family: 'Jua', system-ui; font-size: 1.35rem; color: #5b3b5e; }
+.dream-modal-body { padding: 1.25rem 1.5rem; }
+
+/* 점수 상세 — 항목 행 */
+.dream-stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+.dream-stat-card {
+  background: #faf6fa; border: 1px solid #f0e4f0; border-radius: 0.9rem;
+  padding: 0.7rem 0.85rem;
+}
+.dream-stat-card .lbl { font-size: 0.72rem; color: #8a6c8a; }
+.dream-stat-card .val { font-family: 'Jua', system-ui; font-size: 1.15rem; color: #5b3b5e; margin-top: 0.15rem; }
+.dream-stat-card .val small { font-size: 0.7rem; color: #b09ab0; font-family: system-ui; }
+
+.dream-score-hero { text-align: center; padding: 0.5rem 0 1rem; }
+.dream-score-hero .num { font-family: 'Jua', system-ui; font-size: 2.4rem; color: #a8347a; line-height: 1; }
+.dream-score-hero .cap { color: #9a7e9a; font-size: 0.78rem; }
+
+.dream-history-list { display: flex; flex-direction: column; gap: 0.45rem; margin-top: 0.5rem; }
+.dream-history-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0.55rem 0.8rem; border-radius: 0.75rem;
+  background: #faf6fa; border: 1px solid #f1e6f1;
+  font-size: 0.82rem;
+}
+.dream-history-row .pts { font-family: 'Jua', system-ui; color: #a8347a; }
+.dream-history-row.bonus .pts { color: #7a5fa8; }
+
+/* 레벨업 모달 */
+.levelup-modal { text-align: center; padding: 2rem 1.5rem 1.5rem; }
+.levelup-badge {
+  font-family: 'Jua', system-ui; color: #fff;
+  display: inline-block; padding: 0.3rem 1rem; border-radius: 9999px;
+  background: linear-gradient(90deg, #f59ec0, #c879ff);
+  box-shadow: 0 6px 16px rgba(200, 121, 255, 0.4);
+  font-size: 1rem; letter-spacing: 0.05em;
+  animation: dream-pop 0.3s ease;
+}
+.levelup-emoji { font-size: 3.5rem; margin: 0.75rem 0 0.25rem; animation: tm-pulse 2s ease infinite; }
+.levelup-title { font-family: 'Jua', system-ui; font-size: 1.4rem; color: #5b3b5e; margin-top: 0.25rem; }
+.levelup-loc { color: #8a6c8a; font-size: 0.9rem; }
+.levelup-symbol { color: #a8347a; font-size: 0.85rem; margin: 0.5rem 0; }
+.levelup-bonus { color: #7a5fa8; font-weight: 700; }
+.levelup-actions { display: flex; gap: 0.6rem; margin-top: 1.25rem; }
+.levelup-actions button { flex: 1; padding: 0.7rem; border-radius: 0.9rem; font-family: 'Jua', system-ui; font-size: 0.95rem; cursor: pointer; border: none; }
+.levelup-btn-primary { background: linear-gradient(90deg, #f59ec0, #c879ff); color: #fff; }
+.levelup-btn-ghost { background: #f3e8f3; color: #7a5f7a; }
+
+/* 랭킹 */
+.ranking-podium { display: grid; grid-template-columns: 1fr 1.1fr 1fr; gap: 0.6rem; align-items: end; margin: 1rem 0; }
+.ranking-pod {
+  text-align: center; border-radius: 1rem 1rem 0.4rem 0.4rem; padding: 0.8rem 0.4rem 0.6rem;
+  font-family: 'Jua', system-ui;
+}
+.ranking-pod .rank-emoji { font-size: 1.6rem; }
+.ranking-pod .name { font-size: 0.85rem; color: #5b3b5e; margin-top: 0.2rem; }
+.ranking-pod .score { font-size: 0.75rem; color: #a8347a; }
+.ranking-pod--1 { background: linear-gradient(180deg, #fff3c4, #ffe49a); min-height: 7rem; order: 2; }
+.ranking-pod--2 { background: linear-gradient(180deg, #eef2ff, #d7def5); min-height: 5.5rem; order: 1; }
+.ranking-pod--3 { background: linear-gradient(180deg, #fde9d6, #f7cf9e); min-height: 4.5rem; order: 3; }
+
+.ranking-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0.55rem 0.8rem; border-radius: 0.75rem; margin-bottom: 0.35rem;
+  background: #faf6fa; border: 1px solid #f1e6f1; font-size: 0.85rem;
+}
+.ranking-row.me { background: #fff0d6; border-color: #ffd98a; }
+.ranking-row .rank-no { width: 1.6rem; color: #9a7e9a; font-family: 'Jua', system-ui; }
+.ranking-row .name { flex: 1; color: #5b3b5e; }
+.ranking-row .score { color: #a8347a; font-family: 'Jua', system-ui; }
+
+/* 칭찬 관련 */
+.praise-reason-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin: 0.5rem 0 0.75rem; }
+.praise-reason-btn {
+  padding: 0.6rem 0.5rem; border-radius: 0.8rem; border: 2px solid #f1e6f1;
+  background: #fff; font-size: 0.82rem; color: #6b4a6e; cursor: pointer;
+  font-family: 'Jua', system-ui; transition: all 0.15s ease;
+}
+.praise-reason-btn:hover { border-color: #f59ec0; }
+.praise-reason-btn.active { background: #ffe3ef; border-color: #f59ec0; color: #a8347a; }
+.praise-remaining { font-size: 0.78rem; color: #8a6c8a; margin-bottom: 0.5rem; }
+
+/* ── 모바일 ── */
+@media (max-width: 640px) {
+  .dream-hud-scene { display: none; }
+  .dream-hud-progress { width: 4rem; }
+  .treasure-map-grid { grid-template-columns: repeat(4, minmax(8rem, 9rem)); gap: 1.25rem 0.4rem; min-width: 34rem; }
+  .dream-stat-grid { grid-template-columns: 1fr; }
+  .praise-reason-grid { grid-template-columns: 1fr; }
+}
+
+/* ==========================================================================
+   꿈의 궁전 페이지 — 상단 정보바 / 배경 전환기 / 심볼 그리드
+   ========================================================================== */
+.dg-topbar {
+  position: absolute;
+  z-index: 40;
+  top: 0.75rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.85rem;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.16);
+  border: 1.5px solid rgba(255, 255, 255, 0.8);
+  max-width: calc(100% - 2rem);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.dg-topbar-level {
+  font-family: 'Jua', system-ui;
+  background: linear-gradient(90deg, #f59ec0, #c879ff);
+  color: #fff;
+  padding: 0.2rem 0.7rem;
+  border-radius: 9999px;
+  font-size: 0.85rem;
+  box-shadow: 0 2px 8px rgba(200, 121, 255, 0.35);
+}
+.dg-topbar-score {
+  display: inline-flex; align-items: center; gap: 0.3rem;
+  font-family: 'Jua', system-ui; color: #a8347a; font-size: 0.9rem;
+}
+.dg-topbar-score svg { color: #f0a040; }
+.dg-topbar-scene {
+  display: inline-flex; align-items: center; gap: 0.3rem;
+  max-width: 12rem; color: #5b3b5e; font-size: 0.78rem;
+}
+.dg-topbar-scene-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dg-topbar-progress { display: flex; flex-direction: column; gap: 0.15rem; min-width: 6rem; }
+.dg-topbar-progress-bar { height: 0.4rem; background: #f3e8f3; border-radius: 9999px; overflow: hidden; }
+.dg-topbar-progress-bar > span { display: block; height: 100%; background: linear-gradient(90deg, #f59ec0, #c879ff); }
+.dg-topbar-progress-text { font-size: 0.62rem; color: #8a6c8a; }
+.dg-topbar-btn {
+  display: inline-flex; align-items: center; gap: 0.25rem;
+  padding: 0.3rem 0.6rem; border-radius: 9999px; border: none; cursor: pointer;
+  background: #fff3c4; color: #8a6d1a; font-family: 'Jua', system-ui; font-size: 0.78rem;
+}
+.dg-topbar-btn:hover { background: #ffe49a; }
+
+.dg-bg-switcher {
+  position: absolute;
+  z-index: 40;
+  bottom: 0.75rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 0.3rem;
+  padding: 0.4rem 0.6rem;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.14);
+  max-width: calc(100% - 2rem);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.dg-bg-chip {
+  position: relative;
+  width: 2.1rem; height: 2.1rem;
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background: #fff;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1rem;
+  transition: transform 0.15s ease;
+}
+.dg-bg-chip:hover { transform: scale(1.08); }
+.dg-bg-chip-active { border-color: #f59ec0; box-shadow: 0 0 0 2px rgba(245, 158, 192, 0.3); }
+.dg-bg-chip-locked { opacity: 0.5; cursor: not-allowed; filter: grayscale(0.6); }
+.dg-bg-chip-locked:hover { transform: none; }
+.dg-bg-chip-level { position: absolute; bottom: -2px; right: -2px; font-size: 0.55rem; background: #5b3b5e; color: #fff; border-radius: 9999px; padding: 0 0.2rem; }
+.dg-bg-chip-lock { position: absolute; top: -2px; left: -2px; font-size: 0.6rem; }
+
+.dg-symbols-section { margin-top: 0.25rem; }
+.dg-symbols-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.3rem; margin-top: 0.35rem; }
+.dg-symbol-chip {
+  aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+  background: rgba(255, 255, 255, 0.14); border-radius: 0.5rem; font-size: 1rem;
+}
+.dg-symbol-locked { opacity: 0.45; filter: grayscale(0.7); }
+
+.dg-rarity-badge { background: #fce7f3 !important; color: #a8347a !important; }
+
+@media (max-width: 860px) {
+  .dg-topbar-scene, .dg-topbar-progress { display: none; }
+}
+
