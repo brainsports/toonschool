@@ -22,12 +22,21 @@ import FlipBackCoverPagePastel from '../components/viewer/pages/FlipBackCoverPag
 import { mapViewerPage } from '../components/viewer/flipbookPageMapper'
 import type { FlipbookMapContext } from '../components/viewer/flipbookPageMapper'
 import type { FlipbookPage as FlipbookPageModel } from '../components/viewer/flipbookPageModel'
+import { usePageTurnSound } from '../components/viewer/usePageTurnSound'
 import '../styles/flipbook.css'
 import '../styles/flipbook-landscape-pastel.css'
 const BGM_PATH = '/audio/viewer/if-i-had-a-chicken.mp3';
 
 const PDF_PAGE_WIDTH = FLIPBOOK_LANDSCAPE_WIDTH;
 const PDF_PAGE_HEIGHT = FLIPBOOK_LANDSCAPE_HEIGHT;
+
+// 책장 넘김 애니메이션 지속시간. CSS(--flp-flip-dur) 와 동일하게 맞춘다.
+// 모션 감소 설정 시 짧은 페이드로 대체(애니메이션은 CSS 미디어쿼리가 담당, 여기서는 상태 전환 시점만 맞춘다).
+const PREFERS_REDUCED_MOTION =
+  typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+    ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    : false
+const FLIP_DURATION_MS = PREFERS_REDUCED_MOTION ? 260 : 650
 
 // 16:9 파스텔 단일 페이지 논리 크기(양면 펼침 기준)
 const PASTEL_PAGE_WIDTH = 1600
@@ -108,6 +117,9 @@ export default function StudentComicViewerPage() {
   const [flipDirection, setFlipDirection] = useState<'next' | 'prev' | null>(null)
   const [targetSpreadIndex, setTargetSpreadIndex] = useState<number | null>(null)
 
+  // 책장 넘김 효과음(합성, 음소거 상태는 localStorage 에 저장).
+  const { playPageTurn, soundEnabled, toggleSound } = usePageTurnSound()
+
   const spreads = getSpreads(pages.length)
 
   // 신규 파스텔 페이지 모델(원본 ViewerPage[] 와 1:1 정렬, 원본 데이터 불변)
@@ -153,12 +165,13 @@ export default function StudentComicViewerPage() {
           setTargetSpreadIndex(next);
           setIsFlipping(true);
           setFlipDirection('next');
+          playPageTurn();
           setTimeout(() => {
             setCurrentSpreadIndex(next);
             setIsFlipping(false);
             setFlipDirection(null);
             setTargetSpreadIndex(null);
-          }, 1100);
+          }, FLIP_DURATION_MS);
         }
       }, 4000)
     } else {
@@ -167,7 +180,8 @@ export default function StudentComicViewerPage() {
     return () => {
       if (autoFlipTimerRef.current) clearInterval(autoFlipTimerRef.current)
     }
-  }, [isAutoFlip, spreads.length])
+    // playPageTurn 은 안정적인 useCallback(usePageTurnSound)이므로 추가해도 재실행을 유발하지 않는다.
+  }, [isAutoFlip, spreads.length, playPageTurn])
 
   useEffect(() => {
     const handleResize = () => {
@@ -316,12 +330,13 @@ export default function StudentComicViewerPage() {
     setTargetSpreadIndex(next);
     setFlipDirection('next');
     setIsFlipping(true);
+    playPageTurn();
     setTimeout(() => {
       setCurrentSpreadIndex(next);
       setIsFlipping(false);
       setFlipDirection(null);
       setTargetSpreadIndex(null);
-    }, 1100);
+    }, FLIP_DURATION_MS);
   }
 
   const handlePrev = () => {
@@ -330,12 +345,13 @@ export default function StudentComicViewerPage() {
     setTargetSpreadIndex(prev);
     setFlipDirection('prev');
     setIsFlipping(true);
+    playPageTurn();
     setTimeout(() => {
       setCurrentSpreadIndex(prev);
       setIsFlipping(false);
       setFlipDirection(null);
       setTargetSpreadIndex(null);
-    }, 1100);
+    }, FLIP_DURATION_MS);
   }
 
   useEffect(() => {
@@ -702,6 +718,7 @@ export default function StudentComicViewerPage() {
       )}
 
       <style>{`
+        :root { --flp-flip-dur: 650ms; }
         @keyframes flipNextAnim {
           0%   { transform: rotateY(0deg); }
           100% { transform: rotateY(-180deg); }
@@ -723,19 +740,19 @@ export default function StudentComicViewerPage() {
           100% { border-top-left-radius: 0; border-bottom-left-radius: 0; box-shadow: 0 12px 30px rgba(15, 23, 42, 0.10); }
         }
         .flipping-next {
-          animation: flipNextAnim 1100ms cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+          animation: flipNextAnim var(--flp-flip-dur) cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
           will-change: transform;
         }
         .flipping-prev {
-          animation: flipPrevAnim 1100ms cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+          animation: flipPrevAnim var(--flp-flip-dur) cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
           will-change: transform;
         }
         .page-curl-wrapper-next {
-          animation: pageCurlNextRadius 1100ms cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+          animation: pageCurlNextRadius var(--flp-flip-dur) cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
           will-change: border-radius, box-shadow;
         }
         .page-curl-wrapper-prev {
-          animation: pageCurlPrevRadius 1100ms cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+          animation: pageCurlPrevRadius var(--flp-flip-dur) cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
           will-change: border-radius, box-shadow;
         }
         .page-curl-overlay {
@@ -753,27 +770,27 @@ export default function StudentComicViewerPage() {
         }
         .next-curl-overlay {
           background: radial-gradient(circle at right center, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.45) 28%, rgba(15,23,42,0.18) 62%, transparent 78%);
-          animation: curlOverlayAnim 1100ms cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+          animation: curlOverlayAnim var(--flp-flip-dur) cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
         }
         .next-curl-shadow {
           background: linear-gradient(to right, transparent 0%, rgba(15,23,42,0.05) 85%, rgba(15,23,42,0.15) 100%);
-          animation: curlOverlayAnim 1100ms cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+          animation: curlOverlayAnim var(--flp-flip-dur) cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
         }
         .next-curl-highlight {
           background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.25) 45%, rgba(255,255,255,0.75) 82%, rgba(255,255,255,0.2) 100%);
-          animation: curlOverlayAnim 1100ms cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+          animation: curlOverlayAnim var(--flp-flip-dur) cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
         }
         .prev-curl-overlay {
           background: radial-gradient(circle at left center, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.45) 28%, rgba(15,23,42,0.18) 62%, transparent 78%);
-          animation: curlOverlayAnim 1100ms cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+          animation: curlOverlayAnim var(--flp-flip-dur) cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
         }
         .prev-curl-shadow {
           background: linear-gradient(to left, transparent 0%, rgba(15,23,42,0.05) 85%, rgba(15,23,42,0.15) 100%);
-          animation: curlOverlayAnim 1100ms cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+          animation: curlOverlayAnim var(--flp-flip-dur) cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
         }
         .prev-curl-highlight {
           background: linear-gradient(-90deg, transparent 0%, rgba(255,255,255,0.25) 45%, rgba(255,255,255,0.75) 82%, rgba(255,255,255,0.2) 100%);
-          animation: curlOverlayAnim 1100ms cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+          animation: curlOverlayAnim var(--flp-flip-dur) cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
         }
         @keyframes spineShadowAnim {
           0% { opacity: 0; }
@@ -785,14 +802,29 @@ export default function StudentComicViewerPage() {
           inset: 0;
           pointer-events: none;
           background: linear-gradient(to right, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0) 25%);
-          animation: spineShadowAnim 1100ms cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+          animation: spineShadowAnim var(--flp-flip-dur) cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
         }
         .page-shadow-overlay-right {
           position: absolute;
           inset: 0;
           pointer-events: none;
           background: linear-gradient(to left, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0) 25%);
-          animation: spineShadowAnim 1100ms cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+          animation: spineShadowAnim var(--flp-flip-dur) cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+        }
+        /* 모션 감소 설정: 3D 책장 넘김 대신 짧고 부드러운 페이드로 전환(멀미 방지). */
+        @keyframes flpFadeTurn { from { opacity: 1; } to { opacity: 0; } }
+        @media (prefers-reduced-motion: reduce) {
+          :root { --flp-flip-dur: 260ms; }
+          .flipping-next, .flipping-prev {
+            animation: flpFadeTurn var(--flp-flip-dur) ease forwards !important;
+            will-change: opacity;
+          }
+          .page-curl-wrapper-next, .page-curl-wrapper-prev,
+          .next-curl-overlay, .next-curl-shadow, .next-curl-highlight,
+          .prev-curl-overlay, .prev-curl-shadow, .prev-curl-highlight,
+          .page-shadow-overlay, .page-shadow-overlay-right {
+            animation: none !important;
+          }
         }
       `}</style>
       <div 
@@ -884,7 +916,19 @@ export default function StudentComicViewerPage() {
                <button onClick={() => { if (!isFlipping) setCurrentSpreadIndex(spreads.length - 1) }} disabled={isFlipping} className="p-2 hover:bg-white/10 rounded-full text-white transition-colors disabled:opacity-30" title="마지막으로">
                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m13 17 5-5-5-5"/><path d="m6 17 5-5-5-5"/><path d="M20 17V7"/></svg>
                </button>
-               
+
+               <div className="w-[1px] h-5 bg-white/20 mx-1"></div>
+
+               <button
+                 onClick={toggleSound}
+                 className="p-2 hover:bg-white/10 rounded-full text-white transition-colors"
+                 title={soundEnabled ? '책장 넘김 소리 끄기' : '책장 넘김 소리 켜기'}
+                 aria-label={soundEnabled ? '책장 넘김 소리 끄기' : '책장 넘김 소리 켜기'}
+                 aria-pressed={!soundEnabled}
+               >
+                 {soundEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
+               </button>
+
                <div className="w-[1px] h-5 bg-white/20 mx-1"></div>
                
                <div className="relative">
