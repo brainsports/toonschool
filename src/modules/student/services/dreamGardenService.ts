@@ -264,6 +264,23 @@ export async function getOrCreateStudentGarden(studentId: string): Promise<Stude
   return createDefaultGarden(studentId)
 }
 
+/**
+ * 정원의 선택 배경(background_code)을 변경한다.
+ * background_code 는 레벨 장면 키(dream_palace/starlight_garden/...) 또는 호환 기본값.
+ * 레벨/점수에는 영향을 주지 않는다(이전 배경으로 돌아가도 점수·레벨 유지).
+ */
+export async function updateGardenBackground(studentId: string, backgroundCode: string): Promise<void> {
+  await getOrCreateStudentGarden(studentId)
+  const { error } = await supabase
+    .from('student_gardens')
+    .update({ background_code: backgroundCode })
+    .eq('student_id', studentId)
+  if (error) {
+    console.error('[dreamGardenService] updateGardenBackground failed:', error)
+    throw error
+  }
+}
+
 export async function getStudentItems(studentId: string): Promise<StudentItem[]> {
   const { data, error } = await supabase
     .from('student_items')

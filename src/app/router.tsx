@@ -43,6 +43,7 @@ import StudentMyPage from '../modules/student/pages/StudentMyPage'
 import StudentResourcePage from '../modules/student/pages/StudentResourcePage'
 import StudentDreamGardenPage from '../modules/student/pages/StudentDreamGardenPage'
 import FlipbookLandscapePreviewPage from '../modules/student/pages/FlipbookLandscapePreviewPage'
+import TreasureMapPage from '../modules/student/components/dream/TreasureMapPage'
 
 import ResourceInbox from '../modules/resources/pages/ResourceInbox'
 
@@ -65,6 +66,7 @@ import TeacherManagementPage from '../modules/admin-lms/pages/TeacherManagementP
 import AdminProfilePage from '../modules/admin-lms/pages/AdminProfilePage'
 import TeacherMessagePage from '../modules/admin-lms/pages/TeacherMessagePage'
 import NotificationWritePage from '../modules/admin-lms/pages/NotificationWritePage'
+import DreamGrowthPage from '../modules/admin-lms/pages/DreamGrowthPage'
 
 // 기관관리자 라우트
 import OrgAdminDashboard from '../modules/admin-org/pages/OrgAdminDashboard'
@@ -133,6 +135,7 @@ export default function AppRouter() {
         <Route path="/student/my" element={<Navigate to="/student/mypage" replace />} />
         <Route path="/student/resources" element={<StudentResourcePage />} />
         <Route path="/student/dream-garden" element={<StudentDreamGardenPage />} />
+        <Route path="/student/treasure-map" element={<TreasureMapPage />} />
       </Route>
       <Route path="/book/:slug" element={<SharedComicViewerPage />} />
 
@@ -145,6 +148,7 @@ export default function AppRouter() {
         {/* 공통/선생님 */}
         <Route path="classes" element={<ClassManagementPage />} />
         <Route path="students" element={<AdminStudentManagementPage />} />
+        <Route path="dream-growth" element={<DreamGrowthPage />} />
         <Route path="assessments" element={<AssessmentPage />} />
         <Route path="teacher-message" element={<TeacherMessagePage />} />
         <Route path="notifications/write" element={<NotificationWritePage />} />
