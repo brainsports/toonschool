@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom'
 import { Volume2, VolumeX, ArrowLeft, ArrowRight, BookOpen, MoreVertical, ZoomIn, ZoomOut, Maximize, PlayCircle, Monitor, Copy } from 'lucide-react'
 import { supabase } from '../../../shared/lib/supabase'
 import { usePageTurnSound } from '../components/viewer/usePageTurnSound'
+import { useSwipeNavigation } from '../components/viewer/useSwipeNavigation'
 
 const BGM_PATH = '/audio/viewer/if-i-had-a-chicken.mp3';
 
@@ -80,7 +81,9 @@ export default function SharedComicViewerPage() {
 
   const [zoomPercent, setZoomPercent] = useState<number | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
-  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 })
+  const stageRef = useRef<HTMLDivElement>(null)
+  const [stageSize, setStageSize] = useState({ width: 0, height: 0 })
+  const rafRef = useRef<number | null>(null)
   const audioRef = useRef<HTMLAudioElement>(null)
 
   const [showMenu, setShowMenu] = useState(false)
@@ -168,19 +171,31 @@ export default function SharedComicViewerPage() {
     // playPageTurn 은 안정적인 useCallback(usePageTurnSound)이므로 추가해도 재실행을 유발하지 않는다.
   }, [isAutoFlip, spreads.length, playPageTurn])
 
+  // 가용 영역(스테이지) 측정. 캔버스 자신이 아니라 스테이지를 재서 순환 측정을 방지.
+  // 주의: 측정 effect 는 스테이지가 실제 마운트된 뒤(=페이지 로드 후)에 붙어야 한다.
+  // 따라서 ResizeObserver 로 스테이지를 관찰하고 deps 에 pages.length 를 준다.
+  // 스테이지 크기는 부모 flex 가 결정(캔버스와 무관)하므로 관찰이 순환/루프를 일으키지 않는다.
   useEffect(() => {
-    const handleResize = () => {
-      if (containerRef.current) {
-        setContainerSize({
-          width: containerRef.current.clientWidth,
-          height: containerRef.current.clientHeight
-        })
-      }
+    const el = stageRef.current
+    if (!el) return
+    const measure = () => setStageSize({ width: el.clientWidth, height: el.clientHeight })
+    const onResize = () => {
+      if (rafRef.current != null) cancelAnimationFrame(rafRef.current)
+      rafRef.current = requestAnimationFrame(measure)
     }
-    setTimeout(handleResize, 50)
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
-  }, [])
+    measure()
+    const ro = new ResizeObserver(onResize)
+    ro.observe(el)
+    window.addEventListener('orientationchange', onResize)
+    const vv = typeof window !== 'undefined' ? window.visualViewport : undefined
+    if (vv) vv.addEventListener('resize', onResize)
+    return () => {
+      if (rafRef.current != null) cancelAnimationFrame(rafRef.current)
+      ro.disconnect()
+      window.removeEventListener('orientationchange', onResize)
+      if (vv) vv.removeEventListener('resize', onResize)
+    }
+  }, [pages.length])
 
   useEffect(() => {
     if (pages.length === 0) return;
@@ -238,20 +253,21 @@ export default function SharedComicViewerPage() {
   const pageDisplayHeight = isLegacyPortrait ? LEGACY_PAGE_DISPLAY_HEIGHT : LANDSCAPE_PAGE_DISPLAY_HEIGHT;
   const BASE_WIDTH = useSinglePageMode ? pageDisplayWidth : pageDisplayWidth * 2;
   const BASE_HEIGHT = pageDisplayHeight;
-  const SCROLL_PADDING = useSinglePageMode ? 16 : 48;
 
+  // 단일 scale: 가용 스테이지 공간에서 gutter 여백만 빼고 책을 맞춘다(비율 유지).
+  const GUTTER = useSinglePageMode ? 12 : 24;
   let fitScale = 1;
-  if (containerSize.width > 0 && containerSize.height > 0) {
-    const scaleW = (containerSize.width - SCROLL_PADDING * 2) / BASE_WIDTH;
-    const scaleH = (containerSize.height - SCROLL_PADDING * 2) / BASE_HEIGHT;
+  if (stageSize.width > 0 && stageSize.height > 0) {
+    const scaleW = (stageSize.width - GUTTER * 2) / BASE_WIDTH;
+    const scaleH = (stageSize.height - GUTTER * 2) / BASE_HEIGHT;
     fitScale = Math.min(scaleW, scaleH);
-    fitScale = Math.max(0.3, fitScale);
+    fitScale = Math.max(0.15, fitScale);
   }
 
-  const currentZoom = zoomPercent !== null ? zoomPercent : (containerSize.width > 0 ? Math.round(fitScale * 100) : 100);
+  const currentZoom = zoomPercent !== null ? zoomPercent : (stageSize.width > 0 ? Math.round(fitScale * 100) : 100);
 
   useEffect(() => {
-    const el = containerRef.current;
+    const el = stageRef.current;
     if (!el) return;
     const handleWheel = (e: WheelEvent) => {
       if (e.ctrlKey || e.metaKey) {
@@ -338,6 +354,14 @@ export default function SharedComicViewerPage() {
       setTargetSpreadIndex(null);
     }, FLIP_DURATION_MS);
   }
+
+  // 모바일 터치: 가로 스와이프로 페이지 이동. 탭은 페이지 반의 onClick 이 담당하므로 스와이프만.
+  const swipeNav = useSwipeNavigation({
+    onNext: handleNext,
+    onPrev: handlePrev,
+    isLocked: () => isFlipping,
+    enableTap: false,
+  })
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -568,14 +592,19 @@ export default function SharedComicViewerPage() {
         }
       `}</style>
       <div
-        className="flex-1 w-full relative overflow-auto student-scrollbar bg-[#fbf4ec] flex flex-col items-center pt-4 pb-8 px-2 md:px-8"
+        className="flex-1 w-full relative overflow-hidden bg-[#fbf4ec] flex flex-col"
+        style={{ paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'env(safe-area-inset-left)', paddingRight: 'env(safe-area-inset-right)' }}
       >
-
-         <div className="flex flex-col items-center my-auto shrink-0 w-full">
+        <div
+          ref={stageRef}
+          className="flex-1 min-h-0 w-full flex items-center justify-center overflow-auto student-scrollbar"
+          {...swipeNav}
+        >
            <div
              ref={containerRef}
              className="relative shadow-2xl bg-[#e2e8f0] rounded-none shrink-0 viewerCanvas"
              style={{
+                margin: GUTTER,
                 width: BASE_WIDTH * (currentZoom / 100),
                 height: BASE_HEIGHT * (currentZoom / 100),
                 overflow: 'visible',
@@ -657,9 +686,10 @@ export default function SharedComicViewerPage() {
                 {!useSinglePageMode && <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-full bg-gradient-to-r from-black/10 via-transparent to-black/10 z-40 pointer-events-none mix-blend-multiply opacity-60" />}
               </div>
            </div>
+        </div>
 
            {hasStarted && (
-             <div className="mt-4 flex items-center gap-1.5 md:gap-2 px-3 py-1.5 md:px-4 md:py-2 rounded-full shadow-md z-50 transition-all shrink-0 playerWrapper border border-white/10" style={{ backgroundColor: 'rgba(30, 34, 45, 0.75)', backdropFilter: 'blur(8px)' }}>
+             <div className="mt-2 flex items-center gap-1.5 md:gap-2 px-3 py-1.5 md:px-4 md:py-2 rounded-full shadow-md z-50 transition-all shrink-0 playerWrapper border border-white/10" style={{ backgroundColor: 'rgba(30, 34, 45, 0.75)', backdropFilter: 'blur(8px)', marginBottom: 'env(safe-area-inset-bottom)' }}>
                {windowWidth > 600 && (
                  <button onClick={() => { if (!isFlipping) setCurrentSpreadIndex(0) }} disabled={isFlipping} className="p-1.5 md:p-2 hover:bg-white/10 rounded-full text-white transition-colors disabled:opacity-30" title="처음으로">
                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m11 17-5-5 5-5"/><path d="m18 17-5-5 5-5"/><path d="M4 17V7"/></svg>
@@ -737,7 +767,6 @@ export default function SharedComicViewerPage() {
                </div>
              </div>
            )}
-         </div>
       </div>
 
     </div>

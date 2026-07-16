@@ -23,6 +23,7 @@ import { mapViewerPage } from '../components/viewer/flipbookPageMapper'
 import type { FlipbookMapContext } from '../components/viewer/flipbookPageMapper'
 import type { FlipbookPage as FlipbookPageModel } from '../components/viewer/flipbookPageModel'
 import { usePageTurnSound } from '../components/viewer/usePageTurnSound'
+import { useSwipeNavigation } from '../components/viewer/useSwipeNavigation'
 import '../styles/flipbook.css'
 import '../styles/flipbook-landscape-pastel.css'
 const BGM_PATH = '/audio/viewer/if-i-had-a-chicken.mp3';
@@ -38,13 +39,11 @@ const PREFERS_REDUCED_MOTION =
     : false
 const FLIP_DURATION_MS = PREFERS_REDUCED_MOTION ? 260 : 650
 
-// 16:9 파스텔 단일 페이지 논리 크기(양면 펼침 기준)
+// 16:9 파스텔 단일 페이지 논리 크기
 const PASTEL_PAGE_WIDTH = 1600
 const PASTEL_PAGE_HEIGHT = 900
-// 양면 펼침 논리 크기(좌·우 두 페이지)
+// 양면 펼침 논리 너비(좌·우 두 페이지). 단일 모드는 PASTEL_PAGE_WIDTH 사용.
 const SPREAD_WIDTH = PASTEL_PAGE_WIDTH * 2
-const SPREAD_HEIGHT = PASTEL_PAGE_HEIGHT
-const SPREAD_PAD = 48
 
 type ViewerPage =
   | { type: 'front-cover'; data: EditorState | null }
@@ -57,9 +56,13 @@ type ViewerPage =
 
 type Spread = { pages: [number | null, number | null] };
 
-const getSpreads = (totalCount: number): Spread[] => {
+const getSpreads = (totalCount: number, single = false): Spread[] => {
   if (totalCount <= 0) return []
-  // 표지는 책 앞표지처럼 단독(우측 면). 본문은 2면 펼침. 마지막 홀수 페이지는 단독.
+  // 단일 페이지 모드(모바일 세로): 한 페이지를 한 스프레드(한 면)로.
+  if (single) {
+    return Array.from({ length: totalCount }, (_, i) => ({ pages: [i, null] }))
+  }
+  // 양면 펼침(PC/태블릿): 표지는 우측 단독, 본문은 2면, 마지막 홀수 페이지는 단독.
   const spreads: Spread[] = [{ pages: [null, 0] }]
   let i = 1
   while (i < totalCount) {
@@ -103,8 +106,14 @@ export default function StudentComicViewerPage() {
 
   const [zoomPercent, setZoomPercent] = useState<number | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
-  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 })
+  const stageRef = useRef<HTMLDivElement>(null)
+  const [stageSize, setStageSize] = useState({ width: 0, height: 0 })
+  const rafRef = useRef<number | null>(null)
   const audioRef = useRef<HTMLAudioElement>(null)
+
+  // 화면 크기 기반 모바일 단일 페이지 모드(기기명 아님). 공유 뷰어와 동일 기준.
+  const [isSinglePageMode, setIsSinglePageMode] = useState(false)
+  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1280)
 
   const [projectData, setProjectData] = useState<ComicProjectData | null>(null)
   const [quizAnswers, setQuizAnswers] = useState<Record<number, 'O' | 'X'>>({})
@@ -120,7 +129,26 @@ export default function StudentComicViewerPage() {
   // 책장 넘김 효과음(합성, 음소거 상태는 localStorage 에 저장).
   const { playPageTurn, primeAudio, soundEnabled, toggleSound } = usePageTurnSound()
 
-  const spreads = getSpreads(pages.length)
+  const useSinglePageMode = isSinglePageMode
+  const spreads = getSpreads(pages.length, useSinglePageMode)
+  const prevSingleModeRef = useRef(useSinglePageMode)
+
+  // 화면 크기로 단일/양면 모드 결정(회전 포함). 기기명 아닌 가용 너비·방향 기준(공유 뷰어와 동일).
+  useEffect(() => {
+    const checkMode = () => {
+      const w = window.innerWidth
+      const h = window.innerHeight
+      setIsSinglePageMode(w <= 768 || (w <= 1024 && h > w))
+      setWindowWidth(w)
+    }
+    checkMode()
+    window.addEventListener('resize', checkMode)
+    window.addEventListener('orientationchange', checkMode)
+    return () => {
+      window.removeEventListener('resize', checkMode)
+      window.removeEventListener('orientationchange', checkMode)
+    }
+  }, [])
 
   // 신규 파스텔 페이지 모델(원본 ViewerPage[] 와 1:1 정렬, 원본 데이터 불변)
   const pastelCtx = useMemo<FlipbookMapContext>(() => {
@@ -142,6 +170,23 @@ export default function StudentComicViewerPage() {
   currentSpreadIndexRef.current = currentSpreadIndex
   const isFlippingRef = useRef(isFlipping)
   isFlippingRef.current = isFlipping
+
+  // 모드(단일↔양면) 전환 시 보던 페이지 유지.
+  useEffect(() => {
+    if (pages.length === 0) return
+    if (prevSingleModeRef.current !== useSinglePageMode) {
+      const oldSpreads = getSpreads(pages.length, prevSingleModeRef.current)
+      const cur = oldSpreads[currentSpreadIndexRef.current]
+      if (cur) {
+        const pageViewing = cur.pages[0] !== null ? cur.pages[0] : cur.pages[1]
+        if (pageViewing !== null) {
+          const newIndex = spreads.findIndex((s) => s.pages[0] === pageViewing || s.pages[1] === pageViewing)
+          if (newIndex !== -1) setCurrentSpreadIndex(newIndex)
+        }
+      }
+      prevSingleModeRef.current = useSinglePageMode
+    }
+  }, [useSinglePageMode, pages.length]) // spreads 는 useSinglePageMode/pages.length 에서 파생
 
   const toggleAutoFlip = () => setIsAutoFlip(p => !p)
 
@@ -183,19 +228,30 @@ export default function StudentComicViewerPage() {
     // playPageTurn 은 안정적인 useCallback(usePageTurnSound)이므로 추가해도 재실행을 유발하지 않는다.
   }, [isAutoFlip, spreads.length, playPageTurn])
 
+  // 가용 영역(스테이지) 측정. 캔버스가 아니라 스테이지를 재서 순환 측정을 방지.
+  // 스테이지는 캔버스가 마운트된 뒤(프로젝트 로드 후)에 관찰해야 하므로 ResizeObserver + pages.length 의존.
+  // 스테이지 크기는 부모 flex 가 결정(캔버스와 무관) → 관찰 루프 없음.
   useEffect(() => {
-    const handleResize = () => {
-      if (containerRef.current) {
-        setContainerSize({
-          width: containerRef.current.clientWidth,
-          height: containerRef.current.clientHeight
-        })
-      }
+    const el = stageRef.current
+    if (!el) return
+    const measure = () => setStageSize({ width: el.clientWidth, height: el.clientHeight })
+    const onResize = () => {
+      if (rafRef.current != null) cancelAnimationFrame(rafRef.current)
+      rafRef.current = requestAnimationFrame(measure)
     }
-    setTimeout(handleResize, 50)
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
-  }, [])
+    measure()
+    const ro = new ResizeObserver(onResize)
+    ro.observe(el)
+    window.addEventListener('orientationchange', onResize)
+    const vv = typeof window !== 'undefined' ? window.visualViewport : undefined
+    if (vv) vv.addEventListener('resize', onResize)
+    return () => {
+      if (rafRef.current != null) cancelAnimationFrame(rafRef.current)
+      ro.disconnect()
+      window.removeEventListener('orientationchange', onResize)
+      if (vv) vv.removeEventListener('resize', onResize)
+    }
+  }, [pages.length])
 
   useEffect(() => {
     const stateProjectId = location.state?.projectId;
@@ -243,22 +299,24 @@ export default function StudentComicViewerPage() {
   }, [location.state])
 
 
-  // --- Zoom Logic (양면 펼침 단일 scale) ---
-  const SCROLL_PADDING = SPREAD_PAD;
+  // --- 단일 scale: 가용 스테이지 공간에서 gutter 만 빼고 맞춤(비율 유지). ---
+  const BASE_W = useSinglePageMode ? PASTEL_PAGE_WIDTH : SPREAD_WIDTH;
+  const BASE_H = PASTEL_PAGE_HEIGHT;
+  const GUTTER = useSinglePageMode ? 12 : 24;
 
   let fitScale = 1;
-  if (containerSize.width > 0 && containerSize.height > 0) {
-    const scaleW = (containerSize.width - SCROLL_PADDING * 2) / SPREAD_WIDTH;
-    const scaleH = (containerSize.height - SCROLL_PADDING * 2) / SPREAD_HEIGHT;
+  if (stageSize.width > 0 && stageSize.height > 0) {
+    const scaleW = (stageSize.width - GUTTER * 2) / BASE_W;
+    const scaleH = (stageSize.height - GUTTER * 2) / BASE_H;
     fitScale = Math.min(scaleW, scaleH);
-    fitScale = Math.max(0.2, fitScale);
+    fitScale = Math.max(0.15, fitScale);
   }
 
-  const currentZoom = zoomPercent !== null ? zoomPercent : (containerSize.width > 0 ? Math.round(fitScale * 100) : 100);
+  const currentZoom = zoomPercent !== null ? zoomPercent : (stageSize.width > 0 ? Math.round(fitScale * 100) : 100);
   const spreadScale = currentZoom / 100;
 
   useEffect(() => {
-    const el = containerRef.current;
+    const el = stageRef.current;
     if (!el) return;
     const handleWheel = (e: WheelEvent) => {
       if (e.ctrlKey || e.metaKey) {
@@ -355,6 +413,14 @@ export default function StudentComicViewerPage() {
       setTargetSpreadIndex(null);
     }, FLIP_DURATION_MS);
   }
+
+  // 모바일 터치: 가로 스와이프 + 탭(좌/우 절반). 학생 뷰어는 페이지 반 클릭이 없어 탭도 허용.
+  const swipeNav = useSwipeNavigation({
+    onNext: handleNext,
+    onPrev: handlePrev,
+    isLocked: () => isFlipping,
+    enableTap: true,
+  })
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -456,9 +522,11 @@ export default function StudentComicViewerPage() {
     targetSpreadIndex !== null ? spreads[targetSpreadIndex] ?? null : null
   const baseSpread: Spread =
     isFlipping && targetSpread
-      ? flipDirection === 'next'
-        ? { pages: [currentSpread.pages[0], targetSpread.pages[1]] }
-        : { pages: [targetSpread.pages[0], currentSpread.pages[1]] }
+      ? useSinglePageMode
+        ? targetSpread // 단일 모드: 넘겨서 드러날 타겟 페이지를 베이스로
+        : flipDirection === 'next'
+          ? { pages: [currentSpread.pages[0], targetSpread.pages[1]] }
+          : { pages: [targetSpread.pages[0], currentSpread.pages[1]] }
       : currentSpread
   const handleDownloadPdf = async () => {
     if (isPdfDownloading) return;
@@ -829,17 +897,22 @@ export default function StudentComicViewerPage() {
           }
         }
       `}</style>
-      <div 
-        className="flex-1 w-full relative overflow-auto student-scrollbar bg-[#f3f4f7] flex flex-col items-center pt-8 pb-10 px-4 md:px-10"
+      <div
+        className="flex-1 w-full relative overflow-hidden bg-[#f3f4f7] flex flex-col"
+        style={{ paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'env(safe-area-inset-left)', paddingRight: 'env(safe-area-inset-right)' }}
       >
-         
-         <div className="flex flex-col items-center my-auto shrink-0 w-full">
-           <div 
+        <div
+          ref={stageRef}
+          className="flex-1 min-h-0 w-full flex items-center justify-center overflow-auto student-scrollbar"
+          {...swipeNav}
+        >
+           <div
              ref={containerRef}
              className="relative shadow-2xl bg-[#e2e8f0] rounded-none shrink-0 viewerCanvas"
              style={{
-                width: SPREAD_WIDTH * spreadScale,
-                height: SPREAD_HEIGHT * spreadScale,
+                margin: GUTTER,
+                width: BASE_W * spreadScale,
+                height: BASE_H * spreadScale,
                 overflow: 'visible',
                 opacity: hasStarted ? 1 : 0.5,
                 perspective: '2400px',
@@ -848,25 +921,27 @@ export default function StudentComicViewerPage() {
               <div
                 className="relative"
                 style={{
-                  width: SPREAD_WIDTH,
-                  height: SPREAD_HEIGHT,
+                  width: BASE_W,
+                  height: BASE_H,
                   transform: `scale(${spreadScale})`,
                   transformOrigin: 'top left',
                   transformStyle: 'preserve-3d',
                 }}
               >
-                {/* 베이스 스프레드: 좌·우 두 페이지(각 1600×900 고정) */}
+                {/* 베이스: 양면은 좌·우 두 페이지, 단일 모드는 한 페이지만(각 1600×900) */}
                 <div className="absolute inset-0 flex">
                   <div style={{ width: PASTEL_PAGE_WIDTH, height: PASTEL_PAGE_HEIGHT }}>
                     {renderPageSlot(baseSpread.pages[0])}
                   </div>
-                  <div style={{ width: PASTEL_PAGE_WIDTH, height: PASTEL_PAGE_HEIGHT }}>
-                    {renderPageSlot(baseSpread.pages[1])}
-                  </div>
+                  {!useSinglePageMode && (
+                    <div style={{ width: PASTEL_PAGE_WIDTH, height: PASTEL_PAGE_HEIGHT }}>
+                      {renderPageSlot(baseSpread.pages[1])}
+                    </div>
+                  )}
                 </div>
 
-                {/* 중앙 책등 섀도우 */}
-                <div className="flp-spine" aria-hidden="true" />
+                {/* 중앙 책등 섀도우(양면 모드만) */}
+                {!useSinglePageMode && <div className="flp-spine" aria-hidden="true" />}
 
                 {/* 실제 책 넘김: 종이 한 장이 회전(앞면=현재 면, 뒷면=넘어갈 면) */}
                 {isFlipping && targetSpread && (
@@ -875,10 +950,10 @@ export default function StudentComicViewerPage() {
                     style={{
                       position: 'absolute',
                       top: 0,
-                      left: flipDirection === 'next' ? PASTEL_PAGE_WIDTH : 0,
+                      left: useSinglePageMode ? 0 : (flipDirection === 'next' ? PASTEL_PAGE_WIDTH : 0),
                       width: PASTEL_PAGE_WIDTH,
                       height: PASTEL_PAGE_HEIGHT,
-                      transformOrigin: flipDirection === 'next' ? 'left center' : 'right center',
+                      transformOrigin: useSinglePageMode ? 'center center' : (flipDirection === 'next' ? 'left center' : 'right center'),
                       transformStyle: 'preserve-3d',
                       zIndex: 30,
                       pointerEvents: 'none',
@@ -888,7 +963,7 @@ export default function StudentComicViewerPage() {
                       className={`flp-turn-face flp-turn-front ${flipDirection === 'next' ? 'page-curl-wrapper-next' : 'page-curl-wrapper-prev'}`}
                       style={{ position: 'absolute', inset: 0, backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', overflow: 'hidden' }}
                     >
-                      {renderPageSlot(flipDirection === 'next' ? currentSpread.pages[1] : currentSpread.pages[0])}
+                      {renderPageSlot(useSinglePageMode ? currentSpread.pages[0] : (flipDirection === 'next' ? currentSpread.pages[1] : currentSpread.pages[0]))}
                       {/* 종이가 바깥쪽에서 들리며 휘어지는 느낌(그라데이션·그림자·하이라이트) */}
                       <div className={`page-curl-overlay ${flipDirection === 'next' ? 'next-curl-overlay' : 'prev-curl-overlay'}`} />
                       <div className={`page-curl-overlay ${flipDirection === 'next' ? 'next-curl-shadow' : 'prev-curl-shadow'}`} />
@@ -898,7 +973,7 @@ export default function StudentComicViewerPage() {
                       className="flp-turn-face flp-turn-back"
                       style={{ position: 'absolute', inset: 0, backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'rotateY(180deg)', overflow: 'hidden' }}
                     >
-                      {renderPageSlot(flipDirection === 'next' ? targetSpread.pages[0] : targetSpread.pages[1])}
+                      {renderPageSlot(useSinglePageMode ? targetSpread.pages[0] : (flipDirection === 'next' ? targetSpread.pages[0] : targetSpread.pages[1]))}
                       {/* 넘어가서 안착할 때 중앙 제본선에 지는 그림자 */}
                       <div className={flipDirection === 'next' ? 'page-shadow-overlay-right' : 'page-shadow-overlay'} />
                     </div>
@@ -906,12 +981,15 @@ export default function StudentComicViewerPage() {
                 )}
               </div>
            </div>
+        </div>
            {/* Bottom Player Bar */}
            {hasStarted && (
-             <div className="mt-8 flex items-center gap-2 px-4 py-2 rounded-full shadow-lg z-50 transition-all shrink-0 playerWrapper" style={{ backgroundColor: 'rgba(40, 25, 10, 0.88)' }}>
+             <div className="mt-2 flex items-center gap-2 px-4 py-2 rounded-full shadow-lg z-50 transition-all shrink-0 playerWrapper" style={{ backgroundColor: 'rgba(40, 25, 10, 0.88)', marginBottom: 'env(safe-area-inset-bottom)' }}>
+               {windowWidth > 600 && (
                <button onClick={() => { if (!isFlipping) setCurrentSpreadIndex(0) }} disabled={isFlipping} className="p-2 hover:bg-white/10 rounded-full text-white transition-colors disabled:opacity-30" title="처음으로">
                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m11 17-5-5 5-5"/><path d="m18 17-5-5 5-5"/><path d="M4 17V7"/></svg>
                </button>
+               )}
                <button onClick={handlePrev} disabled={currentSpreadIndex === 0 || isFlipping} className="p-2 hover:bg-white/10 rounded-full text-white transition-colors disabled:opacity-30" title="이전">
                  <ArrowLeft className="w-5 h-5" />
                </button>
@@ -921,9 +999,11 @@ export default function StudentComicViewerPage() {
                <button onClick={handleNext} disabled={currentSpreadIndex === spreads.length - 1 || isFlipping} className="p-2 hover:bg-white/10 rounded-full text-white transition-colors disabled:opacity-30" title="다음">
                  <ArrowRight className="w-5 h-5" />
                </button>
+               {windowWidth > 600 && (
                <button onClick={() => { if (!isFlipping) setCurrentSpreadIndex(spreads.length - 1) }} disabled={isFlipping} className="p-2 hover:bg-white/10 rounded-full text-white transition-colors disabled:opacity-30" title="마지막으로">
                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m13 17 5-5-5-5"/><path d="m6 17 5-5-5-5"/><path d="M20 17V7"/></svg>
                </button>
+               )}
 
                <div className="w-[1px] h-5 bg-white/20 mx-1"></div>
 
@@ -966,9 +1046,6 @@ export default function StudentComicViewerPage() {
                </div>
              </div>
            )}
-         </div>
-         
-
       </div>
 
       {/* Zoom Controls */}
