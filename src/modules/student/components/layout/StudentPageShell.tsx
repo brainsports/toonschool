@@ -1,7 +1,7 @@
 // 학생 UI 전체 페이지를 감싸는 공통 레이아웃 컴포넌트
 import React, { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { LogOut, Home, Gift, X, Sprout, Map, Trophy } from 'lucide-react'
+import { LogOut, Home, Sprout, Map, Trophy } from 'lucide-react'
 import { mockStudentProfile } from '../../data/studentMockData'
 import StudentSpaceBackground from './StudentSpaceBackground'
 import '../../styles/student-ui.css'
@@ -15,7 +15,6 @@ import { getStudentItems } from '../../services/dreamGardenService'
 import { getAttendanceRewardItemCount } from '../../services/studentAttendanceService'
 import type { StudentItem } from '../../types/dreamGarden'
 import { useDreamProgress } from '../dream/useDreamProgress'
-import { getChapter } from '../../config/dreamProgressionConfig'
 import DreamScoreDetailModal from '../dream/DreamScoreDetailModal'
 import DreamRankingModal from '../dream/DreamRankingModal'
 import LevelUpModal from '../dream/LevelUpModal'
@@ -47,19 +46,6 @@ const bgOverlays = {
   pastel: 'student-pastel-bg from-transparent to-transparent',
 }
 
-function getItemEmoji(item?: StudentItem['item'] | null) {
-  if (item?.category === 'animal') return '🐰'
-  if (item?.category === 'sky') return '⭐'
-  if (item?.category === 'spirit') return '✨'
-  if (item?.category === 'decor') return '🎀'
-  if (item?.category === 'legend') return '👑'
-  return '🌱'
-}
-
-function formatAcquiredDate(dateString: string) {
-  return new Date(dateString).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' })
-}
-
 export default function StudentPageShell({
   children,
   showHUD = true,
@@ -73,10 +59,7 @@ export default function StudentPageShell({
   const [isAllWorksModalOpen, setIsAllWorksModalOpen] = useState(false)
   const [myWorks, setMyWorks] = useState<MyWork[]>([])
   const [hasLoadedWorks, setHasLoadedWorks] = useState(false)
-  const [isLootModalOpen, setIsLootModalOpen] = useState(false)
   const [studentItems, setStudentItems] = useState<StudentItem[]>([])
-  const [hasLoadedItems, setHasLoadedItems] = useState(false)
-  const [isLoadingItems, setIsLoadingItems] = useState(false)
   const [attendanceRewardCount, setAttendanceRewardCount] = useState(0)
   const [isScoreDetailOpen, setIsScoreDetailOpen] = useState(false)
   const [isRankingOpen, setIsRankingOpen] = useState(false)
@@ -86,19 +69,14 @@ export default function StudentPageShell({
   const loadLootItems = useCallback(async () => {
     if (!studentId) {
       setStudentItems([])
-      setHasLoadedItems(true)
       return
     }
 
     try {
-      setIsLoadingItems(true)
       const items = await getStudentItems(studentId)
       setStudentItems(items)
-      setHasLoadedItems(true)
     } catch (error) {
       console.error('[StudentPageShell] 득템 현황 조회 실패:', error)
-    } finally {
-      setIsLoadingItems(false)
     }
   }, [studentId])
 
@@ -157,16 +135,6 @@ export default function StudentPageShell({
     setHasLoadedWorks(true)
   }, [authProfile?.id, authProfile?.name, hasLoadedWorks, user?.id])
 
-  const handleOpenLootModal = useCallback(async () => {
-    setIsLootModalOpen(true)
-
-    if (hasLoadedItems) {
-      return
-    }
-
-    await loadLootItems()
-  }, [hasLoadedItems, loadLootItems])
-
   const handleLogout = useCallback(async () => {
     await signOut()
     navigate('/', { replace: true })
@@ -183,9 +151,6 @@ export default function StudentPageShell({
   const isRealStudent = user && authProfile?.role === 'student';
   const isFull = maxWidth === 'full';
   const totalLootCount = studentItems.reduce((sum, item) => sum + item.quantity, 0)
-  const recentLootItems = studentItems.slice(0, 5)
-  const dreamChapter = getChapter(dream.level)
-  const dreamIsMax = dream.level >= 10
 
   return (
     <div className={`${isFull ? 'h-[100dvh] overflow-hidden' : 'min-h-screen overflow-x-hidden'} flex flex-col ${isFull ? 'pb-0' : 'pb-12'} bg-gradient-to-tr ${bgOverlays[bgVariant as keyof typeof bgOverlays] || bgOverlays.default} relative`}>
@@ -253,7 +218,8 @@ export default function StudentPageShell({
               </button>
             </div>
 
-            {/* 우측: 꿈점수·레벨·진행률·랭킹·보물지도 (기존 득템/출석보상은 상세 모달로 이동) */}
+            {/* 우측: 꿈점수(P) · 보물지도 · 랭킹 · 로그아웃
+                (성장 단계 안내/득템 버튼은 제거. 득템·출석보상 수는 꿈점수 상세 모달에서 확인) */}
             <div className="flex items-center gap-2">
               {/* 꿈점수 (클릭 → 상세 모달) */}
               <button
@@ -264,22 +230,7 @@ export default function StudentPageShell({
                 aria-label="내 꿈점수 상세 보기"
               >
                 <Trophy className="w-4 h-4" />
-                <span><span className="dream-hud-score-num">{dream.dreamScore.toLocaleString()}</span> 꿈점수</span>
-              </button>
-
-              {/* 현재 장면 + 진행률 + 남은 점수 */}
-              <button
-                type="button"
-                onClick={() => setIsScoreDetailOpen(true)}
-                className="dream-hud-chip dream-hud-chip--plain"
-                style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '0.1rem', cursor: 'pointer' }}
-                title={`${dreamChapter.chapterTitle} · ${dreamIsMax ? '최고 레벨' : `다음 장면까지 활동점수 ${dream.pointsToNextLevel.toLocaleString()}점`}`}
-              >
-                <span className="dream-hud-scene">{dreamChapter.chapterTitle}</span>
-                <span className="dream-hud-progress"><span style={{ width: `${Math.round(dream.levelProgressRate * 100)}%` }} /></span>
-                <span style={{ fontSize: '0.6rem', color: '#8a6c8a', lineHeight: 1 }}>
-                  {dreamIsMax ? '최고 레벨 🎉' : `다음 장면까지 ${dream.pointsToNextLevel.toLocaleString()}점`}
-                </span>
+                <span><span className="dream-hud-score-num">{dream.dreamScore.toLocaleString()}</span>P</span>
               </button>
 
               {/* 보물지도 */}
@@ -302,17 +253,6 @@ export default function StudentPageShell({
                 aria-label="우리 반 성장랭킹"
               >
                 <Trophy className="w-4 h-4" /><span className="hidden lg:inline">랭킹</span>
-              </button>
-
-              {/* 기존 득템(모달) — 출석보상 개수는 상세 모달에서 확인 */}
-              <button
-                type="button"
-                onClick={handleOpenLootModal}
-                className="dream-hud-chip dream-hud-chip--plain"
-                title={`나의 득템 ${totalLootCount}개 · 출석보상 ${attendanceRewardCount}개`}
-                aria-label="나의 득템 현황"
-              >
-                <Gift className="w-4 h-4" /><span className="hidden lg:inline">🎒{totalLootCount}</span>
               </button>
 
               {/* 로그아웃 버튼 */}
@@ -339,69 +279,6 @@ export default function StudentPageShell({
         onClose={() => setIsAllWorksModalOpen(false)}
         works={myWorks}
       />
-
-      {isLootModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-          <div className="bg-white rounded-[2rem] w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden shadow-2xl">
-            <div className="flex items-start justify-between gap-4 p-6 md:px-8 border-b border-slate-100">
-              <div>
-                <h2 className="text-2xl font-black text-slate-800">나의 득템 현황</h2>
-                <p className="text-sm font-medium text-slate-500 mt-1">내가 얻은 아이템을 확인해 보세요.</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsLootModalOpen(false)}
-                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-colors"
-                aria-label="득템 현황 닫기"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-
-            <div className="p-6 md:p-8 overflow-y-auto">
-              <div className="mb-5 rounded-2xl bg-yellow-50 border-2 border-yellow-100 px-5 py-4 flex items-center justify-between">
-                <span className="font-jua text-slate-700">전체 아이템 수</span>
-                <span className="font-jua text-2xl text-yellow-700">{totalLootCount}개</span>
-              </div>
-
-              {isLoadingItems ? (
-                <div className="py-10 text-center text-slate-400 font-bold">득템 현황을 불러오는 중이에요...</div>
-              ) : recentLootItems.length === 0 ? (
-                <div className="py-10 text-center rounded-2xl bg-slate-50 border border-slate-100 text-slate-500 font-bold">
-                  아직 얻은 아이템이 없어요.
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {recentLootItems.map((studentItem) => (
-                    <div key={studentItem.id} className="flex items-center gap-3 rounded-2xl border border-slate-100 bg-slate-50/70 px-4 py-3">
-                      <div className="w-11 h-11 rounded-2xl bg-white flex items-center justify-center text-2xl shadow-sm">
-                        {getItemEmoji(studentItem.item)}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="font-jua text-slate-800 truncate">{studentItem.item?.name ?? '아이템'}</p>
-                        <p className="text-xs font-bold text-slate-400">{formatAcquiredDate(studentItem.acquired_at)} 획득</p>
-                      </div>
-                      <span className="shrink-0 rounded-full bg-white px-3 py-1 text-sm font-jua text-slate-600 border border-slate-100">
-                        {studentItem.quantity}개
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="p-6 md:px-8 border-t border-slate-100 flex justify-end">
-              <button
-                type="button"
-                onClick={() => navigate('/student/dream-garden')}
-                className="rounded-full bg-emerald-500 px-6 py-3 font-jua text-white shadow-lg shadow-emerald-500/20 hover:bg-emerald-600 transition-colors"
-              >
-                꿈의 정원 보기
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {isScoreDetailOpen && (
         <DreamScoreDetailModal
