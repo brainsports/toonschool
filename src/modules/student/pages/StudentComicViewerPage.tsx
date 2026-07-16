@@ -118,7 +118,7 @@ export default function StudentComicViewerPage() {
   const [targetSpreadIndex, setTargetSpreadIndex] = useState<number | null>(null)
 
   // 책장 넘김 효과음(합성, 음소거 상태는 localStorage 에 저장).
-  const { playPageTurn, soundEnabled, toggleSound } = usePageTurnSound()
+  const { playPageTurn, primeAudio, soundEnabled, toggleSound } = usePageTurnSound()
 
   const spreads = getSpreads(pages.length)
 
@@ -311,6 +311,8 @@ export default function StudentComicViewerPage() {
   const startViewer = () => {
     setHasStarted(true);
     playMusic();
+    // "책 펼치기" 제스처에서 효과음 AudioContext 를 미리 실행해 첫 넘김 소리 누락 방지.
+    primeAudio();
   };
 
   useEffect(() => {
@@ -883,16 +885,22 @@ export default function StudentComicViewerPage() {
                     }}
                   >
                     <div
-                      className="flp-turn-face flp-turn-front"
+                      className={`flp-turn-face flp-turn-front ${flipDirection === 'next' ? 'page-curl-wrapper-next' : 'page-curl-wrapper-prev'}`}
                       style={{ position: 'absolute', inset: 0, backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', overflow: 'hidden' }}
                     >
                       {renderPageSlot(flipDirection === 'next' ? currentSpread.pages[1] : currentSpread.pages[0])}
+                      {/* 종이가 바깥쪽에서 들리며 휘어지는 느낌(그라데이션·그림자·하이라이트) */}
+                      <div className={`page-curl-overlay ${flipDirection === 'next' ? 'next-curl-overlay' : 'prev-curl-overlay'}`} />
+                      <div className={`page-curl-overlay ${flipDirection === 'next' ? 'next-curl-shadow' : 'prev-curl-shadow'}`} />
+                      <div className={`page-curl-overlay ${flipDirection === 'next' ? 'next-curl-highlight' : 'prev-curl-highlight'}`} />
                     </div>
                     <div
                       className="flp-turn-face flp-turn-back"
                       style={{ position: 'absolute', inset: 0, backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'rotateY(180deg)', overflow: 'hidden' }}
                     >
                       {renderPageSlot(flipDirection === 'next' ? targetSpread.pages[0] : targetSpread.pages[1])}
+                      {/* 넘어가서 안착할 때 중앙 제본선에 지는 그림자 */}
+                      <div className={flipDirection === 'next' ? 'page-shadow-overlay-right' : 'page-shadow-overlay'} />
                     </div>
                   </div>
                 )}

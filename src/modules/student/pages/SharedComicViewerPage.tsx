@@ -92,7 +92,7 @@ export default function SharedComicViewerPage() {
   const [targetSpreadIndex, setTargetSpreadIndex] = useState<number | null>(null)
 
   // 책장 넘김 효과음(합성, 음소거 상태는 localStorage 에 저장).
-  const { playPageTurn, soundEnabled, toggleSound } = usePageTurnSound()
+  const { playPageTurn, primeAudio, soundEnabled, toggleSound } = usePageTurnSound()
 
   const [isSinglePageMode, setIsSinglePageMode] = useState(false)
   const prevSingleModeRef = useRef(isSinglePageMode)
@@ -298,6 +298,8 @@ export default function SharedComicViewerPage() {
   const startViewer = () => {
     setHasStarted(true);
     playMusic();
+    // "책 펼치기" 제스처에서 효과음 AudioContext 를 미리 실행해 첫 넘김 소리 누락 방지.
+    primeAudio();
   };
 
   useEffect(() => {

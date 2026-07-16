@@ -29,6 +29,8 @@ function readStoredEnabled(): boolean {
 export interface PageTurnSoundApi {
   /** 책장 넘김 효과음을 재생한다. 음소거 상태거나 오디오를 쓸 수 없으면 아무 일도 일어나지 않는다. */
   playPageTurn: () => void
+  /** "책 펼치기" 같은 최초 사용자 제스처에서 호출해 AudioContext 를 미리 생성·실행한다. 첫 넘김 소리 누락 방지. */
+  primeAudio: () => void
   /** 효과음 사용 여부. */
   soundEnabled: boolean
   /** 효과음 켜기/끄기 토글. localStorage 에 반영된다. */
@@ -74,54 +76,64 @@ export function usePageTurnSound(): PageTurnSoundApi {
     }
   }, [])
 
+  // "책 펼치기" 같은 최초 제스처에서 미리 AudioContext 를 만들어 실행한다.
+  // 첫 넘김에서 맥락이 아직 실행 전이라 소리가 누락되는 것을 방지.
+  const primeAudio = useCallback(() => {
+    ensureCtx()
+  }, [ensureCtx])
+
+  /**
+   * 종이 넘김 소리 재생.
+   *  - 단일 노이즈가 아니라 짧은 노이즈 버스트 3개를 약간씩 어긋나게 겹쳐
+   *    "사각사각" 종이 스치는 느낌을 낸다.
+   *  - 고역통과+대역통과(2~4kHz, 종이 특유의 바스락 주파수)로 크리스피하게.
+   *  - 음량은 또렷하게 들리면서도 부드러운 수준(피크 ~0.34).
+   *  - ctx.currentTime 보다 살짝 뒤에 스케줄해 맥락이 실행 중이도록 여유를 둔다.
+   */
   const playPageTurn = useCallback(() => {
     if (!soundEnabled) return
     const ctx = ensureCtx()
     if (!ctx) return
     try {
-      const now = ctx.currentTime
-      const dur = 0.34
+      const base = ctx.currentTime + 0.02
+      const bursts = 3
+      for (let b = 0; b < bursts; b++) {
+        const start = base + b * (0.032 + Math.random() * 0.02)
+        const dur = 0.07 + Math.random() * 0.045
+        const frames = Math.max(1, Math.floor(ctx.sampleRate * dur))
+        const buffer = ctx.createBuffer(1, frames, ctx.sampleRate)
+        const data = buffer.getChannelData(0)
+        for (let i = 0; i < frames; i++) {
+          const tt = i / frames
+          // 날카로운 어택 + 지수 감쇠(종이가 스치는 짧은 과정).
+          const env = Math.min(1, tt * 45) * Math.pow(1 - tt, 2)
+          data[i] = (Math.random() * 2 - 1) * env
+        }
+        const src = ctx.createBufferSource()
+        src.buffer = buffer
 
-      // --- 종이 스치는 소리 = 포락선(-envelope)이 빠르게 감쇠하는 필터링 노이즈 ---
-      const frames = Math.max(1, Math.floor(ctx.sampleRate * dur))
-      const buffer = ctx.createBuffer(1, frames, ctx.sampleRate)
-      const data = buffer.getChannelData(0)
-      for (let i = 0; i < frames; i++) {
-        const t = i / frames
-        // 앞쪽에서 살짝 일어나다 곧바로 부드럽게 사라지는 포락선.
-        const env = Math.pow(1 - t, 1.5) * Math.min(1, t * 18)
-        data[i] = (Math.random() * 2 - 1) * env
+        const highpass = ctx.createBiquadFilter()
+        highpass.type = 'highpass'
+        highpass.frequency.value = 850 + Math.random() * 250
+
+        const bandpass = ctx.createBiquadFilter()
+        bandpass.type = 'bandpass'
+        bandpass.frequency.value = 2900 + Math.random() * 1200
+        bandpass.Q.value = 0.7
+
+        const gain = ctx.createGain()
+        const peak = 0.34 + Math.random() * 0.06
+        gain.gain.setValueAtTime(0.0001, start)
+        gain.gain.exponentialRampToValueAtTime(peak, start + 0.004)
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + dur)
+
+        src.connect(highpass)
+        highpass.connect(bandpass)
+        bandpass.connect(gain)
+        gain.connect(ctx.destination)
+        src.start(start)
+        src.stop(start + dur + 0.02)
       }
-      const noise = ctx.createBufferSource()
-      noise.buffer = buffer
-
-      // 대역통과 필터 중심주파수를 쓸어내려 "휙" 하는 종이 넘김 느낌. 매번 미세하게 다르게.
-      const bandpass = ctx.createBiquadFilter()
-      bandpass.type = 'bandpass'
-      bandpass.Q.value = 0.8
-      const f0 = 680 + Math.random() * 220
-      const f1 = 2600 + Math.random() * 700
-      bandpass.frequency.setValueAtTime(f0, now)
-      bandpass.frequency.exponentialRampToValueAtTime(f1, now + dur * 0.65)
-
-      // 고역은 누르지 않게(귀에 거슬리지 않도록).
-      const lowpass = ctx.createBiquadFilter()
-      lowpass.type = 'lowpass'
-      lowpass.frequency.value = 4300
-
-      // 전체 음량은 낮고 부드럽게(어린이에게 부담 없는 수준).
-      const gain = ctx.createGain()
-      const peak = 0.15 + Math.random() * 0.04
-      gain.gain.setValueAtTime(0.0001, now)
-      gain.gain.exponentialRampToValueAtTime(peak, now + 0.018)
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + dur)
-
-      noise.connect(bandpass)
-      bandpass.connect(lowpass)
-      lowpass.connect(gain)
-      gain.connect(ctx.destination)
-      noise.start(now)
-      noise.stop(now + dur + 0.02)
     } catch {
       /* 효과음 재생 실패는 페이지 전환 기능에 영향을 주지 않는다. */
     }
@@ -139,5 +151,5 @@ export function usePageTurnSound(): PageTurnSoundApi {
     }
   }, [])
 
-  return { playPageTurn, soundEnabled, toggleSound }
+  return { playPageTurn, primeAudio, soundEnabled, toggleSound }
 }
