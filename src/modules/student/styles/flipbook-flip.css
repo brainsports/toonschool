@@ -1,0 +1,153 @@
+/* ============================================================
+   툰스쿨 플립북 — 책장 넘김 애니메이션(양 뷰어 공용, 단일 소스).
+   학생 뷰어(StudentComicViewerPage)와 공유 뷰어(SharedComicViewerPage)가
+   완전히 동일한 넘김 애니메이션을 쓰도록 이 파일 하나로 통일한다.
+   - 650ms, 들고-휘고-안착 하는 자연스러운 easing.
+   - 종이 느낌: 컬(말림) 반경 애니메이션 + 말림 그림자/하이라이트 +
+     제본선 그림자 + 넘기는 면의 드롭 섀도우.
+   ============================================================ */
+
+:root { --flp-flip-dur: 650ms; }
+
+/* --- 회전: 0° → ±180° (다음=좌로 넘김, 이전=우로 넘김) --- */
+@keyframes flipNextAnim {
+  0%   { transform: rotateY(0deg); }
+  100% { transform: rotateY(-180deg); }
+}
+@keyframes flipPrevAnim {
+  0%   { transform: rotateY(0deg); }
+  100% { transform: rotateY(180deg); }
+}
+
+/* --- 컬(말림): 넘어가는 면의 모서리가 둥글게 말리며 들리는 느낌 + 드롭 섀도우 --- */
+@keyframes pageCurlNextRadius {
+  0%   { border-top-right-radius: 0; border-bottom-right-radius: 0; box-shadow: 0 14px 32px rgba(15, 23, 42, 0.12); }
+  25%  { border-top-right-radius: 3rem; border-bottom-right-radius: 4rem; box-shadow: 0 30px 70px rgba(15, 23, 42, 0.34), inset 18px 0 34px rgba(15, 23, 42, 0.12); }
+  55%  { border-top-right-radius: 4rem; border-bottom-right-radius: 6rem; box-shadow: 0 30px 70px rgba(15, 23, 42, 0.34), inset 18px 0 34px rgba(15, 23, 42, 0.12); }
+  100% { border-top-right-radius: 0; border-bottom-right-radius: 0; box-shadow: 0 14px 32px rgba(15, 23, 42, 0.12); }
+}
+@keyframes pageCurlPrevRadius {
+  0%   { border-top-left-radius: 0; border-bottom-left-radius: 0; box-shadow: 0 14px 32px rgba(15, 23, 42, 0.12); }
+  25%  { border-top-left-radius: 3rem; border-bottom-left-radius: 4rem; box-shadow: 0 30px 70px rgba(15, 23, 42, 0.34), inset -18px 0 34px rgba(15, 23, 42, 0.12); }
+  55%  { border-top-left-radius: 4rem; border-bottom-left-radius: 6rem; box-shadow: 0 30px 70px rgba(15, 23, 42, 0.34), inset -18px 0 34px rgba(15, 23, 42, 0.12); }
+  100% { border-top-left-radius: 0; border-bottom-left-radius: 0; box-shadow: 0 14px 32px rgba(15, 23, 42, 0.12); }
+}
+
+/* 자연스럽게 들리고(완만 시작) → 빠르게 → 부드럽게 안착(ease-in-out 계열) */
+.flipping-next {
+  animation: flipNextAnim var(--flp-flip-dur) cubic-bezier(0.65, 0.05, 0.36, 1) forwards;
+  will-change: transform;
+}
+.flipping-prev {
+  animation: flipPrevAnim var(--flp-flip-dur) cubic-bezier(0.65, 0.05, 0.36, 1) forwards;
+  will-change: transform;
+}
+.page-curl-wrapper-next {
+  animation: pageCurlNextRadius var(--flp-flip-dur) cubic-bezier(0.65, 0.05, 0.36, 1) forwards;
+  will-change: border-radius, box-shadow;
+}
+.page-curl-wrapper-prev {
+  animation: pageCurlPrevRadius var(--flp-flip-dur) cubic-bezier(0.65, 0.05, 0.36, 1) forwards;
+  will-change: border-radius, box-shadow;
+}
+
+/* --- 컬 오버레이(말림 그라데이션·그림자·하이라이트) --- */
+.page-curl-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 50;
+}
+@keyframes curlOverlayAnim {
+  0% { opacity: 0; }
+  20% { opacity: 1; }
+  55% { opacity: 1; }
+  100% { opacity: 0; }
+}
+.next-curl-overlay {
+  background: radial-gradient(circle at right center, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.45) 28%, rgba(15,23,42,0.20) 62%, transparent 78%);
+  animation: curlOverlayAnim var(--flp-flip-dur) cubic-bezier(0.65, 0.05, 0.36, 1) forwards;
+}
+/* 말리는(들리는) 가장자리의 그림자 — 종이가 올라가며 지는 그림자를 더 살림 */
+.next-curl-shadow {
+  background: linear-gradient(to right, transparent 0%, rgba(15,23,42,0.10) 55%, rgba(15,23,42,0.30) 100%);
+  animation: curlOverlayAnim var(--flp-flip-dur) cubic-bezier(0.65, 0.05, 0.36, 1) forwards;
+}
+.next-curl-highlight {
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.25) 45%, rgba(255,255,255,0.75) 82%, rgba(255,255,255,0.2) 100%);
+  animation: curlOverlayAnim var(--flp-flip-dur) cubic-bezier(0.65, 0.05, 0.36, 1) forwards;
+}
+.prev-curl-overlay {
+  background: radial-gradient(circle at left center, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.45) 28%, rgba(15,23,42,0.20) 62%, transparent 78%);
+  animation: curlOverlayAnim var(--flp-flip-dur) cubic-bezier(0.65, 0.05, 0.36, 1) forwards;
+}
+.prev-curl-shadow {
+  background: linear-gradient(to left, transparent 0%, rgba(15,23,42,0.10) 55%, rgba(15,23,42,0.30) 100%);
+  animation: curlOverlayAnim var(--flp-flip-dur) cubic-bezier(0.65, 0.05, 0.36, 1) forwards;
+}
+.prev-curl-highlight {
+  background: linear-gradient(-90deg, transparent 0%, rgba(255,255,255,0.25) 45%, rgba(255,255,255,0.75) 82%, rgba(255,255,255,0.2) 100%);
+  animation: curlOverlayAnim var(--flp-flip-dur) cubic-bezier(0.65, 0.05, 0.36, 1) forwards;
+}
+
+/* --- 제본선 그림자(뒷면이 안착하며 중앙에 지는 그림자) --- */
+@keyframes spineShadowAnim {
+  0% { opacity: 0; }
+  50% { opacity: 0.5; }
+  100% { opacity: 0.12; }
+}
+.page-shadow-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(to right, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0) 32%);
+  animation: spineShadowAnim var(--flp-flip-dur) cubic-bezier(0.65, 0.05, 0.36, 1) forwards;
+}
+.page-shadow-overlay-right {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(to left, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0) 32%);
+  animation: spineShadowAnim var(--flp-flip-dur) cubic-bezier(0.65, 0.05, 0.36, 1) forwards;
+}
+
+/* --- 넘기는 동안 아래(드러나는 다음 페이지)에 지는 캐스트 섀도우 --- */
+@keyframes castShadowAnim {
+  0% { opacity: 0; }
+  45% { opacity: 0.28; }
+  100% { opacity: 0; }
+}
+.flp-cast-shadow-next {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+  background: linear-gradient(to left, rgba(0,0,0,0.28) 0%, rgba(0,0,0,0) 60%);
+  animation: castShadowAnim var(--flp-flip-dur) cubic-bezier(0.65, 0.05, 0.36, 1) forwards;
+}
+.flp-cast-shadow-prev {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+  background: linear-gradient(to right, rgba(0,0,0,0.28) 0%, rgba(0,0,0,0) 60%);
+  animation: castShadowAnim var(--flp-flip-dur) cubic-bezier(0.65, 0.05, 0.36, 1) forwards;
+}
+
+/* --- 모션 감소: 3D 넘김 대신 짧은 페이드(멀미 방지) --- */
+@keyframes flpFadeTurn { from { opacity: 1; } to { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  :root { --flp-flip-dur: 260ms; }
+  .flipping-next, .flipping-prev {
+    animation: flpFadeTurn var(--flp-flip-dur) ease forwards !important;
+    will-change: opacity;
+  }
+  .page-curl-wrapper-next, .page-curl-wrapper-prev,
+  .next-curl-overlay, .next-curl-shadow, .next-curl-highlight,
+  .prev-curl-overlay, .prev-curl-shadow, .prev-curl-highlight,
+  .page-shadow-overlay, .page-shadow-overlay-right,
+  .flp-cast-shadow-next, .flp-cast-shadow-prev {
+    animation: none !important;
+  }
+}

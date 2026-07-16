@@ -4,6 +4,8 @@ import { Volume2, VolumeX, ArrowLeft, ArrowRight, BookOpen, MoreVertical, ZoomIn
 import { supabase } from '../../../shared/lib/supabase'
 import { usePageTurnSound } from '../components/viewer/usePageTurnSound'
 import { useSwipeNavigation } from '../components/viewer/useSwipeNavigation'
+import BookFlip from '../components/viewer/BookFlip'
+import '../styles/flipbook-flip.css'
 
 const BGM_PATH = '/audio/viewer/if-i-had-a-chicken.mp3';
 
@@ -481,116 +483,6 @@ export default function SharedComicViewerPage() {
         </div>
       )}
 
-      <style>{`
-        :root { --flp-flip-dur: 650ms; }
-        @keyframes flipNextAnim {
-          0%   { transform: rotateY(0deg); }
-          100% { transform: rotateY(-180deg); }
-        }
-        @keyframes flipPrevAnim {
-          0%   { transform: rotateY(0deg); }
-          100% { transform: rotateY(180deg); }
-        }
-        @keyframes pageCurlNextRadius {
-          0%   { border-top-right-radius: 0; border-bottom-right-radius: 0; box-shadow: 0 12px 30px rgba(15, 23, 42, 0.10); }
-          20%  { border-top-right-radius: 3rem; border-bottom-right-radius: 4rem; box-shadow: 0 26px 60px rgba(15, 23, 42, 0.24), inset 18px 0 28px rgba(15, 23, 42, 0.08); }
-          55%  { border-top-right-radius: 4rem; border-bottom-right-radius: 6rem; box-shadow: 0 26px 60px rgba(15, 23, 42, 0.24), inset 18px 0 28px rgba(15, 23, 42, 0.08); }
-          100% { border-top-right-radius: 0; border-bottom-right-radius: 0; box-shadow: 0 12px 30px rgba(15, 23, 42, 0.10); }
-        }
-        @keyframes pageCurlPrevRadius {
-          0%   { border-top-left-radius: 0; border-bottom-left-radius: 0; box-shadow: 0 12px 30px rgba(15, 23, 42, 0.10); }
-          20%  { border-top-left-radius: 3rem; border-bottom-left-radius: 4rem; box-shadow: 0 26px 60px rgba(15, 23, 42, 0.24), inset -18px 0 28px rgba(15, 23, 42, 0.08); }
-          55%  { border-top-left-radius: 4rem; border-bottom-left-radius: 6rem; box-shadow: 0 26px 60px rgba(15, 23, 42, 0.24), inset -18px 0 28px rgba(15, 23, 42, 0.08); }
-          100% { border-top-left-radius: 0; border-bottom-left-radius: 0; box-shadow: 0 12px 30px rgba(15, 23, 42, 0.10); }
-        }
-        .flipping-next {
-          animation: flipNextAnim var(--flp-flip-dur) cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
-          will-change: transform;
-        }
-        .flipping-prev {
-          animation: flipPrevAnim var(--flp-flip-dur) cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
-          will-change: transform;
-        }
-        .page-curl-wrapper-next {
-          animation: pageCurlNextRadius var(--flp-flip-dur) cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
-          will-change: border-radius, box-shadow;
-        }
-        .page-curl-wrapper-prev {
-          animation: pageCurlPrevRadius var(--flp-flip-dur) cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
-          will-change: border-radius, box-shadow;
-        }
-        .page-curl-overlay {
-          position: absolute;
-          inset: 0;
-          pointer-events: none;
-          opacity: 0;
-          z-index: 50;
-        }
-        @keyframes curlOverlayAnim {
-          0% { opacity: 0; }
-          20% { opacity: 1; }
-          55% { opacity: 1; }
-          100% { opacity: 0; }
-        }
-        .next-curl-overlay {
-          background: radial-gradient(circle at right center, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.45) 28%, rgba(15,23,42,0.18) 62%, transparent 78%);
-          animation: curlOverlayAnim var(--flp-flip-dur) cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
-        }
-        .next-curl-shadow {
-          background: linear-gradient(to right, transparent 0%, rgba(15,23,42,0.05) 85%, rgba(15,23,42,0.15) 100%);
-          animation: curlOverlayAnim var(--flp-flip-dur) cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
-        }
-        .next-curl-highlight {
-          background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.25) 45%, rgba(255,255,255,0.75) 82%, rgba(255,255,255,0.2) 100%);
-          animation: curlOverlayAnim var(--flp-flip-dur) cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
-        }
-        .prev-curl-overlay {
-          background: radial-gradient(circle at left center, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.45) 28%, rgba(15,23,42,0.18) 62%, transparent 78%);
-          animation: curlOverlayAnim var(--flp-flip-dur) cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
-        }
-        .prev-curl-shadow {
-          background: linear-gradient(to left, transparent 0%, rgba(15,23,42,0.05) 85%, rgba(15,23,42,0.15) 100%);
-          animation: curlOverlayAnim var(--flp-flip-dur) cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
-        }
-        .prev-curl-highlight {
-          background: linear-gradient(-90deg, transparent 0%, rgba(255,255,255,0.25) 45%, rgba(255,255,255,0.75) 82%, rgba(255,255,255,0.2) 100%);
-          animation: curlOverlayAnim var(--flp-flip-dur) cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
-        }
-        @keyframes spineShadowAnim {
-          0% { opacity: 0; }
-          50% { opacity: 0.3; }
-          100% { opacity: 0; }
-        }
-        .page-shadow-overlay {
-          position: absolute;
-          inset: 0;
-          pointer-events: none;
-          background: linear-gradient(to right, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0) 25%);
-          animation: spineShadowAnim var(--flp-flip-dur) cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
-        }
-        .page-shadow-overlay-right {
-          position: absolute;
-          inset: 0;
-          pointer-events: none;
-          background: linear-gradient(to left, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0) 25%);
-          animation: spineShadowAnim var(--flp-flip-dur) cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
-        }
-        /* 모션 감소 설정: 3D 책장 넘김 대신 짧고 부드러운 페이드로 전환(멀미 방지). */
-        @keyframes flpFadeTurn { from { opacity: 1; } to { opacity: 0; } }
-        @media (prefers-reduced-motion: reduce) {
-          :root { --flp-flip-dur: 260ms; }
-          .flipping-next, .flipping-prev {
-            animation: flpFadeTurn var(--flp-flip-dur) ease forwards !important;
-            will-change: opacity;
-          }
-          .page-curl-wrapper-next, .page-curl-wrapper-prev,
-          .next-curl-overlay, .next-curl-shadow, .next-curl-highlight,
-          .prev-curl-overlay, .prev-curl-shadow, .prev-curl-highlight,
-          .page-shadow-overlay, .page-shadow-overlay-right {
-            animation: none !important;
-          }
-        }
-      `}</style>
       <div
         className="flex-1 w-full relative overflow-hidden bg-[#fbf4ec] flex flex-col"
         style={{ paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'env(safe-area-inset-left)', paddingRight: 'env(safe-area-inset-right)' }}
@@ -643,44 +535,19 @@ export default function SharedComicViewerPage() {
                   )}
                 </div>
 
-                {isFlipping && targetSpreadIndex !== null && (
-                  <div className="absolute inset-0 pointer-events-none z-30 flex justify-center">
-                    {flipDirection === 'next' && (
-                      <div
-                        className={`absolute ${useSinglePageMode ? 'w-full right-0' : 'w-1/2 right-0'} h-full flipping-page flipping-next`}
-                        style={{ transformOrigin: useSinglePageMode ? 'center center' : 'left center', transformStyle: 'preserve-3d' }}
-                      >
-                        <div className="absolute inset-0 bg-white rounded-none page-curl-wrapper-next overflow-hidden" style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
-                          {renderHalf(spreads[currentSpreadIndex].pages[useSinglePageMode ? 0 : 1], false, useSinglePageMode)}
-                          <div className="page-curl-overlay next-curl-overlay"></div>
-                          <div className="page-curl-overlay next-curl-shadow"></div>
-                          <div className="page-curl-overlay next-curl-highlight"></div>
-                        </div>
-                        <div className="absolute inset-0 bg-white rounded-none overflow-hidden" style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}>
-                          {renderHalf(spreads[targetSpreadIndex].pages[0], true, useSinglePageMode)}
-                          {!useSinglePageMode && <div className="page-shadow-overlay-right"></div>}
-                        </div>
-                      </div>
-                    )}
-
-                    {flipDirection === 'prev' && (
-                      <div
-                        className={`absolute ${useSinglePageMode ? 'w-full left-0' : 'w-1/2 left-0'} h-full flipping-page flipping-prev`}
-                        style={{ transformOrigin: useSinglePageMode ? 'center center' : 'right center', transformStyle: 'preserve-3d' }}
-                      >
-                        <div className="absolute inset-0 bg-white rounded-none page-curl-wrapper-prev overflow-hidden" style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
-                          {renderHalf(spreads[currentSpreadIndex].pages[0], true, useSinglePageMode)}
-                          <div className="page-curl-overlay prev-curl-overlay"></div>
-                          <div className="page-curl-overlay prev-curl-shadow"></div>
-                          <div className="page-curl-overlay prev-curl-highlight"></div>
-                        </div>
-                        <div className="absolute inset-0 bg-white rounded-none overflow-hidden" style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'rotateY(-180deg)' }}>
-                          {renderHalf(spreads[targetSpreadIndex].pages[useSinglePageMode ? 0 : 1], false, useSinglePageMode)}
-                          {!useSinglePageMode && <div className="page-shadow-overlay"></div>}
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                {isFlipping && targetSpreadIndex !== null && flipDirection && (
+                  <>
+                    {/* 넘기는 동안 아래(드러나는 다음 페이지)에 지는 캐스트 섀도우 */}
+                    <div className={flipDirection === 'next' ? 'flp-cast-shadow-next' : 'flp-cast-shadow-prev'} aria-hidden="true" />
+                    <BookFlip
+                      direction={flipDirection}
+                      single={useSinglePageMode}
+                      pageWidth={LANDSCAPE_PAGE_DISPLAY_WIDTH * (currentZoom / 100)}
+                      pageHeight={LANDSCAPE_PAGE_DISPLAY_HEIGHT * (currentZoom / 100)}
+                      front={renderHalf(spreads[currentSpreadIndex].pages[useSinglePageMode ? 0 : (flipDirection === 'next' ? 1 : 0)], flipDirection !== 'next', useSinglePageMode)}
+                      back={renderHalf(spreads[targetSpreadIndex].pages[useSinglePageMode ? 0 : (flipDirection === 'next' ? 0 : 1)], flipDirection === 'next', useSinglePageMode)}
+                    />
+                  </>
                 )}
 
                 {!useSinglePageMode && <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-full bg-gradient-to-r from-black/10 via-transparent to-black/10 z-40 pointer-events-none mix-blend-multiply opacity-60" />}
@@ -689,7 +556,7 @@ export default function SharedComicViewerPage() {
         </div>
 
            {hasStarted && (
-             <div className="mt-2 flex items-center gap-1.5 md:gap-2 px-3 py-1.5 md:px-4 md:py-2 rounded-full shadow-md z-50 transition-all shrink-0 playerWrapper border border-white/10" style={{ backgroundColor: 'rgba(30, 34, 45, 0.75)', backdropFilter: 'blur(8px)', marginBottom: 'env(safe-area-inset-bottom)' }}>
+             <div className="mt-2 flex items-center justify-center gap-1.5 md:gap-2 px-3 py-1.5 md:px-4 md:py-2 rounded-full shadow-md z-50 transition-all shrink-0 playerWrapper border border-white/10" style={{ backgroundColor: 'rgba(30, 34, 45, 0.75)', backdropFilter: 'blur(8px)', marginBottom: 'env(safe-area-inset-bottom)', width: BASE_WIDTH * (currentZoom / 100), marginInline: 'auto', boxSizing: 'border-box' }}>
                {windowWidth > 600 && (
                  <button onClick={() => { if (!isFlipping) setCurrentSpreadIndex(0) }} disabled={isFlipping} className="p-1.5 md:p-2 hover:bg-white/10 rounded-full text-white transition-colors disabled:opacity-30" title="처음으로">
                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m11 17-5-5 5-5"/><path d="m18 17-5-5 5-5"/><path d="M4 17V7"/></svg>
