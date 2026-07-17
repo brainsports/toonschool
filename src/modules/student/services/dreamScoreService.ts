@@ -222,11 +222,15 @@ async function computeDreamProgress(studentId: string): Promise<DreamProgressRes
   rows = await fetchRewardLogRows(studentId)
   breakdown = computeDreamScore(rows)
 
-  // 5) 레벨 달성 아이템 지급(새 레벨). 점수 0, student_items 만 기록.
+  // 5) 레벨 달성 아이템 지급. 점수 0, student_items 만 기록. 멱등(이미 보유하면 스킵).
+  //    '새로 달성한 레벨'뿐 아니라 '현재까지 달성한 모든 레벨(2~currentLevel)'에 대해 보정한다.
+  //    → 아이템 지급 기능 도입 전에 이미 레벨업한 학생에게도 소급 지급(마이그레이션 적용 직후 일괄 해금).
   //    DB items 에 레벨 아이템이 없으면(시드 미적용) 조용히 스킵된다.
-  if (levelUp.newLevels.length > 0) {
+  const achievedLevels: number[] = []
+  for (let l = MIN_LEVEL + 1; l <= breakdown.level; l++) achievedLevels.push(l)
+  if (achievedLevels.length > 0) {
     try {
-      const granted = await ensureLevelItems(studentId, levelUp.newLevels)
+      const granted = await ensureLevelItems(studentId, achievedLevels)
       if (granted.length > 0 && typeof window !== 'undefined') {
         // 정원·마이페이지가 새 아이템을 즉시 반영하도록 알림.
         window.dispatchEvent(new Event('studentLootItemsChanged'))

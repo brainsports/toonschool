@@ -12,17 +12,17 @@
 
 insert into public.items (code, name, category, rarity, description, image_url, is_placeable, is_active, sort_order)
 values
-  -- Level 2 — 별빛 정원
-  ('lv2_small_flower_seed', '별빛 씨앗', 'nature', 'common', '별빛 정원에 처음 심는 씨앗이에요.', '/images/toonschool/dream-garden/items/level-2/small-flower-seed.png', true, true, 201),
-  ('lv2_sparkling_grass', '반짝 별풀', 'nature', 'common', '별빛을 머금고 반짝이는 풀이에요.', '/images/toonschool/dream-garden/items/level-2/sparkling-grass.png', true, true, 202),
-  ('lv2_pink_flower', '별빛 꽃', 'nature', 'common', '별빛 아래 피어난 분홍 꽃이에요.', '/images/toonschool/dream-garden/items/level-2/pink-flower.png', true, true, 203),
-  ('lv2_small_star_piece', '작은 별조각', 'sky', 'common', '밤하늘에서 떨어진 별조각이에요.', '/images/toonschool/dream-garden/items/level-2/small-star-piece.png', true, true, 204),
-  ('lv2_yellow_butterfly', '별빛 나비', 'animal', 'common', '별빛을 따라 날아다니는 나비예요.', '/images/toonschool/dream-garden/items/level-2/yellow-butterfly.png', true, true, 205),
-  ('lv2_flower_path', '별빛 꽃길', 'decor', 'uncommon', '정원을 예쁘게 이어 주는 꽃길이에요.', '/images/toonschool/dream-garden/items/level-2/flower-path.png', true, true, 206),
-  ('lv2_moonlight_mushroom', '달빛 버섯', 'nature', 'uncommon', '달빛을 머금고 빛나는 버섯이에요.', '/images/toonschool/dream-garden/items/level-2/moonlight-mushroom.png', true, true, 207),
-  ('lv2_firefly', '반딧불', 'animal', 'uncommon', '어둠을 밝혀 주는 반딧불이에요.', '/images/toonschool/dream-garden/items/level-2/firefly.png', true, true, 208),
-  ('lv2_waterdrop_spirit', '물방울 정령', 'spirit', 'rare', '맑은 물방울에서 태어난 정령이에요.', '/images/toonschool/dream-garden/items/level-2/waterdrop-spirit.png', true, true, 209),
-  ('lv2_aurora_tree', '오로라 나무', 'nature', 'epic', '하늘빛 오로라를 품은 특별한 나무예요.', '/images/toonschool/dream-garden/items/level-2/aurora-tree.png', true, true, 210),
+  -- Level 2 — 별빛 정원 (전용 신규 아이템 lv2_item_NN.png)
+  ('lv2_small_flower_seed', '반짝이는 별목걸이', 'decor', 'common', '별빛을 고스란히 머금은 반짝이는 목걸이예요.', '/images/toonschool/dream-garden/items/level-2/lv2_item_01.png', true, true, 201),
+  ('lv2_sparkling_grass', '구름 젤리 컵', 'decor', 'common', '폭신한 구름을 담은 달콤한 젤리 컵이에요.', '/images/toonschool/dream-garden/items/level-2/lv2_item_02.png', true, true, 202),
+  ('lv2_pink_flower', '무지개 깃펜', 'decor', 'common', '무지개 빛 먹물로 이야기를 적는 깃펜이에요.', '/images/toonschool/dream-garden/items/level-2/lv2_item_03.png', true, true, 203),
+  ('lv2_small_star_piece', '달빛 보석함', 'decor', 'uncommon', '달빛 보석을 반짝이게 보관하는 상자예요.', '/images/toonschool/dream-garden/items/level-2/lv2_item_04.png', true, true, 204),
+  ('lv2_yellow_butterfly', '솜사탕 왕관', 'decor', 'uncommon', '폭신한 솜사탕으로 만든 달콤한 왕관이에요.', '/images/toonschool/dream-garden/items/level-2/lv2_item_05.png', true, true, 205),
+  ('lv2_flower_path', '바람개비 배지', 'decor', 'uncommon', '바람이 불 때마다 살랑 도는 바람개비 배지예요.', '/images/toonschool/dream-garden/items/level-2/lv2_item_06.png', true, true, 206),
+  ('lv2_moonlight_mushroom', '꿈씨앗 화분', 'nature', 'rare', '작은 꿈이 자라나는 신비한 씨앗 화분이에요.', '/images/toonschool/dream-garden/items/level-2/lv2_item_07.png', true, true, 207),
+  ('lv2_firefly', '마법 리본 상자', 'decor', 'rare', '리본이 저절로 매듭지는 마법 상자예요.', '/images/toonschool/dream-garden/items/level-2/lv2_item_08.png', true, true, 208),
+  ('lv2_waterdrop_spirit', '햇살 나침반', 'decor', 'epic', '밝은 햇살 쪽으로 길을 알려주는 나침반이에요.', '/images/toonschool/dream-garden/items/level-2/lv2_item_09.png', true, true, 209),
+  ('lv2_aurora_tree', '별사탕 램프', 'sky', 'epic', '별사탕처럼 반짝이는 포근한 램프예요.', '/images/toonschool/dream-garden/items/level-2/lv2_item_10.png', true, true, 210),
   -- Level 3 — 구름 도서관
   ('lv3_tiny_telescope', '작은 망원경', 'decor', 'common', '멀리 있는 것을 보게 해 주는 망원경이에요.', '/images/toonschool/dream-garden/items/level-3/tiny-telescope.png', true, true, 301),
   ('lv3_feather_quill', '깃펜', 'decor', 'common', '이야기를 적을 때 쓰는 깃펜이에요.', '/images/toonschool/dream-garden/items/level-3/feather-quill.png', true, true, 302),
