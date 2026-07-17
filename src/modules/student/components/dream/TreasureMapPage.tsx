@@ -78,7 +78,7 @@ export default function TreasureMapPage() {
 
   // 진행 데이터 정규화(방어): 점수 null/문자열/NaN → 0, 레벨 → 1~10
   const currentLevel = clamp(Number.isFinite(progress.level) ? progress.level : MIN_LEVEL, MIN_LEVEL, MAX_LEVEL)
-  const activityScore = Number.isFinite(progress.activityScore) ? progress.activityScore : 0
+  const dreamScore = Number.isFinite(progress.dreamScore) ? progress.dreamScore : 0
 
   // ── 이미지 로딩 상태 ──
   const [imgLoaded, setImgLoaded] = useState(false)
@@ -348,7 +348,7 @@ export default function TreasureMapPage() {
           <span className="tm-sb-name">{studentName}</span>
           <span className="tm-sb-level">LV.{currentLevel}</span>
           <span className="tm-sb-score">
-            활동 점수 <strong>{activityScore.toLocaleString()}</strong>점
+            꿈 점수 <strong>{dreamScore.toLocaleString()}</strong>점
           </span>
           {!isMaxLevel ? (
             <>
@@ -448,7 +448,7 @@ export default function TreasureMapPage() {
                 {TREASURE_MAP_POSITIONS.map((pos) => {
                   const state = getLevelState(pos.level, currentLevel)
                   const chapter = getChapter(pos.level)
-                  const need = Math.max(0, chapter.minActivityScore - activityScore)
+                  const need = Math.max(0, chapter.minActivityScore - dreamScore)
                   const aria =
                     state === 'locked'
                       ? `레벨 ${pos.level} ${chapter.chapterTitle}, 잠김, 다음 레벨까지 ${need.toLocaleString()}점 필요`
@@ -528,7 +528,7 @@ export default function TreasureMapPage() {
             <LevelDetailPanel
               chapter={selectedChapter}
               state={getLevelState(selectedChapter.level, currentLevel)}
-              activityScore={activityScore}
+              dreamScore={dreamScore}
               isMobile={isMobile}
               viewportRef={viewportRef}
               stageSize={stageSize}
@@ -609,7 +609,7 @@ function StateLayer({
 function LevelDetailPanel({
   chapter,
   state,
-  activityScore,
+  dreamScore,
   isMobile,
   viewportRef,
   stageSize,
@@ -619,7 +619,7 @@ function LevelDetailPanel({
 }: {
   chapter: DreamChapter
   state: LevelState
-  activityScore: number
+  dreamScore: number
   isMobile: boolean
   viewportRef: React.RefObject<HTMLDivElement | null>
   stageSize: { w: number; h: number }
@@ -628,7 +628,7 @@ function LevelDetailPanel({
   onEnter: (level: number) => void
 }) {
   const pos = getTreasureMapPosition(chapter.level)!
-  const need = Math.max(0, chapter.minActivityScore - activityScore)
+  const need = Math.max(0, chapter.minActivityScore - dreamScore)
   const items = getLevelItems(chapter.level)
   const repItem = items[0]
   const isMax = chapter.level === MAX_LEVEL
@@ -675,7 +675,7 @@ function LevelDetailPanel({
         </div>
         <div className="tm-detail-stat">
           <div className="lbl">내 점수</div>
-          <div className="val">{activityScore.toLocaleString()}</div>
+          <div className="val">{dreamScore.toLocaleString()}</div>
         </div>
         <div className="tm-detail-stat">
           <div className="lbl">{state === 'locked' ? '남은 점수' : isMax ? '최고단계' : '상태'}</div>
