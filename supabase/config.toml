@@ -29,3 +29,8 @@ enabled = true
 verify_jwt = true
 entrypoint = "./functions/generate-comic-background/index.ts"
 
+[functions.generate-mindmap]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/generate-mindmap/index.ts"
+

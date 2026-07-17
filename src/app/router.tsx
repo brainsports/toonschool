@@ -44,6 +44,9 @@ import StudentResourcePage from '../modules/student/pages/StudentResourcePage'
 import StudentDreamGardenPage from '../modules/student/pages/StudentDreamGardenPage'
 import FlipbookLandscapePreviewPage from '../modules/student/pages/FlipbookLandscapePreviewPage'
 import TreasureMapPage from '../modules/student/components/dream/TreasureMapPage'
+import StudentMindmapStartPage from '../modules/student/pages/StudentMindmapStartPage'
+import StudentMindmapEditorPage from '../modules/student/pages/StudentMindmapEditorPage'
+import SharedMindmapViewerPage from '../modules/student/pages/SharedMindmapViewerPage'
 
 import ResourceInbox from '../modules/resources/pages/ResourceInbox'
 
@@ -136,8 +139,11 @@ export default function AppRouter() {
         <Route path="/student/resources" element={<StudentResourcePage />} />
         <Route path="/student/dream-garden" element={<StudentDreamGardenPage />} />
         <Route path="/student/treasure-map" element={<TreasureMapPage />} />
+        <Route path="/student/mindmap" element={<StudentMindmapStartPage />} />
+        <Route path="/student/mindmap/edit/:projectId" element={<StudentMindmapEditorPage />} />
       </Route>
       <Route path="/book/:slug" element={<SharedComicViewerPage />} />
+      <Route path="/mindmap/share/:slug" element={<SharedMindmapViewerPage />} />
 
       {/* Stage 2 검증용 16:9 파스텔 플립북 미리보기(공개/임시). Stage 5 이후 정리. */}
       <Route path="/flipbook/preview" element={<FlipbookLandscapePreviewPage />} />
