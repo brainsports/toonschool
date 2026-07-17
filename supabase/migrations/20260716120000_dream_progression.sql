@@ -1,16 +1,17 @@
 -- ============================================================================
--- 꿈의 궁전 성장형 보상 시스템 — additive 마이그레이션(작성 전용, 미적용)
+-- 꿈의 궁전 성장형 보상 시스템 — additive 마이그레이션
 -- ============================================================================
 -- 목적: 크로스 사용자 기능(우리 반 랭킹 / 교사 학생 점수 조회)을 잠금해제.
 --
--- ★ 이 파일은 supabase db push / 마이그레이션 적용 없이 작성만 한다(운영 DB 변경 금지).
---    클라이언트는 이 마이그레이션이 적용되지 않은 상태에서도 안전하게 동작한다:
---      - 학생 본인 점수/레벨/보물지도/정원/레벨업: 본인 reward_logs 클라이언트 계산으로 100% 동작.
---      - 교사 칭찬: teacher_messages 채널 + 학생 자가기록으로 동작(이 파일과 무관).
---      - 랭킹 / 교사 점수 조회: 적용 전엔 fallback, 적용 후 표시.
+-- 적용 이력(2026-07-17): 본 파일을 운영 DB 에 수동 적용(supabase db query --linked -f).
+--   - denorm 3컬럼(dream_score/activity_score/dream_level): 적용됨(정상).
+--   - student_reward_stats_select_same_class / _for_teacher 정책: 적용됨(정상).
+--   - students_select_same_class 정책: ★적용 후 무한 재귀(500)로 곧바로 DROP 했음★.
+--     (RLS 정책이 자기 테이블(students)을 서브쿼리 참조 → PostgreSQL RLS 재귀 에러.
+--      같은 학급 students 행 상호 읽기는 SECURITY DEFINER 헬퍼(get_my_class_id) 도입 후
+--      별도 마이그레이션으로 안전하게 재도입해야 한다. 현재는 랭킹 이름 노출만 fallback.)
 --
--- 적용 시점에 담당자가 충분한 검토/테스트 후 수동 적용한다.
--- 모든 구문은 ADDITIVE 이며 기존 데이터/정책을 삭제하지 않는다.
+-- 모든 구문은 ADDITIVE/멱등(IF NOT EXISTS, DROP POLICY IF EXISTS)이며 기존 데이터를 삭제하지 않는다.
 -- ============================================================================
 
 -- 1) student_reward_stats 에 denorm 점수/레벨 컬럼 추가(클라이언트가 best-effort 로 갱신).
@@ -44,23 +45,13 @@ using (
   )
 );
 
--- 3) 랭킹용: 같은 학급 동급생의 students 행(이름/학급)을 서로 읽을 수 있도록 허용.
---    (기존 staff 정책과 병합되며, 학생은 동급생 범위로 제한된다)
-drop policy if exists "students_select_same_class" on public.students;
-create policy "students_select_same_class"
-on public.students
-for select
-to authenticated
-using (
-  id = auth.uid()
-  or exists (
-    select 1
-    from public.students me
-    where me.id = auth.uid()
-      and me.class_id is not null
-      and me.class_id = students.class_id
-  )
-);
+-- 3) ★ students_select_same_class 정책은 제외됨(재귀 버그) ★
+--    원래 같은 학급 students 행 상호 읽기를 허용하려 했으나, RLS 정책이 students 를
+--    서브쿼리로 자기 참조하여 PostgreSQL RLS 무한 재귀(500 에러)를 유발한다.
+--    운영 적용 후 즉시 DROP 했고 이 파일에서도 제외한다.
+--    [복구 필요] 동급생 students 행 읽기(랭킹 이름 표시)를 켜려면 SECURITY DEFINER 함수
+--    get_my_class_id() 를 만들어 자식 참조 없이 class_id = public.get_my_class_id() 형태로
+--    별도 마이그레이션에서 재도입할 것.
 
 -- 4) 교사용: 담당 학생(created_by 본인 OR 본인 소유 학급)의 student_reward_stats 읽기 허용.
 drop policy if exists "student_reward_stats_select_for_teacher" on public.student_reward_stats;

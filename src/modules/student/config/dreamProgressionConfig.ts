@@ -267,21 +267,46 @@ const li = (
 })
 
 /**
+ * li() 와 동일하되 이미지 파일명을 명시적으로 지정(파일명이 code slug 와 다를 때).
+ * 레벨 2 신규 아이템(lv2_item_NN.png)처럼 파일명이 코드와 무관할 때 사용.
+ * 코드는 slug 기반(lv{level}_{slug}) → 기존 코드를 그대로 유지하면서 이미지만 교체.
+ */
+const liImg = (
+  level: number,
+  slug: string,
+  name: string,
+  category: ItemCategory,
+  rarity: GrantableRarity,
+  description: string,
+  imageFile: string,
+  defaultScale = 0.9,
+): LevelItemSpec => ({
+  code: `lv${level}_${slug.replace(/-/g, '_')}`,
+  name,
+  category,
+  rarity,
+  description,
+  image: imageFile,
+  defaultScale,
+})
+
+/**
  * 레벨 2~10 의 아이템 목록. 각 10개씩.
  * 레벨이 오를수록 등급이 높은(희귀/전설) 아이템 비중이 커진다.
  */
 export const LEVEL_ITEM_CATALOG: Record<number, LevelItemSpec[]> = {
   2: [
-    li(2, 'small-flower-seed', '별빛 씨앗', 'nature', 'common', '별빛 정원에 처음 심는 씨앗이에요.'),
-    li(2, 'sparkling-grass', '반짝 별풀', 'nature', 'common', '별빛을 머금고 반짝이는 풀이에요.'),
-    li(2, 'pink-flower', '별빛 꽃', 'nature', 'common', '별빛 아래 피어난 분홍 꽃이에요.'),
-    li(2, 'small-star-piece', '작은 별조각', 'sky', 'common', '밤하늘에서 떨어진 별조각이에요.'),
-    li(2, 'yellow-butterfly', '별빛 나비', 'animal', 'common', '별빛을 따라 날아다니는 나비예요.'),
-    li(2, 'flower-path', '별빛 꽃길', 'decor', 'uncommon', '정원을 예쁘게 이어 주는 꽃길이에요.'),
-    li(2, 'moonlight-mushroom', '달빛 버섯', 'nature', 'uncommon', '달빛을 머금고 빛나는 버섯이에요.'),
-    li(2, 'firefly', '반딧불', 'animal', 'uncommon', '어둠을 밝혀 주는 반딧불이에요.'),
-    li(2, 'waterdrop-spirit', '물방울 정령', 'spirit', 'rare', '맑은 물방울에서 태어난 정령이에요.'),
-    li(2, 'aurora-tree', '오로라 나무', 'nature', 'epic', '하늘빛 오로라를 품은 특별한 나무예요.'),
+    // 레벨 2 전용 신규 아이템(lv2_item_NN.png). code 는 기존 slug 기반 코드를 유지한다.
+    liImg(2, 'small-flower-seed', '반짝이는 별목걸이', 'decor', 'common', '별빛을 고스란히 머금은 반짝이는 목걸이예요.', 'lv2_item_01.png'),
+    liImg(2, 'sparkling-grass', '구름 젤리 컵', 'decor', 'common', '폭신한 구름을 담은 달콤한 젤리 컵이에요.', 'lv2_item_02.png'),
+    liImg(2, 'pink-flower', '무지개 깃펜', 'decor', 'common', '무지개 빛 먹물로 이야기를 적는 깃펜이에요.', 'lv2_item_03.png'),
+    liImg(2, 'small-star-piece', '달빛 보석함', 'decor', 'uncommon', '달빛 보석을 반짝이게 보관하는 상자예요.', 'lv2_item_04.png'),
+    liImg(2, 'yellow-butterfly', '솜사탕 왕관', 'decor', 'uncommon', '폭신한 솜사탕으로 만든 달콤한 왕관이에요.', 'lv2_item_05.png'),
+    liImg(2, 'flower-path', '바람개비 배지', 'decor', 'uncommon', '바람이 불 때마다 살랑 도는 바람개비 배지예요.', 'lv2_item_06.png'),
+    liImg(2, 'moonlight-mushroom', '꿈씨앗 화분', 'nature', 'rare', '작은 꿈이 자라나는 신비한 씨앗 화분이에요.', 'lv2_item_07.png'),
+    liImg(2, 'firefly', '마법 리본 상자', 'decor', 'rare', '리본이 저절로 매듭지는 마법 상자예요.', 'lv2_item_08.png'),
+    liImg(2, 'waterdrop-spirit', '햇살 나침반', 'decor', 'epic', '밝은 햇살 쪽으로 길을 알려주는 나침반이에요.', 'lv2_item_09.png'),
+    liImg(2, 'aurora-tree', '별사탕 램프', 'sky', 'epic', '별사탕처럼 반짝이는 포근한 램프예요.', 'lv2_item_10.png'),
   ],
   3: [
     li(3, 'tiny-telescope', '작은 망원경', 'decor', 'common', '멀리 있는 것을 보게 해 주는 망원경이에요.'),
