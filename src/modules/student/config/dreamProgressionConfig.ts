@@ -502,3 +502,21 @@ export function levelFromActivityScore(activityScore: number): number {
   const level = Math.floor(activityScore / ACTIVITY_SCORE_PER_LEVEL) + 1
   return Math.max(MIN_LEVEL, Math.min(MAX_LEVEL, level))
 }
+
+/**
+ * 아이템 code 로부터 해당 아이템의 레벨을 추론한다.
+ * - 레벨 2~10 아이템: code 가 `lv{N}_{slug}` 형태(예: lv2_small_flower_seed) → N.
+ * - 레벨 1 아이템: 접두어 없는 기본 시드 코드(예: firefly, pink_flower) → 1.
+ *
+ * DB items 테이블에 레벨 컬럼이 없으므로 code 접두어가 유일한 단서다.
+ * 레벨별 독립 정원(선택한 레벨의 아이템/배치만 표시)의 기준값으로 사용한다.
+ */
+const ITEM_LEVEL_RE = /^lv(\d+)_/i
+export function getItemLevelFromCode(code?: string | null): number {
+  if (!code) return MIN_LEVEL
+  const m = code.match(ITEM_LEVEL_RE)
+  if (!m) return MIN_LEVEL
+  const n = parseInt(m[1], 10)
+  if (!Number.isFinite(n)) return MIN_LEVEL
+  return Math.max(MIN_LEVEL, Math.min(MAX_LEVEL, n))
+}

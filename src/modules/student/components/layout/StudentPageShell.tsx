@@ -221,13 +221,13 @@ export default function StudentPageShell({
             {/* 우측: 꿈점수(P) · 보물지도 · 랭킹 · 로그아웃
                 (성장 단계 안내/득템 버튼은 제거. 득템·출석보상 수는 꿈점수 상세 모달에서 확인) */}
             <div className="flex items-center gap-2">
-              {/* 꿈점수 (클릭 → 상세 모달) */}
+              {/* 보상 포인트(P): 레벨 보너스 포함 총점. (레벨은 '활동 점수' 기준 — 보물지도 참고) */}
               <button
                 type="button"
                 onClick={() => setIsScoreDetailOpen(true)}
                 className="dream-hud-chip dream-hud-chip--score"
-                title="내 꿈점수 상세 보기"
-                aria-label="내 꿈점수 상세 보기"
+                title="내 보상 포인트(P) 상세 보기 — 레벨은 활동 점수 기준"
+                aria-label="내 보상 포인트 상세 보기"
               >
                 <Trophy className="w-4 h-4" />
                 <span><span className="dream-hud-score-num">{dream.dreamScore.toLocaleString()}</span>P</span>

@@ -64,12 +64,62 @@
 }
 
 /* ==========================================================================
+   꿈의 정원 — 레벨 선택 바 (레벨별 독립 정원)
+   ========================================================================== */
+.dg-level-selector {
+  position: absolute;
+  z-index: 41;
+  top: 3.4rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0.45rem;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.14);
+  border: 1.5px solid rgba(255, 255, 255, 0.8);
+  max-width: calc(100% - 1rem);
+}
+.dg-ls-arrow {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 1.8rem; height: 1.8rem; border-radius: 9999px; border: none; cursor: pointer;
+  background: #f3e8f3; color: #6b3f6e; flex-shrink: 0;
+  transition: background 0.12s ease;
+}
+.dg-ls-arrow:disabled { opacity: 0.35; cursor: not-allowed; }
+.dg-ls-arrow:not(:disabled):hover { background: #ffe3ef; }
+.dg-ls-chips {
+  display: flex; align-items: center; gap: 0.2rem;
+  overflow-x: auto; scrollbar-width: none; padding: 0 0.1rem; max-width: 22rem;
+}
+.dg-ls-chips::-webkit-scrollbar { display: none; }
+.dg-ls-chip {
+  position: relative;
+  display: inline-flex; align-items: center; gap: 0.2rem;
+  min-width: 2rem; height: 1.9rem; padding: 0 0.5rem;
+  border-radius: 9999px; border: 2px solid transparent;
+  background: #faf6fa; color: #6b4a6e; cursor: pointer;
+  font-family: 'Jua', system-ui, sans-serif; font-size: 0.8rem;
+  white-space: nowrap; flex-shrink: 0;
+  transition: transform 0.12s ease, background 0.12s ease;
+}
+.dg-ls-chip:hover:not(:disabled) { transform: scale(1.05); }
+.dg-ls-chip-active { background: linear-gradient(90deg, #f59ec0, #c879ff); color: #fff; border-color: #fff; box-shadow: 0 2px 8px rgba(200, 121, 255, 0.35); }
+.dg-ls-chip-current { border-color: #ffd36e; }
+.dg-ls-chip-locked { background: #efeaf0; color: #b6a8b6; cursor: not-allowed; opacity: 0.7; }
+.dg-ls-num { font-weight: 700; }
+.dg-ls-cur { font-size: 0.58rem; background: #fff3c4; color: #8a6d1a; padding: 0 0.3rem; border-radius: 9999px; }
+
+/* ==========================================================================
    꿈의 정원 — 과거 레벨 "다시 구경하기" 미리보기 안내 배너
    ========================================================================== */
 .dg-preview-banner {
   position: absolute;
   z-index: 41;
-  top: 3.4rem;
+  top: 6rem;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -97,7 +147,10 @@
   white-space: nowrap;
 }
 @media (max-width: 860px) {
-  .dg-preview-banner { top: 0.5rem; font-size: 0.72rem; }
+  .dg-level-selector { top: 0.4rem; max-width: calc(100% - 0.5rem); }
+  .dg-ls-chip { min-width: 1.7rem; height: 1.7rem; font-size: 0.72rem; padding: 0 0.4rem; }
+  .dg-ls-chips { max-width: 16rem; }
+  .dg-preview-banner { top: 3rem; font-size: 0.72rem; }
 }
 
 /* ==========================================================================
