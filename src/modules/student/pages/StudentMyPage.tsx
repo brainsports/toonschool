@@ -21,6 +21,7 @@ import { getStudentGrowthDashboard } from '../services/studentGrowthService'
 import { grantAttendanceReward } from '../services/dreamGardenService'
 import type { StudentGrowthDashboardData } from '../types/studentGrowth'
 import DreamPalaceDashboardCard from '../components/dream/DreamPalaceDashboardCard'
+import MindmapWorksSection from '../components/mindmap/MindmapWorksSection'
 
 
 
@@ -193,12 +194,20 @@ export default function StudentMyPage() {
                   내가 배운 내용을 멋진 만화로 만들어 볼까요?
                 </p>
 
-                <button 
+                <button
                   onClick={() => navigate('/student/select-unit')}
                   className="mt-2 bg-pink-500 hover:bg-pink-600 text-white font-bold py-3 px-6 rounded-full shadow-md shadow-pink-500/20 hover:shadow-lg transition-all flex items-center gap-2 w-fit active:scale-95"
                 >
                   <Play className="w-5 h-5 fill-current" />
                   <span>툰스쿨 에디터 입장</span>
+                </button>
+
+                <button
+                  onClick={() => navigate('/student/mindmap')}
+                  className="mt-2 ml-2 bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-6 rounded-full shadow-md shadow-purple-500/20 hover:shadow-lg transition-all flex items-center gap-2 w-fit active:scale-95"
+                >
+                  <span className="text-lg leading-none">🧠</span>
+                  <span>마인드맵 만들기</span>
                 </button>
               </div>
               <img
@@ -385,6 +394,9 @@ export default function StudentMyPage() {
               )}
             </div>
           </div>
+
+          {/* 나의 마인드맵(만화와 구분) */}
+          <MindmapWorksSection studentId={profile?.id ?? user?.id ?? ''} />
 
           {/* Right Column (4/12) */}
           <div className="lg:col-span-4 flex flex-col gap-6">
