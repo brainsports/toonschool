@@ -49,6 +49,34 @@ function getRewardCandidateItems(items: DreamGardenItem[], rewardType: RewardTyp
   return placeableItems
 }
 
+/** 학생의 현재 레벨(denorm student_reward_stats.dream_level). 미사용 시 0. */
+async function getStudentCurrentLevel(studentId: string): Promise<number> {
+  const { data } = await supabase
+    .from('student_reward_stats')
+    .select('dream_level')
+    .eq('student_id', studentId)
+    .maybeSingle()
+  const lv = data?.dream_level
+  return Number.isFinite(lv) && lv >= 2 && lv <= 10 ? lv : 0
+}
+
+/** 학생이 보유한 특정 레벨의 아이템 code 집합. */
+async function getOwnedLevelItemCodes(studentId: string, level: number): Promise<Set<string>> {
+  const { data } = await supabase
+    .from('student_items')
+    .select('item:items(code)')
+    .eq('student_id', studentId)
+  const prefix = `lv${level}_`
+  return new Set(
+    (data ?? [])
+      .map((r: Record<string, unknown>) => {
+        const item = Array.isArray(r.item) ? r.item[0] : r.item
+        return (item as { code?: string } | null)?.code
+      })
+      .filter((c): c is string => typeof c === 'string' && c.startsWith(prefix)),
+  )
+}
+
 type AutoPlacementZone = Pick<SaveGardenPlacementInput, 'x' | 'y' | 'scale' | 'zIndex'>
 
 const flowerGardenZones: AutoPlacementZone[] = [
@@ -312,7 +340,25 @@ export async function grantRandomItem(
   }
 
   const activeItems = await getActiveItems()
-  const rewardItems = getRewardCandidateItems(activeItems, rewardType)
+
+  // 레벨 우선 지급: 현재 레벨의 미보유 아이템이 있으면 우선 후보로 사용.
+  // 현재 레벨 10개를 모두 모은 후에만 전체 풀에서 지급.
+  let rewardItems: DreamGardenItem[]
+  const currentLevel = await getStudentCurrentLevel(studentId)
+  if (currentLevel >= 2) {
+    const ownedCodes = await getOwnedLevelItemCodes(studentId, currentLevel)
+    const prefix = `lv${currentLevel}_`
+    const levelUnowned = activeItems.filter(
+      (item) => item.code?.startsWith(prefix) && !ownedCodes.has(item.code),
+    )
+    rewardItems = getRewardCandidateItems(levelUnowned, rewardType)
+  } else {
+    rewardItems = []
+  }
+  // 현재 레벨 후보가 없거나 레벨 1이면 전체 풀에서 선택
+  if (rewardItems.length === 0) {
+    rewardItems = getRewardCandidateItems(activeItems, rewardType)
+  }
   if (rewardItems.length === 0) {
     return {
       status: 'skipped',

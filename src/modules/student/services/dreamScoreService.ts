@@ -15,6 +15,7 @@ import {
   DREAM_CHAPTERS,
   DreamIdempotencyKeys,
   EVENT_SOURCE_PREFIX,
+  getLevelItems,
   levelFromScore,
   LEVEL_BONUS_POINTS,
   MAX_LEVEL,
@@ -175,6 +176,70 @@ export async function ensureLevelBonuses(studentId: string, activityScore: numbe
   }
 }
 
+/** 레벨 달성 축하 아이템: 각 레벨(2~currentLevel) 도달 시 해당 레벨 아이템 1개만 지급(전체 10개 아님). */
+const LEVEL_ITEM_CELEBRATION_PREFIX = 'dream:levelitem:'
+async function grantLevelCelebrationItems(studentId: string, currentLevel: number): Promise<void> {
+  const existing = await fetchExistingEventSources(studentId)
+  let granted = false
+
+  for (let level = MIN_LEVEL + 1; level <= currentLevel; level++) {
+    const sourceId = `${LEVEL_ITEM_CELEBRATION_PREFIX}${level}`
+    if (existing.has(sourceId)) continue // 이미 축하 지급 완료
+
+    // 해당 레벨의 아이템 목록(config 카탈로그)
+    const specs = getLevelItems(level)
+    if (specs.length === 0) {
+      await insertEventIfMissing(studentId, sourceId) // 카탈로그 없음 → 마커만
+      continue
+    }
+
+    // DB items 에서 code → id 매핑
+    const codes = specs.map((s) => s.code)
+    const { data: dbItems } = await supabase
+      .from('items').select('id, code').in('code', codes)
+    const codeToId = new Map<string, string>(
+      (dbItems ?? []).map((r: { id: string; code: string }) => [r.code, r.id]),
+    )
+    if (codeToId.size === 0) {
+      await insertEventIfMissing(studentId, sourceId) // DB에 아이템 없음 → 마커만
+      continue
+    }
+
+    // 학생이 이미 보유한 item_id 집합
+    const itemIds = Array.from(codeToId.values())
+    const { data: ownedRows } = await supabase
+      .from('student_items').select('item_id')
+      .eq('student_id', studentId).in('item_id', itemIds)
+    const ownedIds = new Set((ownedRows ?? []).map((r: { item_id: string }) => r.item_id))
+
+    // 미보유 첫 번째 아이템 지급 (1개만)
+    const unownedSpec = specs.find((s) => {
+      const id = codeToId.get(s.code)
+      return id && !ownedIds.has(id)
+    })
+
+    if (unownedSpec) {
+      const itemId = codeToId.get(unownedSpec.code)!
+      const { error } = await supabase.from('student_items').insert({
+        student_id: studentId,
+        item_id: itemId,
+        source_type: 'event',
+        source_id: sourceId,
+        quantity: 1,
+        is_new: true,
+      })
+      if (!error) granted = true
+    }
+
+    // 축하 완료 마커 (보유 여부와 무관하게 1회만)
+    await insertEventIfMissing(studentId, sourceId)
+  }
+
+  if (granted && typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('studentLootItemsChanged'))
+  }
+}
+
 export interface DreamProgressResult extends DreamScoreBreakdown {
   /** 이번 호출에서 새로 달성(보너스/심볼이 막 기록된)한 레벨들. 레벨업 모달 1회 표시에 사용. */
   newlyAchievedLevels: number[]
@@ -228,7 +293,11 @@ async function computeDreamProgress(studentId: string): Promise<DreamProgressRes
   rows = await fetchRewardLogRows(studentId)
   breakdown = computeDreamScore(rows)
 
-  // 5) denorm 동기화(best-effort) — 랭킹/교사 조회용. 컬럼 미존재 시 무시.
+  // 5) 레벨 달성 축하 아이템: 도달한 각 레벨(2~currentLevel)마다 해당 레벨 아이템 1개 지급.
+  //    과거 전체 일괄 지급(10개)과 달리 1개만. 멱등(reward_logs marker dream:levelitem:{level}).
+  await grantLevelCelebrationItems(studentId, breakdown.level)
+
+  // 6) denorm 동기화(best-effort) — 랭킹/교사 조회용. 컬럼 미존재 시 무시.
   void syncDreamStats(studentId, breakdown)
 
   const result = { ...breakdown, newlyAchievedLevels: levelUp.newLevels }
