@@ -64,54 +64,50 @@
 }
 
 /* ==========================================================================
-   꿈의 정원 — 레벨 선택 바 (레벨별 독립 정원)
+   꿈의 정원 — 배경 슬라이드(밀어내기) 전환 + 왼쪽 패널 레벨 선택기
    ========================================================================== */
-.dg-level-selector {
-  position: absolute;
-  z-index: 41;
-  top: 3.4rem;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-  padding: 0.3rem 0.45rem;
-  border-radius: 9999px;
-  background: rgba(255, 255, 255, 0.94);
-  backdrop-filter: blur(10px);
-  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.14);
-  border: 1.5px solid rgba(255, 255, 255, 0.8);
-  max-width: calc(100% - 1rem);
+/* 배경 슬라이드: 두 레이어로 실제 밀어내기 연출 */
+.dg-bg-viewport { position: absolute; inset: 0; overflow: hidden; }
+.dg-bg-layer {
+  position: absolute; inset: 0;
+  background-size: cover; background-position: center;
+  will-change: transform;
 }
-.dg-ls-arrow {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 1.8rem; height: 1.8rem; border-radius: 9999px; border: none; cursor: pointer;
-  background: #f3e8f3; color: #6b3f6e; flex-shrink: 0;
-  transition: background 0.12s ease;
-}
-.dg-ls-arrow:disabled { opacity: 0.35; cursor: not-allowed; }
-.dg-ls-arrow:not(:disabled):hover { background: #ffe3ef; }
-.dg-ls-chips {
-  display: flex; align-items: center; gap: 0.2rem;
-  overflow-x: auto; scrollbar-width: none; padding: 0 0.1rem; max-width: 22rem;
-}
-.dg-ls-chips::-webkit-scrollbar { display: none; }
-.dg-ls-chip {
+.dg-bg-in-up { animation: dg-slide-in-right 560ms cubic-bezier(0.22, 1, 0.36, 1) forwards; z-index: 2; }
+.dg-bg-out-up { animation: dg-slide-out-left 560ms cubic-bezier(0.22, 1, 0.36, 1) forwards; z-index: 1; }
+.dg-bg-in-down { animation: dg-slide-in-left 560ms cubic-bezier(0.22, 1, 0.36, 1) forwards; z-index: 2; }
+.dg-bg-out-down { animation: dg-slide-out-right 560ms cubic-bezier(0.22, 1, 0.36, 1) forwards; z-index: 1; }
+@keyframes dg-slide-in-right { from { transform: translateX(100%); } to { transform: translateX(0); } }
+@keyframes dg-slide-out-left { from { transform: translateX(0); } to { transform: translateX(-100%); } }
+@keyframes dg-slide-in-left { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+@keyframes dg-slide-out-right { from { transform: translateX(0); } to { transform: translateX(100%); } }
+
+/* 왼쪽 패널 레벨 선택기(클릭 가능한 10칸) */
+.dg-level-cell {
   position: relative;
-  display: inline-flex; align-items: center; gap: 0.2rem;
-  min-width: 2rem; height: 1.9rem; padding: 0 0.5rem;
-  border-radius: 9999px; border: 2px solid transparent;
-  background: #faf6fa; color: #6b4a6e; cursor: pointer;
-  font-family: 'Jua', system-ui, sans-serif; font-size: 0.8rem;
-  white-space: nowrap; flex-shrink: 0;
-  transition: transform 0.12s ease, background 0.12s ease;
+  flex-direction: column; gap: 0.05rem;
+  padding: 0.2rem 0.1rem;
+  border: 2px solid transparent;
+  border-radius: 0.55rem;
+  background: rgba(255, 255, 255, 0.65);
+  color: #6b4a6e; cursor: pointer;
+  font-family: 'Jua', system-ui, sans-serif;
+  transition: transform 0.12s ease, background 0.12s ease, border-color 0.12s ease;
 }
-.dg-ls-chip:hover:not(:disabled) { transform: scale(1.05); }
-.dg-ls-chip-active { background: linear-gradient(90deg, #f59ec0, #c879ff); color: #fff; border-color: #fff; box-shadow: 0 2px 8px rgba(200, 121, 255, 0.35); }
-.dg-ls-chip-current { border-color: #ffd36e; }
-.dg-ls-chip-locked { background: #efeaf0; color: #b6a8b6; cursor: not-allowed; opacity: 0.7; }
-.dg-ls-num { font-weight: 700; }
-.dg-ls-cur { font-size: 0.58rem; background: #fff3c4; color: #8a6d1a; padding: 0 0.3rem; border-radius: 9999px; }
+.dg-level-cell:hover:not(:disabled) { transform: scale(1.06); background: rgba(255, 255, 255, 0.95); }
+.dg-level-cell:disabled { cursor: not-allowed; }
+.dg-level-num { font-size: 0.68rem; font-weight: 700; line-height: 1; }
+.dg-level-icon { font-size: 0.95rem; line-height: 1; }
+.dg-level-cell-viewing { border-color: #f59ec0; background: #ffe3ef; box-shadow: 0 2px 8px rgba(245, 158, 192, 0.3); }
+.dg-level-cell-current { border-color: #ffd36e; }
+.dg-level-cell-current.dg-level-cell-viewing { border-color: #f59ec0; }
+.dg-level-cell-locked { background: rgba(240, 235, 240, 0.6); color: #b6a8b6; opacity: 0.78; }
+.dg-level-tag { font-size: 0.5rem; padding: 0 0.2rem; border-radius: 9999px; line-height: 1.15; }
+.dg-level-tag-current { background: #fff3c4; color: #8a6d1a; }
+.dg-level-tag-viewing { background: #f59ec0; color: #fff; }
+@media (prefers-reduced-motion: reduce) {
+  .dg-bg-in-up, .dg-bg-out-up, .dg-bg-in-down, .dg-bg-out-down { animation: none !important; }
+}
 
 /* ==========================================================================
    꿈의 정원 — 과거 레벨 "다시 구경하기" 미리보기 안내 배너
@@ -119,7 +115,7 @@
 .dg-preview-banner {
   position: absolute;
   z-index: 41;
-  top: 6rem;
+  top: 0.6rem;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -147,10 +143,7 @@
   white-space: nowrap;
 }
 @media (max-width: 860px) {
-  .dg-level-selector { top: 0.4rem; max-width: calc(100% - 0.5rem); }
-  .dg-ls-chip { min-width: 1.7rem; height: 1.7rem; font-size: 0.72rem; padding: 0 0.4rem; }
-  .dg-ls-chips { max-width: 16rem; }
-  .dg-preview-banner { top: 3rem; font-size: 0.72rem; }
+  .dg-preview-banner { top: 0.5rem; font-size: 0.72rem; }
 }
 
 /* ==========================================================================
@@ -272,92 +265,8 @@
 }
 
 /* ==========================================================================
-   꿈의 궁전 페이지 — 상단 정보바 / 배경 전환기 / 심볼 그리드
+   꿈의 궁전 페이지 — 왼쪽 패널 레벨/심볼 그리드
    ========================================================================== */
-.dg-topbar {
-  position: absolute;
-  z-index: 40;
-  top: 0.75rem;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  padding: 0.5rem 0.85rem;
-  border-radius: 9999px;
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(12px);
-  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.16);
-  border: 1.5px solid rgba(255, 255, 255, 0.8);
-  max-width: calc(100% - 2rem);
-  flex-wrap: wrap;
-  justify-content: center;
-}
-.dg-topbar-level {
-  font-family: 'Jua', system-ui;
-  background: linear-gradient(90deg, #f59ec0, #c879ff);
-  color: #fff;
-  padding: 0.2rem 0.7rem;
-  border-radius: 9999px;
-  font-size: 0.85rem;
-  box-shadow: 0 2px 8px rgba(200, 121, 255, 0.35);
-}
-.dg-topbar-score {
-  display: inline-flex; align-items: center; gap: 0.3rem;
-  font-family: 'Jua', system-ui; color: #a8347a; font-size: 0.9rem;
-}
-.dg-topbar-score svg { color: #f0a040; }
-.dg-topbar-scene {
-  display: inline-flex; align-items: center; gap: 0.3rem;
-  max-width: 12rem; color: #5b3b5e; font-size: 0.78rem;
-}
-.dg-topbar-scene-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.dg-topbar-progress { display: flex; flex-direction: column; gap: 0.15rem; min-width: 6rem; }
-.dg-topbar-progress-bar { height: 0.4rem; background: #f3e8f3; border-radius: 9999px; overflow: hidden; }
-.dg-topbar-progress-bar > span { display: block; height: 100%; background: linear-gradient(90deg, #f59ec0, #c879ff); }
-.dg-topbar-progress-text { font-size: 0.62rem; color: #8a6c8a; }
-.dg-topbar-btn {
-  display: inline-flex; align-items: center; gap: 0.25rem;
-  padding: 0.3rem 0.6rem; border-radius: 9999px; border: none; cursor: pointer;
-  background: #fff3c4; color: #8a6d1a; font-family: 'Jua', system-ui; font-size: 0.78rem;
-}
-.dg-topbar-btn:hover { background: #ffe49a; }
-
-.dg-bg-switcher {
-  position: absolute;
-  z-index: 40;
-  bottom: 0.75rem;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  gap: 0.3rem;
-  padding: 0.4rem 0.6rem;
-  border-radius: 9999px;
-  background: rgba(255, 255, 255, 0.88);
-  backdrop-filter: blur(10px);
-  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.14);
-  max-width: calc(100% - 2rem);
-  flex-wrap: wrap;
-  justify-content: center;
-}
-.dg-bg-chip {
-  position: relative;
-  width: 2.1rem; height: 2.1rem;
-  border-radius: 9999px;
-  border: 2px solid transparent;
-  background: #fff;
-  cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 1rem;
-  transition: transform 0.15s ease;
-}
-.dg-bg-chip:hover { transform: scale(1.08); }
-.dg-bg-chip-active { border-color: #f59ec0; box-shadow: 0 0 0 2px rgba(245, 158, 192, 0.3); }
-.dg-bg-chip-locked { opacity: 0.5; cursor: not-allowed; filter: grayscale(0.6); }
-.dg-bg-chip-locked:hover { transform: none; }
-.dg-bg-chip-level { position: absolute; bottom: -2px; right: -2px; font-size: 0.55rem; background: #5b3b5e; color: #fff; border-radius: 9999px; padding: 0 0.2rem; }
-.dg-bg-chip-lock { position: absolute; top: -2px; left: -2px; font-size: 0.6rem; }
-
 .dg-symbols-section { margin-top: 0.25rem; }
 .dg-symbols-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.3rem; margin-top: 0.35rem; }
 .dg-symbol-chip {
@@ -367,8 +276,4 @@
 .dg-symbol-locked { opacity: 0.45; filter: grayscale(0.7); }
 
 .dg-rarity-badge { background: #fce7f3 !important; color: #a8347a !important; }
-
-@media (max-width: 860px) {
-  .dg-topbar-scene, .dg-topbar-progress { display: none; }
-}
 

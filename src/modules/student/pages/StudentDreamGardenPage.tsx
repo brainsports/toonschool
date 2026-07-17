@@ -1,19 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   ChevronDown,
-  ChevronLeft,
-  ChevronRight,
   Gift,
   Leaf,
   LocateFixed,
   Loader2,
-  Lock,
-  MapIcon,
   RefreshCw,
   RotateCcw,
   RotateCw,
   Sprout,
-  Trophy,
   WandSparkles,
   X,
   ZoomIn,
@@ -35,11 +30,9 @@ import {
   updateGardenPlacement,
 } from '../services/dreamGardenService'
 import { useDreamProgress } from '../components/dream/useDreamProgress'
-import DreamRankingModal from '../components/dream/DreamRankingModal'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import {
   DREAM_CHAPTERS,
-  DEFAULT_BACKGROUND_LEVEL,
   MIN_LEVEL,
   MAX_LEVEL,
   RARITY_BASE_POINTS,
@@ -49,7 +42,6 @@ import {
   getChapter,
   getItemLevelFromCode,
 } from '../config/dreamProgressionConfig'
-import { getUnlockedLevels } from '../services/dreamScoreService'
 import '../styles/dream-progression.css'
 
 // ───────────────────────────────────────────────────────────
@@ -422,9 +414,6 @@ export default function StudentDreamGardenPage() {
   const [isAllItemsModalOpen, setIsAllItemsModalOpen] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [highlightId, setHighlightId] = useState<string | null>(null)
-  const [unlockedLevels, setUnlockedLevels] = useState<number[]>([DEFAULT_BACKGROUND_LEVEL])
-  const [isRankingOpen, setIsRankingOpen] = useState(false)
-  const navigate = useNavigate()
   const { progress: dream } = useDreamProgress(studentId, { showLevelUpModal: false })
 
   // ── 레벨별 독립 정원 ──
@@ -438,7 +427,34 @@ export default function StudentDreamGardenPage() {
       ? paramLevel
       : currentLevel
   const isPreviewing = selectedGardenLevel !== currentLevel
-  const bgUrl = useGardenBackgroundUrl(selectedGardenLevel)
+
+  // ── 배경 슬라이드(밀어내기) 전환 ──
+  // 사용자가 레벨을 선택(selectLevel)했을 때만 애니메이션.
+  // 데이터 로드 등 외부 원인으로 레벨이 바뀌면 즉시 동기화(로드 시 슬라이드 발생 방지).
+  const userNavigatedRef = useRef(false)
+  const [shownLevel, setShownLevel] = useState(selectedGardenLevel)
+  const [outgoingLevel, setOutgoingLevel] = useState<number | null>(null)
+  const [slideDir, setSlideDir] = useState<'up' | 'down' | null>(null)
+  useEffect(() => {
+    if (selectedGardenLevel === shownLevel) return
+    if (!userNavigatedRef.current) {
+      setShownLevel(selectedGardenLevel) // 외부 변경 — 애니메이션 없이 동기화
+      return
+    }
+    userNavigatedRef.current = false
+    // 높은 레벨로 이동(up): 새 배경이 오른쪽에서 들어옴 / 낮은 레벨(down): 왼쪽에서 들어옴
+    setOutgoingLevel(shownLevel)
+    setSlideDir(selectedGardenLevel > shownLevel ? 'up' : 'down')
+    const t = window.setTimeout(() => {
+      setShownLevel(selectedGardenLevel)
+      setOutgoingLevel(null)
+      setSlideDir(null)
+    }, 560)
+    return () => window.clearTimeout(t)
+  }, [selectedGardenLevel, shownLevel])
+  const shownBg = useGardenBackgroundUrl(shownLevel)
+  const incomingBg = useGardenBackgroundUrl(selectedGardenLevel)
+  const outgoingBg = useGardenBackgroundUrl(outgoingLevel ?? shownLevel)
 
   // 선택한 레벨의 아이템/배치만 표시(아이템 레벨은 code 접두어 lv{N}_ 로 판별).
   // 각 아이템은 하나의 레벨에만 속하므로, 같은 배치 테이블에서도 레벨별로 독립 분리된다.
@@ -456,6 +472,7 @@ export default function StudentDreamGardenPage() {
 
   const selectLevel = (level: number) => {
     if (level < MIN_LEVEL || level > currentLevel) return // 미래 레벨은 잠금
+    userNavigatedRef.current = true // 배경 슬라이드 애니메이션 트리거
     setSearchParams(level === currentLevel ? {} : { level: String(level) }, { replace: true })
     setSelectedId(null)
   }
@@ -846,16 +863,6 @@ export default function StudentDreamGardenPage() {
   const totalItemCount = levelStudentItems.reduce((sum, item) => sum + item.quantity, 0)
   const placedCount = levelPlacements.length
 
-  // 해제된 레벨(배경 선택 가능 목록) 동기화 — 점수/레벨 변화 시마다
-  useEffect(() => {
-    if (!studentId) return
-    getUnlockedLevels(studentId)
-      .then(setUnlockedLevels)
-      .catch(() => {
-        /* fallback: 기본 레벨만 */
-      })
-  }, [studentId, dream.level])
-
   const handleBackgroundPointerDown = (e: React.PointerEvent) => {
     if (e.target === e.currentTarget) {
       setSelectedId(null)
@@ -867,82 +874,23 @@ export default function StudentDreamGardenPage() {
       <main className="dream-garden-page">
         <section className="dream-garden-stage" aria-label="나의 꿈의 정원">
 
-          {/* ── 배경 이미지: 학생의 실제 레벨(dream.level) 기준 자동 선택.
-                레벨1=기존 정원 webp(경로 유지), 레벨2~5=준비된 이미지, 6~10/로딩실패=레벨1 폴백 ── */}
-          <div className="dg-background-image" style={{ backgroundImage: `url(${bgUrl})` }} />
-
-          {/* ── 상태바: LV / 꿈점수(P) / 보물지도 / 랭킹 (단순화) ── */}
-          <div className="dg-topbar">
-            <div className="dg-topbar-level">LV.{dream.level}</div>
-            <div className="dg-topbar-score">
-              <Trophy className="w-4 h-4" />
-              <span><strong>{dream.dreamScore.toLocaleString()}</strong>P</span>
-            </div>
-            <button type="button" className="dg-topbar-btn" onClick={() => navigate('/student/treasure-map')} title="보물지도">
-              <MapIcon className="w-4 h-4" /><span className="hidden lg:inline">보물지도</span>
-            </button>
-            <button type="button" className="dg-topbar-btn" onClick={() => setIsRankingOpen(true)} title="우리 반 랭킹">
-              <Trophy className="w-4 h-4" /><span className="hidden lg:inline">랭킹</span>
-            </button>
+          {/* ── 배경: 레벨별 전용 배경. 레벨 변경 시 PowerPoint '밀어내기' 좌우 슬라이드 전환 ── */}
+          <div className="dg-bg-viewport">
+            <div
+              className={`dg-bg-layer${slideDir ? ` dg-bg-out-${slideDir}` : ''}`}
+              style={{ backgroundImage: `url(${slideDir ? outgoingBg : shownBg})` }}
+              aria-hidden="true"
+            />
+            {slideDir && (
+              <div
+                className={`dg-bg-layer dg-bg-in-${slideDir}`}
+                style={{ backgroundImage: `url(${incomingBg})` }}
+                aria-hidden="true"
+              />
+            )}
           </div>
 
-          {/* ── 레벨 선택: ◀ 이전 | LV.1 … LV.현재 | LV.잠금 … | 다음 ▶ ── */}
-          <div className="dg-level-selector" role="navigation" aria-label="정원 레벨 선택">
-            <button
-              type="button"
-              className="dg-ls-arrow"
-              onClick={() => selectLevel(selectedGardenLevel - 1)}
-              disabled={selectedGardenLevel <= MIN_LEVEL}
-              aria-label="이전 레벨 정원"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <div className="dg-ls-chips">
-              {DREAM_CHAPTERS.map((ch) => {
-                const unlocked = ch.level <= currentLevel
-                const isCurrent = ch.level === currentLevel
-                const isSelected = ch.level === selectedGardenLevel
-                return (
-                  <button
-                    key={ch.level}
-                    type="button"
-                    className={[
-                      'dg-ls-chip',
-                      isSelected ? 'dg-ls-chip-active' : '',
-                      isCurrent ? 'dg-ls-chip-current' : '',
-                      unlocked ? '' : 'dg-ls-chip-locked',
-                    ]
-                      .filter(Boolean)
-                      .join(' ')}
-                    disabled={!unlocked}
-                    onClick={() => selectLevel(ch.level)}
-                    title={unlocked ? `LV.${ch.level} ${ch.locationName}` : `LV.${ch.level} (아직 잠겨 있어요)`}
-                    aria-current={isSelected ? 'true' : undefined}
-                  >
-                    {unlocked ? (
-                      <>
-                        <span className="dg-ls-num">{ch.level}</span>
-                        {isCurrent && <span className="dg-ls-cur">현재</span>}
-                      </>
-                    ) : (
-                      <Lock className="w-3 h-3" />
-                    )}
-                  </button>
-                )
-              })}
-            </div>
-            <button
-              type="button"
-              className="dg-ls-arrow"
-              onClick={() => selectLevel(selectedGardenLevel + 1)}
-              disabled={selectedGardenLevel >= currentLevel}
-              aria-label="다음 레벨 정원"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* 과거 레벨 정원을 보고 있을 때 안내 */}
+          {/* 과거 레벨 정원을 보고 있을 때 안내(현재 레벨이 아닌 정원 구경 중) */}
           {isPreviewing && (
             <div className="dg-preview-banner" role="status">
               <span>
@@ -1001,22 +949,40 @@ export default function StudentDreamGardenPage() {
               </div>
             </div>
 
-            {/* 레벨 상징 아이템(해제한 레벨) */}
+            {/* 레벨 선택기(왼쪽 패널에 통합) — 보는 중 / 현재 레벨 / 잠금 구분 */}
             <div className="dg-info-section dg-symbols-section">
               <div className="dg-info-header">
-                <p className="dg-section-title-inline">해제한 레벨 상징 {unlockedLevels.length}/10</p>
+                <p className="dg-section-title-inline">해제한 레벨 성장 {currentLevel}/10</p>
               </div>
-              <div className="dg-symbols-grid">
+              <div className="dg-symbols-grid dg-level-grid">
                 {DREAM_CHAPTERS.map((ch) => {
-                  const unlocked = unlockedLevels.includes(ch.level)
+                  const unlocked = ch.level <= currentLevel
+                  const isCurrent = ch.level === currentLevel
+                  const isViewing = ch.level === selectedGardenLevel
                   return (
-                    <span
+                    <button
                       key={ch.level}
-                      className={`dg-symbol-chip${unlocked ? '' : ' dg-symbol-locked'}`}
-                      title={unlocked ? `LV.${ch.level} · ${ch.symbolName}` : `LV.${ch.level} (잠김)`}
+                      type="button"
+                      className={[
+                        'dg-symbol-chip',
+                        'dg-level-cell',
+                        isViewing ? 'dg-level-cell-viewing' : '',
+                        isCurrent ? 'dg-level-cell-current' : '',
+                        unlocked ? '' : 'dg-level-cell-locked',
+                      ]
+                        .filter(Boolean)
+                        .join(' ')}
+                      disabled={!unlocked}
+                      onClick={() => selectLevel(ch.level)}
+                      title={unlocked ? `LV.${ch.level} · ${ch.locationName}` : `LV.${ch.level} (아직 잠겨 있어요)`}
+                      aria-current={isViewing ? 'true' : undefined}
+                      aria-label={`레벨 ${ch.level} ${ch.locationName}${isCurrent ? ', 현재 레벨' : isViewing ? ', 보는 중' : unlocked ? '' : ', 잠김'}`}
                     >
-                      {unlocked ? ch.symbolEmoji : '🔒'}
-                    </span>
+                      <span className="dg-level-num">{ch.level}</span>
+                      <span className="dg-level-icon">{unlocked ? ch.symbolEmoji : '🔒'}</span>
+                      {isCurrent && <span className="dg-level-tag dg-level-tag-current">현재</span>}
+                      {isViewing && !isCurrent && <span className="dg-level-tag dg-level-tag-viewing">보는 중</span>}
+                    </button>
                   )
                 })}
               </div>
@@ -1202,10 +1168,6 @@ export default function StudentDreamGardenPage() {
             </div>
           </div>
         </div>
-      )}
-
-      {isRankingOpen && studentId && (
-        <DreamRankingModal studentId={studentId} progress={dream} onClose={() => setIsRankingOpen(false)} />
       )}
     </StudentPageShell>
   )

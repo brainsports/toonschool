@@ -4,15 +4,16 @@
  * 본 파일은 DB 접근을 하지 않는다. dreamScoreService 가 reward_logs(+items join) 를 가져와
  * 여기에 넘기면 점수 분해/레벨/주간·월간 집계를 반환한다.
  *
- * 핵심: 레벨 달성 보너스(200점)는 dreamScore 에 포함되지만 activityScore(레벨 판정용)에서는
- * 제외된다 → 보너스로 인한 연쇄 레벨업이 발생하지 않는다.
+ * 핵심: 레벨은 '총점(dreamScore = activityScore + 레벨 보너스)' 기준으로 판정한다.
+ * 레벨 달성 보너스(200점)도 달성에 기여하며, 보너스로 인한 연쇄 레벨업은
+ * dreamScoreService.ensureLevelBonuses 의 멱등 루프가 수렴시킨다.
  */
 import {
   ACTIVITY_SCORE_PER_LEVEL,
   DUPLICATE_ITEM_REPEAT_RATE,
   DREAM_CHAPTERS,
   EVENT_SOURCE_PREFIX,
-  levelFromActivityScore,
+  levelFromScore,
   MAX_LEVEL,
   REWARD_EVENT_POINTS,
   type ItemRarity,
@@ -244,17 +245,18 @@ export function computeDreamScore(rows: RewardLogRow[], now: Date = new Date()):
     attendancePoints + streak5Points + comicCompletePoints + teacherPraisePoints + itemPoints + specialMissionPoints
   const bonusScore = levelBonusPoints
   const dreamScore = activityScore + bonusScore
-  const level = levelFromActivityScore(activityScore)
+  // 레벨은 '총점(dreamScore)' 기준. 레벨 보너스도 달성에 기여한다.
+  const level = levelFromScore(dreamScore)
 
-  // 다음 레벨까지 남은 활동 점수 / 진행률
+  // 다음 레벨까지 남은 점수 / 진행률 (총점 기준)
   const chapter = DREAM_CHAPTERS.find((c) => c.level === level) ?? DREAM_CHAPTERS[0]
   const levelStart = chapter.minActivityScore
   const levelEnd = chapter.maxActivityScore ?? null
   const isMax = level >= MAX_LEVEL
   const nextLevel = isMax ? null : level + 1
-  const pointsToNextLevel = isMax ? 0 : Math.max(0, (chapter.maxActivityScore ?? 0) + 1 - activityScore)
+  const pointsToNextLevel = isMax ? 0 : Math.max(0, (chapter.maxActivityScore ?? 0) + 1 - dreamScore)
   const span = levelEnd === null ? ACTIVITY_SCORE_PER_LEVEL : levelEnd - levelStart + 1
-  const progressed = activityScore - levelStart
+  const progressed = dreamScore - levelStart
   const levelProgressRate = Math.max(0, Math.min(1, span > 0 ? progressed / span : 0))
 
   return {

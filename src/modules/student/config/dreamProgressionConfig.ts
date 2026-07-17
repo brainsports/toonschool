@@ -4,11 +4,12 @@
  * 레벨 임계값·10개 스토리 장면·등급 점수·보상 점수·멱등 키를 모두 이 파일에서 관리한다.
  * 어느 컴포넌트에서도 레벨 기준을 하드코딩하지 않는다.
  *
- * 설계 원칙(PLAN.md §13 참고):
- * - activityScore = 레벨 판정에 사용하는 '실제 활동 점수' (레벨 보너스 제외)
- * - bonusScore    = 레벨 달성 보너스 점수 (200점) — dreamScore 에는 포함, activityScore 에서는 제외
- *   → 보너스가 다음 레벨을 연쇄적으로 열지 못한다.
- * - dreamScore    = 화면에 표시되는 전체 누적 점수 = activityScore + bonusScore
+ * 설계 원칙:
+ * - activityScore = 출석/만화/칭찬/아이템/미션 등 '활동으로 얻은 점수' (레벨 보너스 제외)
+ * - bonusScore    = 레벨 달성 보너스 점수 (200점 × 달성 레벨 수)
+ * - dreamScore    = 화면에 표시되는 전체 누적 점수(총점) = activityScore + bonusScore
+ * - 레벨 판정은 '총점(dreamScore)' 기준(levelFromScore). 레벨 보너스도 달성에 기여하며,
+ *   ensureLevelBonuses 의 멱등 루프가 연쇄를 수렴시킨다.
  */
 
 export type ItemRarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary' | 'symbol'
@@ -495,13 +496,21 @@ export function getChapter(level: number): DreamChapter {
   return getChapterByLevel(level)
 }
 
-/** helper: 활동 점수로 레벨 계산 */
-export function levelFromActivityScore(activityScore: number): number {
-  if (activityScore < 0) return MIN_LEVEL
-  // 0~999 -> 1, 1000~1999 -> 2, ... 9000+ -> 10
-  const level = Math.floor(activityScore / ACTIVITY_SCORE_PER_LEVEL) + 1
+/**
+ * helper: 점수 → 레벨. 0~999 -> 1, 1000~1999 -> 2, ..., 9000+ -> 10.
+ *
+ * 레벨은 '총점(dreamScore = 활동점수 + 레벨 달성 보너스)' 기준으로 계산한다.
+ * (레벨 보너스도 레벨 달성에 기여. ensureLevelBonuses 가 멱등 루프로 수렴시킨다.)
+ * 0·음수·문자열·NaN·10 초과 점수는 1~10 범위로 정규화된다.
+ */
+export function levelFromScore(score: number): number {
+  if (!Number.isFinite(score) || score < 0) return MIN_LEVEL
+  const level = Math.floor(score / ACTIVITY_SCORE_PER_LEVEL) + 1
   return Math.max(MIN_LEVEL, Math.min(MAX_LEVEL, level))
 }
+
+/** (하위호환 별칭) 레벨 계산 — levelFromScore 와 동일. */
+export const levelFromActivityScore = levelFromScore
 
 /**
  * 아이템 code 로부터 해당 아이템의 레벨을 추론한다.

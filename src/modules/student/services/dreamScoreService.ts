@@ -6,7 +6,8 @@
  * - 5일 연속 출석(100), 레벨 달성 보너스(200), 레벨 심볼(0) 은 reward_logs 의 'event' 행으로 기록.
  *   reward_type='event' 는 운영 CHECK 제약에 허용되므로 별도 마이그레이션 없이 동작.
  * - 멱등성: reward_logs unique 인덱스(student_id, reward_type, source_id) + 사전 존재 조회.
- * - 레벨 보너스는 activityScore 에서 제외되므로 연쇄 레벨업이 발생하지 않는다.
+ * - 레벨은 '총점(dreamScore)' 기준. 레벨 보너스(200점)도 달성에 기여하며,
+ *   ensureLevelBonuses 가 멱등 루프로 연쇄를 수렴시킨다(MAX_LEVEL 초과 불가).
  * - student_reward_stats denorm 동기화는 best-effort(컬럼 미존재 시 에러 무시).
  */
 import { supabase } from '../../../shared/lib/supabase'
@@ -14,7 +15,8 @@ import {
   DREAM_CHAPTERS,
   DreamIdempotencyKeys,
   EVENT_SOURCE_PREFIX,
-  levelFromActivityScore,
+  levelFromScore,
+  LEVEL_BONUS_POINTS,
   MAX_LEVEL,
   MIN_LEVEL,
 } from '../config/dreamProgressionConfig'
@@ -143,22 +145,27 @@ export interface LevelUpResult {
 
 /**
  * 레벨 달성 보너스(200점) + 레벨 상징(0점) 보정.
- * activityScore 기준 레벨이 이전에 기록된 최고 레벨을 초과하면,
- * 그 사이의 모든 레벨에 대해 보너스/심볼을 idempotent 게 기록한다.
- * 보너스는 activityScore 에 포함되지 않으므로 재귀 호출/연쇄가 없다.
+ * 레벨은 '총점(dreamScore = activityScore + 레벨 보너스)' 기준.
+ * 보너스를 지급하면 총점이 올라 레벨이 더 높아질 수 있으므로, 수렴할 때까지
+ * 한 단계씩 idempotent 게 지급하며 다시 조회한다(MAX_LEVEL 초과 불가 → 반드시 수렴).
  */
 export async function ensureLevelBonuses(studentId: string, activityScore: number): Promise<LevelUpResult> {
-  const currentLevel = levelFromActivityScore(activityScore)
-  const maxCredited = await getMaxCreditedLevel(studentId)
   const newLevels: number[] = []
 
-  for (let lvl = maxCredited + 1; lvl <= currentLevel; lvl++) {
-    if (lvl < MIN_LEVEL) continue
+  for (let guard = 0; guard < MAX_LEVEL + 2; guard++) {
+    const maxCredited = await getMaxCreditedLevel(studentId)
+    // 이미 기록된 레벨 보너스(2..maxCredited, 각 200점) 합산
+    const bonusScore = Math.max(0, maxCredited - 1) * LEVEL_BONUS_POINTS
+    const dreamScore = activityScore + bonusScore
+    const currentLevel = levelFromScore(dreamScore)
+    if (currentLevel <= maxCredited) break // 안정(더 지급할 레벨 없음)
+
+    const lvl = maxCredited + 1
     // 레벨 1은 시작 레벨 → 보너스 대상 제외(심볼만)
     if (lvl > MIN_LEVEL) {
       await insertEventIfMissing(studentId, DreamIdempotencyKeys.levelBonus(lvl))
     }
-    // 상징 아이템(0점) — 레벨 1 포함 모든 레벨
+    // 상징 아이템(0점) — 모든 레벨
     await insertEventIfMissing(studentId, DreamIdempotencyKeys.levelSymbol(lvl))
     newLevels.push(lvl)
   }
