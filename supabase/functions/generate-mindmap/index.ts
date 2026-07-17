@@ -71,7 +71,7 @@ async function generateJson(prompt: string, timeoutMs = 45000): Promise<unknown>
         generationConfig: {
           temperature: 0.7,
           responseMimeType: 'application/json',
-          maxOutputTokens: 4096,
+          maxOutputTokens: 8192,
         },
       }),
     })
