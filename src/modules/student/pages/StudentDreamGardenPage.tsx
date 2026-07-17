@@ -33,14 +33,17 @@ import {
 } from '../services/dreamGardenService'
 import { useDreamProgress } from '../components/dream/useDreamProgress'
 import DreamRankingModal from '../components/dream/DreamRankingModal'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   DREAM_CHAPTERS,
   DEFAULT_BACKGROUND_LEVEL,
+  MIN_LEVEL,
+  MAX_LEVEL,
   RARITY_BASE_POINTS,
   RARITY_LABEL,
   GARDEN_BACKGROUND_FALLBACK,
   getGardenBackgroundUrl,
+  getChapter,
 } from '../config/dreamProgressionConfig'
 import { getUnlockedLevels } from '../services/dreamScoreService'
 import '../styles/dream-progression.css'
@@ -815,9 +818,18 @@ export default function StudentDreamGardenPage() {
       })
   }, [studentId, dream.level])
 
-  // 배경은 '학생의 실제 레벨(dream.level)' 하나만 기준으로 자동 선택.
+  // 배경은 기본적으로 '학생의 실제 레벨(dream.level)' 기준 자동 선택.
+  // 단, 보물지도에서 과거(완료) 레벨을 "다시 구경하기"로 진입한 경우(?level=N)에는
+  // 해당 레벨 배경을 미리보기로 보여준다(현재 레벨 이하만 허용).
+  const [searchParams, setSearchParams] = useSearchParams()
+  const paramLevel = Number(searchParams.get('level'))
+  const previewLevel =
+    Number.isInteger(paramLevel) && paramLevel >= MIN_LEVEL && paramLevel <= MAX_LEVEL && paramLevel <= dream.level
+      ? paramLevel
+      : dream.level
+  const isPreviewing = previewLevel !== dream.level
   // 이미지 preload 실패/404 시 useGardenBackgroundUrl 이 레벨1 배경으로 폴백한다.
-  const bgUrl = useGardenBackgroundUrl(dream.level)
+  const bgUrl = useGardenBackgroundUrl(previewLevel)
 
   const handleBackgroundPointerDown = (e: React.PointerEvent) => {
     if (e.target === e.currentTarget) {
@@ -848,6 +860,18 @@ export default function StudentDreamGardenPage() {
               <Trophy className="w-4 h-4" /><span className="hidden lg:inline">랭킹</span>
             </button>
           </div>
+
+          {/* 과거 레벨 "다시 구경하기" 미리보기 안내 */}
+          {isPreviewing && (
+            <div className="dg-preview-banner" role="status">
+              <span>
+                LV.{previewLevel} {getChapter(previewLevel).locationName} 다시 보는 중 (내 레벨 LV.{dream.level})
+              </span>
+              <button type="button" onClick={() => setSearchParams({}, { replace: true })}>
+                현재 레벨로 돌아가기
+              </button>
+            </div>
+          )}
 
           {/* ── 꽃비 효과 (정원이 살아있는 느낌, 매우 은은함 / 클릭·드래그 간섭 없음) ── */}
           <DreamGardenPetals />
