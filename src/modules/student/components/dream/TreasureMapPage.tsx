@@ -557,31 +557,10 @@ function StateLayer({
     <div className="tm-state-layer" aria-hidden="true">
       {TREASURE_MAP_POSITIONS.map((pos) => {
         const state = getLevelState(pos.level, currentLevel)
-        const chapter = getChapter(pos.level)
         const { x, y } = pos.marker
-        const illustrated = pos.illustrated
 
         return (
           <div key={pos.level}>
-            {/* 레벨5(비일러스트) 동적 양피지 라벨 */}
-            {!illustrated && (
-              <div className="tm-overlay-label" style={{ left: `${x}%`, top: `${y}%` }}>
-                <span className="tm-ov-num">{pos.level}</span>
-                <span className="tm-ov-icon">{chapter.symbolEmoji}</span>
-                <span className="tm-ov-name">{chapter.chapterTitle}</span>
-              </div>
-            )}
-
-            {/* 레벨 번호 배지(현재 레벨은 아래, 나머지는 위) */}
-            {illustrated && (
-              <span
-                className="tm-num-badge"
-                style={{ left: `${x}%`, top: `${state === 'current' ? y + 10 : y - 9}%` }}
-              >
-                {pos.level}
-              </span>
-            )}
-
             {/* 완료 */}
             {state === 'completed' && (
               <>
@@ -684,7 +663,6 @@ function LevelDetailPanel({
       <div className="tm-detail-head">
         <span className="tm-detail-level">LV.{chapter.level}</span>
         <span className={`tm-detail-state tm-detail-state--${state}`}>{stateLabelKo(state)}</span>
-        {!pos.illustrated && chapter.symbolEmoji && <span style={{ fontSize: '1.1rem' }}>{chapter.symbolEmoji}</span>}
       </div>
       <div className="tm-detail-title">{chapter.chapterTitle}</div>
       <div className="tm-detail-loc">{chapter.locationName} · 상징 {chapter.symbolName}</div>

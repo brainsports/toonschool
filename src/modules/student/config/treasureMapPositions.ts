@@ -15,11 +15,12 @@
  * 좌표는 DEBUG_TREASURE_MAP_HOTSPOTS=true 로 브라우저에서 시각 확인하며 조정한다.
  */
 
-/** 보물지도 배경 이미지(브라우저 경로). 파일 이동/이름 변경 금지. */
-export const TREASURE_MAP_BACKGROUND = '/images/toonschool/dream-garden/treasure-map-bg-v1.png'
+/** 보물지도 배경 이미지(브라우저 경로). 파일 이동/이름 변경 금지.
+ * v2(1536×1024): 1~10번 모두 이미지 안에 직접 포함된 3-4-3 ㄹ자 완성본. */
+export const TREASURE_MAP_BACKGROUND = '/images/toonschool/dream-garden/treasure-map-bg-v2.png'
 
-/** 원본 이미지 종횡비(1491×1055). 로딩 전에도 지도 영역 비율을 유지하기 위해 사용. */
-export const TREASURE_MAP_IMAGE_ASPECT = 1491 / 1055
+/** 원본 이미지 종횡비(1536×1024 = 1.5). 로딩 전에도 지도 영역 비율을 유지하기 위해 사용. */
+export const TREASURE_MAP_IMAGE_ASPECT = 1536 / 1024
 
 /**
  * 개발 모드: 핫스팟 클릭 영역과 마커 중심을 화면에 표시해 좌표를 조정한다.
@@ -51,11 +52,6 @@ export interface TreasureMapLevelPosition {
   hotspot: TreasureMapHotspot
   /** 상태 마커 중심(체크·자물쇠·핀) */
   marker: TreasureMapMarker
-  /**
-   * 배경 이미지에 해당 장소 일러스트가 이미 그려져 있는지.
-   * false 면 동적 라벨(양피지 스타일)로 장소를 직접 그린다(레벨 5).
-   */
-  illustrated: boolean
 }
 
 /** 각 레벨의 중심점과 핫스팟 반경(지도 % 기준). 중심점만 옮기면 된다. */
@@ -68,24 +64,24 @@ interface RawCenter {
   hw?: number
   /** 클릭 영역 높이의 절반(기본 9 → 18%) */
   hh?: number
-  illustrated?: boolean
 }
 
-// 3×3 지그재그 배치 + 바다(레벨5) 동적 오버레이.
-// 상단 행: 1·2·3 / 중단 행: 7·6·4 (+바다 5) / 하단 행: 8·9·10
-// 경로 순서는 항상 1 → 2 → ... → 10.
+// v2 보물지도 배치: 3-4-3 ㄹ자.
+// 상단 행(좌→우): 1·2·3
+// 중단 행(시각 좌→우 = 7·6·5·4, 이동 순서는 4→5→6→7 우→좌)
+// 하단 행(좌→우): 8·9·10
+// 전체 이동 순서는 항상 1 → 2 → ... → 10.
 const CENTERS: Record<number, RawCenter> = {
-  1: { cx: 18, cy: 30 },
-  2: { cx: 45, cy: 28 },
-  3: { cx: 72, cy: 28 },
-  4: { cx: 78, cy: 50 },
-  // 5: 배경에 일러스트가 없으므로 오른쪽 바다/섬 영역에 동적 라벨로 배치.
-  5: { cx: 87, cy: 38, hw: 8, hh: 9, illustrated: false },
-  6: { cx: 45, cy: 52 },
-  7: { cx: 18, cy: 52 },
-  8: { cx: 18, cy: 74 },
-  9: { cx: 45, cy: 74 },
-  10: { cx: 76, cy: 74 },
+  1: { cx: 16, cy: 27 },
+  2: { cx: 45, cy: 27 },
+  3: { cx: 75, cy: 27 },
+  4: { cx: 86, cy: 50 },
+  5: { cx: 62, cy: 50 },
+  6: { cx: 38, cy: 50 },
+  7: { cx: 14, cy: 50 },
+  8: { cx: 22, cy: 73 },
+  9: { cx: 50, cy: 73 },
+  10: { cx: 78, cy: 73 },
 }
 
 function buildPositions(): TreasureMapLevelPosition[] {
@@ -103,7 +99,6 @@ function buildPositions(): TreasureMapLevelPosition[] {
         height: hh * 2,
       },
       marker: { x: c.cx, y: c.cy },
-      illustrated: c.illustrated ?? true,
     }
   })
 }

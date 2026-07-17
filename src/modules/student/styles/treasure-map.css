@@ -211,27 +211,6 @@
   z-index: 6;
 }
 
-/* 레벨 번호 배지(각 장소 위, 얇고 은은함) */
-.tm-num-badge {
-  position: absolute;
-  transform: translate(-50%, -50%);
-  min-width: 1.5rem;
-  height: 1.5rem;
-  padding: 0 0.35rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.92);
-  color: #8a6d1a;
-  border: 2px solid #ffd98a;
-  border-radius: 9999px;
-  font-family: 'Jua', system-ui, sans-serif;
-  font-size: 0.8rem;
-  box-shadow: 0 2px 5px rgba(120, 80, 40, 0.18);
-  pointer-events: none;
-  white-space: nowrap;
-}
-
 /* 완료: 금빛 체크 배지 + 은은한 금빛 테두리 */
 .tm-check-badge {
   position: absolute;
@@ -350,40 +329,6 @@
   0%, 100% { opacity: 0.25; transform: translate(-50%, -50%) scale(0.8); }
   50%      { opacity: 1; transform: translate(-50%, -50%) scale(1.15); }
 }
-
-/* ── 레벨5 동적 라벨(양피지 스타일) — 배경에 일러스트가 없는 장소 ── */
-.tm-overlay-label {
-  position: absolute;
-  transform: translate(-50%, -50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.15rem;
-  padding: 0.45rem 0.7rem 0.5rem;
-  border-radius: 0.9rem;
-  background: linear-gradient(160deg, #fff7e2 0%, #fcebc4 100%);
-  border: 2px dashed #d8b77a;
-  box-shadow: 0 4px 12px rgba(140, 100, 40, 0.22);
-  font-family: 'Jua', system-ui, sans-serif;
-  color: #6b4a1e;
-  text-align: center;
-  pointer-events: none;
-  max-width: 9rem;
-}
-.tm-overlay-label .tm-ov-num {
-  font-size: 1.1rem;
-  color: #fff;
-  background: #d8a13a;
-  width: 1.7rem;
-  height: 1.7rem;
-  border-radius: 9999px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 2px 5px rgba(160, 110, 30, 0.4);
-}
-.tm-overlay-label .tm-ov-icon { font-size: 1.2rem; }
-.tm-overlay-label .tm-ov-name { font-size: 0.78rem; line-height: 1.15; }
 
 /* ── 줌/현재위치 컨트롤(모바일 중심) ── */
 .tm-controls {
