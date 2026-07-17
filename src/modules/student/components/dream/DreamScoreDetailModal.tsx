@@ -49,7 +49,7 @@ export default function DreamScoreDetailModal({ progress, totalLootCount, attend
           </div>
 
           <div className="dream-stat-grid">
-            <Stat lbl="레벨 판정용 활동 점수" val={p.activityScore.toLocaleString()} />
+            <Stat lbl="활동 점수(보너스 제외)" val={p.activityScore.toLocaleString()} />
             <Stat lbl="레벨 달성 보너스 점수" val={p.bonusScore.toLocaleString()} />
             <Stat lbl="이번 주 획득" val={`+${p.weeklyPoints.toLocaleString()}`} />
             <Stat lbl="이번 달 획득" val={`+${p.monthlyPoints.toLocaleString()}`} />
@@ -70,7 +70,7 @@ export default function DreamScoreDetailModal({ progress, totalLootCount, attend
               </div>
             ) : (
               <div style={{ fontSize: '0.85rem', color: '#6b4a6e' }}>
-                다음 레벨까지 <strong style={{ color: '#a8347a' }}>활동 점수 {p.pointsToNextLevel.toLocaleString()}점</strong> 남았어요.
+                다음 레벨까지 <strong style={{ color: '#a8347a' }}>{p.pointsToNextLevel.toLocaleString()}점</strong> 남았어요.
               </div>
             )}
           </div>

@@ -14,7 +14,7 @@
 
 export type ItemRarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary' | 'symbol'
 
-/** 레벨 1개당 필요한 활동 점수 구간 폭. 한 곳에서 800/1200 등으로 조정 가능. */
+/** 레벨 1개당 필요한 점수(총점 기준) 구간 폭. 한 곳에서 800/1200 등으로 조정 가능. */
 export const ACTIVITY_SCORE_PER_LEVEL = 1000
 
 /** 레벨 달성 보너스(레벨 2~10 최초 달성 시 각 1회). 레벨 1은 시작 레벨이므로 제외. */

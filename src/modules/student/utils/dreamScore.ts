@@ -31,7 +31,7 @@ export interface RewardLogRow {
 }
 
 export interface DreamScoreBreakdown {
-  /** 레벨 판정용 실제 활동 점수(레벨 보너스 제외) */
+  /** 활동 점수(출석/만화/칭찬/아이템/미션 합, 레벨 보너스 제외) */
   activityScore: number
   /** 레벨 달성 보너스 점수 */
   bonusScore: number
