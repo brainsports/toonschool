@@ -282,13 +282,24 @@ export const MINDMAP_LIMITS = {
   maxDescriptionLength: 200,
 } as const;
 
-/** 자동 배치 기준 캔버스 세계 크기/반경. */
+/** 자동 배치 기준(좌·우 수평 트리). position 은 노드 중심점. */
 export const LAYOUT = {
-  centralSize: { w: 240, h: 130 },
-  mainSize: { w: 210, h: 78 },
-  subSize: { w: 188, h: 76 },
-  mainRadiusX: 560,
-  mainRadiusY: 340,
-  subGap: 96,
-  subSpread: 230,
+  centralSize: { w: 250, h: 120 },
+  mainSize: { w: 210, h: 84 },
+  subSize: { w: 224, h: 150 }, // 2차 가지는 설명(50~200자)을 담아 충분히 높게
+  thoughtSize: { w: 220, h: 90 },
+  grandSize: { w: 190, h: 80 },
+  // 중심→1차 가지 수평 거리
+  mainDx: 360,
+  // 1차 가지→2차 가지 수평 거리(바깥 방향)
+  childDx: 300,
+  // 2차→3차 가지 수평 거리
+  grandDx: 250,
+  // 같은 부모 안 자식들 사이 세로 간격
+  childGapY: 24,
+  // 한쪽에 쌓이는 1차 가지들 사이 최소 세로 여백
+  mainGapY: 36,
+  // '나의 생각'을 중심 아래로 띄우는 거리
+  thoughtDy: 220,
+  thoughtGapX: 240,
 };

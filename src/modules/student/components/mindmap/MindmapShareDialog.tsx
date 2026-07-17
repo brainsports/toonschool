@@ -7,6 +7,7 @@
 import { useState } from 'react';
 import { Share2, Copy, Check, X, Link2, AlertCircle } from 'lucide-react';
 import type { MindmapProject } from '../../types/mindmap';
+import MindmapDialog from './MindmapDialog';
 
 export interface MindmapShareDialogProps {
   project: MindmapProject;
@@ -50,13 +51,14 @@ export default function MindmapShareDialog(props: MindmapShareDialogProps) {
     }
   };
 
+  const [confirmRevoke, setConfirmRevoke] = useState(false);
   const handleRevoke = async () => {
-    if (!confirm('공유를 중지할까요? 친구가 가진 링크로 더 이상 볼 수 없어요.')) return;
     setRevoking(true);
     try {
       await onRevoke();
     } finally {
       setRevoking(false);
+      setConfirmRevoke(false);
     }
   };
 
@@ -118,7 +120,7 @@ export default function MindmapShareDialog(props: MindmapShareDialogProps) {
             </div>
             <button
               disabled={revoking}
-              onClick={handleRevoke}
+              onClick={() => setConfirmRevoke(true)}
               className="w-full py-2 rounded-xl border border-red-200 text-red-500 font-bold hover:bg-red-50 disabled:opacity-60"
             >
               {revoking ? '공유 중지 중...' : '공유 중지하기'}
@@ -128,6 +130,18 @@ export default function MindmapShareDialog(props: MindmapShareDialogProps) {
 
         {error && <p className="text-sm text-red-500 mt-3 text-center">{error}</p>}
       </div>
+      <MindmapDialog
+        open={confirmRevoke}
+        title="공유를 중지할까요?"
+        confirmLabel="공유 중지하기"
+        cancelLabel="취소"
+        danger
+        confirmDisabled={revoking}
+        onConfirm={handleRevoke}
+        onClose={() => setConfirmRevoke(false)}
+      >
+        <p>친구가 가진 링크로 더 이상 이 마인드맵을 볼 수 없어요. 나중에 다시 공유할 수 있어요.</p>
+      </MindmapDialog>
     </div>
   );
 }

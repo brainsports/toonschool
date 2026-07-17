@@ -1,22 +1,23 @@
 /**
  * 마인드맵 편집 캔버스 호스트.
- *  - 뷰포트 이동(pan): 배경 드래그.
- *  - 확대/축소(zoom): 휠, 핀치(두 손가락), 버튼.
- *  - 노드 드래그: 노드에서 pointerdown → 위치 갱신(onNodePositionChange).
- *  - 화면 맞춤(fit): world 를 뷰포트에 맞춤.
+ *  - 중앙 영역 전체를 캔버스로 쓴다: 뷰포트 배경 = 테마 그라데이션이 화면을 가득 채움.
+ *  - 배경 장식/캐릭터는 화면 고정. 노드+연결선만 pan/zoom transform 안에서 이동.
+ *  - pan(배경 드래그), zoom(휠/핀치/버튼), 노드 드래그, 화면 맞춤(fit).
  *
- * 변환: transform wrapper 에 translate+scale(transformOrigin 0,0). world 중심을 초기에 맞춤.
+ * 캡처(PNG/PDF/공유)는 이 캔버스가 아니라 에디터의 숨김 포스터(MindmapArtwork)를
+ * 사용한다 → 편집 도구/줌 버튼이 이미지에 들어가지 않는다.
  */
 import { useCallback, useEffect, useImperativeHandle, useRef, useState, type PointerEvent as ReactPointerEvent, type WheelEvent as ReactWheelEvent, type Ref } from 'react';
 import type { MindmapProject } from '../../types/mindmap';
 import { worldSize } from '../../utils/mindmapEngine';
-import MindmapArtwork from './MindmapArtwork';
+import { getTheme } from '../../data/mindmapConfig';
+import MindmapNodesLayer from './MindmapNodesLayer';
+import { MindmapDecorations, MindmapCharacterHints } from './MindmapArtwork';
 
 export interface MindmapCanvasHandle {
   fit: () => void;
   zoomIn: () => void;
   zoomOut: () => void;
-  getWorldEl: () => HTMLDivElement | null;
 }
 
 export interface MindmapCanvasHostProps {
@@ -37,16 +38,18 @@ export interface MindmapCanvasHostProps {
 
 interface View { x: number; y: number; scale: number; }
 
-const MIN_SCALE = 0.2;
+const MIN_SCALE = 0.3;
 const MAX_SCALE = 2.5;
+const FIT_PAD = 64;
+const FIT_MIN = 0.25;
 
 export default function MindmapCanvasHost(props: MindmapCanvasHostProps) {
   const { project, themeId, selectedId, editingId, canvasRef,
     onSelectNode, onNodeDoubleClick, onAddChild, onTitleChange, onFinishEditing,
     onNodeDragStart, onNodeDragMove, onNodeDragEnd } = props;
 
+  const theme = getTheme(themeId || project.themeId);
   const viewportRef = useRef<HTMLDivElement>(null);
-  const worldElRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState<View>({ x: 0, y: 0, scale: 0.6 });
   const [ready, setReady] = useState(false);
   const [cursor, setCursor] = useState<'grab' | 'grabbing'>('grab');
@@ -56,7 +59,6 @@ export default function MindmapCanvasHost(props: MindmapCanvasHostProps) {
     | { mode: 'node'; nodeId: string; startPX: number; startPY: number; origNX: number; origNY: number; moved: boolean }
     | null
   >(null);
-
   const pinchRef = useRef<{ d: number; scale: number } | null>(null);
   const pointersRef = useRef<Map<number, { x: number; y: number }>>(new Map());
 
@@ -64,16 +66,14 @@ export default function MindmapCanvasHost(props: MindmapCanvasHostProps) {
     const vp = viewportRef.current;
     if (!vp) return;
     const { w, h } = worldSize(project.nodes);
-    const pad = 48;
-    const availW = vp.clientWidth - pad * 2;
-    const availH = vp.clientHeight - pad * 2;
-    const scale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, Math.min(availW / w, availH / h)));
+    const availW = Math.max(100, vp.clientWidth - FIT_PAD * 2);
+    const availH = Math.max(100, vp.clientHeight - FIT_PAD * 2);
+    const scale = Math.max(FIT_MIN, Math.min(MAX_SCALE, Math.min(availW / w, availH / h)));
     const x = (vp.clientWidth - w * scale) / 2;
     const y = (vp.clientHeight - h * scale) / 2;
     setView({ x, y, scale });
   }, [project.nodes]);
 
-  // 초기/노드 수 변화 시 1회 자동 맞춤(ready 전까지만).
   useEffect(() => {
     if (ready) return;
     const vp = viewportRef.current;
@@ -86,29 +86,18 @@ export default function MindmapCanvasHost(props: MindmapCanvasHostProps) {
     fit,
     zoomIn: () => setView((v) => ({ ...v, scale: Math.min(MAX_SCALE, v.scale + 0.15) })),
     zoomOut: () => setView((v) => ({ ...v, scale: Math.max(MIN_SCALE, v.scale - 0.15) })),
-    getWorldEl: () => worldElRef.current,
   }), [fit]);
 
-  // ----- 노드 드래그 시작(Artwork 노드에서 호출) -----
   const handleNodeDragStart = useCallback((nodeId: string, e: ReactPointerEvent<HTMLDivElement>) => {
     const node = project.nodes.find((n) => n.id === nodeId);
     if (!node) return;
-    if (e.button !== undefined && e.button !== 0) return; // 좌클릭만
+    if (e.button !== undefined && e.button !== 0) return;
     e.stopPropagation();
     (e.target as Element).setPointerCapture?.(e.pointerId);
-    dragStateRef.current = {
-      mode: 'node',
-      nodeId,
-      startPX: e.clientX,
-      startPY: e.clientY,
-      origNX: node.position.x,
-      origNY: node.position.y,
-      moved: false,
-    };
+    dragStateRef.current = { mode: 'node', nodeId, startPX: e.clientX, startPY: e.clientY, origNX: node.position.x, origNY: node.position.y, moved: false };
     onNodeDragStart?.(nodeId);
   }, [project.nodes, onNodeDragStart]);
 
-  // ----- 범용 pointermove/up(pan + node drag + pinch) -----
   useEffect(() => {
     const onMove = (e: PointerEvent) => {
       const ds = dragStateRef.current;
@@ -120,17 +109,13 @@ export default function MindmapCanvasHost(props: MindmapCanvasHostProps) {
         return;
       }
       if (ds?.mode === 'pan') {
-        const nx = ds.origX + (e.clientX - ds.startX);
-        const ny = ds.origY + (e.clientY - ds.startY);
-        setView((v) => ({ ...v, x: nx, y: ny }));
+        setView((v) => ({ ...v, x: ds.origX + (e.clientX - ds.startX), y: ds.origY + (e.clientY - ds.startY) }));
         return;
       }
     };
     const onUp = () => {
       const ds = dragStateRef.current;
-      if (ds?.mode === 'node' && ds.moved) {
-        onNodeDragEnd?.();
-      }
+      if (ds?.mode === 'node' && ds.moved) onNodeDragEnd?.();
       dragStateRef.current = null;
       pointersRef.current.clear();
       pinchRef.current = null;
@@ -146,7 +131,6 @@ export default function MindmapCanvasHost(props: MindmapCanvasHostProps) {
     };
   }, [view.scale, onNodeDragMove, onNodeDragEnd]);
 
-  // ----- 휠 줌(포인터 중심) -----
   const onWheel = (e: ReactWheelEvent<HTMLDivElement>) => {
     e.preventDefault();
     const vp = viewportRef.current;
@@ -162,9 +146,7 @@ export default function MindmapCanvasHost(props: MindmapCanvasHostProps) {
     });
   };
 
-  // ----- 배경 드래그(pan) / 핀치 -----
   const onViewportPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
-    // 노드 카드 클릭은 여기로 안 옴(버블링 stopPropagation). 여기 오면 배경.
     onSelectNode?.(null);
     pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (pointersRef.current.size === 2) {
@@ -178,9 +160,7 @@ export default function MindmapCanvasHost(props: MindmapCanvasHostProps) {
     setCursor('grabbing');
   };
   const onViewportPointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
-    if (pointersRef.current.has(e.pointerId)) {
-      pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    }
+    if (pointersRef.current.has(e.pointerId)) pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (pointersRef.current.size === 2 && pinchRef.current) {
       const pts = [...pointersRef.current.values()];
       const d = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
@@ -189,48 +169,36 @@ export default function MindmapCanvasHost(props: MindmapCanvasHostProps) {
     }
   };
 
-  const { w, h } = worldSize(project.nodes);
-
   return (
     <div
       ref={viewportRef}
       className="relative w-full h-full overflow-hidden"
-      style={{
-        background: '#f1f5f9',
-        cursor,
-        touchAction: 'none',
-      }}
+      style={{ background: theme.palette.background, cursor, touchAction: 'none' }}
       onPointerDown={onViewportPointerDown}
       onPointerMove={onViewportPointerMove}
       onWheel={onWheel}
     >
-      <div
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          transform: `translate(${view.x}px, ${view.y}px) scale(${view.scale})`,
-          transformOrigin: '0 0',
-          willChange: 'transform',
-        }}
-      >
-        <MindmapArtwork
-          project={project}
-          themeId={themeId}
+      {/* 화면 고정 장식 + 캐릭터 안내 */}
+      <div className="absolute inset-0 pointer-events-none">
+        <MindmapDecorations theme={theme} />
+        <MindmapCharacterHints />
+      </div>
+
+      {/* 노드+연결선(pan/zoom transform) */}
+      <div style={{ position: 'absolute', left: 0, top: 0, transform: `translate(${view.x}px, ${view.y}px) scale(${view.scale})`, transformOrigin: '0 0', willChange: 'transform' }}>
+        <MindmapNodesLayer
+          nodes={project.nodes}
+          theme={theme}
           interactive
           selectedId={selectedId}
           editingId={editingId}
-          scale={view.scale}
-          worldRef={worldElRef}
-          onSelectNode={onSelectNode}
-          onNodeDoubleClick={onNodeDoubleClick}
-          onNodeDragStart={handleNodeDragStart}
+          onSelect={onSelectNode}
+          onDoubleClick={onNodeDoubleClick}
+          onDragStart={handleNodeDragStart}
           onAddChild={onAddChild}
           onTitleChange={onTitleChange}
           onFinishEditing={onFinishEditing}
         />
-        {/* 월드 외곽을 시각적으로 안정화(크기 참조용 투명 박스). */}
-        <div style={{ position: 'absolute', left: -1, top: -1, width: w + 2, height: h + 2, pointerEvents: 'none' }} />
       </div>
 
       {/* 줌 컨트롤 */}

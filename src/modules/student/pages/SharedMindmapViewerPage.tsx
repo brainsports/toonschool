@@ -20,10 +20,9 @@ export default function SharedMindmapViewerPage() {
   const [data, setData] = useState<MindmapPublicShareRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
-  const [scale, setScale] = useState(0.6);
+  const [zoom, setZoom] = useState(1);
   const [exporting, setExporting] = useState(false);
-  const worldRef = useRef<HTMLDivElement>(null);
-  const wrapRef = useRef<HTMLDivElement>(null);
+  const posterRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -49,25 +48,14 @@ export default function SharedMindmapViewerPage() {
     return () => { cancelled = true; };
   }, [slug]);
 
-  // 초기 맞춤.
-  useEffect(() => {
-    if (!data || !wrapRef.current) return;
-    const el = worldRef.current;
-    if (!el) return;
-    const wrap = wrapRef.current;
-    const s = Math.min((wrap.clientWidth - 48) / el.offsetWidth, (wrap.clientHeight - 48) / el.offsetHeight);
-    setScale(Math.max(0.2, Math.min(1, s)));
-  }, [data]);
+  // 보기 영역은 mode='fill' 포스터가 스스로 맞춤(fit). 확대/축소는 외부 transform.
 
   function handleFit() {
-    const el = worldRef.current; const wrap = wrapRef.current;
-    if (!el || !wrap) return;
-    const s = Math.min((wrap.clientWidth - 48) / el.offsetWidth, (wrap.clientHeight - 48) / el.offsetHeight);
-    setScale(Math.max(0.2, Math.min(1, s)));
+    setZoom(1);
   }
 
   async function handlePng() {
-    const el = worldRef.current;
+    const el = posterRef.current;
     if (!el || !data) return;
     setExporting(true);
     try { await exportPng(el, data.title); } finally { setExporting(false); }
@@ -121,8 +109,8 @@ export default function SharedMindmapViewerPage() {
           </div>
         </div>
         <div className="ml-auto flex items-center gap-1.5">
-          <button onClick={() => setScale((s) => Math.min(2, s + 0.15))} className="p-2 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-50" title="확대"><ZoomIn className="w-4 h-4" /></button>
-          <button onClick={() => setScale((s) => Math.max(0.2, s - 0.15))} className="p-2 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-50" title="축소"><ZoomOut className="w-4 h-4" /></button>
+          <button onClick={() => setZoom((s) => Math.min(2, s + 0.15))} className="p-2 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-50" title="확대"><ZoomIn className="w-4 h-4" /></button>
+          <button onClick={() => setZoom((s) => Math.max(0.4, s - 0.15))} className="p-2 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-50" title="축소"><ZoomOut className="w-4 h-4" /></button>
           <button onClick={handleFit} className="p-2 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-50" title="화면 맞춤"><Maximize className="w-4 h-4" /></button>
           <button onClick={handlePng} disabled={exporting} className="px-3 py-2 rounded-lg bg-pink-500 text-white text-sm font-bold hover:bg-pink-600 flex items-center gap-1 disabled:opacity-60" title="PNG 저장">
             <Download className="w-4 h-4" /> <span className="hidden sm:inline">PNG</span>
@@ -130,11 +118,15 @@ export default function SharedMindmapViewerPage() {
         </div>
       </header>
 
-      {/* 보기 영역(스크롤/줌) */}
-      <div ref={wrapRef} className="flex-1 min-h-0 overflow-auto student-scrollbar p-4 md:p-8">
-        <div className="flex items-start justify-center" style={{ minHeight: '100%' }}>
-          <div style={{ transform: `scale(${scale})`, transformOrigin: 'top center' }}>
-            <MindmapArtwork project={project} themeId={project.themeId} interactive={false} showCharacters={false} worldRef={worldRef} />
+      {/* 보기 영역: 같은 포스터 컴포넌트로 자동 맞춤. 확대 시 스크롤. */}
+      <div className="flex-1 min-h-0 overflow-auto student-scrollbar p-4 md:p-8">
+        <div className="w-full h-full flex items-center justify-center" style={{ minHeight: '100%' }}>
+          <div className="w-full" style={{ maxWidth: 1100, transform: `scale(${zoom})`, transformOrigin: 'center center' }}>
+            <MindmapArtwork project={project} themeId={project.themeId} mode="fill" interactive={false} showCharacters={false} />
+            {/* 미리보기/캡처와 동일한 1.91:1 포스터(숨김, PNG 저장용) */}
+            <div aria-hidden style={{ position: 'absolute', left: -99999, top: 0, width: 1200, height: 628 }}>
+              <MindmapArtwork project={project} themeId={project.themeId} mode="fixed" width={1200} height={628} artworkRef={posterRef} />
+            </div>
           </div>
         </div>
       </div>

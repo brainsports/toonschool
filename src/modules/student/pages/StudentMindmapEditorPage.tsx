@@ -12,18 +12,20 @@ import type { AiPartialAction } from '../types/mindmapAi';
 import { MINDMAP_THEMES, MINDMAP_ICONS, getTheme } from '../data/mindmapConfig';
 import {
   addNode, autoLayout, checkCompletion, clampDescription, clampTitle, deleteNode as engineDelete,
-  getChildren, getNode, newId, reparent,
+  getNode, newId, reparent,
 } from '../utils/mindmapEngine';
 import {
   enableShare, getMindmap, revokeShare, saveMindmap,
-  generateMindmapFull, generateMindmapPartial, aiResponseToNodes,
+  generateMindmapFull, generateMindmapPartial, aiResponseToNodes, validateAiFull,
 } from '../services/mindmapService';
 import { exportPng, exportPdf, printMindmap, makeThumbnailDataUrl } from '../utils/mindmapExport';
 import MindmapCanvasHost, { type MindmapCanvasHandle } from '../components/mindmap/MindmapCanvasHost';
-import MindmapArtwork from '../components/mindmap/MindmapArtwork';
+import MindmapArtwork, { POSTER_W, POSTER_H } from '../components/mindmap/MindmapArtwork';
 import MindmapRightPanel from '../components/mindmap/MindmapRightPanel';
 import MindmapShareDialog from '../components/mindmap/MindmapShareDialog';
 import MindmapCompleteDialog from '../components/mindmap/MindmapCompleteDialog';
+import MindmapDialog from '../components/mindmap/MindmapDialog';
+import MindmapToast from '../components/mindmap/MindmapToast';
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error' | 'offline';
 
@@ -44,10 +46,13 @@ export default function StudentMindmapEditorPage() {
   const [showExport, setShowExport] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [isEnabling, setIsEnabling] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<MindmapNode | null>(null);
+  const [toast, setToast] = useState<{ message: string; tone: 'success' | 'error' | 'info' } | null>(null);
 
   const [past, setPast] = useState<MindmapProject[]>([]);
   const [future, setFuture] = useState<MindmapProject[]>([]);
   const canvasRef = useRef<MindmapCanvasHandle>(null);
+  const posterRef = useRef<HTMLDivElement>(null);
   const firstLoadRef = useRef(true);
   const saveTimerRef = useRef<number | null>(null);
   const lastSavedVersion = useRef<number>(0);
@@ -155,21 +160,22 @@ export default function StudentMindmapEditorPage() {
   const handleDelete = useCallback((id: string) => {
     const node = project?.nodes.find((n) => n.id === id);
     if (!node) return;
-    const hasChildren = getChildren(project!.nodes, id).length > 0;
-    let mode: 'cascade' | 'lift' = 'cascade';
-    if (hasChildren) {
-      const choice = confirm('이 가지 아래 내용도 함께 지울까요?\n\n[확인] = 하위 가지까지 삭제\n[취소] = 하위 가지는 살려두고 이 가지만 삭제');
-      if (choice === undefined) return;
-      mode = choice ? 'cascade' : 'lift';
-    } else {
-      if (!confirm('이 가지를 지울까요?')) return;
+    setDeleteTarget(node); // 한국어 모달로 확인 받기(브라우저 confirm 미사용)
+  }, [project]);
+
+  const confirmDelete = useCallback(() => {
+    const target = deleteTarget;
+    if (!target) return;
+    try {
+      commit((p) => ({ ...p, nodes: engineDelete(p.nodes, target.id, 'cascade') }));
+      setSelectedId(null);
+      setToast({ message: '가지가 삭제되었어요.', tone: 'success' });
+    } catch {
+      setToast({ message: '삭제하지 못했어요. 잠시 후 다시 해 주세요.', tone: 'error' });
+    } finally {
+      setDeleteTarget(null);
     }
-    commit((p) => {
-      const next = engineDelete(p.nodes, id, mode);
-      return { ...p, nodes: next };
-    });
-    setSelectedId(null);
-  }, [project, commit]);
+  }, [deleteTarget, commit]);
 
   const handleReparent = useCallback((id: string, newParentId: string | null) => {
     commit((p) => {
@@ -229,7 +235,13 @@ export default function StudentMindmapEditorPage() {
         grade: project.grade, subject: project.subject, semester: project.semester,
         unitTitle: project.unitTitle, centralTopic: project.centralTopic || project.unitTitle,
       });
-      if (!res.data) { setAiMsg(res.message || 'AI 가 만들지 못했어요.'); return; }
+      if (!res.data) { setAiMsg(res.message || 'AI 가 만들지 못했어요. 다시 시도해 주세요.'); return; }
+      // 품질 검증: 1차 4~6, 각 2차 ≥2, 설명 50~200자. 미달이면 덮어쓰지 않고 재시도 안내.
+      const report = validateAiFull(res.data);
+      if (!report.ok) {
+        setAiMsg(`AI 결과가 조금 부족해요(${report.issues[0]}). 다시 시도해 주세요.`);
+        return;
+      }
       commit((p) => {
         const nodes = aiResponseToNodes(res.data!, central);
         // 학생 '나의 생각' 틀 1개 보존/추가.
@@ -241,6 +253,7 @@ export default function StudentMindmapEditorPage() {
         ];
         return { ...p, nodes: autoLayout(finalNodes), centralTopic: res.data!.centralTopic || p.centralTopic };
       });
+      setToast({ message: 'AI가 마인드맵을 만들었어요.', tone: 'success' });
       setTimeout(() => canvasRef.current?.fit(), 80);
     } finally {
       setAiLoading(false);
@@ -295,7 +308,7 @@ export default function StudentMindmapEditorPage() {
     if (!project) return;
     setIsEnabling(true);
     try {
-      const el = canvasRef.current?.getWorldEl();
+      const el = posterRef.current;
       let thumb: string | null = null;
       if (el) { try { thumb = await makeThumbnailDataUrl(el); } catch { thumb = null; } }
       const updated = await enableShare(project, thumb);
@@ -311,9 +324,9 @@ export default function StudentMindmapEditorPage() {
     setShowShare(false);
   }, [project, commit]);
 
-  // ---- 내보내기 ----
+  // ---- 내보내기(숨김 1.91:1 포스터를 캡처 → 편집 도구/줌 버튼 미포함) ----
   const doExport = useCallback(async (kind: 'png' | 'pdf' | 'print') => {
-    const el = canvasRef.current?.getWorldEl();
+    const el = posterRef.current;
     if (!el || !project) return;
     setShowExport(false);
     try {
@@ -322,7 +335,7 @@ export default function StudentMindmapEditorPage() {
       else await printMindmap(el, project.title);
     } catch (e) {
       console.error('[mindmap] export failed', e);
-      setAiMsg('저장하지 못했어요. 잠시 후 다시 시도해 주세요.');
+      setToast({ message: '저장하지 못했어요. 잠시 후 다시 시도해 주세요.', tone: 'error' });
     }
   }, [project]);
 
@@ -497,8 +510,53 @@ export default function StudentMindmapEditorPage() {
         <PreviewModal project={project} onClose={() => setShowPreview(false)} />
       )}
       {showHelp && <HelpModal onClose={() => setShowHelp(false)} />}
+
+      {/* 삭제 확인(한국어 모달) */}
+      {deleteTarget && (
+        <MindmapDialog
+          open
+          title="이 가지를 삭제할까요?"
+          confirmLabel="삭제하기"
+          cancelLabel="취소"
+          danger
+          onConfirm={confirmDelete}
+          onClose={() => setDeleteTarget(null)}
+        >
+          <p>
+            선택한 가지 <strong>“{deleteTarget.title || '제목 없음'}”</strong>와 그 아래에 연결된 작은 가지도 함께 삭제됩니다.
+            삭제한 내용은 되돌리기 버튼으로 다시 복구할 수 있어요.
+          </p>
+          {(() => {
+            const cnt = project ? countDescendants(project.nodes, deleteTarget.id) : 0;
+            return cnt > 0 ? <p className="mt-2 text-red-500 font-bold">연결된 가지 {cnt}개도 함께 삭제됩니다.</p> : null;
+          })()}
+        </MindmapDialog>
+      )}
+
+      <MindmapToast message={toast?.message ?? null} tone={toast?.tone} onDone={() => setToast(null)} />
+
+      {/* 캡처 전용 숨김 포스터(1.91:1). 화면에 보이지 않음. */}
+      {project && (
+        <div aria-hidden style={{ position: 'fixed', left: -99999, top: 0, width: POSTER_W, height: POSTER_H, pointerEvents: 'none', opacity: 1 }}>
+          <MindmapArtwork project={project} themeId={project.themeId} mode="fixed" width={POSTER_W} height={POSTER_H} artworkRef={posterRef} />
+        </div>
+      )}
     </div>
   );
+}
+
+/** 삭제 모달 표시용 하위 가지 개수. */
+function countDescendants(nodes: MindmapNode[], id: string): number {
+  let n = 0;
+  const stack = [id];
+  const seen = new Set<string>([id]);
+  while (stack.length) {
+    const cur = stack.pop()!;
+    for (const nd of nodes) {
+      if (nd.parentId === cur && !seen.has(nd.id)) { seen.add(nd.id); n++; stack.push(nd.id); }
+    }
+  }
+  return n;
 }
 
 function SaveStatusBadge({ status }: { status: SaveStatus }) {
@@ -515,17 +573,17 @@ function SaveStatusBadge({ status }: { status: SaveStatus }) {
 }
 
 function PreviewModal({ project, onClose }: { project: MindmapProject; onClose: () => void }) {
-  const ref = useRef<HTMLDivElement>(null);
+  // 미리보기도 캡처/공유와 동일한 포스터(1.91:1, 1200×628) 사용. 모달 폭에 맞춰 비율 유지 축소.
   return (
     <div className="fixed inset-0 z-[200] bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-5xl max-h-[92vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
         <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
-          <h3 className="font-bold text-slate-800">미리보기</h3>
+          <h3 className="font-bold text-slate-800">미리보기 (1.91:1)</h3>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-700 text-xl">✕</button>
         </div>
-        <div className="flex-1 overflow-auto p-4 bg-slate-50" ref={ref}>
-          <div style={{ transform: 'scale(0.62)', transformOrigin: 'top center' }}>
-            <MindmapArtworkStatic project={project} />
+        <div className="flex-1 flex items-center justify-center p-4 bg-slate-100 overflow-hidden">
+          <div className="w-full" style={{ maxWidth: POSTER_W }}>
+            <MindmapArtwork project={project} themeId={project.themeId} mode="fixed" width={POSTER_W} height={POSTER_H} />
           </div>
         </div>
       </div>
@@ -551,9 +609,4 @@ function HelpModal({ onClose }: { onClose: () => void }) {
       </div>
     </div>
   );
-}
-
-// 정적(읽기 전용) 아트워크 래핑 컴포넌트.
-function MindmapArtworkStatic({ project }: { project: MindmapProject }) {
-  return <MindmapArtwork project={project} themeId={project.themeId} interactive={false} showCharacters />;
 }

@@ -25,6 +25,11 @@ export interface AiFullMindmapResponse {
   branches: AiBranch[];
 }
 
+/** 중심 주제 추천 응답(3~5개). */
+export interface AiTopicsResponse {
+  topics: string[];
+}
+
 /** 부분(선택 노드) 생성 응답. */
 export interface AiPartialMindmapResponse {
   /** 선택한 노드 아래에 붙일 추천 자식. */

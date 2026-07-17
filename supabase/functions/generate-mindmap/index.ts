@@ -15,8 +15,13 @@ import { createAdminClient, resolveCaller } from '../_shared/client.ts'
 
 const TAG = 'generate-mindmap'
 const TEXT_MODEL = Deno.env.get('GEMINI_TEXT_MODEL') || 'gemini-2.5-flash'
+const MIN_BRANCHES = 4
 const MAX_BRANCHES = 6
+const MIN_LEAVES = 2
 const MAX_LEAVES = 4
+const DESC_MAX = 200
+const TOPICS_MIN = 3
+const TOPICS_MAX = 5
 
 function log(stage: string, fields: Record<string, unknown> = {}) {
   const safe: Record<string, unknown> = {}
@@ -159,10 +164,11 @@ function validateBranches(raw: unknown): { branches: ValidatedBranch[]; centralT
       const co = c as Record<string, unknown>
       const ctitle = cleanStr(co.title, 30)
       if (!ctitle || isBadText(ctitle)) continue
-      const cdesc = cleanStr(co.description, MAX_STR)
+      const cdesc = cleanStr(co.description, DESC_MAX)
       if (cdesc && isBadText(cdesc)) continue
       children.push({ title: ctitle, description: cdesc, icon: cleanStr(co.icon, 20) || undefined })
     }
+    if (children.length === 0) continue // 2차 가지가 없는 1차 가지는 버린다
     branches.push({
       title,
       description: cleanStr(bo.description, MAX_STR) || undefined,
@@ -201,6 +207,24 @@ function validatePartial(raw: unknown): ValidatedPartial | null {
   return out
 }
 
+function validateTopics(raw: unknown): string[] | null {
+  if (!raw || typeof raw !== 'object') return null
+  const obj = raw as Record<string, unknown>
+  const arr = Array.isArray(obj.topics) ? obj.topics : null
+  if (!arr) return null
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const t of arr) {
+    const s = cleanStr(t, 40)
+    if (!s || isBadText(s)) continue
+    if (seen.has(s)) continue
+    seen.add(s)
+    out.push(s)
+    if (out.length >= TOPICS_MAX) break
+  }
+  return out.length >= TOPICS_MIN ? out : null
+}
+
 // ---------------------------------------------------------------------------
 // 프롬프트
 // ---------------------------------------------------------------------------
@@ -210,18 +234,40 @@ function fullPrompt(ctx: {
   const gradeTxt = ctx.grade ? `초등학교 ${ctx.grade}학년` : '초등학교'
   const subjTxt = ctx.subject ? `${ctx.subject} 과목` : ''
   const unitTxt = ctx.unitTitle ? `"${ctx.unitTitle}" 단원` : ''
-  return `당신은 초등학교 ${gradeTxt} 학생을 돕는 친절한 선생님이다. ${[subjTxt, unitTxt].filter(Boolean).join(' ')}에서 배울 수 있는 마인드맵을 만들어 준다.
+  return `당신은 초등학교 ${gradeTxt} 학생을 돕는 친절하고 꼼꼼한 선생님이다. ${[subjTxt, unitTxt].filter(Boolean).join(' ')}에서 배우는 내용으로 마인드맵을 만들어 준다.
 
 중심 주제: "${ctx.centralTopic}"
 
-아래 조건을 반드시 지킨다:
-- 큰 가지(branch)는 4~6개. 각 큰 가지마다 핵심 개념·쉬운 설명·과정·원인과 결과·특징·실제 예시·생활 속 연결·생각해 볼 질문 같은 요소가 골고루 들어가도록 다양하게 구성한다(단순 키워드 나열 금지).
-- 각 큰 가지 아래 작은 가지(children) 2~4개. 각 작은 가지는 title(짧은 구, 최대 30자)과 description(쉬운 온전한 문장, 최대 80자, "${ctx.centralTopic}"에 맞는 사실만)을 가진다.
-- 학생이 읽기 쉬운 친절한 말투. 불확실하거나 틀린 사실은 절대 만들지 않는다.
-- icon 은 다음 키 중 하나만 고른다: idea,sun,water,air,soil,seed,sprout,leaf,flower,fruit,tree,root,star,heart,book,pencil,question,search,lightbulb,home,friends,clock,weather,music,art,number,letter,map,globe,animal,bird,fish,rocket,cloud,rain,fire,snow,magnet,gear,thermometer. 알맞지 않으면 생략한다.
+[구조 규칙 — 반드시 지킨다]
+- 큰 가지(branch)는 정확히 ${MIN_BRANCHES}~${MAX_BRANCHES}개. 중심 주제를 이해하는 데 꼭 필요한 서로 다른 핵심 영역으로 나눈다(비슷한 의지 반복 금지).
+- 각 큰 가지 아래 작은 가지(children)를 ${MIN_LEAVES}~${MAX_LEAVES}개 만든다.
+- 큰 가지 title: 4~15자, 짧고 명확.
+- 작은 가지 title: 4~20자, 짧은 구.
+- 작은 가지 description: 한글 기준 50~200자의 자세하고 쉬운 온전한 문장. 정의·원리·특징·과정·생활 예시 중 어울리는 것을 구체적으로 설명. 어려운 교과 용어가 나오면 곧바로 쉬운 말로 풀어쓴다. 절대 빈 값/“내용 없음”/임시 문구/같은 문장 반복 금지. "${ctx.centralTopic}" 단원에 맞는 사실만.
 
-반드시 다음 JSON 형태로만 응답한다(JSON 이외의 설명·코드블록 금지):
-{"centralTopic":"${ctx.centralTopic}","branches":[{"title":"큰가지제목","icon":"아이콘키","description":"한 줄 요약","children":[{"title":"작은가지제목","icon":"아이콘키","description":"쉬운 설명"}]}]}`
+[말투] 초등학생이 혼자 읽어도 이해되는 친절한 말투. 틀리거나 불확실한 사실은 만들지 않는다.
+[icon] 다음 키 중 하나만: idea,sun,water,air,soil,seed,sprout,leaf,flower,fruit,tree,root,star,heart,book,pencil,question,search,lightbulb,home,friends,clock,weather,music,art,number,letter,map,globe,animal,bird,fish,rocket,cloud,rain,fire,snow,magnet,gear,thermometer. 알맞지 않으면 생략.
+
+반드시 다음 JSON 형태로만 응답한다(JSON 외 설명·코드블록 금지):
+{"centralTopic":"${ctx.centralTopic}","branches":[{"title":"큰가지제목","icon":"아이콘키","description":"한 줄 요약","children":[{"title":"작은가지제목","icon":"아이콘키","description":"50~200자의 자세하고 쉬운 설명"}]}]}`
+}
+
+function topicsPrompt(ctx: {
+  grade?: number; subject?: string; semester?: number; unitTitle?: string; subunitTitle?: string;
+}): string {
+  const gradeTxt = ctx.grade ? `초등학교 ${ctx.grade}학년` : '초등학교'
+  const subjTxt = ctx.subject ? `${ctx.subject} 과목` : ''
+  const unitTxt = ctx.unitTitle ? `"${ctx.unitTitle}" 단원` : ''
+  const subTxt = ctx.subunitTitle ? `(작은 단원: "${ctx.subunitTitle}")` : ''
+  return `당신은 초등학교 ${gradeTxt} 학생을 돕는 선생님이다. ${[subjTxt, unitTxt, subTxt].filter(Boolean).join(' ')}에서 마인드맵의 중심 주제로 쓰기 좋은 질문/주제를 ${TOPICS_MIN}~${TOPICS_MAX}개 추천해 준다.
+
+규칙:
+- 반드시 이 단원과 직접 관련된 구체적인 주제만. 단원과 관련 없는 추상적·일반적 주제 금지.
+- 초등학생이 이해하기 쉬운 한글 문장(물음표로 끝나는 질문형도 좋음). 각 10~30자.
+- 비슷한 주제 반복 금지.
+
+반드시 다음 JSON 형태로만 응답한다(JSON 외 금지):
+{"topics":["주제1","주제2","주제3"]}`
 }
 
 type PartialReq = { action: string; nodeTitle: string; nodeDescription: string }
@@ -261,7 +307,34 @@ serve(async (req) => {
     log('authed', { uid: caller.id.slice(0, 8) })
 
     const body = await req.json().catch(() => ({}))
-    const mode = body?.mode === 'partial' ? 'partial' : 'full'
+    const mode = body?.mode === 'partial' ? 'partial' : body?.mode === 'topics' ? 'topics' : 'full'
+
+    if (mode === 'topics') {
+      const ctx = {
+        grade: Number(body?.grade) || undefined,
+        subject: cleanStr(body?.subject, 20) || undefined,
+        semester: Number(body?.semester) || undefined,
+        unitTitle: cleanStr(body?.unitTitle, 40) || undefined,
+        subunitTitle: cleanStr(body?.subunitTitle, 40) || undefined,
+      }
+      if (!ctx.unitTitle && !ctx.subject) return fail('학년·과목·단원을 먼저 선택해 주세요.', 'INVALID_INPUT')
+      log('topicsStart', {})
+      let raw: unknown
+      try {
+        raw = await generateJson(topicsPrompt(ctx))
+      } catch (e) {
+        const code = (e as { code?: string })?.code || 'PROVIDER_ERROR'
+        log('topicsAiError', { code, elapsedMs: Date.now() - t0 })
+        return fail(userMessage(code), code)
+      }
+      const topics = validateTopics(raw)
+      if (!topics) {
+        log('topicsBadOutput', { elapsedMs: Date.now() - t0 })
+        return fail(userMessage('BAD_MODEL_OUTPUT'), 'BAD_MODEL_OUTPUT')
+      }
+      log('topicsDone', { count: topics.length, elapsedMs: Date.now() - t0 })
+      return ok({ data: { topics } })
+    }
 
     if (mode === 'full') {
       const centralTopic = cleanStr(body?.centralTopic, 40)

@@ -284,20 +284,24 @@ export function checkCompletion(project: MindmapProject): CompletionReport {
 }
 
 /**
- * 방사형(radial) 자동 배치.
- * 중심은 (0,0). 큰 가지는 위쪽 270도에 균등 배치(아래쪽은 '나의 생각' 자리).
- * 각 큰 가지의 자식(작은 가지)은 해당 가지 바깥쪽으로 부채꼴로 펼친다.
- * '나의 생각'(thought) 노드는 중심 아래쪽에 가로로 나열(기준 이미지의 하단 영역).
- * 접힌(collapsed) 가지의 자식은 배치에서 제외.
+ * 좌·우 수평 트리 자동 배치.
+ *  - 중심(central)은 (0,0).
+ *  - 모든 1차 가지(main)는 중심의 **왼쪽 또는 오른쪽**에만 배치(위/아래 금지).
+ *  - 좌·우 개수를 최대한 균형 있게 분배(홀수면 한쪽이 1개 더 많음).
+ *  - 2차 가지(sub)는 부모 가지의 **바깥 방향**으로(왼쪽 가지→더 왼쪽, 오른쪽→더 오른쪽).
+ *  - 3차 가지(grand)는 더 바깥으로.
+ *  - 각 1차 가지의 "서브트리 높이"를 계산해 세로로 포개 쌓아 선/노드 겹침 방지.
+ *  - '나의 생각'(thought)은 1차 가지가 아닌 보조 노드이므로 중심 아래에 가로로 나열.
+ *  - 접힌(collapsed) 가지의 자식은 배치에서 제외.
  */
 export function autoLayout(nodes: MindmapNode[]): MindmapNode[] {
   const central = nodes.find((n) => n.type === 'central');
   if (!central) return nodes;
   const next = nodes.map((n) => ({ ...n, position: { ...n.position } }));
-
+  const byId = new Map(next.map((n) => [n.id, n] as const));
   const setPos = (id: string, x: number, y: number) => {
-    const t = next.find((n) => n.id === id);
-    if (t) t.position = { x, y };
+    const t = byId.get(id);
+    if (t) t.position = { x: Math.round(x), y: Math.round(y) };
   };
 
   setPos(central.id, 0, 0);
@@ -305,42 +309,68 @@ export function autoLayout(nodes: MindmapNode[]): MindmapNode[] {
   const mains = allKids.filter((n) => n.type === 'main');
   const thoughts = allKids.filter((n) => n.type === 'thought');
 
-  const total = mains.length;
-  mains.forEach((main, i) => {
-    // 위쪽(−90도)을 중심으로 ±135도(상단 270도)에 균등 배치. 하단은 '나의 생각' 자리.
-    const angle = total <= 1 ? -Math.PI / 2 : -Math.PI / 2 + ((i / (total - 1)) - 0.5) * (Math.PI * 1.5);
-    const mx = Math.round(Math.cos(angle) * LAYOUT.mainRadiusX);
-    const my = Math.round(Math.sin(angle) * LAYOUT.mainRadiusY);
-    setPos(main.id, mx, my);
+  // 서브트리(2차+3차)의 세로 높이 계산.
+  const grandUnitH = LAYOUT.grandSize.h + LAYOUT.childGapY;
+  const subtreeHeight = (mainId: string): number => {
+    const subs = getChildren(next, mainId).filter((n) => n.type !== 'thought');
+    if (subs.length === 0) return LAYOUT.mainSize.h + LAYOUT.mainGapY;
+    let total = 0;
+    for (const s of subs) {
+      const grands = getChildren(next, s.id);
+      const gh = grands.length > 0 ? grands.length * grandUnitH : LAYOUT.subSize.h;
+      total += Math.max(LAYOUT.subSize.h, gh);
+      total += LAYOUT.childGapY;
+    }
+    return Math.max(LAYOUT.mainSize.h + LAYOUT.mainGapY, total);
+  };
 
-    if (main.collapsed) return;
-    const children = getChildren(next, main.id).filter((n) => n.type !== 'thought');
-    const dirX = Math.sign(mx) || 1;
-    children.forEach((child, j) => {
-      const spread = children.length > 1 ? (j - (children.length - 1) / 2) * 0.4 : 0;
-      const a = angle + spread;
-      const r = LAYOUT.subSpread;
-      const cx = mx + Math.round(Math.cos(a) * r * dirX);
-      const cy = my + Math.round(Math.sin(a) * r * 0.85);
-      setPos(child.id, cx, cy);
+  // 좌·우 균형 분배(인덱스 짝수→오른쪽, 홀수→왼쪽). 홀수 개면 오른쪽이 1개 더 많음.
+  const leftMains: MindmapNode[] = [];
+  const rightMains: MindmapNode[] = [];
+  mains.forEach((m, i) => (i % 2 === 0 ? rightMains : leftMains).push(m));
 
-      // 3단계(손자)가 있다면 더 바깥으로.
-      if (!child.collapsed) {
-        const grands = getChildren(next, child.id);
-        grands.forEach((g, k) => {
-          const ga = a + (k - (grands.length - 1) / 2) * 0.3;
-          setPos(g.id, cx + Math.round(Math.cos(ga) * 150 * dirX), cy + Math.round(Math.sin(ga) * 150));
-        });
-      }
-    });
-  });
+  let maxHalfH = 0;
+  const layoutSide = (list: MindmapNode[], sign: -1 | 1) => {
+    if (list.length === 0) return;
+    const bands = list.map((m) => ({ m, h: subtreeHeight(m.id) }));
+    const totalH = bands.reduce((s, b) => s + b.h, 0);
+    let cursor = -totalH / 2;
+    for (const b of bands) {
+      const my = cursor + b.h / 2;
+      const mx = sign * LAYOUT.mainDx;
+      setPos(b.m.id, mx, my);
+      cursor += b.h;
+      if (b.m.collapsed) continue;
+      const subs = getChildren(next, b.m.id).filter((n) => n.type !== 'thought');
+      // 자식들을 메인 y 중심으로 균등 배치(바깥 방향).
+      const childTotal = subs.reduce((s, _s, j) => s + (j > 0 ? LAYOUT.childGapY : 0) + LAYOUT.subSize.h, 0);
+      let cy = my - childTotal / 2 + LAYOUT.subSize.h / 2;
+      subs.forEach((s) => {
+        const cx = mx + sign * LAYOUT.childDx;
+        setPos(s.id, cx, cy);
+        // 3차 가지는 더 바깥으로, 부모 sub 근처에 세로 정렬.
+        if (!s.collapsed) {
+          const grands = getChildren(next, s.id);
+          let gy = cy - ((grands.length - 1) * grandUnitH) / 2;
+          grands.forEach((g) => {
+            setPos(g.id, cx + sign * LAYOUT.grandDx, gy);
+            gy += grandUnitH;
+          });
+        }
+        cy += LAYOUT.subSize.h + LAYOUT.childGapY;
+      });
+    }
+    maxHalfH = Math.max(maxHalfH, totalH / 2);
+  };
 
-  // '나의 생각' 은 중심 아래에 가로로 나열.
-  const thoughtY = LAYOUT.mainRadiusY + 170;
-  const thoughtSpacing = 250;
+  layoutSide(leftMains, -1);
+  layoutSide(rightMains, 1);
+
+  // '나의 생각' 은 모든 1차 가지 아래, 중심 아래에 가로로 나열.
+  const thoughtY = maxHalfH + LAYOUT.thoughtDy;
   thoughts.forEach((th, i) => {
-    const x = (i - (thoughts.length - 1) / 2) * thoughtSpacing;
-    setPos(th.id, Math.round(x), Math.round(thoughtY));
+    const x = (i - (thoughts.length - 1) / 2) * LAYOUT.thoughtGapX;
+    setPos(th.id, x, thoughtY);
   });
 
   return next;
@@ -366,7 +396,7 @@ export function nodeSize(type: MindmapNode['type']): { w: number; h: number } {
     case 'central': return LAYOUT.centralSize;
     case 'main': return LAYOUT.mainSize;
     case 'sub': return LAYOUT.subSize;
-    case 'thought': return { w: 220, h: 90 };
+    case 'thought': return LAYOUT.thoughtSize;
   }
 }
 

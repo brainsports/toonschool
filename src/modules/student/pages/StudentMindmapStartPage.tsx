@@ -5,7 +5,7 @@
  */
 import { useEffect, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Sparkles, PenLine, ChevronRight, Wand2 } from 'lucide-react';
+import { ArrowLeft, Sparkles, PenLine, ChevronRight, Wand2, Lightbulb } from 'lucide-react';
 import { useAuth } from '../../../shared/contexts/AuthContext';
 import { supabase } from '../../../shared/lib/supabase';
 import StudentPageShell from '../components/layout/StudentPageShell';
@@ -17,6 +17,7 @@ import {
 } from '../services/studentCurriculumService';
 import {
   createMindmap, generateMindmapFull, aiResponseToNodes, saveMindmap,
+  generateTopicSuggestions,
 } from '../services/mindmapService';
 import { newId, autoLayout } from '../utils/mindmapEngine';
 import type { MindmapProject } from '../types/mindmap';
@@ -43,6 +44,33 @@ export default function StudentMindmapStartPage() {
   const [mode, setMode] = useState<'manual' | 'ai' | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [topics, setTopics] = useState<string[]>([]);
+  const [topicsLoading, setTopicsLoading] = useState(false);
+  const [topicsError, setTopicsError] = useState<string | null>(null);
+
+  // 단원(또는 작은 단원)이 선택되면 AI 중심 주제 추천(실패해도 직접 입력은 가능).
+  useEffect(() => {
+    let cancelled = false;
+    const valid = !!(grade && subject && major);
+    // 모든 setState 는 비동기 콜백 안에서(동기식 effect 본문 setState 회피).
+    Promise.resolve().then(async () => {
+      if (cancelled) return;
+      if (!valid) { setTopics([]); setTopicsError(null); setTopicsLoading(false); return; }
+      setTopicsLoading(true); setTopicsError(null); setTopics([]);
+      try {
+        const res = await generateTopicSuggestions({
+          grade: grade!.value, subject: subject!.name, semester,
+          unitTitle: major!.unitName, subunitTitle: middle?.subunitName,
+        });
+        if (!cancelled && res.data && res.data.topics.length) setTopics(res.data.topics.slice(0, 5));
+      } catch {
+        if (!cancelled) setTopicsError('추천을 불러오지 못했어요. 직접 입력할 수 있어요.');
+      } finally {
+        if (!cancelled) setTopicsLoading(false);
+      }
+    });
+    return () => { cancelled = true; };
+  }, [grade, subject, major, middle, semester]);
 
   useEffect(() => {
     getStudentGrades().then(setGrades).catch(() => setGrades([]));
@@ -220,7 +248,34 @@ export default function StudentMindmapStartPage() {
               disabled={!major}
               className="w-full border-2 border-slate-200 focus:border-pink-300 rounded-xl px-4 py-3 font-bold text-slate-700 focus:outline-none disabled:bg-slate-50"
             />
-            <div className="text-[11px] text-slate-400 mt-1">마인드맵 한가운데 들어갈 주제를 적어요.</div>
+            <div className="text-[11px] text-slate-400 mt-1">마인드맵 한가운데 들어갈 주제를 적어요. 추천을 고르거나 직접 써도 돼요.</div>
+
+            {/* AI 중심 주제 추천 */}
+            {major && topicsLoading && (
+              <div className="mt-3 flex items-center gap-2 text-sm text-purple-600 font-bold">
+                <Lightbulb className="w-4 h-4 animate-pulse" /> 주제를 생각하고 있어요…
+              </div>
+            )}
+            {!topicsLoading && topics.length > 0 && (
+              <div className="mt-3">
+                <div className="text-xs font-bold text-purple-600 mb-2 flex items-center gap-1"><Sparkles className="w-3.5 h-3.5" /> AI 추천 주제 (누르면 입력돼요)</div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {topics.map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => setCentralTopic(t)}
+                      className={`text-left px-3 py-2.5 rounded-xl border-2 text-sm font-bold transition-colors ${centralTopic === t ? 'border-pink-400 bg-pink-50 text-pink-600' : 'border-purple-100 bg-purple-50/50 text-slate-700 hover:border-purple-300'}`}
+                    >
+                      <span className="mr-1">💡</span>{t}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {!topicsLoading && topicsError && (
+              <div className="mt-3 text-xs text-slate-400">{topicsError}</div>
+            )}
           </Section>
 
           {/* 6. 제작 방식 */}

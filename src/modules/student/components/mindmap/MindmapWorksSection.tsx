@@ -8,7 +8,9 @@ import { useNavigate } from 'react-router-dom';
 import { Pencil, Eye, Share2, Trash2, Image as ImageIcon, Plus, CheckCircle2 } from 'lucide-react';
 import { listMyMindmaps, deleteMindmap, getMindmap, type MindmapListItem } from '../../services/mindmapService';
 import { exportPng } from '../../utils/mindmapExport';
-import MindmapArtwork from './MindmapArtwork';
+import MindmapArtwork, { POSTER_W, POSTER_H } from './MindmapArtwork';
+import MindmapDialog from './MindmapDialog';
+import MindmapToast from './MindmapToast';
 import type { MindmapProject } from '../../types/mindmap';
 
 export default function MindmapWorksSection({ studentId }: { studentId: string }) {
@@ -16,6 +18,8 @@ export default function MindmapWorksSection({ studentId }: { studentId: string }
   const [items, setItems] = useState<MindmapListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [preview, setPreview] = useState<MindmapProject | null>(null);
+  const [deleteItem, setDeleteItem] = useState<MindmapListItem | null>(null);
+  const [toast, setToast] = useState<{ message: string; tone: 'success' | 'error' | 'info' } | null>(null);
 
   const refresh = () => {
     setLoading(true);
@@ -34,10 +38,21 @@ export default function MindmapWorksSection({ studentId }: { studentId: string }
     return () => { cancelled = true; };
   }, [studentId]);
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('이 마인드맵을 삭제할까요?')) return;
-    await deleteMindmap(id, studentId);
-    refresh();
+  const handleDelete = (item: MindmapListItem) => {
+    setDeleteItem(item);
+  };
+  const confirmDeleteItem = async () => {
+    const item = deleteItem;
+    if (!item) return;
+    try {
+      await deleteMindmap(item.id, studentId);
+      setToast({ message: '마인드맵이 삭제되었어요.', tone: 'success' });
+    } catch {
+      setToast({ message: '삭제하지 못했어요. 잠시 후 다시 해 주세요.', tone: 'error' });
+    } finally {
+      setDeleteItem(null);
+      refresh();
+    }
   };
 
   const handleShare = async (item: MindmapListItem) => {
@@ -51,8 +66,8 @@ export default function MindmapWorksSection({ studentId }: { studentId: string }
       if (typeof navigator.share === 'function') {
         try { await navigator.share({ title: `${item.title} - 툰스쿨 마인드맵`, url }); return; } catch { /* fallthrough */ }
       }
-      try { await navigator.clipboard.writeText(url); alert('공유 링크를 복사했어요.'); }
-      catch { alert('복사하지 못했어요.'); }
+      try { await navigator.clipboard.writeText(url); setToast({ message: '공유 링크를 복사했어요.', tone: 'success' }); }
+      catch { setToast({ message: '복사하지 못했어요.', tone: 'error' }); }
     } else {
       navigate(`/student/mindmap/edit/${item.id}`);
     }
@@ -107,7 +122,7 @@ export default function MindmapWorksSection({ studentId }: { studentId: string }
                   <IconBtn title="보기" onClick={() => openPreview(it.id)}><Eye className="w-3.5 h-3.5" /></IconBtn>
                   <IconBtn title="수정" onClick={() => navigate(`/student/mindmap/edit/${it.id}`)}><Pencil className="w-3.5 h-3.5" /></IconBtn>
                   <IconBtn title="친구에게 공유" onClick={() => handleShare(it)}><Share2 className="w-3.5 h-3.5" /></IconBtn>
-                  <IconBtn title="삭제" danger onClick={() => handleDelete(it.id)}><Trash2 className="w-3.5 h-3.5" /></IconBtn>
+                  <IconBtn title="삭제" danger onClick={() => handleDelete(it)}><Trash2 className="w-3.5 h-3.5" /></IconBtn>
                 </div>
               </div>
             </div>
@@ -116,6 +131,20 @@ export default function MindmapWorksSection({ studentId }: { studentId: string }
       )}
 
       {preview && <PreviewModal project={preview} onClose={() => setPreview(null)} onEdit={() => { navigate(`/student/mindmap/edit/${preview.id}`); }} />}
+
+      <MindmapDialog
+        open={!!deleteItem}
+        title="이 마인드맵을 삭제할까요?"
+        confirmLabel="삭제하기"
+        cancelLabel="취소"
+        danger
+        onConfirm={confirmDeleteItem}
+        onClose={() => setDeleteItem(null)}
+      >
+        <p>선택한 마인드맵 <strong>“{deleteItem?.title || ''}”</strong>이(가) 작품함에서 삭제됩니다. 삭제하면 되돌릴 수 없어요.</p>
+      </MindmapDialog>
+
+      <MindmapToast message={toast?.message ?? null} tone={toast?.tone} onDone={() => setToast(null)} />
     </div>
   );
 }
@@ -151,9 +180,9 @@ function PreviewModal({ project, onClose, onEdit }: { project: MindmapProject; o
             <button onClick={onClose} className="text-slate-400 hover:text-slate-700 text-xl px-2">✕</button>
           </div>
         </div>
-        <div className="flex-1 overflow-auto p-4 bg-slate-50">
-          <div className="flex justify-center" style={{ transform: 'scale(0.6)', transformOrigin: 'top center' }}>
-            <MindmapArtwork project={project} themeId={project.themeId} interactive={false} showCharacters worldRef={ref} />
+        <div className="flex-1 flex items-center justify-center p-4 bg-slate-100 overflow-hidden">
+          <div className="w-full" style={{ maxWidth: POSTER_W }}>
+            <MindmapArtwork project={project} themeId={project.themeId} mode="fixed" width={POSTER_W} height={POSTER_H} showCharacters artworkRef={ref} />
           </div>
         </div>
       </div>

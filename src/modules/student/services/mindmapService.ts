@@ -24,10 +24,11 @@ import {
   type AiFullMindmapResponse,
   type AiPartialMindmapResponse,
   type AiPartialRequest,
+  type AiTopicsResponse,
 } from '../types/mindmapAi';
 import { newId, autoLayout } from '../utils/mindmapEngine';
 import { BRANCH_COLOR_KEYS } from '../data/mindmapConfig';
-import { buildSampleMindmap, buildSamplePartial } from '../utils/mindmapSampleData';
+import { buildSampleMindmap, buildSamplePartial, buildSampleTopics } from '../utils/mindmapSampleData';
 
 const TABLE = 'mindmap_projects';
 const VIEW = 'mindmap_public_shares';
@@ -551,10 +552,65 @@ export async function generateMindmapPartial(
   return { data: buildSamplePartial(req), live: false, code: res.code, message: res.message };
 }
 
+export async function generateTopicSuggestions(params: {
+  grade?: number;
+  subject?: string;
+  semester?: number;
+  unitTitle?: string;
+  subunitTitle?: string;
+}): Promise<AiCallResult<AiTopicsResponse>> {
+  const res = await invokeEf<AiTopicsResponse>({ mode: 'topics', ...params });
+  if (res.data && res.data.topics?.length >= 1) return res;
+  console.warn('[mindmap] topics EF unreachable → 로컬 샘플 폴백 사용.', res.code);
+  return { data: { topics: buildSampleTopics(params) }, live: false, code: res.code, message: res.message };
+}
+
 // ---------------------------------------------------------------------------
-// AI 응답 → 노드 변환(자동 배치 포함)
+// AI 응답 검증(저장 전) + 노드 변환
 // ---------------------------------------------------------------------------
-/** AI 전체 응답을 노드로 변환. central 은 기존 것 재사용 권장(있을 때). */
+const MAX_DESC = 200;
+
+/** 설명에서 JSON/영어 필드명/태그가 새어나오지 않도록 정제. */
+function cleanDescription(raw?: string): string {
+  if (!raw) return '';
+  let s = String(raw).replace(/<[^>]*>/g, '').replace(/```/g, '').trim();
+  // JSON 잔재/필드명 패턴이 보이면 해당 토큰 제거.
+  s = s.replace(/"[a-zA-Z_]+"\s*:/g, '').replace(/[{}[\]]/g, '').trim();
+  s = s.replace(/\s+/g, ' ');
+  if (s.length > MAX_DESC) s = s.slice(0, MAX_DESC);
+  return s;
+}
+
+export interface AiValidationReport {
+  ok: boolean;
+  issues: string[];
+}
+/**
+ * 전체 생성 응답 검증(저장 전).
+ *  - 1차 가지 4~6개
+ *  - 각 1차 가지에 2차 가지 2개 이상
+ *  - 2차 가지 제목/설명이 비어 있지 않을 것(설명 길이 50~200자는 프롬프트·EF·정제로 유도;
+ *    너무 짧은 것은 구조적으로만 걸러 "다시 시도" 안내)
+ * 구조가 심하게 미달이면 ok=false → 호출측은 빈 마인드맵 대신 "다시 시도" 안내.
+ */
+export function validateAiFull(resp: AiFullMindmapResponse | null | undefined): AiValidationReport {
+  const issues: string[] = [];
+  if (!resp || !Array.isArray(resp.branches)) { return { ok: false, issues: ['AI 응답이 올바르지 않아요.'] }; }
+  if (resp.branches.length < 4 || resp.branches.length > 6) {
+    issues.push('1차 가지를 4~6개로 만들어 주세요.');
+  }
+  for (const b of resp.branches) {
+    const kids = (b.children || []).filter((c) => (c.title || '').trim().length > 0);
+    if (kids.length < 2) { issues.push(`'${b.title}' 가지에 작은 가지를 2개 이상 만들어 주세요.`); }
+    for (const c of kids) {
+      const d = cleanDescription(c.description);
+      if (d.trim().length < 8) { issues.push(`'${c.title}' 설명이 너무 짧아요.`); }
+    }
+  }
+  return { ok: issues.length === 0, issues };
+}
+
+/** AI 전체 응답을 노드로 변환. central 은 기존 것 재사용 권장(있을 때). 설명은 정제. */
 export function aiResponseToNodes(
   resp: AiFullMindmapResponse,
   existingCentral?: MindmapNode
@@ -586,7 +642,7 @@ export function aiResponseToNodes(
       parentId: central.id,
       type: 'main',
       title: b.title,
-      description: b.description,
+      description: cleanDescription(b.description),
       icon: b.icon,
       shape: 'rounded',
       colorKey,
@@ -601,7 +657,7 @@ export function aiResponseToNodes(
         parentId: mainId,
         type: 'sub',
         title: c.title,
-        description: c.description,
+        description: cleanDescription(c.description),
         icon: c.icon,
         shape: 'rounded',
         colorKey,
