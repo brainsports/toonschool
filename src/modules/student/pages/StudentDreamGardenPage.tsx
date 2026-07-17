@@ -17,7 +17,7 @@ import {
 import StudentPageShell from '../components/layout/StudentPageShell'
 import DreamGardenPetals from '../components/dream-garden/DreamGardenPetals'
 import { useAuth } from '../../../shared/contexts/AuthContext'
-import type { GardenPlacement, RewardResult, StudentGarden, StudentItem } from '../types/dreamGarden'
+import type { GardenPlacement, RewardResult, StudentItem } from '../types/dreamGarden'
 import {
   getAutoGardenPlacement,
   getGardenPlacements,
@@ -404,7 +404,6 @@ export default function StudentDreamGardenPage() {
   const { user, profile, loading: authLoading } = useAuth()
   const studentId = profile?.role === 'student' ? profile.id : user?.id
 
-  const [garden, setGarden] = useState<StudentGarden | null>(null)
   const [studentItems, setStudentItems] = useState<StudentItem[]>([])
   const [placements, setPlacements] = useState<GardenPlacement[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -653,7 +652,7 @@ export default function StudentDreamGardenPage() {
     setError(null)
 
     try {
-      const gardenData = await getOrCreateStudentGarden(studentId)
+      await getOrCreateStudentGarden(studentId)
       const [itemsData, placementsRaw] = await Promise.all([
         getStudentItems(studentId),
         getGardenPlacements(studentId),
@@ -745,7 +744,6 @@ export default function StudentDreamGardenPage() {
       // ── 4) 마지막 저장 확정값(롤백 기준) 갱신. ──
       committedRef.current = new Map(placementsData.map((p) => [p.id, snapshotPlacement(p)]))
 
-      setGarden(gardenData)
       setStudentItems(itemsData)
       setPlacements(placementsData)
 
@@ -921,27 +919,28 @@ export default function StudentDreamGardenPage() {
 
           {/* ── 왼쪽 정보 오버레이 ── */}
           <aside className="dream-garden-overlay dream-garden-overlay-left" aria-label="정원 정보">
-            {/* ── 제목 패널 ── */}
+            {/* ── 제목 패널: 서비스명 배지 + 현재 장면 제목 ── */}
             <div className="dream-garden-title">
               <div className="dg-title-badge">
                 <Sprout className="w-4 h-4" />
-                꿈의 정원
+                툰스쿨의 모험
               </div>
               <h1 className="dg-title-text">
-                {garden?.garden_name ?? '나의 꿈의 정원'}
+                {getChapter(selectedGardenLevel).locationName}
               </h1>
               <p className="dg-title-sub">
                 출석하고 만화를 완성하면 정원 아이템을 모을 수 있어요.
               </p>
             </div>
 
-            {/* 정원 단계 */}
+            {/* 정원 단계: 수집 현황 + 현재 총점 */}
             <div className="dg-info-section dg-collection-summary">
               <div className="dg-info-header">
                 <div className="dg-info-icon dg-info-icon-green">
                   <Leaf className="w-4 h-4" />
                 </div>
                 <p className="dg-info-label">LV.{selectedGardenLevel} 정원 수집 현황</p>
+                <span className="dg-info-score" title="내 보상 포인트(P)">{dream.dreamScore.toLocaleString()}P</span>
               </div>
               <div className="dg-collection-counts">
                 <span>획득 <strong>{totalItemCount}개</strong></span>

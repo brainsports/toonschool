@@ -368,10 +368,10 @@ export default function TreasureMapPage() {
             type="button"
             className="tm-sb-gopalace"
             onClick={() => goToDreamPalace(currentLevel)}
-            title="현재 꿈의 궁전(정원)으로 이동"
+            title="현재 툰스쿨의 모험으로 이동"
           >
             <Sprout className="w-4 h-4" />
-            꿈의 궁전 바로가기
+            툰스쿨의 모험 바로가기
           </button>
         </div>
 

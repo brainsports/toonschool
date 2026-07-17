@@ -214,7 +214,7 @@ export default function StudentPageShell({
                 className="flex items-center gap-1 text-[#2d1f35] font-jua text-sm hover:scale-105 transition-transform"
               >
                 <Sprout className="w-4 h-4" />
-                <span>{'\uafc8\uc758 \uc815\uc6d0'}</span>
+                <span>{'\ud230\uc2a4\ucfe8\uc758 \ubaa8\ud5d8'}</span>
               </button>
             </div>
 
@@ -230,7 +230,7 @@ export default function StudentPageShell({
                 aria-label="내 보상 포인트 상세 보기"
               >
                 <Trophy className="w-4 h-4" />
-                <span><span className="dream-hud-score-num">{dream.dreamScore.toLocaleString()}</span>P</span>
+                <span className="dream-hud-points">{dream.dreamScore.toLocaleString()}P</span>
               </button>
 
               {/* 보물지도 */}

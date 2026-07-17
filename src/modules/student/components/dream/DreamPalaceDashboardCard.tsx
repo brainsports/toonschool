@@ -21,7 +21,7 @@ export default function DreamPalaceDashboardCard({ studentId }: { studentId: str
     <div
       className="relative overflow-hidden rounded-[1.75rem] border border-purple-100 shadow-sm min-h-[180px] flex flex-col"
       role="region"
-      aria-label="꿈의 궁전 현황"
+      aria-label="툰스쿨의 모험 현황"
     >
       {/* 배경: 현재 레벨 장면 이미지(은은하게) */}
       <div
@@ -36,7 +36,7 @@ export default function DreamPalaceDashboardCard({ studentId }: { studentId: str
           <div className="flex items-center gap-2">
             <span className="inline-flex items-center gap-1 text-xs font-bold text-purple-600 bg-purple-50 px-2.5 py-1 rounded-full">
               <Sparkles className="w-3.5 h-3.5" />
-              꿈의 궁전
+              툰스쿨의 모험
             </span>
             {isLoading && <span className="text-xs text-slate-400">불러오는 중…</span>}
           </div>
@@ -59,8 +59,7 @@ export default function DreamPalaceDashboardCard({ studentId }: { studentId: str
           <div className="text-right shrink-0">
             <div className="text-[11px] font-bold text-slate-400 mb-0.5">내 꿈점수</div>
             <div className="font-jua text-xl md:text-2xl text-purple-600 leading-none">
-              {dream.dreamScore.toLocaleString()}
-              <span className="text-sm text-purple-400 ml-0.5">P</span>
+              {dream.dreamScore.toLocaleString()}P
             </div>
           </div>
         </div>
@@ -88,7 +87,7 @@ export default function DreamPalaceDashboardCard({ studentId }: { studentId: str
           onClick={() => navigate('/student/dream-garden')}
           className="mt-1 self-start inline-flex items-center gap-1 bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white font-bold text-sm py-2 px-4 rounded-full shadow-md shadow-purple-500/20 transition-all active:scale-95"
         >
-          꿈의 궁전으로
+          툰스쿨의 모험으로
           <ChevronRight className="w-4 h-4" />
         </button>
       </div>

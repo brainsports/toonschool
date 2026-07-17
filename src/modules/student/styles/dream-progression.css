@@ -36,7 +36,9 @@
 .dream-hud-chip--score { background: #ffe3ef; color: #a8347a; border-color: #ffc6dc; }
 .dream-hud-chip--plain { cursor: default; background: #eef2ff; color: #42506e; border-color: #d7def5; }
 
-.dream-hud-score-num { font-size: 1rem; font-weight: 700; }
+/* 포인트 P: 숫자와 P 같은 크기·굵기·진한색 (작은 첨자 금지) */
+.dream-hud-points { font-size: 1rem; font-weight: 800; color: #2d1f35; letter-spacing: 0; white-space: nowrap; }
+.dream-hud-score-num { font-size: 1rem; font-weight: 800; color: #2d1f35; }
 .dream-hud-scene { font-size: 0.7rem; opacity: 0.85; max-width: 9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .dream-hud-progress {
@@ -265,15 +267,35 @@
 }
 
 /* ==========================================================================
-   꿈의 궁전 페이지 — 왼쪽 패널 레벨/심볼 그리드
+   꿈의 모험 페이지 — 왼쪽 패널 레벨/심볼 그리드 (1~10 모두 5x2 고정 노출)
    ========================================================================== */
 .dg-symbols-section { margin-top: 0.25rem; }
-.dg-symbols-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.3rem; margin-top: 0.35rem; }
+/* minmax(0,1fr) + gap/padding 점검: 5열 고정, 5/10번 셀이 잘리거나 숨겨지지 않도록 */
+.dg-symbols-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.25rem;
+  margin-top: 0.35rem;
+  width: 100%;
+}
 .dg-symbol-chip {
+  min-width: 0;
   aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
   background: rgba(255, 255, 255, 0.14); border-radius: 0.5rem; font-size: 1rem;
+  overflow: hidden;
 }
 .dg-symbol-locked { opacity: 0.45; filter: grayscale(0.7); }
+
+/* 수집 현황 헤더 오른쪽 현재 총점 (어두운 오버레이 위 밝은색, 헤더 flex 의 margin-left:auto 로 우측 정렬) */
+.dg-info-score {
+  margin-left: auto;
+  font-family: 'Jua', system-ui, sans-serif;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #ffffff;
+  white-space: nowrap;
+  letter-spacing: 0;
+}
 
 .dg-rarity-badge { background: #fce7f3 !important; color: #a8347a !important; }
 

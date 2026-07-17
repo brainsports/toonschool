@@ -53,7 +53,7 @@ export const DREAM_CHAPTERS: DreamChapter[] = [
     minActivityScore: 0,
     maxActivityScore: 999,
     chapterTitle: '꿈의 궁전과 빈 책',
-    locationName: '꿈의 궁전',
+    locationName: '꿈의 정원',
     symbolName: '꿈의 황금 열쇠',
     backgroundKey: 'dream_palace',
     themeKey: 'palace',
@@ -226,9 +226,12 @@ export function getGardenBackgroundUrl(level: number): string {
 }
 
 // ─────────────────────────────────────────────────────────────────
-// 레벨별 아이템 카탈로그 (레벨 2~10).
+// 레벨별 아이템 카탈로그 (레벨 2~10). 레벨별 정원 장면을 구성하는 아이템 목록.
 // 레벨 1의 30개 아이템은 기존 시드(출석/만화 보상)로 지급되므로 여기서 제외.
-// 각 레벨 달성 시 해당 레벨 아이템이 자동 지급된다(dreamLevelItemService.ensureLevelItems).
+//
+// 주의: 레벨 아이템은 "레벨 도달 시 일괄 자동 지급"하지 않는다.
+//   과거 ensureLevelItems 벌크 지급은 폐기됨(레벨만 열렸다고 10개가 한꺼번에 지급되는 문제).
+//   아이템은 보상 조건(출석/만화 완성/우연한 행운 등) 달성 시 하나씩 지급된다.
 //
 // - code: DB items.code (전역 unique). 레벨1과 충돌하지 않도록 lv{N}_ 접두어.
 // - image: 파일명만. 실제 경로는 getLevelItemImageUrl(level, image) 로 조합.
