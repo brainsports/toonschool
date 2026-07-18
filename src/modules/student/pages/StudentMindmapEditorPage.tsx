@@ -12,7 +12,7 @@ import type { AiPartialAction } from '../types/mindmapAi';
 import { MINDMAP_THEMES, MINDMAP_ICONS, getTheme } from '../data/mindmapConfig';
 import {
   addNode, autoLayout, checkCompletion, clampDescription, clampTitle, deleteNode as engineDelete,
-  filterEmptyNodes, getNode, newId, reparent,
+  filterEmptyNodes, getDepth, getNode, newId, nodeTypeForDepth, reparent,
 } from '../utils/mindmapEngine';
 import {
   enableShare, getMindmap, revokeShare, saveMindmap,
@@ -212,7 +212,7 @@ export default function StudentMindmapEditorPage() {
       if (!node) return p;
       const res = addNode(p.nodes, {
         parentId: node.parentId ?? p.nodes.find((n) => n.type === 'central')?.id ?? '',
-        type: node.type === 'main' ? 'main' : 'sub',
+        type: node.type,
         title: node.title + ' 복사',
         description: node.description,
         icon: node.icon,
@@ -283,6 +283,15 @@ export default function StudentMindmapEditorPage() {
     if (!project || !selectedId) { setAiMsg('노드를 먼저 선택해 주세요.'); return; }
     const node = getNode(project.nodes, selectedId);
     if (!node) return;
+    const selectedDepth = getDepth(project.nodes, node.id);
+    if (
+      node.type !== 'thought'
+      && selectedDepth >= 5
+      && (action === 'add_children' || action === 'question')
+    ) {
+      setAiMsg('여기까지는 가지를 더 아래로 만들 수 없어요. 다른 가지를 선택해 주세요.');
+      return;
+    }
     setAiLoading(true); setAiMsg(null);
     try {
       const central = project.nodes.find((n) => n.type === 'central');
@@ -301,10 +310,11 @@ export default function StudentMindmapEditorPage() {
         if (res.data!.suggestedDescription) {
           nodes = nodes.map((n) => n.id === node.id ? { ...n, description: clampDescription(res.data!.suggestedDescription!) } : n);
         }
-        const childType: MindmapNode['type'] = node.type === 'main' ? 'sub' : node.type === 'sub' ? 'detail' : 'sub';
+        const childType = nodeTypeForDepth(getDepth(nodes, node.id) + 1);
         for (const c of res.data!.children || []) {
           const r = addNode(nodes, { parentId: node.id, type: childType, title: c.title, description: c.description, icon: c.icon, colorKey: node.colorKey, createdBy: 'ai' });
           if (r.node) nodes = r.nodes;
+          else if (r.reason) setAiMsg(r.reason);
         }
         return { ...p, nodes: autoLayout(nodes), creationMethod: 'ai' as const };
       });
@@ -447,7 +457,7 @@ export default function StudentMindmapEditorPage() {
           <button onClick={() => { const c = project.nodes.find((n) => n.type === 'central'); if (c) addChild(c.id, 'main'); }} className="w-full mb-1.5 p-2 rounded-xl bg-sky-50 text-sky-700 text-xs font-bold hover:bg-sky-100 flex flex-col items-center gap-1">
             <Plus className="w-4 h-4" /> 큰 가지 추가
           </button>
-          <button onClick={() => { if (selectedNode) addChild(selectedNode.id, 'sub'); else { const c = project.nodes.find((n) => n.type === 'central'); if (c) addChild(c.id, 'main'); } }} className="w-full mb-1.5 p-2 rounded-xl bg-indigo-50 text-indigo-700 text-xs font-bold hover:bg-indigo-100 flex flex-col items-center gap-1">
+          <button onClick={() => { if (selectedNode) addChild(selectedNode.id, nodeTypeForDepth(getDepth(project.nodes, selectedNode.id) + 1)); else { const c = project.nodes.find((n) => n.type === 'central'); if (c) addChild(c.id, 'main'); } }} className="w-full mb-1.5 p-2 rounded-xl bg-indigo-50 text-indigo-700 text-xs font-bold hover:bg-indigo-100 flex flex-col items-center gap-1">
             <Plus className="w-4 h-4" /> 작은 가지 추가
           </button>
           <button onClick={() => handleAiFull()} disabled={aiLoading} className="w-full mb-1.5 p-2 rounded-xl bg-purple-50 text-purple-700 text-xs font-bold hover:bg-purple-100 disabled:opacity-50 flex flex-col items-center gap-1">
@@ -502,7 +512,7 @@ export default function StudentMindmapEditorPage() {
             editingId={editingId}
             onSelectNode={setSelectedId}
             onNodeDoubleClick={(id) => setEditingId(id)}
-            onAddChild={(pid) => { const parent = getNode(project.nodes, pid); const t = parent?.type === 'central' ? 'main' : parent?.type === 'main' ? 'sub' : 'detail'; addChild(pid, t); }}
+            onAddChild={(pid) => addChild(pid, nodeTypeForDepth(getDepth(project.nodes, pid) + 1))}
             onTitleChange={setTitle}
             onFinishEditing={() => setEditingId(null)}
             onNodeDragStart={onNodeDragStartCb}

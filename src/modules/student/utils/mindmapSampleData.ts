@@ -102,10 +102,11 @@ export function buildSampleMindmap(params: {
 function branch(title: string, icon: string, children: AiLeaf[]): AiBranch {
   return { title, icon, children };
 }
-// 2차(짧은 세부 주제) + 그 아래 3차 설명 카드 1개(description 을 detail 로 내림).
+// 2차(짧은 세부 주제) + 그 아래 3차 설명 카드 1개. 두 단계의 제목은 반복하지 않는다.
 function leaf(title: string, icon: string, description: string): AiLeaf {
   const d = description.trim();
-  return { title, icon, details: d ? [{ title, description: d }] : [] };
+  const detailTitle = title.endsWith('알아보기') ? `${title} 자세히` : `${title} 알아보기`;
+  return { title, icon, details: d ? [{ title: detailTitle.slice(0, 30), description: d }] : [] };
 }
 
 /** 부분 생성 로컬 폴백(선택 노드 아래에 들어갈 자식/설명 제안). */
