@@ -1,5 +1,5 @@
 /**
- * 마인드맵 공유 화면(읽기 전용, 공개).
+ * 툰마인드 공유 화면(읽기 전용, 공개).
  *  - 누구나(비로그인) share_slug 로 열람.
  *  - 개인정보(이메일/학급/기관/교사/내부 id) 미노출. 편집·삭제 버튼 없음.
  *  - 공유 중지(is_public=false 또는 share_revoked_at) 시 접근 차단.
@@ -36,9 +36,9 @@ export default function SharedMindmapViewerPage() {
         setLoading(false);
         // best-effort OG meta.
         try {
-          document.title = `${row.title} - 툰스쿨 마인드맵`;
-          setMeta('og:title', `${row.title} - 툰스쿨 마인드맵`);
-          setMeta('og:description', `${row.subject} ${row.unit_title ? row.unit_title + ' ' : ''}마인드맵 · 툰스쿨`);
+          document.title = `${row.title} - 툰마인드 | 툰스쿨`;
+          setMeta('og:title', `${row.title} - 툰마인드 | 툰스쿨`);
+          setMeta('og:description', `${row.subject} ${row.unit_title ? row.unit_title + ' ' : ''}툰마인드 · 툰스쿨`);
           setMeta('og:url', buildShareUrl(slug));
         } catch { /* ignore */ }
       } catch {
@@ -66,7 +66,7 @@ export default function SharedMindmapViewerPage() {
       <div className="min-h-[100dvh] flex items-center justify-center" style={{ background: 'linear-gradient(135deg,#fff3e6 0%,#ffe9f0 55%,#f3e8ff 100%)' }}>
         <div className="text-center">
           <div className="text-5xl mb-3 animate-bounce">🧠</div>
-          <p className="text-slate-600 font-bold">마인드맵을 불러오는 중...</p>
+          <p className="text-slate-600 font-bold">툰마인드를 불러오는 중...</p>
         </div>
       </div>
     );

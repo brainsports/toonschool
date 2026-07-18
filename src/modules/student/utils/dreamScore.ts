@@ -214,10 +214,10 @@ export function computeDreamScore(rows: RewardLogRow[], now: Date = new Date()):
       case 'event': {
         const sid = row.source_id ?? ''
         if (sid.startsWith('mindmap:') && typeof row.points === 'number' && row.points > 0) {
-          const label = sid.startsWith('mindmap:first-unit:') ? '단원 마인드맵 완성'
-            : sid.startsWith('mindmap:evaluated:') ? '마인드맵 평가 완료'
-            : sid.startsWith('mindmap:resubmit:') ? '마인드맵 다시 제출'
-            : '마인드맵 우수 칭찬'
+          const label = sid.startsWith('mindmap:first-unit:') ? '단원 툰마인드 완성'
+            : sid.startsWith('mindmap:evaluated:') ? '툰마인드 평가 완료'
+            : sid.startsWith('mindmap:resubmit:') ? '툰마인드 다시 제출'
+            : '툰마인드 우수 칭찬'
           specialMissionPoints += row.points
           addScored(row, row.points, label, false, () => { specialMissionCount++ })
           break

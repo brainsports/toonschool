@@ -1,5 +1,5 @@
 /**
- * 마인드맵 핵심 로직: 노드 계통(트리) 연산 · 검증 · 자동 배치.
+ * 툰마인드 핵심 로직: 노드 계통(트리) 연산 · 검증 · 자동 배치.
  * 순수 함수로만 구성하여 UI/저장과 분리한다.
  */
 import type { MindmapNode, MindmapProject } from '../types/mindmap';

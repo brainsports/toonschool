@@ -1,5 +1,5 @@
 /**
- * 마인드맵 에디터 데이터 모델.
+ * 툰마인드 에디터 데이터 모델.
  *
  * 설계 원칙:
  * - AI 가 고정 이미지를 만드는 것이 아니라, 노드/연결선 "데이터"를 만든다.
@@ -19,7 +19,7 @@ export type MindmapNodeShape = 'circle' | 'rounded' | 'cloud' | 'star' | 'oval';
 /** 누가 만들었는지. '나의 생각' 완성 조건은 학생 작성 노드 존재 여부로 판단. */
 export type MindmapCreatedBy = 'student' | 'ai';
 
-/** 단일 마인드맵 노드. */
+/** 단일 툰마인드 노드. */
 export interface MindmapNode {
   id: string;
   /** 부모 노드 id. 중심 주제는 null. */
@@ -79,7 +79,7 @@ export type MindmapCreationMethod = 'direct' | 'ai';
 /** 화면 배치 방식. 기본 방사형(radial) = 기준 이미지처럼 중심에서 퍼짐. */
 export type MindmapLayoutType = 'radial' | 'tree';
 
-/** 저장/전송용 마인드맵 프로젝트. */
+/** 저장/전송용 툰마인드 프로젝트. */
 export interface MindmapProject {
   id: string;
   studentId: string;

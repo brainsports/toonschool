@@ -220,7 +220,7 @@ export default function StudentMyPage() {
                   className="mt-2 ml-2 bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-6 rounded-full shadow-md shadow-purple-500/20 hover:shadow-lg transition-all flex items-center gap-2 w-fit active:scale-95"
                 >
                   <span className="text-lg leading-none">🧠</span>
-                  <span>마인드맵 만들기</span>
+                  <span>툰마인드 만들기</span>
                 </button>
               </div>
               <img
@@ -376,7 +376,7 @@ export default function StudentMyPage() {
 
               <div className="grid grid-cols-2 gap-2 rounded-2xl bg-slate-50 p-1.5">
                 <button onClick={() => setWorkTab('comic')} className={`min-h-11 rounded-xl text-sm font-black transition ${workTab === 'comic' ? 'bg-white text-pink-600 shadow-sm' : 'text-slate-500'}`}>만화 작품</button>
-                <button onClick={() => setWorkTab('mindmap')} className={`min-h-11 rounded-xl text-sm font-black transition ${workTab === 'mindmap' ? 'bg-white text-purple-600 shadow-sm' : 'text-slate-500'}`}>마인드맵</button>
+                <button onClick={() => setWorkTab('mindmap')} className={`min-h-11 rounded-xl px-3 text-sm font-black transition ${workTab === 'mindmap' ? 'bg-white text-purple-600 shadow-sm' : 'text-slate-500'}`}>툰마인드</button>
               </div>
 
               {workTab === 'comic' ? (isLoadingWorks ? (

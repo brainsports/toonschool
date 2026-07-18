@@ -1,5 +1,5 @@
 /**
- * 마인드맵 PNG/PDF/썸네일 내보내기.
+ * 툰마인드 PNG/PDF/썸네일 내보내기.
  *
  * 주의(html2canvas + Tailwind v4): Tailwind v4 색상 유틸리티는 oklch 로 컴파일되며,
  * html2canvas(1.x)는 oklch 를 파싱하지 못해 오류를 낸다. 따라서 캡처 대상 노드는
@@ -43,7 +43,7 @@ function triggerDownload(blob: Blob, fileName: string) {
 }
 
 function safeFileName(title: string, ext: string): string {
-  const base = (title || '마인드맵').replace(/[\\/:*?"<>|]+/g, '_').slice(0, 40).trim() || '마인드맵';
+  const base = (title || '툰마인드').replace(/[\\/:*?"<>|]+/g, '_').slice(0, 40).trim() || '툰마인드';
   return `${base}.${ext}`;
 }
 
