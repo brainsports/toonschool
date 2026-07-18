@@ -247,6 +247,11 @@ export interface CreateMindmapInput {
 export function createBlankProject(input: CreateMindmapInput): MindmapProject {
   const now = new Date().toISOString();
   const centralId = newId('central');
+  // 프로젝트 id는 DB 의 uuid PK 이므로 정식 UUID 를 사용한다(newId 의 짧은 id 아님).
+  const g = globalThis as unknown as { crypto?: Crypto };
+  const projId = g.crypto && typeof g.crypto.randomUUID === 'function'
+    ? g.crypto.randomUUID()
+    : '00000000-0000-4000-8000-' + Math.random().toString(16).slice(2, 14).padEnd(12, '0');
   const central: MindmapNode = {
     id: centralId,
     parentId: null,
@@ -262,7 +267,7 @@ export function createBlankProject(input: CreateMindmapInput): MindmapProject {
     createdBy: 'student',
   };
   return {
-    id: newId('proj').replace('proj_', ''),
+    id: projId,
     studentId: input.studentId,
     organizationId: input.organizationId ?? null,
     classId: input.classId ?? null,
