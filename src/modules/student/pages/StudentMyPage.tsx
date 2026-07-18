@@ -1,8 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { 
-  BookOpen, Star, Trophy, Calendar, 
-  Bell, MessageSquare, ChevronRight,
+  BookOpen, Trophy, Calendar, ChevronRight,
   CheckCircle2, Play, Heart
 } from 'lucide-react'
 import StudentPageShell from '../components/layout/StudentPageShell'
@@ -22,6 +21,7 @@ import { grantAttendanceReward } from '../services/dreamGardenService'
 import type { StudentGrowthDashboardData } from '../types/studentGrowth'
 import DreamPalaceDashboardCard from '../components/dream/DreamPalaceDashboardCard'
 import MindmapWorksSection from '../components/mindmap/MindmapWorksSection'
+import StudentDashboardSidebar from '../components/mypage/StudentDashboardSidebar'
 
 
 
@@ -44,7 +44,7 @@ export default function StudentMyPage() {
   const [totalAttendanceCount, setTotalAttendanceCount] = useState(0);
   const [growthData, setGrowthData] = useState<StudentGrowthDashboardData | null>(null);
   const [isLoadingGrowth, setIsLoadingGrowth] = useState(true);
-  const attendanceMonth = useMemo(() => getCurrentAttendanceMonth(), []);
+  const [attendanceMonth, setAttendanceMonth] = useState(() => getCurrentAttendanceMonth());
   const daysOfWeek = ['일', '월', '화', '수', '목', '금', '토'];
 
   const monthlyAttendance = useMemo(() => {
@@ -174,16 +174,27 @@ export default function StudentMyPage() {
     setAllMessages(msgs);
   };
 
+  const handleMoveAttendanceMonth = async (offset: number) => {
+    if (!user?.id) return;
+
+    const targetDate = new Date(attendanceMonth.year, attendanceMonth.month - 1 + offset, 1);
+    const targetMonth = getCurrentAttendanceMonth(targetDate);
+    setAttendanceMonth(targetMonth);
+
+    try {
+      const records = await getMonthlyAttendance(user.id, targetDate);
+      setAttendanceDates(records.map((record) => record.attendance_date));
+    } catch (err) {
+      console.error('[StudentMyPage] 월별 출석 내역 조회 실패:', err);
+    }
+  };
+
   const completedWorksCount = myWorks.filter(work => work.status === 'completed' || work.status === 'shared').length;
 
   return (
     <StudentPageShell bgVariant="pastel" maxWidth="2xl">
       <div className="py-6 px-4 md:px-8 max-w-[1400px] mx-auto w-full flex flex-col gap-6 overflow-y-auto">
-          
-          {/* Left Column (8/12) */}
-          <div className="flex flex-col gap-6">
-            
-            {/* 학생 격려 배너 */}
+          {/* 학생 격려 배너 */}
             <div className="bg-gradient-to-r from-pink-50 to-sky-50 rounded-[2rem] p-8 flex items-center justify-between border border-pink-100 relative overflow-hidden min-h-[260px] shadow-sm">
               <div className="z-10 flex flex-col gap-4 max-w-xl">
                 <div className="flex items-center gap-2">
@@ -218,11 +229,13 @@ export default function StudentMyPage() {
               />
             </div>
 
-            {/* 꿈의 궁전 요약 카드 (레벨/점수/진행/바로가기) */}
-            <DreamPalaceDashboardCard studentId={profile?.id ?? user?.id} />
+          {/* 꿈의 궁전 요약 카드 (레벨/점수/진행/바로가기) */}
+          <DreamPalaceDashboardCard studentId={profile?.id ?? user?.id} />
 
-            {/* Stats Cards & Growth Chart */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_260px] lg:grid-cols-[minmax(0,1fr)_280px] xl:grid-cols-[minmax(0,1fr)_minmax(280px,320px)] gap-5 xl:gap-6 items-start">
+            <main className="min-w-0 flex flex-col gap-6">
+              {/* Stats Cards & Growth Chart */}
+              <div className="grid grid-cols-1 min-[900px]:grid-cols-2 min-[1200px]:grid-cols-3 gap-4">
               {/* Card 1: 완성 작품 */}
               <div className="bg-white rounded-[20px] px-6 py-5 flex items-center gap-4 border border-slate-100 shadow-sm min-h-[112px]">
                 <div className="w-12 h-12 bg-pink-50 text-pink-500 rounded-full flex items-center justify-center shrink-0">
@@ -376,7 +389,7 @@ export default function StudentMyPage() {
                   <p className="text-red-500 font-medium text-sm">{worksError}</p>
                 </div>
               ) : myWorks.length > 0 ? (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 min-[900px]:grid-cols-2 min-[1200px]:grid-cols-4 gap-4">
                   {myWorks.slice(0, 4).map(work => (
                     <WorkCard key={work.id} work={work} />
                   ))}
@@ -399,186 +412,22 @@ export default function StudentMyPage() {
                 <MindmapWorksSection studentId={profile?.id ?? user?.id ?? ''} />
               )}
             </div>
-          </div>
+          </main>
 
-          {/* Right Column (4/12) */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)] gap-6">
-            
-            {/* 출석 기록 */}
-            <div className="md:col-span-2 lg:col-span-1 lg:row-span-2 bg-white rounded-[1.5rem] p-6 border border-slate-100 shadow-sm flex flex-col gap-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 bg-pink-50 text-pink-500 rounded-lg">
-                    <Calendar className="w-4 h-4" />
-                  </div>
-                  <h3 className="font-bold text-slate-800">출석 기록</h3>
-                </div>
-                <div className="text-sm font-bold text-slate-700">
-                  {attendanceMonth.year}년 {attendanceMonth.month}월
-                </div>
-              </div>
-
-              {/* Monthly Calendar */}
-              <div className="mt-2">
-                {/* 요일 헤더 */}
-                <div className="grid grid-cols-7 gap-1 mb-2">
-                  {daysOfWeek.map((day, idx) => (
-                    <div key={day} className={`text-center text-xs font-bold ${idx === 0 || idx === 6 ? 'text-pink-400' : 'text-slate-400'}`}>
-                      {day}
-                    </div>
-                  ))}
-                </div>
-                {/* 날짜 그리드 */}
-                <div className="grid grid-cols-7 gap-1">
-                  {monthlyAttendance.map((item, idx) => (
-                    <div key={idx} className="flex flex-col items-center justify-center h-10">
-                      {item ? (
-                        <div className={`relative flex flex-col items-center justify-center w-8 h-8 rounded-full ${item.isToday ? 'bg-pink-100' : ''}`}>
-                          <span className={`text-xs font-medium ${item.isToday ? 'text-pink-600 font-bold' : 'text-slate-600'} ${item.attended ? 'mb-2' : ''}`}>
-                            {item.date}
-                          </span>
-                          {item.attended && (
-                            <div className="absolute bottom-0 text-[12px] leading-none">
-                              😊
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="w-8 h-8"></div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between mt-2 pt-4 border-t border-slate-50">
-                <span className="text-xs font-medium text-slate-500">이번 달 출석</span>
-                <div className="flex items-center gap-2">
-                  <span className="text-2xl font-black text-pink-600">{attendedDaysCount}일</span>
-                  <span className="text-xl">😊</span>
-                </div>
-              </div>
-            </div>
-
-            {/* 선생님 말씀 */}
-            <div className="bg-white rounded-[1.5rem] p-6 border border-slate-100 shadow-sm flex flex-col gap-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 bg-pink-50 text-pink-500 rounded-lg">
-                    <MessageSquare className="w-4 h-4 fill-pink-500" />
-                  </div>
-                  <h3 className="font-bold text-slate-800">선생님 말씀</h3>
-                </div>
-                <button 
-                  onClick={handleOpenTeacherMessages}
-                  className="text-xs font-medium text-slate-500 hover:bg-slate-50 px-2 py-1 rounded-md"
-                >
-                  더보기 <ChevronRight className="w-3 h-3 inline" />
-                </button>
-              </div>
-
-              {latestMessage ? (
-                <div className="flex gap-4 mt-2">
-                  <div className="w-12 h-12 bg-pink-50 rounded-full overflow-hidden shrink-0 relative">
-                    <img src="/images/toonschool/characters/v2/hana-master/hana-v2-front.png" alt="Teacher" className="w-full h-full object-cover object-top" />
-                  </div>
-                  <div className="flex flex-col gap-1.5 pt-1 flex-1">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-bold text-slate-800">
-                          {latestMessage.title || '선생님 말씀'}
-                        </span>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
-                          latestMessage.class_key === 'all-grades' 
-                            ? 'bg-purple-100 text-purple-600' 
-                            : 'bg-sky-100 text-sky-600'
-                        }`}>
-                          {latestMessage.class_key === 'all-grades' ? '전체 학년' : '5학년 전체'}
-                        </span>
-                      </div>
-                    </div>
-                    <p className="text-[13px] font-medium text-slate-600 leading-relaxed line-clamp-3">
-                      {latestMessage.content}
-                    </p>
-                    <span className="text-[10px] text-slate-400 self-end mt-1">
-                      {new Date(latestMessage.message_date).toLocaleDateString()}
-                    </span>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-6 text-center">
-                  <span className="text-3xl mb-3">💬</span>
-                  <p className="text-slate-500 font-medium text-sm">아직 선생님 말씀이 없어요.</p>
-                  <p className="text-slate-400 text-xs mt-1">선생님 말씀이 도착하면 이곳에 보여요.</p>
-                </div>
-              )}
-            </div>
-
-            {/* 알림함 */}
-            <div className="bg-white rounded-[1.5rem] p-6 border border-slate-100 shadow-sm flex flex-col gap-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 bg-pink-50 text-pink-500 rounded-lg">
-                    <Bell className="w-4 h-4" />
-                  </div>
-                  <h3 className="font-bold text-slate-800">알림함</h3>
-                </div>
-                <button 
-                  onClick={() => setIsAllNotificationsModalOpen(true)}
-                  className="text-xs font-medium text-slate-500 hover:bg-slate-50 px-2 py-1 rounded-md"
-                >
-                  더보기 <ChevronRight className="w-3 h-3 inline" />
-                </button>
-              </div>
-
-              <div className="flex flex-col gap-4 mt-2">
-                {notifications.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-6 text-center">
-                    <span className="text-3xl mb-3">📭</span>
-                    <p className="text-slate-500 font-medium text-sm">아직 도착한 알림이 없어요.</p>
-                    <p className="text-slate-400 text-xs mt-1">새로운 소식이 생기면 이곳에 알려드릴게요!</p>
-                  </div>
-                ) : (
-                  notifications.slice(0, 3).map((noti) => (
-                    <div key={noti.id} className="flex items-center gap-3">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
-                        noti.category === 'notice' ? 'bg-sky-50 text-sky-500' :
-                        noti.category === 'learning' ? 'bg-emerald-50 text-emerald-500' :
-                        noti.category === 'event' ? 'bg-purple-50 text-purple-500' :
-                        noti.category === 'mission' ? 'bg-pink-50 text-pink-500' :
-                        'bg-slate-50 text-slate-500'
-                      }`}>
-                        {noti.category === 'notice' ? <Bell className="w-4 h-4" /> :
-                         noti.category === 'learning' ? <Star className="w-4 h-4" /> :
-                         noti.category === 'event' ? <MessageSquare className="w-4 h-4" /> :
-                         noti.category === 'mission' ? <Trophy className="w-4 h-4" /> :
-                         <Bell className="w-4 h-4" />}
-                      </div>
-                      <div className="flex-1 flex flex-col justify-center overflow-hidden">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-1.5 truncate">
-                            {noti.sender_role === 'org_admin' && (
-                              <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded shrink-0">기관관리자</span>
-                            )}
-                            <span className="text-xs font-bold text-slate-800 truncate">{noti.title}</span>
-                          </div>
-                          <span className="text-[10px] font-medium text-slate-400 shrink-0">
-                            {new Date(noti.notice_date).toLocaleDateString(undefined, { month: 'numeric', day: 'numeric' })}
-                          </span>
-                        </div>
-                        <span className="text-[11px] text-slate-500 truncate">{noti.content}</span>
-                      </div>
-                      <div className="w-1.5 h-1.5 rounded-full bg-pink-500 shrink-0"></div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-
-          </div>
-
+          <StudentDashboardSidebar
+                attendanceMonth={attendanceMonth}
+                daysOfWeek={daysOfWeek}
+                monthlyAttendance={monthlyAttendance}
+                attendedDaysCount={attendedDaysCount}
+                latestMessage={latestMessage}
+                notifications={notifications}
+                onPreviousMonth={() => void handleMoveAttendanceMonth(-1)}
+                onNextMonth={() => void handleMoveAttendanceMonth(1)}
+                onOpenTeacherMessages={() => void handleOpenTeacherMessages()}
+                onOpenNotifications={() => setIsAllNotificationsModalOpen(true)}
+          />
         </div>
-
+      </div>
         <AllWorksModal 
           isOpen={isAllWorksModalOpen} 
           onClose={() => setIsAllWorksModalOpen(false)} 
