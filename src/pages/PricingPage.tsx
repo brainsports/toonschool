@@ -1,4 +1,4 @@
-﻿import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   BookOpen,
@@ -231,9 +231,22 @@ function PricingCalculator() {
               className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-lg font-bold focus:outline-none focus:border-primary transition-colors"
             />
           </div>
+
+          {/* 기본 제공량 안내 박스 */}
+          <div className="flex items-center gap-2.5 bg-pink-50 border border-pink-100 rounded-xl px-4 py-3">
+            <CheckCircle size={16} className="text-primary shrink-0" />
+            <p className="text-sm text-on-surface">
+              기본 제공:{' '}
+              <span className="font-bold text-primary">학생 1명당 월 8작품</span>
+            </p>
+          </div>
+
           <div>
-            <p className="text-sm font-bold text-on-surface mb-3">
-              학생 1명당 월 추가 만화 창작 횟수
+            <p className="text-sm font-bold text-on-surface mb-1">
+              학생 1명당 월 추가 작품 횟수
+            </p>
+            <p className="text-xs text-on-surface-variant mb-3">
+              기본 월 8작품을 초과하여 추가할 횟수를 선택해 주세요.
             </p>
             <div className="grid grid-cols-4 gap-2">
               {[0, 1, 2, 4].map((n) => (
@@ -283,9 +296,15 @@ function PricingCalculator() {
                   <span className="text-on-surface">예상 월 이용료</span>
                   <span className="text-primary">{fmt(totalMonthly)}</span>
                 </div>
-                <div className="flex justify-between text-xs text-on-surface-variant">
-                  <span>전체 만화 창작 가능 횟수</span>
-                  <span className="font-bold">{totalComics.toLocaleString()}회/월</span>
+                <div className="space-y-1 border-t border-pink-100 pt-2">
+                  <div className="flex justify-between text-xs text-on-surface-variant">
+                    <span>학생 1명당 월 이용 가능 작품 수</span>
+                    <span className="font-bold text-on-surface">{(8 + extraTimes)}작품/월</span>
+                  </div>
+                  <div className="flex justify-between text-xs text-on-surface-variant">
+                    <span>기관 전체 월 이용 가능 작품 수</span>
+                    <span className="font-bold text-on-surface">{totalComics.toLocaleString()}작품/월</span>
+                  </div>
                 </div>
               </div>
               {needConsult && (
