@@ -65,7 +65,16 @@ export const THOUGHT_PROMPTS: Record<ThoughtPromptKey, string> = {
 };
 
 /** 프로젝트 상태. */
-export type MindmapProjectStatus = 'draft' | 'completed';
+export type MindmapProjectStatus =
+  | 'draft'
+  | 'completed'
+  | 'submitted'
+  | 'pending_review'
+  | 'evaluated'
+  | 'revision_requested'
+  | 'resubmitted';
+
+export type MindmapCreationMethod = 'direct' | 'ai';
 
 /** 화면 배치 방식. 기본 방사형(radial) = 기준 이미지처럼 중심에서 퍼짐. */
 export type MindmapLayoutType = 'radial' | 'tree';
@@ -91,6 +100,12 @@ export interface MindmapProject {
   themeId: string;
   layoutType: MindmapLayoutType;
   status: MindmapProjectStatus;
+  creationMethod: MindmapCreationMethod;
+  submittedAt: string | null;
+  evaluatedAt: string | null;
+  resubmittedAt: string | null;
+  revisionCount: number;
+  lastRenderOk: boolean;
 
   nodes: MindmapNode[];
   /** parentId 파생 연결선을 보조/미리보기용으로만 사용. */
@@ -131,6 +146,12 @@ export interface MindmapProjectRow {
   theme_id: string;
   layout_type: MindmapLayoutType;
   status: MindmapProjectStatus;
+  creation_method: MindmapCreationMethod;
+  submitted_at: string | null;
+  evaluated_at: string | null;
+  resubmitted_at: string | null;
+  revision_count: number;
+  last_render_ok: boolean;
   nodes: MindmapNode[];
   edges: MindmapEdge[];
   thumbnail_url: string | null;

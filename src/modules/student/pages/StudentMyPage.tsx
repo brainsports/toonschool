@@ -29,6 +29,7 @@ export default function StudentMyPage() {
   const navigate = useNavigate()
   const { user, profile } = useAuth()
   const [isAllWorksModalOpen, setIsAllWorksModalOpen] = useState(false);
+  const [workTab, setWorkTab] = useState<'comic' | 'mindmap'>('comic');
   const [isTeacherMessageModalOpen, setIsTeacherMessageModalOpen] = useState(false);
   const [myWorks, setMyWorks] = useState<MyWork[]>([]);
   const [isLoadingWorks, setIsLoadingWorks] = useState(true);
@@ -177,10 +178,10 @@ export default function StudentMyPage() {
 
   return (
     <StudentPageShell bgVariant="pastel" maxWidth="2xl">
-      <div className="py-6 px-4 md:px-8 max-w-[1400px] mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-6 overflow-y-auto">
+      <div className="py-6 px-4 md:px-8 max-w-[1400px] mx-auto w-full flex flex-col gap-6 overflow-y-auto">
           
           {/* Left Column (8/12) */}
-          <div className="lg:col-span-8 flex flex-col gap-6">
+          <div className="flex flex-col gap-6">
             
             {/* 학생 격려 배너 */}
             <div className="bg-gradient-to-r from-pink-50 to-sky-50 rounded-[2rem] p-8 flex items-center justify-between border border-pink-100 relative overflow-hidden min-h-[260px] shadow-sm">
@@ -306,7 +307,7 @@ export default function StudentMyPage() {
                       {[
                         { label: '배운 내용 이해', score: growthData.latest.understanding_score, maxScore: 20, color: 'bg-pink-500', bg: 'bg-pink-50' },
                         { label: '핵심 정리', score: growthData.latest.summary_score, maxScore: 20, color: 'bg-purple-500', bg: 'bg-purple-50' },
-                        { label: '만화 표현', score: growthData.latest.expression_score, maxScore: 20, color: 'bg-blue-500', bg: 'bg-blue-50' },
+                        { label: '창의적 표현', score: growthData.latest.expression_score, maxScore: 20, color: 'bg-blue-500', bg: 'bg-blue-50' },
                         { label: '생각 확장', score: growthData.latest.thinking_score, maxScore: 20, color: 'bg-emerald-500', bg: 'bg-emerald-50' },
                         { label: '완성 태도', score: growthData.latest.completion_score, maxScore: 20, color: 'bg-yellow-400', bg: 'bg-yellow-50' },
                       ].map((area, idx) => (
@@ -353,17 +354,20 @@ export default function StudentMyPage() {
                   </div>
                   <h3 className="font-bold text-slate-800">내 작품</h3>
                 </div>
-                {myWorks.length > 0 && (
-                  <button 
-                    onClick={() => setIsAllWorksModalOpen(true)}
-                    className="text-xs font-bold text-pink-500 hover:bg-pink-50 px-3 py-1.5 rounded-full flex items-center gap-1 transition-colors"
-                  >
-                    모두보기 <ChevronRight className="w-3 h-3" />
-                  </button>
-                )}
+                <button
+                  onClick={() => workTab === 'comic' ? setIsAllWorksModalOpen(true) : navigate('/student/mindmaps')}
+                  className="text-xs font-bold text-pink-500 hover:bg-pink-50 px-3 py-1.5 rounded-full flex items-center gap-1 transition-colors"
+                >
+                  모두보기 <ChevronRight className="w-3 h-3" />
+                </button>
               </div>
 
-              {isLoadingWorks ? (
+              <div className="grid grid-cols-2 gap-2 rounded-2xl bg-slate-50 p-1.5">
+                <button onClick={() => setWorkTab('comic')} className={`min-h-11 rounded-xl text-sm font-black transition ${workTab === 'comic' ? 'bg-white text-pink-600 shadow-sm' : 'text-slate-500'}`}>만화 작품</button>
+                <button onClick={() => setWorkTab('mindmap')} className={`min-h-11 rounded-xl text-sm font-black transition ${workTab === 'mindmap' ? 'bg-white text-purple-600 shadow-sm' : 'text-slate-500'}`}>마인드맵</button>
+              </div>
+
+              {workTab === 'comic' ? (isLoadingWorks ? (
                 <div className="flex justify-center items-center h-40">
                   <span className="text-slate-400 font-medium text-sm">작품을 불러오는 중입니다...</span>
                 </div>
@@ -391,18 +395,17 @@ export default function StudentMyPage() {
                     툰스쿨 에디터
                   </button>
                 </div>
+              )) : (
+                <MindmapWorksSection studentId={profile?.id ?? user?.id ?? ''} />
               )}
             </div>
           </div>
 
-          {/* 나의 마인드맵(만화와 구분) */}
-          <MindmapWorksSection studentId={profile?.id ?? user?.id ?? ''} />
-
           {/* Right Column (4/12) */}
-          <div className="lg:col-span-4 flex flex-col gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)] gap-6">
             
             {/* 출석 기록 */}
-            <div className="bg-white rounded-[1.5rem] p-6 border border-slate-100 shadow-sm flex flex-col gap-4">
+            <div className="md:col-span-2 lg:col-span-1 lg:row-span-2 bg-white rounded-[1.5rem] p-6 border border-slate-100 shadow-sm flex flex-col gap-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="p-1.5 bg-pink-50 text-pink-500 rounded-lg">

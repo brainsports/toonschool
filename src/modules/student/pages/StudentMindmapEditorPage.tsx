@@ -69,6 +69,11 @@ export default function StudentMindmapEditorPage() {
         const p = await getMindmap(projectId);
         if (cancelled) return;
         if (!p) { setLoadError('작품을 불러오지 못했어요.'); return; }
+        if (!['draft', 'completed', 'revision_requested'].includes(p.status)) {
+          alert('선생님이 확인 중인 작품은 지금 수정할 수 없어요. 내 작품에서 결과를 확인해 주세요.');
+          navigate('/student/mindmaps', { replace: true });
+          return;
+        }
         setProject(p);
         lastSavedVersion.current = p.version;
         setSaveStatus('saved');
@@ -78,7 +83,7 @@ export default function StudentMindmapEditorPage() {
     }
     load();
     return () => { cancelled = true; };
-  }, [projectId]);
+  }, [projectId, navigate]);
 
   // ---- 자동 저장(디바운스). 첫 로드 시엔 저장하지 않는다. ----
   useEffect(() => {
@@ -264,7 +269,7 @@ export default function StudentMindmapEditorPage() {
         const studentThoughts = p.nodes.filter((n) => n.type === 'thought' && n.createdBy === 'student' && n.title.trim().length > 0);
         const centralId = aiNodes.find((n) => n.type === 'central')?.id ?? '';
         const finalNodes = autoLayout([...aiNodes, ...studentThoughts.map((t) => ({ ...t, parentId: centralId }))]);
-        return { ...p, nodes: finalNodes, centralTopic: res.data!.centralTopic || p.centralTopic };
+        return { ...p, nodes: finalNodes, centralTopic: res.data!.centralTopic || p.centralTopic, creationMethod: 'ai' as const };
       });
       setToast({ message: 'AI가 마인드맵을 만들었어요.', tone: 'success' });
       setTimeout(() => canvasRef.current?.fit(), 80);
@@ -301,7 +306,7 @@ export default function StudentMindmapEditorPage() {
           const r = addNode(nodes, { parentId: node.id, type: childType, title: c.title, description: c.description, icon: c.icon, colorKey: node.colorKey, createdBy: 'ai' });
           if (r.node) nodes = r.nodes;
         }
-        return { ...p, nodes: autoLayout(nodes) };
+        return { ...p, nodes: autoLayout(nodes), creationMethod: 'ai' as const };
       });
       setTimeout(() => canvasRef.current?.fit(), 80);
     } finally {

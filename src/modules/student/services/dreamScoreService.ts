@@ -27,7 +27,7 @@ import { computeDreamScore, type DreamScoreBreakdown, type RewardLogRow } from '
 export async function fetchRewardLogRows(studentId: string): Promise<RewardLogRow[]> {
   const { data, error } = await supabase
     .from('reward_logs')
-    .select('id, reward_type, source_id, reward_date, item_id, created_at, item:items(rarity)')
+    .select('id, reward_type, source_id, reward_date, item_id, points, created_at, item:items(rarity)')
     .eq('student_id', studentId)
     .order('created_at', { ascending: true })
 

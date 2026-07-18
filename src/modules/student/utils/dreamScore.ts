@@ -27,6 +27,7 @@ export interface RewardLogRow {
   reward_date: string | null
   item_id: string | null
   created_at: string
+  points?: number | null
   item?: { rarity?: string | null } | null
 }
 
@@ -212,6 +213,15 @@ export function computeDreamScore(rows: RewardLogRow[], now: Date = new Date()):
       }
       case 'event': {
         const sid = row.source_id ?? ''
+        if (sid.startsWith('mindmap:') && typeof row.points === 'number' && row.points > 0) {
+          const label = sid.startsWith('mindmap:first-unit:') ? '단원 마인드맵 완성'
+            : sid.startsWith('mindmap:evaluated:') ? '마인드맵 평가 완료'
+            : sid.startsWith('mindmap:resubmit:') ? '마인드맵 다시 제출'
+            : '마인드맵 우수 칭찬'
+          specialMissionPoints += row.points
+          addScored(row, row.points, label, false, () => { specialMissionCount++ })
+          break
+        }
         const parsed = eventLabelFromSource(sid)
         if (!parsed) break // 알 수 없는 event 무시
         if (sid.startsWith(EVENT_SOURCE_PREFIX.streak5)) {

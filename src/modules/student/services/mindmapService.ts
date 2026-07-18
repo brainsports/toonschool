@@ -101,6 +101,12 @@ export function rowToProject(row: MindmapProjectRow): MindmapProject {
     themeId: row.theme_id,
     layoutType: row.layout_type,
     status: row.status,
+    creationMethod: row.creation_method ?? 'direct',
+    submittedAt: row.submitted_at ?? null,
+    evaluatedAt: row.evaluated_at ?? null,
+    resubmittedAt: row.resubmitted_at ?? null,
+    revisionCount: row.revision_count ?? 0,
+    lastRenderOk: row.last_render_ok ?? true,
     nodes: (row.nodes ?? []) as MindmapNode[],
     edges: (row.edges ?? []) as MindmapEdge[],
     thumbnailUrl: row.thumbnail_url,
@@ -134,6 +140,12 @@ export function projectToRow(p: MindmapProject): MindmapProjectRow {
     theme_id: p.themeId,
     layout_type: p.layoutType,
     status: p.status,
+    creation_method: p.creationMethod,
+    submitted_at: p.submittedAt,
+    evaluated_at: p.evaluatedAt,
+    resubmitted_at: p.resubmittedAt,
+    revision_count: p.revisionCount,
+    last_render_ok: p.lastRenderOk,
     nodes: p.nodes,
     edges: p.edges,
     thumbnail_url: p.thumbnailUrl,
@@ -284,6 +296,12 @@ export function createBlankProject(input: CreateMindmapInput): MindmapProject {
     themeId: input.themeId || 'pastel',
     layoutType: 'radial',
     status: 'draft',
+    creationMethod: 'direct',
+    submittedAt: null,
+    evaluatedAt: null,
+    resubmittedAt: null,
+    revisionCount: 0,
+    lastRenderOk: true,
     nodes: [central],
     edges: [],
     thumbnailUrl: null,
@@ -368,11 +386,17 @@ export interface MindmapListItem {
   subject: string;
   unitTitle: string;
   grade: number;
-  status: 'draft' | 'completed';
+  semester: number;
+  centralTopic: string;
+  status: import('../types/mindmap').MindmapProjectStatus;
+  creationMethod: import('../types/mindmap').MindmapCreationMethod;
   isPublic: boolean;
   shareSlug: string | null;
   thumbnailUrl: string | null;
+  createdAt: string;
   updatedAt: string;
+  submittedAt: string | null;
+  evaluatedAt: string | null;
 }
 
 export async function listMyMindmaps(studentId: string): Promise<MindmapListItem[]> {
@@ -382,19 +406,24 @@ export async function listMyMindmaps(studentId: string): Promise<MindmapListItem
     try {
       const { data, error } = await supabase
         .from(TABLE)
-        .select('id,title,subject,unit_title,grade,status,is_public,share_slug,thumbnail_url,updated_at')
+        .select('id,title,subject,unit_title,grade,semester,central_topic,status,creation_method,is_public,share_slug,thumbnail_url,created_at,updated_at,submitted_at,evaluated_at')
         .eq('student_id', studentId)
         .order('updated_at', { ascending: false });
       if (!error && data) {
         for (const r of data as Array<{
           id: string; title: string; subject: string; unit_title: string;
-          grade: number; status: 'draft' | 'completed'; is_public: boolean;
-          share_slug: string | null; thumbnail_url: string | null; updated_at: string;
+          grade: number; semester: number; central_topic: string;
+          status: import('../types/mindmap').MindmapProjectStatus;
+          creation_method: import('../types/mindmap').MindmapCreationMethod; is_public: boolean;
+          share_slug: string | null; thumbnail_url: string | null; created_at: string; updated_at: string;
+          submitted_at: string | null; evaluated_at: string | null;
         }>) {
           remoteItems.push({
             id: r.id, title: r.title, subject: r.subject, unitTitle: r.unit_title,
             grade: r.grade, status: r.status, isPublic: r.is_public,
             shareSlug: r.share_slug, thumbnailUrl: r.thumbnail_url, updatedAt: r.updated_at,
+            semester: r.semester, centralTopic: r.central_topic, creationMethod: r.creation_method ?? 'direct',
+            createdAt: r.created_at, submittedAt: r.submitted_at, evaluatedAt: r.evaluated_at,
           });
         }
       } else if (error && isMissingTableError(error)) {
@@ -416,7 +445,9 @@ export async function listMyMindmaps(studentId: string): Promise<MindmapListItem
     localItems.push({
       id: p.id, title: p.title, subject: p.subject, unitTitle: p.unitTitle, grade: p.grade,
       status: p.status, isPublic: p.isPublic, shareSlug: p.shareSlug, thumbnailUrl: p.thumbnailUrl,
-      updatedAt: p.updatedAt,
+      updatedAt: p.updatedAt, semester: p.semester, centralTopic: p.centralTopic,
+      creationMethod: p.creationMethod ?? 'direct', createdAt: p.createdAt,
+      submittedAt: p.submittedAt ?? null, evaluatedAt: p.evaluatedAt ?? null,
     });
   }
   const merged = [...remoteItems, ...localItems];
