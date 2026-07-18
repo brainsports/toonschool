@@ -193,12 +193,13 @@ export default function StudentMyPage() {
 
   return (
     <StudentPageShell bgVariant="pastel" maxWidth="2xl">
-      <div className="py-6 px-4 md:px-8 max-w-[1400px] mx-auto w-full flex flex-col gap-6 overflow-y-auto">
+      <div className="py-6 px-4 md:px-8 max-w-[1400px] mx-auto w-full grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_260px] lg:grid-cols-[minmax(0,1fr)_280px] xl:grid-cols-[minmax(0,1fr)_minmax(280px,320px)] gap-5 xl:gap-6 items-start overflow-y-auto">
+        <main className="min-w-0 flex flex-col gap-6">
           {/* 학생 격려 배너 */}
-            <div className="bg-gradient-to-r from-pink-50 to-sky-50 rounded-[2rem] p-8 flex items-center justify-between border border-pink-100 relative overflow-hidden min-h-[260px] shadow-sm">
-              <div className="z-10 flex flex-col gap-4 max-w-xl">
+            <div className="bg-gradient-to-r from-pink-50 to-sky-50 rounded-[2rem] p-6 xl:p-8 flex items-center justify-between border border-pink-100 relative overflow-hidden min-h-[300px] shadow-sm">
+              <div className="z-10 flex flex-col gap-4 max-w-[72%] xl:max-w-xl">
                 <div className="flex items-center gap-2">
-                  <h2 className="text-2xl md:text-3xl font-black text-pink-600">오늘도 툰스쿨과 함께 출발해요!</h2>
+                  <h2 className="text-xl min-[1100px]:text-2xl xl:text-3xl font-black text-pink-600 break-keep">오늘도 툰스쿨과 함께 출발해요!</h2>
                   <span className="text-2xl">🚀</span>
                 </div>
 
@@ -225,17 +226,15 @@ export default function StudentMyPage() {
               <img
                 src="/images/toonschool/login-hero.png"
                 alt="Study Hero"
-                className="absolute right-0 bottom-0 h-[90%] md:h-[95%] object-contain object-right-bottom transform translate-x-4 opacity-90"
+                className="absolute right-2 bottom-0 h-[58%] lg:h-[72%] xl:h-[88%] max-w-[42%] object-contain object-right-bottom opacity-90"
               />
             </div>
 
           {/* 꿈의 궁전 요약 카드 (레벨/점수/진행/바로가기) */}
           <DreamPalaceDashboardCard studentId={profile?.id ?? user?.id} />
 
-          <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_260px] lg:grid-cols-[minmax(0,1fr)_280px] xl:grid-cols-[minmax(0,1fr)_minmax(280px,320px)] gap-5 xl:gap-6 items-start">
-            <main className="min-w-0 flex flex-col gap-6">
-              {/* Stats Cards & Growth Chart */}
-              <div className="grid grid-cols-1 min-[900px]:grid-cols-2 min-[1200px]:grid-cols-3 gap-4">
+          {/* Stats Cards & Growth Chart */}
+          <div className="grid grid-cols-1 min-[900px]:grid-cols-2 min-[1200px]:grid-cols-3 gap-4">
               {/* Card 1: 완성 작품 */}
               <div className="bg-white rounded-[20px] px-6 py-5 flex items-center gap-4 border border-slate-100 shadow-sm min-h-[112px]">
                 <div className="w-12 h-12 bg-pink-50 text-pink-500 rounded-full flex items-center justify-center shrink-0">
@@ -412,21 +411,20 @@ export default function StudentMyPage() {
                 <MindmapWorksSection studentId={profile?.id ?? user?.id ?? ''} />
               )}
             </div>
-          </main>
+        </main>
 
-          <StudentDashboardSidebar
-                attendanceMonth={attendanceMonth}
-                daysOfWeek={daysOfWeek}
-                monthlyAttendance={monthlyAttendance}
-                attendedDaysCount={attendedDaysCount}
-                latestMessage={latestMessage}
-                notifications={notifications}
-                onPreviousMonth={() => void handleMoveAttendanceMonth(-1)}
-                onNextMonth={() => void handleMoveAttendanceMonth(1)}
-                onOpenTeacherMessages={() => void handleOpenTeacherMessages()}
-                onOpenNotifications={() => setIsAllNotificationsModalOpen(true)}
-          />
-        </div>
+        <StudentDashboardSidebar
+          attendanceMonth={attendanceMonth}
+          daysOfWeek={daysOfWeek}
+          monthlyAttendance={monthlyAttendance}
+          attendedDaysCount={attendedDaysCount}
+          latestMessage={latestMessage}
+          notifications={notifications}
+          onPreviousMonth={() => void handleMoveAttendanceMonth(-1)}
+          onNextMonth={() => void handleMoveAttendanceMonth(1)}
+          onOpenTeacherMessages={() => void handleOpenTeacherMessages()}
+          onOpenNotifications={() => setIsAllNotificationsModalOpen(true)}
+        />
       </div>
         <AllWorksModal 
           isOpen={isAllWorksModalOpen} 
