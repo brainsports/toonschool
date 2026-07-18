@@ -65,6 +65,7 @@ import RequireStudent from '../shared/components/RequireStudent'
 import AdminLMSPage from '../modules/admin-lms/pages/AdminLMSPage'
 import ClassManagementPage from '../modules/admin-lms/pages/ClassManagementPage'
 import AdminStudentManagementPage from '../modules/admin-lms/pages/StudentManagementPage'
+import StudentDetailPage from '../modules/admin-lms/pages/StudentDetailPage'
 import AssessmentPage from '../modules/admin-lms/pages/AssessmentPage'
 import TeacherManagementPage from '../modules/admin-lms/pages/TeacherManagementPage'
 import AdminProfilePage from '../modules/admin-lms/pages/AdminProfilePage'
@@ -158,6 +159,7 @@ export default function AppRouter() {
         {/* 공통/선생님 */}
         <Route path="classes" element={<ClassManagementPage />} />
         <Route path="students" element={<AdminStudentManagementPage />} />
+        <Route path="students/:studentId" element={<StudentDetailPage />} />
         <Route path="dream-growth" element={<DreamGrowthPage />} />
         <Route path="mindmaps" element={<MindmapManagementPage />} />
         <Route path="mindmaps/:mindmapId" element={<MindmapEvaluationPage />} />

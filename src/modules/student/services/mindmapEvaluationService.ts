@@ -133,7 +133,7 @@ export async function listTeacherMindmaps(): Promise<TeacherMindmapItem[]> {
   const ids = students.map((student) => student.id);
   const { data: projects, error } = await supabase
     .from('mindmap_projects')
-    .select('id,student_id,student_name,class_id,grade,subject,semester,unit_id,unit_title,central_topic,creation_method,status,nodes,thumbnail_url,version,submitted_at,updated_at')
+    .select('id,student_id,student_name,class_id,grade,grade_name,subject,semester,unit_id,unit_title,central_topic,creation_method,status,nodes,thumbnail_url,version,submitted_at,evaluated_at,revision_count,updated_at')
     .in('student_id', ids)
     .order('submitted_at', { ascending: false, nullsFirst: false });
   if (error) throw new Error(error.message);
@@ -168,6 +168,8 @@ export async function listTeacherMindmaps(): Promise<TeacherMindmapItem[]> {
       thumbnailUrl: row.thumbnail_url as string | null,
       version: Number(row.version),
       submittedAt: row.submitted_at as string | null,
+      evaluatedAt: (row.evaluated_at as string | null) ?? null,
+      revisionCount: Number(row.revision_count ?? 0),
       updatedAt: row.updated_at as string,
       evaluation: latest.get(row.id as string) ?? null,
     };
@@ -212,4 +214,126 @@ export async function saveMindmapEvaluation(input: SaveEvaluationInput): Promise
   });
   if (error) throw new Error(error.message || '평가를 저장하지 못했습니다.');
   return evaluationFromRow(data as EvaluationRow);
+}
+
+export interface StudentMindmapWorkSummary {
+  id: string;
+  subject: string;
+  unitTitle: string;
+  centralTopic: string;
+  status: MindmapProjectStatus;
+  creationMethod: 'direct' | 'ai';
+  submittedAt: string | null;
+  evaluatedAt: string | null;
+  revisionCount: number;
+  totalScore: number | null;
+  teacherFeedback: string | null;
+  understandingScore: number | null;
+  connectionScore: number | null;
+  detailScore: number | null;
+  accuracyScore: number | null;
+  presentationScore: number | null;
+}
+
+export interface StudentMindmapSummary {
+  works: StudentMindmapWorkSummary[];
+  totalCount: number;
+  subjectCounts: { subject: string; count: number }[];
+  evaluatedCount: number;
+  revisionRequestedCount: number;
+  resubmittedCount: number;
+  averageScore: number | null;
+  recent: StudentMindmapWorkSummary | null;
+  recentFeedback: string | null;
+  scoreTrend: { evaluatedAt: string; totalScore: number }[];
+}
+
+/**
+ * 특정 학생의 툰마인드 활동 요약(교사 학생상세 화면용).
+ * 담당 교사는 is_assigned_mindmap_teacher RLS 로 본인 학생 범위 읽기 허용.
+ */
+export async function getStudentMindmapSummary(studentId: string): Promise<StudentMindmapSummary> {
+  const { data: projects, error } = await supabase
+    .from('mindmap_projects')
+    .select('id,subject,unit_title,central_topic,status,creation_method,submitted_at,evaluated_at,revision_count')
+    .eq('student_id', studentId)
+    .order('updated_at', { ascending: false });
+  if (error) throw new Error(error.message);
+
+  const projectRows = (projects ?? []) as Array<{
+    id: string; subject: string; unit_title: string; central_topic: string;
+    status: MindmapProjectStatus; creation_method: 'direct' | 'ai';
+    submitted_at: string | null; evaluated_at: string | null; revision_count: number;
+  }>;
+  const projectIds = projectRows.map((row) => row.id);
+
+  let evaluations: EvaluationRow[] = [];
+  if (projectIds.length) {
+    const result = await supabase.from('mindmap_evaluations').select('*').in('mindmap_id', projectIds);
+    if (result.error) throw new Error(result.error.message);
+    evaluations = (result.data ?? []) as EvaluationRow[];
+  }
+
+  // 작품별 최신 평가(버전 내림차순).
+  const latestEvalByProject = new Map<string, EvaluationRow>();
+  for (const row of evaluations.sort((a, b) => b.version - a.version)) {
+    if (!latestEvalByProject.has(row.mindmap_id)) latestEvalByProject.set(row.mindmap_id, row);
+  }
+
+  const works: StudentMindmapWorkSummary[] = projectRows.map((row) => {
+    const ev = latestEvalByProject.get(row.id);
+    return {
+      id: row.id,
+      subject: row.subject || '',
+      unitTitle: row.unit_title || '',
+      centralTopic: row.central_topic || '',
+      status: row.status,
+      creationMethod: row.creation_method ?? 'direct',
+      submittedAt: row.submitted_at,
+      evaluatedAt: row.evaluated_at,
+      revisionCount: Number(row.revision_count ?? 0),
+      totalScore: ev?.total_score ?? null,
+      teacherFeedback: ev?.teacher_feedback ?? null,
+      understandingScore: ev ? ev.understanding_score : null,
+      connectionScore: ev ? ev.connection_score : null,
+      detailScore: ev ? ev.detail_score : null,
+      accuracyScore: ev ? ev.accuracy_score : null,
+      presentationScore: ev ? ev.presentation_score : null,
+    };
+  });
+
+  const evaluated = evaluations.filter((row) => row.status === 'evaluated');
+  const evaluatedScores = evaluated.map((row) => row.total_score);
+  const averageScore = evaluatedScores.length
+    ? Math.round((evaluatedScores.reduce((a, b) => a + b, 0) / evaluatedScores.length) * 10) / 10
+    : null;
+
+  const subjectMap = new Map<string, number>();
+  for (const work of works) {
+    const key = work.subject || '미지정';
+    subjectMap.set(key, (subjectMap.get(key) ?? 0) + 1);
+  }
+
+  const scoreTrend = evaluated
+    .slice()
+    .sort((a, b) => new Date(a.evaluated_at).getTime() - new Date(b.evaluated_at).getTime())
+    .map((row) => ({ evaluatedAt: row.evaluated_at, totalScore: row.total_score }));
+
+  const recentFeedback = evaluated
+    .slice()
+    .sort((a, b) => new Date(b.evaluated_at).getTime() - new Date(a.evaluated_at).getTime())
+    .find((row) => (row.teacher_feedback ?? '').trim())?.teacher_feedback ?? null;
+
+  return {
+    works,
+    totalCount: works.length,
+    subjectCounts: [...subjectMap.entries()].map(([subject, count]) => ({ subject, count })).sort((a, b) => b.count - a.count),
+    evaluatedCount: works.filter((w) => w.status === 'evaluated').length,
+    revisionRequestedCount: works.filter((w) => w.status === 'revision_requested').length,
+    resubmittedCount: works.filter((w) => w.status === 'resubmitted').length,
+    averageScore,
+    recent: works[0] ?? null,
+    recentFeedback,
+    scoreTrend,
+  };
 }

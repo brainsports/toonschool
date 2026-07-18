@@ -2,6 +2,7 @@
 // 학생관리 페이지
 // ──────────────────────────────────────────────
 import { useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import * as XLSX from 'xlsx'
 import { supabase } from '../../../shared/lib/supabase'
 import { useAuth } from '../../../shared/contexts/AuthContext'
@@ -27,6 +28,7 @@ interface ExcelRow {
 const GRADES = [1, 2, 3, 4, 5, 6]
 
 export default function StudentManagementPage() {
+  const navigate = useNavigate()
   const { profile, user } = useAuth()
   const [license, setLicense] = useState<LicenseInfo | null>(null)
   const [allClasses, setAllClasses] = useState<ClassRoom[]>([])
@@ -648,7 +650,7 @@ export default function StudentManagementPage() {
             }}>
               <div><input type="checkbox" checked={checkedIds.has(stu.id)} onChange={() => toggleCheck(stu.id)} style={{ cursor: 'pointer' }} /></div>
               <div style={{ fontSize: 14, color: '#888' }}>{stu.number}</div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: '#1a1a2e' }}>{stu.name}</div>
+              <button onClick={() => navigate(`/admin/lms/students/${stu.id}`)} style={{ fontSize: 15, fontWeight: 700, color: '#1a1a2e', background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left', padding: 0 }} title="학생 상세 보기">{stu.name} <span style={{ fontSize: 11, color: '#ff2778' }}>상세</span></button>
               <div style={{ fontSize: 13, color: '#555', fontFamily: 'monospace' }}>{stu.loginId}</div>
               <div style={{ fontSize: 13, color: '#aaa', fontFamily: 'monospace' }}>******</div>
               <div>

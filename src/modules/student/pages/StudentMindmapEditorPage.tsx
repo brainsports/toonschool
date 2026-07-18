@@ -9,7 +9,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Undo2, Redo2, Wand2, LayoutGrid, Eye, CheckCircle2, Share2, Image, FileType, Printer, HelpCircle, Plus, Sparkles, Palette } from 'lucide-react';
 import type { MindmapNode, MindmapProject } from '../types/mindmap';
 import type { AiPartialAction } from '../types/mindmapAi';
-import { MINDMAP_THEMES, MINDMAP_ICONS, getTheme, MAX_CHILD_BRANCHES } from '../data/mindmapConfig';
+import { MINDMAP_THEMES, MINDMAP_ICONS, getTheme } from '../data/mindmapConfig';
 import {
   addNode, autoLayout, checkCompletion, clampDescription, clampTitle, deleteNode as engineDelete,
   filterEmptyNodes, getNode, newId, reparent,

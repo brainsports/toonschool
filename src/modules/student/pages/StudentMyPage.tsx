@@ -16,9 +16,9 @@ import { getStudentWorks } from '../services/studentWorkService'
 import { getLatestTeacherMessageForStudent, getTeacherMessagesForStudent, type TeacherMessage } from '../services/teacherMessageService'
 import { getNotificationsForStudent, type StudentNotification } from '../services/notificationService'
 import { ensureTodayAttendance, getCurrentAttendanceMonth, getMonthlyAttendance, getTotalAttendanceCount } from '../services/studentAttendanceService'
-import { getStudentGrowthDashboard } from '../services/studentGrowthService'
+import { getUnifiedGrowthDashboard, type UnifiedGrowthDashboard } from '../services/growthAggregationService'
+import { GROWTH_AREA_KEYS, GROWTH_AREA_LABELS, type GrowthAreaKey } from '../utils/growthAreas'
 import { grantAttendanceReward } from '../services/dreamGardenService'
-import type { StudentGrowthDashboardData } from '../types/studentGrowth'
 import DreamPalaceDashboardCard from '../components/dream/DreamPalaceDashboardCard'
 import MindmapWorksSection from '../components/mindmap/MindmapWorksSection'
 import StudentDashboardSidebar from '../components/mypage/StudentDashboardSidebar'
@@ -42,7 +42,8 @@ export default function StudentMyPage() {
   const [isAllNotificationsModalOpen, setIsAllNotificationsModalOpen] = useState(false);
   const [attendanceDates, setAttendanceDates] = useState<string[]>([]);
   const [totalAttendanceCount, setTotalAttendanceCount] = useState(0);
-  const [growthData, setGrowthData] = useState<StudentGrowthDashboardData | null>(null);
+  const [growthData, setGrowthData] = useState<UnifiedGrowthDashboard | null>(null);
+  const [growthSource, setGrowthSource] = useState<'comic' | 'toonmind' | 'unified'>('comic');
   const [isLoadingGrowth, setIsLoadingGrowth] = useState(true);
   const [attendanceMonth, setAttendanceMonth] = useState(() => getCurrentAttendanceMonth());
   const daysOfWeek = ['일', '월', '화', '수', '목', '금', '토'];
@@ -142,8 +143,10 @@ export default function StudentMyPage() {
       if (!user?.id) return;
       setIsLoadingGrowth(true);
       try {
-        const data = await getStudentGrowthDashboard(user.id);
+        const data = await getUnifiedGrowthDashboard(user.id);
         setGrowthData(data);
+        // 만화 데이터가 없고 툰마인드 평가가 있으면 툰마인드 탭을 기본으로.
+        if (!data.comic.latest && data.toonmind.latest) setGrowthSource('toonmind');
       } catch (err) {
         console.error('[StudentMyPage] 성장기록 조회 실패:', err);
       } finally {
@@ -273,21 +276,29 @@ export default function StudentMyPage() {
                   <CheckCircle2 className="w-6 h-6" />
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-xs font-bold text-slate-500 mb-0.5">성장 점수</span>
+                  <span className="text-xs font-bold text-slate-500 mb-0.5">최근 만화 평가 점수</span>
                   <div className="flex items-baseline gap-1">
-                    <span className="text-2xl font-black text-emerald-500">{growthData?.latest?.total_score || 0}</span>
+                    <span className="text-2xl font-black text-emerald-500">{growthData?.comic.latest?.total_score ?? 0}</span>
                     <span className="text-sm font-bold text-emerald-500">점</span>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Growth Chart */}
+            {/* Growth Chart — 만화 / 툰마인드 / 통합 토들 */}
             <div className="bg-white rounded-[20px] p-6 border border-slate-100 shadow-sm flex flex-col gap-4">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <h3 className="font-bold text-slate-800">성장 기록</h3>
-                <div className="text-xs font-bold px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-lg">
-                  {growthData?.latest ? `최근 작품 점수 ${growthData.latest.total_score}점` : '기록 없음'}
+                <div className="flex items-center gap-1.5">
+                  {([['comic', '만화'], ['toonmind', '툰마인드'], ['unified', '통합']] as const).map(([key, label]) => (
+                    <button
+                      key={key}
+                      onClick={() => setGrowthSource(key)}
+                      className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-colors ${growthSource === key ? 'bg-pink-500 text-white' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}
+                    >
+                      {label}
+                    </button>
+                  ))}
                 </div>
               </div>
 
@@ -295,65 +306,14 @@ export default function StudentMyPage() {
                  <div className="flex-1 flex items-center justify-center py-10">
                    <span className="text-slate-400 text-sm font-medium">불러오는 중...</span>
                  </div>
-              ) : !growthData?.latest ? (
+              ) : !growthData?.hasAny ? (
                  <div className="flex-1 flex flex-col items-center justify-center text-center px-4 py-8 bg-slate-50 rounded-xl border border-slate-100 border-dashed">
                    <span className="text-2xl mb-2">🌱</span>
                    <p className="text-slate-600 font-bold text-sm mb-1">아직 성장기록이 없어요.</p>
-                   <p className="text-slate-400 text-xs break-keep mt-1">만화를 완성하면 AI 선생님이 작품을 보고 성장 피드백을 남겨 줄게요.</p>
+                   <p className="text-slate-400 text-xs break-keep mt-1">만화를 완성하거나 툰마인드를 제출해 평가를 받으면 성장 기록이 쌓여요.</p>
                  </div>
               ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.15fr)_minmax(280px,0.85fr)] gap-6 items-stretch">
-                  <div className="flex flex-col">
-                    <div className="mb-3.5 text-[13px] font-bold text-slate-600 flex items-center gap-1.5 bg-slate-50 px-3 py-2.5 rounded-lg">
-                      <span className="text-lg">{growthData.delta && growthData.delta > 0 ? '🚀' : growthData.delta !== null ? '💪' : '🌟'}</span>
-                      {growthData.delta !== null ? (
-                        growthData.delta > 0 
-                          ? `지난 작품보다 +${growthData.delta}점 성장했어요!` 
-                          : `이번에는 지난 작품보다 ${Math.abs(growthData.delta)}점 낮지만, 다시 좋아질 수 있어요!`
-                      ) : (
-                        '첫 성장기록이에요. 다음 작품에서 얼마나 자랄지 기대돼요!'
-                      )}
-                    </div>
-                    
-                    <div className="w-full flex flex-col gap-3">
-                      {[
-                        { label: '배운 내용 이해', score: growthData.latest.understanding_score, maxScore: 20, color: 'bg-pink-500', bg: 'bg-pink-50' },
-                        { label: '핵심 정리', score: growthData.latest.summary_score, maxScore: 20, color: 'bg-purple-500', bg: 'bg-purple-50' },
-                        { label: '창의적 표현', score: growthData.latest.expression_score, maxScore: 20, color: 'bg-blue-500', bg: 'bg-blue-50' },
-                        { label: '생각 확장', score: growthData.latest.thinking_score, maxScore: 20, color: 'bg-emerald-500', bg: 'bg-emerald-50' },
-                        { label: '완성 태도', score: growthData.latest.completion_score, maxScore: 20, color: 'bg-yellow-400', bg: 'bg-yellow-50' },
-                      ].map((area, idx) => (
-                        <div key={idx} className="flex flex-col gap-1.5">
-                          <div className="flex items-center justify-between text-[13px] font-bold">
-                            <span className="text-slate-700">{area.label}</span>
-                            <span className="text-slate-700">{area.score}<span className="text-slate-400 font-medium"> / {area.maxScore}</span></span>
-                          </div>
-                          <div className={`w-full h-2 rounded-full ${area.bg}`}>
-                            <div 
-                              className={`h-full rounded-full ${area.color}`} 
-                              style={{ width: `${(area.score / area.maxScore) * 100}%` }}
-                            ></div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col gap-3 h-full">
-                    <div className="bg-sky-50 rounded-[14px] p-4 border border-sky-100 flex-1 flex flex-col">
-                      <div className="text-xs font-black text-sky-600 mb-1.5">이번 작품에서 잘한 점</div>
-                      <p className="text-[13px] text-slate-700 font-medium break-keep leading-[1.6]">
-                        {growthData.latest.strength_feedback}
-                      </p>
-                    </div>
-                    <div className="bg-pink-50 rounded-[14px] p-4 border border-pink-100 flex-1 flex flex-col">
-                      <div className="text-xs font-black text-pink-600 mb-1.5">다음에 더 좋아질 점</div>
-                      <p className="text-[13px] text-slate-700 font-medium break-keep leading-[1.6]">
-                        {growthData.latest.improvement_feedback}
-                      </p>
-                    </div>
-                  </div>
-                </div>
+                <GrowthSourcePanel growthData={growthData} source={growthSource} />
               )}
             </div>
 
@@ -444,5 +404,108 @@ export default function StudentMyPage() {
           onDeleted={refreshMessagesAndNotifications}
         />
     </StudentPageShell>
+  )
+}
+
+const GROWTH_AREA_COLORS: Record<GrowthAreaKey, { color: string; bg: string }> = {
+  understanding: { color: 'bg-pink-500', bg: 'bg-pink-50' },
+  summarizing: { color: 'bg-purple-500', bg: 'bg-purple-50' },
+  expression: { color: 'bg-blue-500', bg: 'bg-blue-50' },
+  problemSolving: { color: 'bg-emerald-500', bg: 'bg-emerald-50' },
+  sharing: { color: 'bg-yellow-400', bg: 'bg-yellow-50' },
+}
+
+function GrowthSourcePanel({ growthData, source }: { growthData: UnifiedGrowthDashboard; source: 'comic' | 'toonmind' | 'unified' }) {
+  const comicLatest = growthData.comic.latest
+  const toonmindLatest = growthData.toonmind.latest
+  const areas = source === 'comic' ? growthData.comic.areas : source === 'toonmind' ? growthData.toonmind.areas : growthData.unified.areas
+  const total = source === 'comic' ? growthData.comic.total : source === 'toonmind' ? growthData.toonmind.total : growthData.unified.total
+  const sourceEmpty = source === 'comic' ? !comicLatest : source === 'toonmind' ? !toonmindLatest : !growthData.hasAny
+
+  if (sourceEmpty) {
+    const msg = source === 'comic'
+      ? '아직 만화 평가 기록이 없어요. 만화를 완성해 공유하면 AI 선생님이 평가해 줘요.'
+      : source === 'toonmind'
+        ? '아직 툰마인드 평가 기록이 없어요. 툰마인드를 제출해 선생님 평가를 받아보세요.'
+        : '아직 성장 기록이 없어요.'
+    return (
+      <div className="flex flex-col items-center justify-center text-center px-4 py-8 bg-slate-50 rounded-xl border border-slate-100 border-dashed">
+        <span className="text-2xl mb-2">📝</span>
+        <p className="text-slate-600 font-bold text-sm">{msg}</p>
+      </div>
+    )
+  }
+
+  let emoji = '🌟'
+  let message = ''
+  if (source === 'comic' && comicLatest) {
+    const delta = growthData.comic.delta
+    emoji = delta && delta > 0 ? '🚀' : delta !== null ? '💪' : '🌟'
+    message = delta !== null
+      ? (delta > 0 ? `지난 만화보다 +${delta}점 성장했어요!` : `지난 만화보다 ${Math.abs(delta)}점 낮지만 다시 좋아질 수 있어요!`)
+      : '첫 만화 성장기록이에요.'
+  } else if (source === 'toonmind' && toonmindLatest) {
+    emoji = '🧠'
+    message = `최근 툰마인드 평가 · 평가완료 ${growthData.toonmind.evaluatedCount}회`
+  } else if (source === 'unified') {
+    emoji = '🌟'
+    message = '만화·툰마인드 평가를 5개 영역으로 평균한 통합 결과예요.'
+  }
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.15fr)_minmax(280px,0.85fr)] gap-6 items-stretch">
+      <div className="flex flex-col">
+        <div className="mb-3.5 text-[13px] font-bold text-slate-600 flex items-center gap-1.5 bg-slate-50 px-3 py-2.5 rounded-lg">
+          <span className="text-lg">{emoji}</span>
+          <span>{message}{total !== null && total !== undefined && <span className="ml-1 text-slate-400">(총 {Math.round(total)}점)</span>}</span>
+        </div>
+        <div className="w-full flex flex-col gap-3">
+          {GROWTH_AREA_KEYS.map((key) => {
+            const palette = GROWTH_AREA_COLORS[key]
+            const raw = areas[key]
+            const empty = raw === null
+            const score = raw ?? 0
+            return (
+              <div key={key} className="flex flex-col gap-1.5">
+                <div className="flex items-center justify-between text-[13px] font-bold">
+                  <span className="text-slate-700">{GROWTH_AREA_LABELS[key]}</span>
+                  <span className="text-slate-700">{empty ? <span className="text-slate-300">—</span> : score}<span className="text-slate-400 font-medium"> / 20</span></span>
+                </div>
+                <div className={`w-full h-2 rounded-full ${palette.bg}`}>
+                  <div className={`h-full rounded-full ${palette.color}`} style={{ width: `${(score / 20) * 100}%` }} />
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-3 h-full">
+        {source === 'comic' && comicLatest ? (
+          <>
+            <div className="bg-sky-50 rounded-[14px] p-4 border border-sky-100 flex-1 flex flex-col">
+              <div className="text-xs font-black text-sky-600 mb-1.5">이번 작품에서 잘한 점</div>
+              <p className="text-[13px] text-slate-700 font-medium break-keep leading-[1.6]">{comicLatest.strength_feedback}</p>
+            </div>
+            <div className="bg-pink-50 rounded-[14px] p-4 border border-pink-100 flex-1 flex flex-col">
+              <div className="text-xs font-black text-pink-600 mb-1.5">다음에 더 좋아질 점</div>
+              <p className="text-[13px] text-slate-700 font-medium break-keep leading-[1.6]">{comicLatest.improvement_feedback}</p>
+            </div>
+          </>
+        ) : source === 'toonmind' && toonmindLatest ? (
+          <div className="bg-purple-50 rounded-[14px] p-4 border border-purple-100 flex-1 flex flex-col">
+            <div className="text-xs font-black text-purple-600 mb-1.5">선생님 피드백</div>
+            <p className="text-[13px] text-slate-700 font-medium break-keep leading-[1.6]">{toonmindLatest.teacherFeedback || '남겨주신 피드백이 없어요.'}</p>
+          </div>
+        ) : (
+          <div className="bg-emerald-50 rounded-[14px] p-4 border border-emerald-100 flex-1 flex flex-col">
+            <div className="text-xs font-black text-emerald-600 mb-1.5">통합 성장 안내</div>
+            <p className="text-[13px] text-slate-700 font-medium break-keep leading-[1.6]">
+              만화 평가와 툰마인드 평가를 같은 5개 영역으로 옮겨 영역별 평균을 냈어요. 한 영역에 평가가 하나뿐이면 그 점수로, 둘 다 있으면 평균으로 표시해요.
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
   )
 }

@@ -1,25 +1,28 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BarChart3, Brain, CheckCircle2, Clock3, Download, Search, Send, Users } from 'lucide-react';
+import { BarChart3, Brain, CheckCircle2, Clock3, Download, Mail, Search, Send, Users } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import {
   MINDMAP_STATUS_LABELS,
   listTeacherMindmaps,
   saveMindmapEvaluation,
 } from '../../student/services/mindmapEvaluationService';
+import { createNotification } from '../../student/services/notificationService';
 import type { MindmapProjectStatus } from '../../student/types/mindmap';
 import type { TeacherMindmapItem } from '../../student/types/mindmapEvaluation';
 import { fetchStudentsByTeacher } from '../services/studentService';
+import { useAuth } from '../../../shared/contexts/AuthContext';
 import type { Student } from '../types';
 
 type SortKey = 'recent' | 'oldest' | 'name' | 'score-desc' | 'score-asc';
-type ViewTab = 'works' | 'stats';
+type ViewTab = 'works' | 'stats' | 'missing';
 
 const inputClass = 'min-h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-pink-400';
 const PAGE_NOW = Date.now();
 
 export default function MindmapManagementPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [items, setItems] = useState<TeacherMindmapItem[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
@@ -90,6 +93,25 @@ export default function MindmapManagementPage() {
     });
   }, [items, search, classId, grade, subject, semester, unit, method, status, date, sort, onlyMissing]);
 
+  // 미제출 학생: 현재 학급/학년 필터 기준으로 제출된 작품이 없는 학생.
+  // 작성 시작 여부·마지막 활동일·현재 단계 포함(요구사항 #13).
+  const missingStudents = useMemo(() => {
+    const submittedIds = new Set(items.filter((item) => item.submittedAt).map((item) => item.studentId));
+    return students
+      .filter((student) => {
+        if (submittedIds.has(student.id)) return false;
+        if (classId !== 'all' && student.classId !== classId) return false;
+        if (grade !== 'all' && String(student.grade) !== grade) return false;
+        return true;
+      })
+      .map((student) => {
+        const own = items.filter((item) => item.studentId === student.id);
+        const started = own.length > 0;
+        const lastActivity = own.map((item) => time(item.updatedAt)).sort((a, b) => b - a)[0] ?? null;
+        return { student, started, lastActivity, stage: started ? own[0].status : null };
+      });
+  }, [students, items, classId, grade]);
+
   const summary = useMemo(() => {
     const weekAgo = PAGE_NOW - 7 * 86_400_000;
     return {
@@ -98,9 +120,28 @@ export default function MindmapManagementPage() {
       pending: items.filter((item) => ['submitted', 'pending_review', 'resubmitted'].includes(item.status)).length,
       revision: items.filter((item) => item.status === 'revision_requested').length,
       evaluated: items.filter((item) => item.status === 'evaluated').length,
-      missing: students.filter((student) => !items.some((item) => item.studentId === student.id && item.submittedAt)).length,
+      missing: missingStudents.length,
     };
-  }, [items, students]);
+  }, [items, missingStudents]);
+
+  const [notifyBusy, setNotifyBusy] = useState(false);
+
+  async function sendNotifications(targetStudentIds: string[], title: string, content: string) {
+    if (!user?.id) throw new Error('로그인 정보가 없어 알림을 보낼 수 없어요.');
+    if (!targetStudentIds.length) return;
+    const noticeDate = new Date().toISOString().slice(0, 10);
+    // 학생 1명당 1행(target_key=studentId). 학생은 본인 담당 선생님(sender_id) 알림만 수신.
+    await Promise.all(targetStudentIds.map((sid) => createNotification({
+      target_key: sid,
+      sender_id: user.id,
+      sender_role: 'teacher',
+      category: 'mission',
+      title,
+      content,
+      notice_date: noticeDate,
+      is_published: true,
+    })));
+  }
 
   function toggleAll() {
     setSelected(selected.size === filtered.length ? new Set() : new Set(filtered.map((item) => item.id)));
@@ -133,16 +174,57 @@ export default function MindmapManagementPage() {
     }
   }
 
+  // 공통 피드백 전송: 점수를 일괄 부여하지 않고(요구사항 #12) 알림 채널로만 의견 전달.
+  async function sendBulkFeedback() {
+    if (!bulkFeedback.trim() || selected.size === 0) return;
+    setBulkBusy(true);
+    try {
+      const targets = items.filter((item) => selected.has(item.id));
+      const ids = [...new Set(targets.map((item) => item.studentId))];
+      await sendNotifications(ids, '툰마인드 피드백', bulkFeedback.trim());
+      setSelected(new Set());
+      setBulkFeedback('');
+      alert(`${ids.length}명 학생에게 피드백을 보냈습니다.`);
+    } catch (cause) {
+      alert(cause instanceof Error ? cause.message : '피드백을 보내지 못했습니다.');
+    } finally {
+      setBulkBusy(false);
+    }
+  }
+
   function exportWorkbook(mode: 'results' | 'submissions') {
     const rows = filtered.map((item) => mode === 'results' ? {
-      학생: item.studentName, 학급: item.className, 과목: item.subject, 단원: item.unitTitle,
-      중심주제: item.centralTopic, 상태: MINDMAP_STATUS_LABELS[item.status],
-      점수: item.evaluation?.totalScore ?? '', 제출일: formatDate(item.submittedAt),
-      피드백: item.evaluation?.teacherFeedback ?? '',
+      '학생 이름': item.studentName,
+      '학년': `${item.grade}학년`,
+      '반': item.className,
+      '과목': item.subject,
+      '학기': `${item.semester}학기`,
+      '단원': item.unitTitle,
+      '중심 주제': item.centralTopic,
+      '제작 방식': item.creationMethod === 'ai' ? 'AI 도움' : '직접 만들기',
+      '제출일': formatDate(item.submittedAt),
+      '상태': MINDMAP_STATUS_LABELS[item.status],
+      '핵심 내용 이해': item.evaluation?.understandingScore ?? '',
+      '중심 주제와 가지 연결': item.evaluation?.connectionScore ?? '',
+      '내용의 구체성': item.evaluation?.detailScore ?? '',
+      '내용의 정확성': item.evaluation?.accuracyScore ?? '',
+      '표현과 구성': item.evaluation?.presentationScore ?? '',
+      '툰마인드 평가 총점': item.evaluation?.totalScore ?? '',
+      '전체 피드백': item.evaluation?.teacherFeedback ?? '',
+      '재제출 횟수': item.revisionCount,
+      '최종 평가일': formatDate(item.evaluatedAt),
+      // 작품에 귀속 가능한 꿈점수(평가완료 20 + 우수칭찬 30 + 재제출 20×횟수). 단원별 최초완성 80점은 학생/단원 단위라 제외.
+      '획득 꿈점수(작품귀속)': dreamPointsForWork(item),
     } : {
-      학생: item.studentName, 학급: item.className, 과목: item.subject, 단원: item.unitTitle,
-      제출여부: item.submittedAt ? '제출' : '미제출', 제출일: formatDate(item.submittedAt),
-      상태: MINDMAP_STATUS_LABELS[item.status],
+      '학생 이름': item.studentName,
+      '학년': `${item.grade}학년`,
+      '반': item.className,
+      '과목': item.subject,
+      '학기': `${item.semester}학기`,
+      '단원': item.unitTitle,
+      '제출 여부': item.submittedAt ? '제출' : '미제출',
+      '제출일': formatDate(item.submittedAt),
+      '상태': MINDMAP_STATUS_LABELS[item.status],
     });
     const sheet = XLSX.utils.json_to_sheet(rows);
     const book = XLSX.utils.book_new();
@@ -177,12 +259,29 @@ export default function MindmapManagementPage() {
       </section>
 
       <div className="flex gap-2 rounded-2xl bg-white p-2 shadow-sm">
-        <TabButton active={tab === 'works'} onClick={() => setTab('works')}>작품 목록</TabButton>
+        <TabButton active={tab === 'works'} onClick={() => setTab('works')}>작품 관리</TabButton>
         <TabButton active={tab === 'stats'} onClick={() => setTab('stats')}><BarChart3 className="h-4 w-4" /> 통계</TabButton>
+        <TabButton active={tab === 'missing'} onClick={() => setTab('missing')}><Users className="h-4 w-4" /> 미제출 학생</TabButton>
       </div>
 
       {tab === 'stats' ? (
         <Statistics items={items} students={students} />
+      ) : tab === 'missing' ? (
+        <MissingStudentsPanel
+          missing={missingStudents}
+          busy={notifyBusy}
+          onRemind={async (ids) => {
+            setNotifyBusy(true);
+            try {
+              await sendNotifications(ids, '툰마인드 제출 안내', '아직 제출하지 않은 툰마인드가 있어요. 완성해서 선생님께 제출해 보세요!');
+              alert(`${ids.length}명에게 제출 안내를 보냈습니다.`);
+            } catch (cause) {
+              alert(cause instanceof Error ? cause.message : '제출 안내를 보내지 못했습니다.');
+            } finally {
+              setNotifyBusy(false);
+            }
+          }}
+        />
       ) : (
         <>
           <section className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
@@ -218,8 +317,9 @@ export default function MindmapManagementPage() {
               </div>
               {selected.size > 0 && (
                 <div className="flex w-full flex-col gap-2 rounded-xl bg-rose-50 p-3 sm:flex-row">
-                  <input value={bulkFeedback} onChange={(e) => setBulkFeedback(e.target.value)} placeholder="선택 학생에게 보낼 공통 수정 안내" className={`${inputClass} flex-1`} />
-                  <button disabled={bulkBusy || !bulkFeedback.trim()} onClick={requestBulkRevision} className="rounded-xl bg-rose-500 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">선택 학생 수정 요청</button>
+                  <input value={bulkFeedback} onChange={(e) => setBulkFeedback(e.target.value)} placeholder="선택 학생에게 보낼 공통 안내 문구(수정 요청 또는 피드백)" className={`${inputClass} flex-1`} />
+                  <button disabled={bulkBusy || !bulkFeedback.trim()} onClick={requestBulkRevision} className="rounded-xl bg-rose-500 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">수정 요청</button>
+                  <button disabled={bulkBusy || !bulkFeedback.trim()} onClick={sendBulkFeedback} className="flex items-center justify-center gap-1 rounded-xl bg-sky-500 px-4 py-2 text-sm font-bold text-white disabled:opacity-50"><Mail className="h-4 w-4" /> 공통 피드백 전송</button>
                 </div>
               )}
             </div>
@@ -315,6 +415,72 @@ function StatCard({ title, values, suffix }: { title: string; values: readonly (
   </div>;
 }
 
+function MissingStudentsPanel({ missing, busy, onRemind }: {
+  missing: { student: Student; started: boolean; lastActivity: number | null; stage: MindmapProjectStatus | null }[];
+  busy: boolean;
+  onRemind: (ids: string[]) => Promise<void>;
+}) {
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const allIds = missing.map((m) => m.student.id);
+  const allSelected = allIds.length > 0 && picked.size === allIds.length;
+  function toggle(id: string) {
+    setPicked((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+  async function remindSelected() {
+    await onRemind([...picked]);
+    setPicked(new Set());
+  }
+  if (!missing.length) {
+    return <div className="rounded-2xl bg-white p-12 text-center text-sm font-bold text-emerald-500">모든 담당 학생이 툰마인드를 제출했어요. 🎉</div>;
+  }
+  return (
+    <section className="space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white p-4 shadow-sm">
+        <label className="flex items-center gap-2 text-sm font-bold text-slate-600">
+          <input type="checkbox" checked={allSelected} onChange={() => setPicked(allSelected ? new Set() : new Set(allIds))} />
+          {missing.length}명 미제출 · {picked.size}명 선택
+        </label>
+        <button disabled={busy || picked.size === 0} onClick={remindSelected} className="flex items-center gap-1 rounded-xl bg-amber-500 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">
+          <Send className="h-4 w-4" /> 선택 학생에게 제출 안내
+        </button>
+      </div>
+      <div className="hidden overflow-x-auto rounded-2xl bg-white shadow-sm lg:block">
+        <table className="w-full min-w-[720px] text-left text-sm">
+          <thead className="bg-slate-50 text-xs text-slate-500"><tr><th className="p-3"></th><th>학생</th><th>학년/반</th><th>작성 시작</th><th>현재 단계</th><th>마지막 활동</th><th>안내</th></tr></thead>
+          <tbody>{missing.map(({ student, started, lastActivity, stage }) => (
+            <tr key={student.id} className="border-t border-slate-100">
+              <td className="p-3"><input type="checkbox" checked={picked.has(student.id)} onChange={() => toggle(student.id)} /></td>
+              <td className="font-bold text-slate-700">{student.name}</td>
+              <td>{student.className || `${student.grade}학년`}</td>
+              <td>{started ? '시작함' : '미시작'}</td>
+              <td>{stage ? MINDMAP_STATUS_LABELS[stage] : '-'}</td>
+              <td className="text-xs">{lastActivity ? new Date(lastActivity).toLocaleDateString('ko-KR') : '-'}</td>
+              <td><button onClick={() => onRemind([student.id])} disabled={busy} className="rounded-lg bg-amber-100 px-3 py-1.5 text-xs font-bold text-amber-700 disabled:opacity-50">제출 안내</button></td>
+            </tr>
+          ))}</tbody>
+        </table>
+      </div>
+      <div className="grid gap-3 lg:hidden">
+        {missing.map(({ student, started, lastActivity, stage }) => (
+          <article key={student.id} className="rounded-2xl border border-slate-200 p-4">
+            <div className="flex items-center justify-between">
+              <label className="flex items-center gap-2 font-black text-slate-800"><input type="checkbox" checked={picked.has(student.id)} onChange={() => toggle(student.id)} />{student.name}</label>
+              <span className="text-xs text-slate-500">{student.className || `${student.grade}학년`}</span>
+            </div>
+            <p className="mt-2 text-xs text-slate-500">{started ? `작성 중 · ${stage ? MINDMAP_STATUS_LABELS[stage] : ''}` : '아직 작성을 시작하지 않았어요.'}</p>
+            <p className="mt-1 text-xs text-slate-400">마지막 활동 {lastActivity ? new Date(lastActivity).toLocaleDateString('ko-KR') : '-'}</p>
+            <button onClick={() => onRemind([student.id])} disabled={busy} className="mt-3 min-h-11 w-full rounded-xl bg-amber-500 font-bold text-white disabled:opacity-50">제출 안내 보내기</button>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function Select({ label, value, onChange, options, includeAll = true }: { label: string; value: string; onChange: (value: string) => void; options: readonly (readonly [string, string])[]; includeAll?: boolean }) {
   return <select aria-label={label} value={value} onChange={(e) => onChange(e.target.value)} className={inputClass}>
     {includeAll && <option value="all">{label}: 전체</option>}
@@ -330,6 +496,14 @@ function unique(values: readonly (readonly [string, string])[]) { return [...new
 function time(value: string | null) { return value ? new Date(value).getTime() : 0; }
 function formatDate(value: string | null) { return value ? new Date(value).toLocaleDateString('ko-KR') : '-'; }
 function branchCounts(item: TeacherMindmapItem) { return { main: item.nodes.filter((n) => n.type === 'main').length, sub: item.nodes.filter((n) => n.type === 'sub').length }; }
+/** 작품에 귀속 가능한 꿈점수(평가완료 20 + 우수칭찬 30 + 재제출 20×횟수). 단원별 최초완성 80점은 학생/단원 단위라 제외. */
+function dreamPointsForWork(item: TeacherMindmapItem): number {
+  let pts = 0;
+  if (item.status === 'evaluated') pts += 20;
+  if (item.evaluation?.excellentPraise) pts += 30;
+  pts += item.revisionCount * 20;
+  return pts;
+}
 function groupCount(items: TeacherMindmapItem[], key: (item: TeacherMindmapItem) => string): [string, number][] {
   const map = new Map<string, number>(); items.forEach((item) => map.set(key(item), (map.get(key(item)) ?? 0) + 1)); return [...map.entries()];
 }

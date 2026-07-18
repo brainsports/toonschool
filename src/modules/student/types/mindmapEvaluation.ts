@@ -46,6 +46,8 @@ export interface TeacherMindmapItem {
   thumbnailUrl: string | null;
   version: number;
   submittedAt: string | null;
+  evaluatedAt: string | null;
+  revisionCount: number;
   updatedAt: string;
   evaluation: MindmapEvaluation | null;
 }
