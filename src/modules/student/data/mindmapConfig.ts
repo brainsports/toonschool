@@ -272,19 +272,20 @@ export function getIcon(key?: string): MindmapIconDef | null {
   return ICON_MAP[key] ?? null;
 }
 
+export const MAX_CHILD_BRANCHES = 10;
+
 /** 기본 제한(초등학생이 너무 복잡해지지 않도록). */
 export const MINDMAP_LIMITS = {
   maxMainBranches: 8,
   maxSubPerMain: 6,
   maxTotalNodes: 50,
-  /** 중심 주제(depth 0)를 제외한 학생 가지의 최대 단계. */
-  maxDepth: 5,
+  maxDepth: 4,
   maxTitleLength: 30,
   maxDescriptionLength: 200,
 } as const;
 
-/** 자동 배치 기준(좌·우 수평 트리). position 은 노드 중심점.
- *  단계별 크기: 중심(가장 큼) > 1차 main(중간) > 2차 sub(짧음) > 3~5차 detail. */
+/** 자동 배치 기준(좌·우 수평 4단계 트리). position 은 노드 중심점.
+ *  단계별 크기: 중심(가장 큼) > 1차 main(중간) > 2차 sub(짧음) > 3차 detail(긴 가로형 설명 카드). */
 export const LAYOUT = {
   centralSize: { w: 250, h: 124 },
   mainSize: { w: 196, h: 70 }, // 1차: 중간 크기 핵심 주제 카드
@@ -295,7 +296,7 @@ export const LAYOUT = {
   mainDx: 300,
   // 1차→2차 수평 거리(바깥 방향)
   subDx: 250,
-  // 2차 이후 상세 가지 사이의 수평 거리(바깥 방향). 넓은 카드 폭 고려.
+  // 2차→3차(설명카드) 수평 거리(바깥 방향). 넓은 카드 폭 고려.
   detailDx: 300,
   // 같은 부모 안 자식들 사이 세로 간격
   childGapY: 18,

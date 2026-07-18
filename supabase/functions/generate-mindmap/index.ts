@@ -245,10 +245,10 @@ function fullPrompt(ctx: {
 
 중심 주제: "${ctx.centralTopic}"
 
-[구조 규칙 — 반드시 지킨다. 중심 주제는 단계에서 제외하고 자동 생성은 1차 → 2차 → 3차까지만 만든다]
+[구조 규칙 — 반드시 지킨다. 4단계: 중심 → 1차 → 2차 → 3차]
 - 1차 가지(branch): 정확히 ${MIN_BRANCHES}~${MAX_BRANCHES}개. 중심 주제의 서로 다른 핵심 영역. title 4~15자.
 - 각 1차 아래 2차 가지(children): ${MIN_LEAVES}~${MAX_LEAVES}개. 짧은 세부 주제. title 4~16자. (2차에는 description 없음)
-- 각 2차 아래 3차 설명 카드(details): 1~${MAX_DETAILS}개. 하나의 카드에 title 4~16자 + description(한글 50~120자, 2~3줄, 자세하고 쉬운 온전한 문장) + icon을 함께 넣는다. 3차 title은 부모인 2차 title을 그대로 반복하면 안 된다. 제목만 있는 중간 노드를 만들지 않는다. 정의·원리·특징·과정·생활 예시 중 어울리는 것을 구체적으로 설명한다. 어려운 용어는 바로 쉬운 말로 풀어쓴다. 절대 빈 값/“내용 없음”/임시 문구/같은 문장 반복 금지. "${ctx.centralTopic}" 단원에 맞는 사실만.
+- 각 2차 아래 3차 설명 카드(details): 1~${MAX_DETAILS}개. title 4~16자 + description(한글 50~120자, 2~3줄, 자세하고 쉬운 온전한 문장). 정의·원리·특징·과정·생활 예시 중 어울리는 것 구체적 설명. 어려운 용어는 바로 쉬운 말로 풀어쓴다. 절대 빈 값/“내용 없음”/임시 문구/같은 문장 반복 금지. "${ctx.centralTopic}" 단원에 맞는 사실만.
 
 [말투] 초등학생이 혼자 읽어도 이해되는 친절한 말투. 틀리거나 불확실한 사실은 만들지 않는다.
 [icon] 다음 키 중 하나만: idea,sun,water,air,soil,seed,sprout,leaf,flower,fruit,tree,root,star,heart,book,pencil,question,search,lightbulb,home,friends,clock,weather,music,art,number,letter,map,globe,animal,bird,fish,rocket,cloud,rain,fire,snow,magnet,gear,thermometer. 알맞지 않으면 생략.

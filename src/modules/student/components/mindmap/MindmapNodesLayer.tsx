@@ -10,8 +10,8 @@
  */
 import { type CSSProperties, type PointerEvent as ReactPointerEvent, type Ref } from 'react';
 import type { MindmapNode } from '../../types/mindmap';
-import { getIcon, MINDMAP_LIMITS, resolveColor, type MindmapTheme } from '../../data/mindmapConfig';
-import { deriveEdges, getChildren, getDepth, nodeSize, worldSize } from '../../utils/mindmapEngine';
+import { getIcon, resolveColor, type MindmapTheme } from '../../data/mindmapConfig';
+import { deriveEdges, getChildren, nodeSize, worldSize } from '../../utils/mindmapEngine';
 
 export interface MindmapNodesLayerProps {
   nodes: MindmapNode[];
@@ -96,7 +96,6 @@ export default function MindmapNodesLayer(props: MindmapNodesLayerProps) {
           theme={theme}
           viewPos={toView(n.position.x, n.position.y)}
           size={nodeSize(n.type)}
-          depth={getDepth(nodes, n.id)}
           number={numberFor(nodes, n)}
           interactive={interactive}
           selected={selectedId === n.id}
@@ -123,14 +122,13 @@ function numberFor(allNodes: MindmapNode[], node: MindmapNode): number | null {
 }
 
 function NodeCard({
-  node, theme, viewPos, size, depth, number, interactive, selected, editing,
+  node, theme, viewPos, size, number, interactive, selected, editing,
   onSelect, onDoubleClick, onDragStart, onAddChild, onTitleChange, onFinishEditing,
 }: {
   node: MindmapNode;
   theme: MindmapTheme;
   viewPos: { x: number; y: number };
   size: { w: number; h: number };
-  depth: number;
   number: number | null;
   interactive: boolean;
   selected: boolean;
@@ -230,7 +228,7 @@ function NodeCard({
         <div style={{ fontSize: 11, fontWeight: 700, color: palette.thoughtBorder, marginTop: 2 }}>📝 내가 쓴 생각</div>
       )}
 
-      {interactive && selected && node.type !== 'thought' && onAddChild && (
+      {interactive && selected && (node.type === 'central' || node.type === 'main' || node.type === 'sub') && onAddChild && (
         <button
           type="button"
           onPointerDown={(e) => e.stopPropagation()}
@@ -240,9 +238,7 @@ function NodeCard({
             border: `2px solid ${border}`, background: '#fff', color: border, fontSize: 20, fontWeight: 800,
             lineHeight: '24px', cursor: 'pointer', boxShadow: '0 4px 10px rgba(0,0,0,0.15)', zIndex: 20,
           }}
-          aria-label={depth >= MINDMAP_LIMITS.maxDepth ? '마지막 5단계 안내' : '하위 가지 추가'}
-          title={depth >= MINDMAP_LIMITS.maxDepth ? '마지막 5단계예요' : '하위 가지 추가'}
-        >+</button>
+          aria-label="하위 가지 추가" title="하위 가지 추가">+</button>
       )}
     </div>
   );
