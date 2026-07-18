@@ -9,14 +9,23 @@ export interface AiBranch {
   title: string;
   description?: string;
   icon?: string;
-  /** 작은 가지(설명 카드). */
+  /** 2차 가지(짧은 세부 주제). */
   children: AiLeaf[];
+}
+
+/** 3차 설명 카드. */
+export interface AiDetail {
+  title: string;
+  description: string;
+  icon?: string;
 }
 
 export interface AiLeaf {
   title: string;
   description?: string;
   icon?: string;
+  /** 3차 설명 카드(1~3개). */
+  details?: AiDetail[];
 }
 
 /** 전체 생성 응답. */

@@ -296,8 +296,9 @@ export default function StudentMindmapEditorPage() {
         if (res.data!.suggestedDescription) {
           nodes = nodes.map((n) => n.id === node.id ? { ...n, description: clampDescription(res.data!.suggestedDescription!) } : n);
         }
+        const childType: MindmapNode['type'] = node.type === 'main' ? 'sub' : node.type === 'sub' ? 'detail' : 'sub';
         for (const c of res.data!.children || []) {
-          const r = addNode(nodes, { parentId: node.id, type: node.type === 'sub' ? 'sub' : 'sub', title: c.title, description: c.description, icon: c.icon, colorKey: node.colorKey, createdBy: 'ai' });
+          const r = addNode(nodes, { parentId: node.id, type: childType, title: c.title, description: c.description, icon: c.icon, colorKey: node.colorKey, createdBy: 'ai' });
           if (r.node) nodes = r.nodes;
         }
         return { ...p, nodes: autoLayout(nodes) };
@@ -496,7 +497,7 @@ export default function StudentMindmapEditorPage() {
             editingId={editingId}
             onSelectNode={setSelectedId}
             onNodeDoubleClick={(id) => setEditingId(id)}
-            onAddChild={(pid) => { const parent = getNode(project.nodes, pid); addChild(pid, parent?.type === 'central' ? 'main' : 'sub'); }}
+            onAddChild={(pid) => { const parent = getNode(project.nodes, pid); const t = parent?.type === 'central' ? 'main' : parent?.type === 'main' ? 'sub' : 'detail'; addChild(pid, t); }}
             onTitleChange={setTitle}
             onFinishEditing={() => setEditingId(null)}
             onNodeDragStart={onNodeDragStartCb}

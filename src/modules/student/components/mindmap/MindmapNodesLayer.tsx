@@ -113,7 +113,7 @@ export default function MindmapNodesLayer(props: MindmapNodesLayerProps) {
 }
 
 function numberFor(allNodes: MindmapNode[], node: MindmapNode): number | null {
-  if (node.type === 'main' || node.type === 'sub') {
+  if (node.type === 'main' || node.type === 'sub' || node.type === 'detail') {
     const siblings = getChildren(allNodes, node.parentId ?? '').filter((n) => n.type === node.type);
     const idx = siblings.findIndex((n) => n.id === node.id);
     return idx >= 0 ? idx + 1 : null;
@@ -145,7 +145,7 @@ function NodeCard({
   const icon = getIcon(node.icon);
   const isCentral = node.type === 'central';
   const isThought = node.type === 'thought';
-  const isDetail = node.type === 'sub'; // 3차 설명 카드
+  const isDetail = node.type === 'detail'; // 3차 설명 카드(가로형 긴 카드)
   // 3차(설명) 카드는 내용에 맞춰 세로로 자라되, 너무 길면 3줄까지만(말줄임).
   const detailDesc = isDetail ? (node.description || '').trim() : '';
 
@@ -228,7 +228,7 @@ function NodeCard({
         <div style={{ fontSize: 11, fontWeight: 700, color: palette.thoughtBorder, marginTop: 2 }}>📝 내가 쓴 생각</div>
       )}
 
-      {interactive && selected && node.type !== 'thought' && onAddChild && (
+      {interactive && selected && (node.type === 'central' || node.type === 'main' || node.type === 'sub') && onAddChild && (
         <button
           type="button"
           onPointerDown={(e) => e.stopPropagation()}
