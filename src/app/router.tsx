@@ -46,6 +46,7 @@ import FlipbookLandscapePreviewPage from '../modules/student/pages/FlipbookLands
 import TreasureMapPage from '../modules/student/components/dream/TreasureMapPage'
 import StudentMindmapStartPage from '../modules/student/pages/StudentMindmapStartPage'
 import StudentMindmapEditorPage from '../modules/student/pages/StudentMindmapEditorPage'
+import StudentMindmapListPage from '../modules/student/pages/StudentMindmapListPage'
 import SharedMindmapViewerPage from '../modules/student/pages/SharedMindmapViewerPage'
 
 import ResourceInbox from '../modules/resources/pages/ResourceInbox'
@@ -70,6 +71,8 @@ import AdminProfilePage from '../modules/admin-lms/pages/AdminProfilePage'
 import TeacherMessagePage from '../modules/admin-lms/pages/TeacherMessagePage'
 import NotificationWritePage from '../modules/admin-lms/pages/NotificationWritePage'
 import DreamGrowthPage from '../modules/admin-lms/pages/DreamGrowthPage'
+import MindmapManagementPage from '../modules/admin-lms/pages/MindmapManagementPage'
+import MindmapEvaluationPage from '../modules/admin-lms/pages/MindmapEvaluationPage'
 
 // 기관관리자 라우트
 import OrgAdminDashboard from '../modules/admin-org/pages/OrgAdminDashboard'
@@ -140,6 +143,7 @@ export default function AppRouter() {
         <Route path="/student/dream-garden" element={<StudentDreamGardenPage />} />
         <Route path="/student/treasure-map" element={<TreasureMapPage />} />
         <Route path="/student/mindmap" element={<StudentMindmapStartPage />} />
+        <Route path="/student/mindmaps" element={<StudentMindmapListPage />} />
         <Route path="/student/mindmap/edit/:projectId" element={<StudentMindmapEditorPage />} />
       </Route>
       <Route path="/book/:slug" element={<SharedComicViewerPage />} />
@@ -155,6 +159,8 @@ export default function AppRouter() {
         <Route path="classes" element={<ClassManagementPage />} />
         <Route path="students" element={<AdminStudentManagementPage />} />
         <Route path="dream-growth" element={<DreamGrowthPage />} />
+        <Route path="mindmaps" element={<MindmapManagementPage />} />
+        <Route path="mindmaps/:mindmapId" element={<MindmapEvaluationPage />} />
         <Route path="assessments" element={<AssessmentPage />} />
         <Route path="teacher-message" element={<TeacherMessagePage />} />
         <Route path="notifications/write" element={<NotificationWritePage />} />

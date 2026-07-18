@@ -22,6 +22,7 @@ const getMenuItems = (role: string) => {
         { label: '학급관리', path: '/admin/lms/classes' },
         { label: '학생관리', path: '/admin/lms/students' },
         { label: '성장 현황', path: '/admin/lms/dream-growth' },
+        { label: '마인드맵 관리', path: '/admin/lms/mindmaps' },
         { label: '평가관리', path: '/admin/lms/assessments' },
         { label: '선생님 말씀', path: '/admin/lms/teacher-message' },
         { label: '알림함 쓰기', path: '/admin/lms/notifications/write' },

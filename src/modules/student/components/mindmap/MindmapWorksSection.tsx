@@ -5,13 +5,14 @@
  */
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Pencil, Eye, Share2, Trash2, Image as ImageIcon, Plus, CheckCircle2 } from 'lucide-react';
+import { Pencil, Eye, Share2, Trash2, Image as ImageIcon, Plus, CheckCircle2, Send, MessageCircle } from 'lucide-react';
 import { listMyMindmaps, deleteMindmap, getMindmap, type MindmapListItem } from '../../services/mindmapService';
 import { exportPng } from '../../utils/mindmapExport';
 import MindmapArtwork, { POSTER_W, POSTER_H } from './MindmapArtwork';
 import MindmapDialog from './MindmapDialog';
 import MindmapToast from './MindmapToast';
 import type { MindmapProject } from '../../types/mindmap';
+import { MINDMAP_STATUS_LABELS, getMindmapEvaluations, scoreMessage, submitMindmapForReview } from '../../services/mindmapEvaluationService';
 
 export default function MindmapWorksSection({ studentId }: { studentId: string }) {
   const navigate = useNavigate();
@@ -78,6 +79,29 @@ export default function MindmapWorksSection({ studentId }: { studentId: string }
     setPreview(p);
   };
 
+  const handleSubmit = async (item: MindmapListItem) => {
+    const project = await getMindmap(item.id);
+    if (!project) return;
+    if (!window.confirm('마인드맵을 선생님께 제출할까요?\n\n제출한 뒤에도 선생님이 수정 요청을 보내면 다시 고칠 수 있어요.')) return;
+    try {
+      await submitMindmapForReview(project);
+      setToast({ message: item.status === 'revision_requested' ? '다시 제출했어요!' : '선생님께 제출했어요!', tone: 'success' });
+      refresh();
+    } catch (cause) {
+      setToast({ message: cause instanceof Error ? cause.message : '제출하지 못했어요.', tone: 'error' });
+    }
+  };
+
+  const handleFeedback = async (item: MindmapListItem) => {
+    try {
+      const latest = (await getMindmapEvaluations(item.id))[0];
+      if (!latest) return setToast({ message: '선생님이 확인하고 있어요.', tone: 'info' });
+      const nodes = latest.nodeFeedback.map((entry) => `• ${entry.nodeTitle}: ${entry.content}`).join('\n');
+      alert(`${scoreMessage(latest.totalScore)} · ${latest.totalScore}점\n\n${latest.teacherFeedback || '선생님이 작품을 확인했어요.'}${nodes ? `\n\n가지별 피드백\n${nodes}` : ''}`);
+    } catch {
+      setToast({ message: '피드백을 불러오지 못했어요.', tone: 'error' });
+    }
+  };
   return (
     <div className="bg-white rounded-[1.5rem] p-6 border border-slate-100 shadow-sm flex flex-col gap-4">
       <div className="flex items-center justify-between">
@@ -85,8 +109,8 @@ export default function MindmapWorksSection({ studentId }: { studentId: string }
           <div className="p-1.5 bg-purple-50 text-purple-500 rounded-lg text-base">🧠</div>
           <h3 className="font-bold text-slate-800">나의 마인드맵</h3>
         </div>
-        <button onClick={() => navigate('/student/mindmap')} className="text-xs font-bold text-purple-500 hover:bg-purple-50 px-3 py-1.5 rounded-full flex items-center gap-1 transition-colors">
-          <Plus className="w-3 h-3" /> 만들기
+        <button onClick={() => navigate('/student/mindmaps')} className="text-xs font-bold text-purple-500 hover:bg-purple-50 px-3 py-1.5 rounded-full flex items-center gap-1 transition-colors">
+          모두 보기
         </button>
       </div>
 
@@ -112,17 +136,19 @@ export default function MindmapWorksSection({ studentId }: { studentId: string }
                 )}
                 <span className="absolute top-1.5 left-1.5 text-[10px] font-bold text-white bg-purple-500 px-1.5 py-0.5 rounded">마인드맵</span>
                 {it.isPublic && <span className="absolute top-1.5 right-1.5 text-[10px] font-bold text-white bg-emerald-500 px-1.5 py-0.5 rounded flex items-center gap-0.5"><CheckCircle2 className="w-2.5 h-2.5" />공유중</span>}
-                {it.status === 'completed' && !it.isPublic && <span className="absolute top-1.5 right-1.5 text-[10px] font-bold text-white bg-emerald-500 px-1.5 py-0.5 rounded">완성</span>}
-                {it.status !== 'completed' && <span className="absolute bottom-1.5 right-1.5 text-[10px] font-bold text-slate-600 bg-white/80 px-1.5 py-0.5 rounded">만드는 중</span>}
+                <span className="absolute bottom-1.5 right-1.5 text-[10px] font-bold text-slate-600 bg-white/90 px-1.5 py-0.5 rounded">{MINDMAP_STATUS_LABELS[it.status]}</span>
               </div>
               <div className="p-2 flex flex-col gap-1">
                 <p className="text-xs font-bold text-slate-700 truncate">{it.title}</p>
-                <p className="text-[10px] text-slate-400 truncate">{it.subject}{it.unitTitle ? ` · ${it.unitTitle}` : ''}</p>
+                <p className="text-[10px] text-slate-400 truncate">{it.grade}학년 · {it.semester}학기 · {it.subject}{it.unitTitle ? ` · ${it.unitTitle}` : ''}</p>
+                <p className="text-[10px] text-slate-400 truncate">{it.creationMethod === 'ai' ? 'AI 도움' : '직접 만들기'} · {new Date(it.updatedAt).toLocaleDateString('ko-KR')}</p>
                 <div className="flex items-center gap-1 mt-1">
                   <IconBtn title="보기" onClick={() => openPreview(it.id)}><Eye className="w-3.5 h-3.5" /></IconBtn>
-                  <IconBtn title="수정" onClick={() => navigate(`/student/mindmap/edit/${it.id}`)}><Pencil className="w-3.5 h-3.5" /></IconBtn>
-                  <IconBtn title="친구에게 공유" onClick={() => handleShare(it)}><Share2 className="w-3.5 h-3.5" /></IconBtn>
-                  <IconBtn title="삭제" danger onClick={() => handleDelete(it)}><Trash2 className="w-3.5 h-3.5" /></IconBtn>
+                  {['draft', 'completed', 'revision_requested'].includes(it.status) && <IconBtn title="수정하기" onClick={() => navigate(`/student/mindmap/edit/${it.id}`)}><Pencil className="w-3.5 h-3.5" /></IconBtn>}
+                  {['completed', 'revision_requested'].includes(it.status) && <IconBtn title="선생님께 제출하기" onClick={() => void handleSubmit(it)}><Send className="w-3.5 h-3.5" /></IconBtn>}
+                  {['evaluated', 'revision_requested'].includes(it.status) && <IconBtn title="선생님 피드백 확인" onClick={() => void handleFeedback(it)}><MessageCircle className="w-3.5 h-3.5" /></IconBtn>}
+                  {it.status === 'completed' && <IconBtn title="친구에게 공유" onClick={() => handleShare(it)}><Share2 className="w-3.5 h-3.5" /></IconBtn>}
+                  {['draft', 'completed'].includes(it.status) && <IconBtn title="삭제" danger onClick={() => handleDelete(it)}><Trash2 className="w-3.5 h-3.5" /></IconBtn>}
                 </div>
               </div>
             </div>

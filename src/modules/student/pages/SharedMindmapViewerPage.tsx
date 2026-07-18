@@ -90,6 +90,7 @@ export default function SharedMindmapViewerPage() {
     id: data!.id, studentId: '', organizationId: null, classId: null, studentName: data!.student_name,
     title: data!.title, grade: 0, subject: data!.subject, semester: 1, unitId: '', unitTitle: data!.unit_title,
     centralTopic: data!.central_topic, themeId: data!.theme_id, layoutType: data!.layout_type, status: 'completed',
+    creationMethod: 'direct', submittedAt: null, evaluatedAt: null, resubmittedAt: null, revisionCount: 0, lastRenderOk: true,
     nodes: (data!.nodes ?? []) as MindmapProject['nodes'], edges: (data!.edges ?? []) as MindmapProject['edges'],
     thumbnailUrl: null, shareSlug: slug ?? null, isPublic: true, sharedAt: null, shareRevokedAt: null,
     shareThumbnailUrl: data!.share_thumbnail_url, createdAt: data!.created_at, updatedAt: data!.created_at, version: 1,
