@@ -1,5 +1,5 @@
 /**
- * 마인드맵 시작 화면.
+ * 툰마인드 시작 화면.
  * 순서: 학년 → 학기 → 과목 → 단원 → 중심 주제 → 제작 방식(직접/AI).
  * 기존 커리큘럼 데이터(studentCurriculumService)를 재사용하고 중복 생성하지 않는다.
  */
@@ -137,7 +137,7 @@ export default function StudentMindmapStartPage() {
         unitId: major.id,
         unitTitle,
         centralTopic: centralTopic.trim(),
-        title: `${centralTopic.trim()} 마인드맵`,
+        title: `${centralTopic.trim()} 툰마인드`,
       });
 
       if (mode === 'ai') {
@@ -171,7 +171,7 @@ export default function StudentMindmapStartPage() {
         <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-6 md:p-8">
           <div className="flex items-center gap-2 mb-1">
             <div className="w-10 h-10 rounded-2xl bg-pink-100 text-pink-500 flex items-center justify-center text-xl">🧠</div>
-            <h1 className="text-xl md:text-2xl font-black text-slate-800">마인드맵 만들기</h1>
+            <h1 className="text-xl md:text-2xl font-black text-slate-800">툰마인드 만들기</h1>
           </div>
           <p className="text-slate-500 font-bold mb-6">어떤 내용을 생각지도로 정리해 볼까요?</p>
 
@@ -237,7 +237,7 @@ export default function StudentMindmapStartPage() {
               disabled={!major}
               className="w-full border-2 border-slate-200 focus:border-pink-300 rounded-xl px-4 py-3 font-bold text-slate-700 focus:outline-none disabled:bg-slate-50"
             />
-            <div className="text-[11px] text-slate-400 mt-1">마인드맵 한가운데 들어갈 주제를 적어요. 추천을 고르거나 직접 써도 돼요.</div>
+            <div className="text-[11px] text-slate-400 mt-1">툰마인드 한가운데 들어갈 주제를 적어요. 추천을 고르거나 직접 써도 돼요.</div>
 
             {/* AI 중심 주제 추천 */}
             {major && topicsLoading && (
@@ -299,9 +299,9 @@ export default function StudentMindmapStartPage() {
             className="mt-6 w-full py-3.5 rounded-2xl bg-pink-500 text-white font-black text-lg hover:bg-pink-600 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {busy ? (
-              <><Sparkles className="w-5 h-5 animate-pulse" /> 마인드맵 시작하는 중...</>
+              <><Sparkles className="w-5 h-5 animate-pulse" /> 툰마인드 시작하는 중...</>
             ) : (
-              <>마인드맵 시작하기 <ChevronRight className="w-5 h-5" /></>
+              <>툰마인드 시작하기 <ChevronRight className="w-5 h-5" /></>
             )}
           </button>
           {mode === 'ai' && <p className="text-[11px] text-slate-400 text-center mt-2">AI 생성은 서버 배포 후 실제 동작하며, 지금은 안전한 예시로 미리 볼 수 있어요.</p>}

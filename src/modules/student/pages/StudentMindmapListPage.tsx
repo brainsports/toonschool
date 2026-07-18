@@ -16,12 +16,12 @@ export default function StudentMindmapListPage() {
               <ChevronLeft className="h-5 w-5" />
             </button>
             <div>
-              <h1 className="text-2xl font-black text-slate-800">내 마인드맵</h1>
+              <h1 className="text-2xl font-black text-slate-800">내 툰마인드</h1>
               <p className="text-sm font-bold text-slate-500">만든 작품과 선생님 피드백을 한곳에서 살펴봐요.</p>
             </div>
           </div>
           <button onClick={() => navigate('/student/mindmap')} className="flex min-h-12 items-center gap-2 rounded-full bg-purple-500 px-6 font-black text-white shadow-lg shadow-purple-200">
-            <Plus className="h-5 w-5" /> 마인드맵 만들기
+            <Plus className="h-5 w-5" /> 툰마인드 만들기
           </button>
         </header>
         <MindmapWorksSection studentId={profile?.id ?? user?.id ?? ''} />

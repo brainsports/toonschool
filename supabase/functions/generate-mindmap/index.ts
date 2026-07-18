@@ -1,4 +1,4 @@
-// 마인드맵 AI 생성 Edge Function.
+// 툰마인드 AI 생성 Edge Function.
 // React 프런트엔드 → (이 함수) → AI API. 별도 백엔드/워커/Vercel Route 없음.
 //
 // 책임: JWT 인증 → 입력 검증 → Gemini 텍스트(JSON) 생성 → 응답 검증 → 반환.
@@ -40,14 +40,14 @@ const fail = (message: string, code: string, extra: Record<string, unknown> = {}
 const userMessage = (code: string): string => {
   switch (code) {
     case 'UNAUTHORIZED': return '로그인이 만료되었어요. 다시 로그인해 주세요.'
-    case 'INVALID_INPUT': return '마인드맵을 만들 정보가 부족해요. 학년·과목·단원을 다시 확인해 주세요.'
+    case 'INVALID_INPUT': return '툰마인드를 만들 정보가 부족해요. 학년·과목·단원을 다시 확인해 주세요.'
     case 'RATE_LIMITED': return '잠시 요청이 많아요. 잠시 후 다시 시도해 주세요.'
     case 'TIMEOUT': return 'AI 가 생각하는 시간이 조금 걸렸어요. 다시 시도해 주세요.'
     case 'BAD_MODEL_OUTPUT': return 'AI 가 올바른 형태로 답하지 못했어요. 다시 시도해 주세요.'
     case 'PROVIDER_5XX':
     case 'PROVIDER_ERROR':
     case 'GEMINI_AUTH': return 'AI 가 응답하지 못했어요. 잠시 후 다시 시도해 주세요.'
-    default: return '마인드맵을 만드는 중 문제가 발생했어요. 잠시 후 다시 시도해 주세요.'
+    default: return '툰마인드를 만드는 중 문제가 발생했어요. 잠시 후 다시 시도해 주세요.'
   }
 }
 
@@ -241,7 +241,7 @@ function fullPrompt(ctx: {
   const gradeTxt = ctx.grade ? `초등학교 ${ctx.grade}학년` : '초등학교'
   const subjTxt = ctx.subject ? `${ctx.subject} 과목` : ''
   const unitTxt = ctx.unitTitle ? `"${ctx.unitTitle}" 단원` : ''
-  return `당신은 초등학교 ${gradeTxt} 학생을 돕는 친절하고 꼼꼼한 선생님이다. ${[subjTxt, unitTxt].filter(Boolean).join(' ')}에서 배우는 내용으로 마인드맵을 만들어 준다.
+  return `당신은 초등학교 ${gradeTxt} 학생을 돕는 친절하고 꼼꼼한 선생님이다. ${[subjTxt, unitTxt].filter(Boolean).join(' ')}에서 배우는 내용으로 툰마인드를 만들어 준다.
 
 중심 주제: "${ctx.centralTopic}"
 
@@ -264,7 +264,7 @@ function topicsPrompt(ctx: {
   const subjTxt = ctx.subject ? `${ctx.subject} 과목` : ''
   const unitTxt = ctx.unitTitle ? `"${ctx.unitTitle}" 단원` : ''
   const subTxt = ctx.subunitTitle ? `(작은 단원: "${ctx.subunitTitle}")` : ''
-  return `당신은 초등학교 ${gradeTxt} 학생을 돕는 선생님이다. ${[subjTxt, unitTxt, subTxt].filter(Boolean).join(' ')}에서 마인드맵의 중심 주제로 쓰기 좋은 질문/주제를 ${TOPICS_MIN}~${TOPICS_MAX}개 추천해 준다.
+  return `당신은 초등학교 ${gradeTxt} 학생을 돕는 선생님이다. ${[subjTxt, unitTxt, subTxt].filter(Boolean).join(' ')}에서 툰마인드의 중심 주제로 쓰기 좋은 질문/주제를 ${TOPICS_MIN}~${TOPICS_MAX}개 추천해 준다.
 
 규칙:
 - 반드시 이 단원과 직접 관련된 구체적인 주제만. 단원과 관련 없는 추상적·일반적 주제 금지.

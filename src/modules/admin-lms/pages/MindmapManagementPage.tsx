@@ -48,7 +48,7 @@ export default function MindmapManagementPage() {
       setItems(works);
       setStudents(roster);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : '마인드맵 목록을 불러오지 못했습니다.');
+      setError(cause instanceof Error ? cause.message : '툰마인드 목록을 불러오지 못했습니다.');
     } finally {
       setLoading(false);
     }
@@ -147,13 +147,13 @@ export default function MindmapManagementPage() {
     const sheet = XLSX.utils.json_to_sheet(rows);
     const book = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(book, sheet, mode === 'results' ? '평가 결과' : '제출 현황');
-    XLSX.writeFile(book, mode === 'results' ? '마인드맵_평가결과.xlsx' : '마인드맵_제출현황.xlsx');
+    XLSX.writeFile(book, mode === 'results' ? '툰마인드_평가결과.xlsx' : '툰마인드_제출현황.xlsx');
   }
 
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-2xl font-black text-slate-800">마인드맵 관리</h1>
+        <h1 className="text-2xl font-black text-slate-800">툰마인드 관리</h1>
         <p className="mt-1 text-sm text-slate-500">담당 학급의 제출 작품만 안전하게 확인하고 평가할 수 있습니다.</p>
       </header>
 
@@ -225,7 +225,7 @@ export default function MindmapManagementPage() {
             </div>
             {loading ? <State text="담당 학급 작품을 불러오는 중입니다..." /> :
              error ? <State text={error} error /> :
-             filtered.length === 0 ? <State text="조건에 맞는 마인드맵이 없습니다." /> :
+             filtered.length === 0 ? <State text="조건에 맞는 툰마인드가 없습니다." /> :
              <MindmapList items={filtered} selected={selected} setSelected={setSelected} onOpen={(id) => navigate(`/admin/lms/mindmaps/${id}`)} />}
           </section>
         </>

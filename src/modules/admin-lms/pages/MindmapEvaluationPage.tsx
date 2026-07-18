@@ -121,13 +121,13 @@ export default function MindmapEvaluationPage() {
     else await printMindmap(artRef.current, project.title);
   }
 
-  if (loading) return <PageState text="마인드맵과 평가 이력을 불러오는 중입니다..." />;
+  if (loading) return <PageState text="툰마인드와 평가 이력을 불러오는 중입니다..." />;
   if (error || !project || !item) return <PageState text={error || '작품이 없습니다.'} error />;
 
   return (
     <div className="space-y-5">
       <button onClick={() => navigate('/admin/lms/mindmaps')} className="flex items-center gap-1 text-sm font-bold text-slate-500 hover:text-pink-500">
-        <ChevronLeft className="h-4 w-4" /> 마인드맵 관리로
+        <ChevronLeft className="h-4 w-4" /> 툰마인드 관리로
       </button>
       <header className="rounded-2xl bg-white p-5 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-3">

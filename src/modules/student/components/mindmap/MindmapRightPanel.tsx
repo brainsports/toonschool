@@ -1,5 +1,5 @@
 /**
- * 마인드맵 편집기 오른쪽 패널: 선택한 노드의 세부 편집.
+ * 툰마인드 편집기 오른쪽 패널: 선택한 노드의 세부 편집.
  * 선택이 없으면 작품 정보와 사용 안내를 표시.
  */
 import type { MindmapNode, MindmapProject } from '../../types/mindmap';

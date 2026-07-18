@@ -1,5 +1,5 @@
 /**
- * 마인드맵 서비스 계층.
+ * 툰마인드 서비스 계층.
  *
  * 영속 전략(운영 마이그레이션 미적용 상태에서도 로컬 검증이 끝까지 동작하도록):
  *  1차: Supabase `mindmap_projects` 테이블(운영 배포 후 정동작).
@@ -284,7 +284,7 @@ export function createBlankProject(input: CreateMindmapInput): MindmapProject {
     organizationId: input.organizationId ?? null,
     classId: input.classId ?? null,
     studentName: input.studentName ?? null,
-    title: input.title || `${input.centralTopic || input.unitTitle || '마인드맵'}`,
+    title: input.title || `${input.centralTopic || input.unitTitle || '툰마인드'}`,
     grade: input.grade,
     gradeName: input.gradeName,
     subject: input.subject,
@@ -630,7 +630,7 @@ export interface AiValidationReport {
  *  - 1차(branches) 4~6개
  *  - 각 1차에 2차(children) 2개 이상
  *  - 각 1차에 3차(details) 설명이 1개 이상(문장 길이 20자 이상)
- * 구조가 심하게 미달이면 ok=false → 빈 마인드맵 대신 "다시 시도" 안내.
+ * 구조가 심하게 미달이면 ok=false → 빈 툰마인드 대신 "다시 시도" 안내.
  */
 export function validateAiFull(resp: AiFullMindmapResponse | null | undefined): AiValidationReport {
   const issues: string[] = [];

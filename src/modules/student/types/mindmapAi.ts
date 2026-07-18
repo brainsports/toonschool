@@ -1,5 +1,5 @@
 /**
- * 마인드맵 AI 생성 응답 계약(Edge Function ↔ 프런트).
+ * 툰마인드 AI 생성 응답 계약(Edge Function ↔ 프런트).
  * Edge Function(supabase/functions/generate-mindmap)이 이 형태의 JSON 을 반환한다.
  * 프런트는 응답을 검증한 뒤 노드로 변환한다.
  */

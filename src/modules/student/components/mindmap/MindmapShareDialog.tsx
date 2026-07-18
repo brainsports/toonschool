@@ -42,8 +42,8 @@ export default function MindmapShareDialog(props: MindmapShareDialogProps) {
     if (!shareUrl) return;
     try {
       await navigator.share({
-        title: `${project.title} - 툰스쿨 마인드맵`,
-        text: `${project.subject} ${project.unitTitle ? project.unitTitle + ' ' : ''}마인드맵을 만들었어요. 구경해 줘!`,
+        title: `${project.title} - 툰마인드 | 툰스쿨`,
+        text: `${project.subject} ${project.unitTitle ? project.unitTitle + ' ' : ''}툰마인드를 만들었어요. 구경해 줘!`,
         url: shareUrl,
       });
     } catch {
@@ -76,7 +76,7 @@ export default function MindmapShareDialog(props: MindmapShareDialogProps) {
           <Share2 className="w-5 h-5 text-pink-500" />
           <h2 className="text-lg font-black text-slate-800">친구에게 공유하기</h2>
         </div>
-        <p className="text-sm text-slate-500 mb-4">완성된 마인드맵을 친구에게 보여줘요. 친구는 로그인 없이 볼 수 있어요.</p>
+        <p className="text-sm text-slate-500 mb-4">완성된 툰마인드를 친구에게 보여줘요. 친구는 로그인 없이 볼 수 있어요.</p>
 
         {draft && (
           <div className="rounded-xl bg-amber-50 border border-amber-200 p-3 text-sm text-amber-700 flex gap-2 mb-4">
@@ -140,7 +140,7 @@ export default function MindmapShareDialog(props: MindmapShareDialogProps) {
         onConfirm={handleRevoke}
         onClose={() => setConfirmRevoke(false)}
       >
-        <p>친구가 가진 링크로 더 이상 이 마인드맵을 볼 수 없어요. 나중에 다시 공유할 수 있어요.</p>
+        <p>친구가 가진 링크로 더 이상 이 툰마인드를 볼 수 없어요. 나중에 다시 공유할 수 있어요.</p>
       </MindmapDialog>
     </div>
   );

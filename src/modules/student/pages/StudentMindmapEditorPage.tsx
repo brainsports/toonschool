@@ -1,5 +1,5 @@
 /**
- * 학생 마인드맵 편집 페이지.
+ * 학생 툰마인드 편집 페이지.
  *  - 프로젝트 로드(또는 신규 생성) → 자동 저장 · 실행 취소/다시 실행 · 노드 편집.
  *  - 좌측 도구 · 중앙 캔버스(이동/확대/드래그) · 우측 노드 편집 패널.
  *  - 완성 · 친구 공유 · PNG/PDF/인쇄.
@@ -271,7 +271,7 @@ export default function StudentMindmapEditorPage() {
         const finalNodes = autoLayout([...aiNodes, ...studentThoughts.map((t) => ({ ...t, parentId: centralId }))]);
         return { ...p, nodes: finalNodes, centralTopic: res.data!.centralTopic || p.centralTopic, creationMethod: 'ai' as const };
       });
-      setToast({ message: 'AI가 마인드맵을 만들었어요.', tone: 'success' });
+      setToast({ message: 'AI가 툰마인드를 만들었어요.', tone: 'success' });
       setTimeout(() => canvasRef.current?.fit(), 80);
     } finally {
       setAiLoading(false);
@@ -385,7 +385,7 @@ export default function StudentMindmapEditorPage() {
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="text-center">
           <div className="text-4xl mb-2 animate-bounce">🧠</div>
-          <p className="text-slate-500 font-bold">마인드맵을 불러오는 중...</p>
+          <p className="text-slate-500 font-bold">툰마인드를 불러오는 중...</p>
         </div>
       </div>
     );

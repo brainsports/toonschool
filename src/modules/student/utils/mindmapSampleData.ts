@@ -36,7 +36,7 @@ export function buildSampleTopics(params: {
   ];
 }
 
-/** 주제 맥락에 맞는 풍성한 예시 마인드맵(1차 4~6, 2차 2~4, 설명 50~200자). */
+/** 주제 맥락에 맞는 풍성한 예시 툰마인드(1차 4~6, 2차 2~4, 설명 50~200자). */
 export function buildSampleMindmap(params: {
   centralTopic: string;
   subject?: string;
