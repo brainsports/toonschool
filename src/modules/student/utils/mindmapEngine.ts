@@ -433,3 +433,69 @@ export function deriveEdges(nodes: MindmapNode[]): DerivedEdge[] {
   }
   return edges;
 }
+
+// ---------------------------------------------------------------------------
+// 빈/placeholder 노드 정제
+// ---------------------------------------------------------------------------
+const PLACEHOLDER_TEXT = new Set([
+  '내용 없음', '설명 없음', '제목 없음', '설명을 입력해 보세요',
+  '새로운 생각을 적어 보세요', '내용을 입력해 주세요', '새 가지', '새 가지입니다',
+]);
+
+/** placeholder/임시 문구 여부(빈 문자열·공백·'내용 없음' 등). */
+export function isPlaceholderText(s: string | null | undefined): boolean {
+  if (s == null) return true;
+  const t = String(s).trim();
+  if (t.length === 0) return true;
+  if (PLACEHOLDER_TEXT.has(t)) return true;
+  return false;
+}
+
+/**
+ * 빈/placeholder 노드를 안전하게 제거한다.
+ *  - central 은 제목이 비어도 유지(중심은 필수).
+ *  - central 이 아닌 노드는 제목이 placeholder 면 제거 → 하위 고아도 함께 제거(cascade).
+ *  - 3차(sub) 설명만 비어있고 제목은 유효하면 노드는 유지(설명은 빈 문자열로 정리).
+ * 기존 정상 데이터는 건드리지 않고, 임시/빈 노드만 걸러낸다(원본 배열 변경 X).
+ */
+export function filterEmptyNodes(input: MindmapNode[]): MindmapNode[] {
+  if (input.length === 0) return input;
+  const remove = new Set<string>();
+  // 제목이 placeholder 인 비-중심 노드를 제거 대상으로.
+  for (const n of input) {
+    if (n.type === 'central') continue;
+    if (isPlaceholderText(n.title)) remove.add(n.id);
+  }
+  // cascade: 제거되는 노드의 자손도 함께 제거.
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const n of input) {
+      if (remove.has(n.id)) continue;
+      if (n.parentId && remove.has(n.parentId)) { remove.add(n.id); changed = true; }
+    }
+  }
+  if (remove.size === 0) {
+    // 제목은 유효하지만 3차 설명에 placeholder 문구가 있으면 빈 문자열로 정리.
+    return input.map((n) => (n.type === 'sub' && isPlaceholderText(n.description) ? { ...n, description: '' } : n));
+  }
+  const kept = input.filter((n) => !remove.has(n.id));
+  return kept.map((n) => (n.type === 'sub' && isPlaceholderText(n.description) ? { ...n, description: '' } : n));
+}
+
+/**
+ * 기존 저장 데이터가 구형 위/아래 방사형 배치인지 판별.
+ * central 의 자식(main) 중 x≈0(위/아래) 이 하나라도 있으면 재배치 대상.
+ */
+export function hasOldVerticalLayout(nodes: MindmapNode[]): boolean {
+  const central = nodes.find((n) => n.type === 'central');
+  if (!central) return false;
+  const mains = nodes.filter((n) => n.parentId === central.id && n.type === 'main');
+  if (mains.length === 0) return false;
+  return mains.some((m) => Math.abs(m.position.x) < 60);
+}
+
+/** 안전하게 재배치가 필요하면 autoLayout 재실행, 아니면 원본 유지(사용자 드래그 존중). */
+export function relayoutIfNeeded(nodes: MindmapNode[]): MindmapNode[] {
+  return hasOldVerticalLayout(nodes) ? autoLayout(nodes) : nodes;
+}

@@ -12,7 +12,7 @@ import type { MindmapProject } from '../../types/mindmap';
 import { worldSize } from '../../utils/mindmapEngine';
 import { getTheme } from '../../data/mindmapConfig';
 import MindmapNodesLayer from './MindmapNodesLayer';
-import { MindmapDecorations, MindmapCharacterHints } from './MindmapArtwork';
+import { MindmapDecorations } from './MindmapArtwork';
 
 export interface MindmapCanvasHandle {
   fit: () => void;
@@ -178,10 +178,9 @@ export default function MindmapCanvasHost(props: MindmapCanvasHostProps) {
       onPointerMove={onViewportPointerMove}
       onWheel={onWheel}
     >
-      {/* 화면 고정 장식 + 캐릭터 안내 */}
+      {/* 화면 고정 배경 장식만(캐릭터 안내는 캔버스 밖 패널로 이동) */}
       <div className="absolute inset-0 pointer-events-none">
         <MindmapDecorations theme={theme} />
-        <MindmapCharacterHints />
       </div>
 
       {/* 노드+연결선(pan/zoom transform) */}

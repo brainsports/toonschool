@@ -19,7 +19,7 @@ const MIN_BRANCHES = 4
 const MAX_BRANCHES = 6
 const MIN_LEAVES = 2
 const MAX_LEAVES = 4
-const DESC_MAX = 200
+const DESC_MAX = 120
 const TOPICS_MIN = 3
 const TOPICS_MAX = 5
 
@@ -243,13 +243,13 @@ function fullPrompt(ctx: {
 - 각 큰 가지 아래 작은 가지(children)를 ${MIN_LEAVES}~${MAX_LEAVES}개 만든다.
 - 큰 가지 title: 4~15자, 짧고 명확.
 - 작은 가지 title: 4~20자, 짧은 구.
-- 작은 가지 description: 한글 기준 50~200자의 자세하고 쉬운 온전한 문장. 정의·원리·특징·과정·생활 예시 중 어울리는 것을 구체적으로 설명. 어려운 교과 용어가 나오면 곧바로 쉬운 말로 풀어쓴다. 절대 빈 값/“내용 없음”/임시 문구/같은 문장 반복 금지. "${ctx.centralTopic}" 단원에 맞는 사실만.
+- 작은 가지 description: 한글 기준 50~120자의 자세하고 쉬운 온전한 문장(2~3줄 분량). 정의·원리·특징·과정·생활 예시 중 어울리는 것을 구체적으로 설명. 어려운 교과 용어가 나오면 곧바로 쉬운 말로 풀어쓴다. 절대 빈 값/“내용 없음”/임시 문구/같은 문장 반복 금지. "${ctx.centralTopic}" 단원에 맞는 사실만.
 
 [말투] 초등학생이 혼자 읽어도 이해되는 친절한 말투. 틀리거나 불확실한 사실은 만들지 않는다.
 [icon] 다음 키 중 하나만: idea,sun,water,air,soil,seed,sprout,leaf,flower,fruit,tree,root,star,heart,book,pencil,question,search,lightbulb,home,friends,clock,weather,music,art,number,letter,map,globe,animal,bird,fish,rocket,cloud,rain,fire,snow,magnet,gear,thermometer. 알맞지 않으면 생략.
 
 반드시 다음 JSON 형태로만 응답한다(JSON 외 설명·코드블록 금지):
-{"centralTopic":"${ctx.centralTopic}","branches":[{"title":"큰가지제목","icon":"아이콘키","description":"한 줄 요약","children":[{"title":"작은가지제목","icon":"아이콘키","description":"50~200자의 자세하고 쉬운 설명"}]}]}`
+{"centralTopic":"${ctx.centralTopic}","branches":[{"title":"큰가지제목","icon":"아이콘키","description":"한 줄 요약","children":[{"title":"작은가지제목","icon":"아이콘키","description":"50~120자의 자세하고 쉬운 설명"}]}]}`
 }
 
 function topicsPrompt(ctx: {

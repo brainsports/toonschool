@@ -182,7 +182,7 @@ function PreviewModal({ project, onClose, onEdit }: { project: MindmapProject; o
         </div>
         <div className="flex-1 flex items-center justify-center p-4 bg-slate-100 overflow-hidden">
           <div className="w-full" style={{ maxWidth: POSTER_W }}>
-            <MindmapArtwork project={project} themeId={project.themeId} mode="fixed" width={POSTER_W} height={POSTER_H} showCharacters artworkRef={ref} />
+            <MindmapArtwork project={project} themeId={project.themeId} mode="fixed" width={POSTER_W} height={POSTER_H} artworkRef={ref} />
           </div>
         </div>
       </div>

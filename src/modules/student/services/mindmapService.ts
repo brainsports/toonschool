@@ -26,7 +26,7 @@ import {
   type AiPartialRequest,
   type AiTopicsResponse,
 } from '../types/mindmapAi';
-import { newId, autoLayout } from '../utils/mindmapEngine';
+import { newId, autoLayout, filterEmptyNodes, relayoutIfNeeded } from '../utils/mindmapEngine';
 import { BRANCH_COLOR_KEYS } from '../data/mindmapConfig';
 import { buildSampleMindmap, buildSamplePartial, buildSampleTopics } from '../utils/mindmapSampleData';
 
@@ -315,17 +315,21 @@ export async function createMindmap(input: CreateMindmapInput): Promise<MindmapP
 }
 
 export async function getMindmap(id: string): Promise<MindmapProject | null> {
+  let raw: MindmapProject | null = null;
   const remote = await probeRemote();
   if (remote) {
     try {
       const { data, error } = await supabase.from(TABLE).select('*').eq('id', id).maybeSingle();
-      if (!error && data) return rowToProject(data as MindmapProjectRow);
+      if (!error && data) raw = rowToProject(data as MindmapProjectRow);
       if (error && isMissingTableError(error)) remoteAvailableCache = false;
     } catch {
       /* fall through */
     }
   }
-  return lsGet<MindmapProject>(LS_PROJECT(id));
+  if (!raw) raw = lsGet<MindmapProject>(LS_PROJECT(id));
+  if (!raw) return null;
+  // 하위호환: 빈/placeholder 노드 제거 + 구형 위/아래 배치면 좌우로 재정렬. 색·수정내용은 유지.
+  return { ...raw, nodes: relayoutIfNeeded(filterEmptyNodes(raw.nodes)) };
 }
 
 // 저장 직렬화: 동시에 여러 저장이 겹치지 않게.
@@ -674,6 +678,6 @@ export function aiResponseToNodes(
     });
   });
 
-  return autoLayout(nodes);
+  return autoLayout(filterEmptyNodes(nodes));
 }
 
