@@ -40,6 +40,14 @@ export function getDepth(nodes: MindmapNode[], id: string): number {
   return depth;
 }
 
+/** 부모-자식 깊이를 화면용 노드 종류로 변환한다. 중심은 0, 상세 카드는 3~5단계다. */
+export function nodeTypeForDepth(depth: number): MindmapNode['type'] {
+  if (depth <= 0) return 'central';
+  if (depth === 1) return 'main';
+  if (depth === 2) return 'sub';
+  return 'detail';
+}
+
 /** nodeId 의 조상에 newParentId 가 있으면 순환이 생긴다. */
 export function wouldCreateCycle(
   nodes: MindmapNode[],
@@ -92,21 +100,25 @@ export function addNode(nodes: MindmapNode[], opts: AddNodeOptions): { nodes: Mi
     return { nodes, node: null, reason: '내용이 너무 많아요. 중요한 내용을 골라 볼까요?' };
   }
 
-  // 깊이 제한: 부모 깊이 + 1 이 maxDepth 이하여야.
+  // 깊이 제한은 화면 좌표가 아닌 실제 부모-자식 관계로 계산한다.
   const parentDepth = getDepth(nodes, parent.id);
-  // central=0, main=1, sub=2, thought(어디든). 깊이는 maxDepth(3)까지.
   if (opts.type !== 'thought' && parentDepth + 1 > MINDMAP_LIMITS.maxDepth) {
-    return { nodes, node: null, reason: '가지가 너무 깊어요. 다른 가지에 연결해 볼까요?' };
+    return {
+      nodes,
+      node: null,
+      reason: '여기까지는 가지를 더 아래로 만들 수 없어요. 다른 가지를 선택해 주세요.',
+    };
   }
+  const type = opts.type === 'thought' ? 'thought' : nodeTypeForDepth(parentDepth + 1);
 
   // 큰 가지 개수 제한(중심의 자식으로 main 추가 시).
-  if (opts.type === 'main') {
+  if (type === 'main') {
     if (mainBranchCount(nodes) >= MINDMAP_LIMITS.maxMainBranches) {
       return { nodes, node: null, reason: '큰 가지는 8개까지 만들 수 있어요.' };
     }
   }
   // 한 큰 가지의 직계 자식 수 제한.
-  if (parent.type === 'main' && opts.type === 'sub') {
+  if (parent.type === 'main' && type === 'sub') {
     if (childCount(nodes, parent.id) >= MINDMAP_LIMITS.maxSubPerMain) {
       return { nodes, node: null, reason: '작은 가지는 6개까지 만들 수 있어요.' };
     }
@@ -114,16 +126,16 @@ export function addNode(nodes: MindmapNode[], opts: AddNodeOptions): { nodes: Mi
 
   const siblings = getChildren(nodes, parent.id);
   const order = siblings.length ? Math.max(...siblings.map((s) => s.order)) + 1 : 0;
-  const colorKey = opts.colorKey ?? pickColorForNew(nodes, parent, opts.type);
+  const colorKey = opts.colorKey ?? pickColorForNew(nodes, parent, type);
 
   const node: MindmapNode = {
-    id: newId(opts.type),
+    id: newId(type),
     parentId: opts.parentId,
-    type: opts.type,
+    type,
     title: (opts.title ?? '').slice(0, MINDMAP_LIMITS.maxTitleLength) || '새 가지',
     description: opts.description,
     icon: opts.icon,
-    shape: opts.shape ?? defaultShape(opts.type),
+    shape: opts.shape ?? defaultShape(type),
     colorKey,
     position: nextChildPosition(nodes, parent),
     order,
@@ -225,6 +237,19 @@ export function collectSubtree(nodes: MindmapNode[], rootId: string): Set<string
   return set;
 }
 
+/** 실제 부모 관계에 맞춰 main/sub/detail 종류를 다시 계산한다. */
+export function normalizeNodeTypesByDepth(nodes: MindmapNode[]): MindmapNode[] {
+  let changed = false;
+  const normalized = nodes.map((node) => {
+    if (node.type === 'central' || node.type === 'thought') return node;
+    const type = nodeTypeForDepth(Math.max(1, getDepth(nodes, node.id)));
+    if (type === node.type) return node;
+    changed = true;
+    return { ...node, type };
+  });
+  return changed ? normalized : nodes;
+}
+
 /** 부모 변경(이동). 순환/깊이 위반 시 원본 반환. */
 export function reparent(
   nodes: MindmapNode[],
@@ -233,27 +258,40 @@ export function reparent(
 ): { nodes: MindmapNode[]; ok: boolean; reason?: string } {
   const node = getNode(nodes, nodeId);
   if (!node || node.type === 'central') return { nodes, ok: false, reason: '중심 주제는 옮길 수 없어요.' };
-  if (newParentId === node.parentId) return { nodes, ok: true };
-  if (newParentId && wouldCreateCycle(nodes, nodeId, newParentId)) {
+  const resolvedParentId = newParentId ?? nodes.find((candidate) => candidate.type === 'central')?.id ?? null;
+  if (resolvedParentId === node.parentId) return { nodes, ok: true };
+  if (resolvedParentId && wouldCreateCycle(nodes, nodeId, resolvedParentId)) {
     return { nodes, ok: false, reason: '자기 자신의 가지 아래로는 옮길 수 없어요.' };
   }
-  const newParent = getNode(nodes, newParentId);
-  if (!newParent && newParentId) return { nodes, ok: false, reason: '목적지를 찾을 수 없어요.' };
+  const newParent = getNode(nodes, resolvedParentId);
+  if (!newParent && resolvedParentId) return { nodes, ok: false, reason: '목적지를 찾을 수 없어요.' };
 
-  // 깊이 검사(새 부모 기준).
+  // 옮길 노드뿐 아니라 그 아래 가장 깊은 자식까지 5단계 안에 들어오는지 검사한다.
   if (newParent) {
     const newDepth = getDepth(nodes, newParent.id) + 1;
-    if (node.type !== 'thought' && newDepth > MINDMAP_LIMITS.maxDepth) {
-      return { nodes, ok: false, reason: '가지가 너무 깊어져서 옮길 수 없어요.' };
+    const oldDepth = getDepth(nodes, node.id);
+    const subtree = collectSubtree(nodes, node.id);
+    const relativeMaxDepth = Math.max(
+      0,
+      ...nodes
+        .filter((candidate) => subtree.has(candidate.id) && candidate.type !== 'thought')
+        .map((candidate) => getDepth(nodes, candidate.id) - oldDepth)
+    );
+    if (node.type !== 'thought' && newDepth + relativeMaxDepth > MINDMAP_LIMITS.maxDepth) {
+      return {
+        nodes,
+        ok: false,
+        reason: '여기로 옮기면 가지가 5단계보다 깊어져요. 다른 가지를 선택해 주세요.',
+      };
     }
   }
 
   const siblings = newParent ? getChildren(nodes, newParent.id) : [];
   const order = siblings.length ? Math.max(...siblings.map((s) => s.order)) + 1 : 0;
   const updated = nodes.map((n) =>
-    n.id === nodeId ? { ...n, parentId: newParentId, order } : n
+    n.id === nodeId ? { ...n, parentId: resolvedParentId, order } : n
   );
-  return { nodes: updated, ok: true };
+  return { nodes: normalizeNodeTypesByDepth(updated), ok: true };
 }
 
 /** 제목 길이 등 입력 제한 적용. */
@@ -311,19 +349,57 @@ export function autoLayout(nodes: MindmapNode[]): MindmapNode[] {
   const thoughts = allKids.filter((n) => n.type === 'thought');
 
   const gap = LAYOUT.childGapY;
-  // 2차(sub) 하나의 세로 높이 = (3차 detail 들의 높이 합) 과 자기 높이 중 큰 쪽.
-  const subHeight = (subId: string): number => {
-    const details = getChildren(next, subId).filter((n) => n.type === 'detail');
-    if (details.length === 0) return LAYOUT.subSize.h;
-    const total = details.length * LAYOUT.detailSize.h + (details.length - 1) * gap;
-    return Math.max(LAYOUT.subSize.h, total);
+  const childrenForLayout = (parentId: string): MindmapNode[] => {
+    const parent = byId.get(parentId);
+    if (parent?.collapsed) return [];
+    return getChildren(next, parentId).filter((node) => node.type !== 'thought');
   };
-  // 1차(main) 서브트리 높이 = (2차 들의 높이 합) 과 자기 높이 중 큰 쪽.
-  const mainHeight = (mainId: string): number => {
-    const subs = getChildren(next, mainId).filter((n) => n.type === 'sub');
-    if (subs.length === 0) return LAYOUT.mainSize.h;
-    const total = subs.reduce((s, sb) => s + subHeight(sb.id), 0) + (subs.length - 1) * gap;
-    return Math.max(LAYOUT.mainSize.h, total);
+
+  // 1~5차를 같은 방식으로 계산해 깊은 학생 가지도 겹치지 않게 배치한다.
+  const heightMemo = new Map<string, number>();
+  const subtreeHeight = (nodeId: string, path = new Set<string>()): number => {
+    const node = byId.get(nodeId);
+    if (!node) return 0;
+    const cached = heightMemo.get(nodeId);
+    if (cached != null) return cached;
+    if (path.has(nodeId)) return nodeSize(node.type).h;
+    const nextPath = new Set(path).add(nodeId);
+    const children = childrenForLayout(nodeId);
+    const childrenHeight = children.length
+      ? children.reduce((sum, child) => sum + subtreeHeight(child.id, nextPath), 0)
+        + (children.length - 1) * gap
+      : 0;
+    const height = Math.max(nodeSize(node.type).h, childrenHeight);
+    heightMemo.set(nodeId, height);
+    return height;
+  };
+
+  const horizontalGapForParent = (parent: MindmapNode): number => (
+    parent.type === 'main' ? LAYOUT.subDx : LAYOUT.detailDx
+  );
+
+  const layoutDescendants = (
+    parent: MindmapNode,
+    parentX: number,
+    parentY: number,
+    sign: -1 | 1,
+    path = new Set<string>()
+  ) => {
+    if (path.has(parent.id)) return;
+    const children = childrenForLayout(parent.id);
+    if (children.length === 0) return;
+    const nextPath = new Set(path).add(parent.id);
+    const totalHeight = children.reduce((sum, child) => sum + subtreeHeight(child.id), 0)
+      + (children.length - 1) * gap;
+    let cursorY = parentY - totalHeight / 2;
+    const childX = parentX + sign * horizontalGapForParent(parent);
+    for (const child of children) {
+      const height = subtreeHeight(child.id);
+      const childY = cursorY + height / 2;
+      setPos(child.id, childX, childY);
+      layoutDescendants(child, childX, childY, sign, nextPath);
+      cursorY += height + gap;
+    }
   };
 
   // 좌·우 균형 분배(인덱스 짝수→오른쪽, 홀수→왼쪽). 홀수 개면 오른쪽이 1개 더 많음.
@@ -334,7 +410,7 @@ export function autoLayout(nodes: MindmapNode[]): MindmapNode[] {
   let maxHalfH = 0;
   const layoutSide = (list: MindmapNode[], sign: -1 | 1) => {
     if (list.length === 0) return;
-    const bands = list.map((m) => ({ m, h: mainHeight(m.id) + LAYOUT.mainGapY }));
+    const bands = list.map((m) => ({ m, h: subtreeHeight(m.id) + LAYOUT.mainGapY }));
     const totalH = bands.reduce((s, b) => s + b.h, 0);
     let cursor = -totalH / 2;
     for (const b of bands) {
@@ -342,28 +418,7 @@ export function autoLayout(nodes: MindmapNode[]): MindmapNode[] {
       const mx = sign * LAYOUT.mainDx;
       setPos(b.m.id, mx, my);
       cursor += b.h;
-      if (b.m.collapsed) continue;
-      // 2차(sub) 들을 메인 y 중심으로 패킹.
-      const subs = getChildren(next, b.m.id).filter((n) => n.type === 'sub');
-      const subsTotal = subs.reduce((s, sb) => s + subHeight(sb.id), 0) + Math.max(0, subs.length - 1) * gap;
-      let cy = my - subsTotal / 2;
-      subs.forEach((sb) => {
-        const sh = subHeight(sb.id);
-        const sy = cy + sh / 2;
-        const sx = mx + sign * LAYOUT.subDx;
-        setPos(sb.id, sx, sy);
-        cy += sh + gap;
-        if (sb.collapsed) return;
-        // 3차(detail) 들을 2차 주변(바깥)으로 패킹.
-        const details = getChildren(next, sb.id).filter((n) => n.type === 'detail');
-        if (details.length === 0) return;
-        const detTotal = details.length * LAYOUT.detailSize.h + (details.length - 1) * gap;
-        let dy = sy - detTotal / 2;
-        details.forEach((d) => {
-          setPos(d.id, sx + sign * LAYOUT.detailDx, dy + LAYOUT.detailSize.h / 2);
-          dy += LAYOUT.detailSize.h + gap;
-        });
-      });
+      layoutDescendants(b.m, mx, my, sign);
     }
     maxHalfH = Math.max(maxHalfH, totalH / 2);
   };
@@ -455,33 +510,6 @@ export function isPlaceholderText(s: string | null | undefined): boolean {
   if (t.length === 0) return true;
   if (PLACEHOLDER_TEXT.has(t)) return true;
   return false;
-}
-
-/**
- * 구형 3단계 데이터(2차 sub 에 설명이 직접 들어 있고 3차 detail 이 없음)를
- * 4단계 구조로 안전하게 변환한다: 설명을 가진 sub → sub(2차, 제목만) + detail(3차, 제목+설명).
- *  - 이미 detail 노드가 있으면(신규 구조) 변환하지 않는다.
- *  - 기존 내용(제목/설명/색)을 보존하고 삭제하지 않는다(additive 변환).
- */
-export function upgradeOldStructure(input: MindmapNode[]): MindmapNode[] {
-  if (input.some((n) => n.type === 'detail')) return input; // 이미 4단계
-  const hasOldSubWithDesc = input.some((n) => n.type === 'sub' && !isPlaceholderText(n.description));
-  if (!hasOldSubWithDesc) return input;
-  const out: MindmapNode[] = [];
-  for (const n of input) {
-    if (n.type === 'sub' && !isPlaceholderText(n.description)) {
-      const desc = n.description ?? '';
-      out.push({ ...n, description: '' }); // 2차는 제목만
-      out.push({
-        id: newId('detail'), parentId: n.id, type: 'detail',
-        title: n.title, description: desc, icon: n.icon, shape: 'rounded',
-        colorKey: n.colorKey, position: { ...n.position }, order: 0, collapsed: false, createdBy: n.createdBy,
-      });
-    } else {
-      out.push(n);
-    }
-  }
-  return out;
 }
 
 /**

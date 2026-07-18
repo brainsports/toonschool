@@ -26,7 +26,8 @@ import {
   type AiPartialRequest,
   type AiTopicsResponse,
 } from '../types/mindmapAi';
-import { newId, autoLayout, filterEmptyNodes, relayoutIfNeeded, upgradeOldStructure } from '../utils/mindmapEngine';
+import { newId, autoLayout, filterEmptyNodes, relayoutIfNeeded } from '../utils/mindmapEngine';
+import { upgradeOldStructure } from '../utils/mindmapCompatibility';
 import { BRANCH_COLOR_KEYS } from '../data/mindmapConfig';
 import { buildSampleMindmap, buildSamplePartial, buildSampleTopics } from '../utils/mindmapSampleData';
 
@@ -346,8 +347,21 @@ export async function getMindmap(id: string): Promise<MindmapProject | null> {
   }
   if (!raw) raw = lsGet<MindmapProject>(LS_PROJECT(id));
   if (!raw) return null;
-  // 하위호환: 구형 3단계→4단계 변환 → 빈/placeholder 제거 → 구형 위/아래 배치면 좌우로 재정렬. 색·수정내용 유지.
-  return { ...raw, nodes: relayoutIfNeeded(filterEmptyNodes(upgradeOldStructure(raw.nodes))) };
+  // 하위호환: AI가 만든 중복 제목 단계를 안전하게 접고 실제 부모 깊이/배치를 정리한다.
+  const upgradedNodes = upgradeOldStructure(raw.nodes);
+  const normalized = {
+    ...raw,
+    nodes: relayoutIfNeeded(filterEmptyNodes(upgradedNodes)),
+  };
+  // 구조가 바뀐 작품은 한 번만 저장한다. 변환 함수가 멱등적이므로 재접속 때 다시 삭제되지 않는다.
+  if (upgradedNodes !== raw.nodes) {
+    try {
+      return (await saveMindmap(normalized)) ?? normalized;
+    } catch {
+      return normalized;
+    }
+  }
+  return normalized;
 }
 
 // 저장 직렬화: 동시에 여러 저장이 겹치지 않게.
@@ -697,6 +711,7 @@ export function aiResponseToNodes(
     });
   });
 
-  return autoLayout(filterEmptyNodes(nodes));
+  // 모델이 2차 제목을 3차 설명 카드에서 그대로 반복해도 중간 제목 노드를 남기지 않는다.
+  return autoLayout(filterEmptyNodes(upgradeOldStructure(nodes)));
 }
 

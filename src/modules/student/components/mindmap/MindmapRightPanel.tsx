@@ -3,8 +3,10 @@
  * 선택이 없으면 작품 정보와 사용 안내를 표시.
  */
 import type { MindmapNode, MindmapProject } from '../../types/mindmap';
-import { resolveColor, getTheme, BRANCH_COLOR_KEYS } from '../../data/mindmapConfig';
-import { clampDescription, clampTitle, collectSubtree, getChildren, getNode } from '../../utils/mindmapEngine';
+import { resolveColor, getTheme, BRANCH_COLOR_KEYS, MINDMAP_LIMITS } from '../../data/mindmapConfig';
+import {
+  clampDescription, clampTitle, collectSubtree, getChildren, getDepth, getNode, nodeTypeForDepth,
+} from '../../utils/mindmapEngine';
 import type { AiPartialAction } from '../../types/mindmapAi';
 import { Trash2, Copy, Plus, Sparkles, ChevronDown } from 'lucide-react';
 
@@ -71,6 +73,8 @@ export default function MindmapRightPanel(props: MindmapRightPanelProps) {
   const palette = theme.palette;
   const isCentral = selectedNode.type === 'central';
   const isThought = selectedNode.type === 'thought';
+  const selectedDepth = getDepth(project.nodes, selectedNode.id);
+  const canAddChild = selectedDepth < MINDMAP_LIMITS.maxDepth;
 
   // 유효한 부모 후보(자기 자신과 자손 제외).
   const forbidden = collectSubtree(project.nodes, selectedNode.id);
@@ -158,14 +162,32 @@ export default function MindmapRightPanel(props: MindmapRightPanelProps) {
         </button>
       )}
 
-      {/* 하위 가지 추가(중심→1차, 1차→2차, 2차→3차) */}
-      {!isThought && selectedNode.type !== 'detail' && (
-        <button
-          onClick={() => onAddChild(selectedNode.id, isCentral ? 'main' : selectedNode.type === 'main' ? 'sub' : 'detail')}
-          className="w-full text-sm py-2 rounded-lg bg-sky-500 text-white font-bold hover:bg-sky-600 mb-3 flex items-center justify-center gap-1"
-        >
-          <Plus className="w-4 h-4" /> 하위 가지 추가
-        </button>
+      {/* 중심을 제외한 1~4단계에서는 자식 가지를 추가할 수 있다. */}
+      {!isThought && (
+        <>
+          <button
+            onClick={() => onAddChild(
+              selectedNode.id,
+              nodeTypeForDepth(selectedDepth + 1)
+            )}
+            className={`w-full text-sm py-2 rounded-lg font-bold mb-2 flex items-center justify-center gap-1 ${
+              canAddChild
+                ? 'bg-sky-500 text-white hover:bg-sky-600'
+                : 'bg-amber-50 text-amber-700 border border-amber-200'
+            }`}
+          >
+            <Plus className="w-4 h-4" />
+            {canAddChild ? '하위 가지 추가' : '마지막 5단계예요'}
+          </button>
+          {!canAddChild && selectedNode.parentId && (
+            <button
+              onClick={() => onAddChild(selectedNode.parentId!, selectedNode.type)}
+              className="w-full text-sm py-2 rounded-lg bg-sky-500 text-white font-bold hover:bg-sky-600 mb-3 flex items-center justify-center gap-1"
+            >
+              <Plus className="w-4 h-4" /> 같은 단계 가지 추가
+            </button>
+          )}
+        </>
       )}
 
       {/* AI 추천 */}
