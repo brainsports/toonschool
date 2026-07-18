@@ -82,7 +82,7 @@ export default function MindmapRightPanel(props: MindmapRightPanelProps) {
     <aside className="w-[280px] shrink-0 h-full bg-white border-l border-slate-200 overflow-y-auto student-scrollbar p-4">
       <div className="flex items-center justify-between mb-3">
         <h3 className="font-bold text-slate-800">
-          {isCentral ? '중심 주제' : isThought ? '나의 생각' : selectedNode.type === 'main' ? '큰 가지' : '작은 가지'} 편집
+          {isCentral ? '중심 주제' : isThought ? '나의 생각' : selectedNode.type === 'main' ? '1차 가지' : selectedNode.type === 'sub' ? '2차 가지' : '3차 설명 카드'} 편집
         </h3>
         <span
           className="text-[10px] font-bold px-2 py-0.5 rounded-full"
@@ -158,10 +158,10 @@ export default function MindmapRightPanel(props: MindmapRightPanelProps) {
         </button>
       )}
 
-      {/* 하위 가지 추가 */}
-      {!isThought && (
+      {/* 하위 가지 추가(중심→1차, 1차→2차, 2차→3차) */}
+      {!isThought && selectedNode.type !== 'detail' && (
         <button
-          onClick={() => onAddChild(selectedNode.id, isCentral ? 'main' : 'sub')}
+          onClick={() => onAddChild(selectedNode.id, isCentral ? 'main' : selectedNode.type === 'main' ? 'sub' : 'detail')}
           className="w-full text-sm py-2 rounded-lg bg-sky-500 text-white font-bold hover:bg-sky-600 mb-3 flex items-center justify-center gap-1"
         >
           <Plus className="w-4 h-4" /> 하위 가지 추가
@@ -233,5 +233,5 @@ export default function MindmapRightPanel(props: MindmapRightPanelProps) {
 }
 
 function typeLabel(t: MindmapNode['type']): string {
-  return t === 'central' ? '중심' : t === 'main' ? '큰가지' : t === 'sub' ? '작은가지' : '생각';
+  return t === 'central' ? '중심' : t === 'main' ? '1차' : t === 'sub' ? '2차' : t === 'detail' ? '3차' : '생각';
 }

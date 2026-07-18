@@ -122,7 +122,7 @@ export default function SharedMindmapViewerPage() {
       <div className="flex-1 min-h-0 overflow-auto student-scrollbar p-4 md:p-8">
         <div className="w-full h-full flex items-center justify-center" style={{ minHeight: '100%' }}>
           <div className="w-full" style={{ maxWidth: 1100, transform: `scale(${zoom})`, transformOrigin: 'center center' }}>
-            <MindmapArtwork project={project} themeId={project.themeId} mode="fill" interactive={false} showCharacters={false} />
+            <MindmapArtwork project={project} themeId={project.themeId} mode="fill" interactive={false} />
             {/* 미리보기/캡처와 동일한 1.91:1 포스터(숨김, PNG 저장용) */}
             <div aria-hidden style={{ position: 'absolute', left: -99999, top: 0, width: 1200, height: 628 }}>
               <MindmapArtwork project={project} themeId={project.themeId} mode="fixed" width={1200} height={628} artworkRef={posterRef} />

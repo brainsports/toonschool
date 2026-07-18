@@ -12,7 +12,7 @@ import type { AiPartialAction } from '../types/mindmapAi';
 import { MINDMAP_THEMES, MINDMAP_ICONS, getTheme } from '../data/mindmapConfig';
 import {
   addNode, autoLayout, checkCompletion, clampDescription, clampTitle, deleteNode as engineDelete,
-  getNode, newId, reparent,
+  filterEmptyNodes, getNode, newId, reparent,
 } from '../utils/mindmapEngine';
 import {
   enableShare, getMindmap, revokeShare, saveMindmap,
@@ -20,7 +20,7 @@ import {
 } from '../services/mindmapService';
 import { exportPng, exportPdf, printMindmap, makeThumbnailDataUrl } from '../utils/mindmapExport';
 import MindmapCanvasHost, { type MindmapCanvasHandle } from '../components/mindmap/MindmapCanvasHost';
-import MindmapArtwork, { POSTER_W, POSTER_H } from '../components/mindmap/MindmapArtwork';
+import MindmapArtwork, { POSTER_W, POSTER_H, MindmapPanelHints } from '../components/mindmap/MindmapArtwork';
 import MindmapRightPanel from '../components/mindmap/MindmapRightPanel';
 import MindmapShareDialog from '../components/mindmap/MindmapShareDialog';
 import MindmapCompleteDialog from '../components/mindmap/MindmapCompleteDialog';
@@ -157,6 +157,22 @@ export default function StudentMindmapEditorPage() {
     });
   }, [commit]);
 
+  // '나의 생각' 추가: 중심 아래에 빈 thought 노드를 만들고 바로 입력.
+  const addThought = useCallback(() => {
+    commit((p) => {
+      const central = p.nodes.find((n) => n.type === 'central');
+      if (!central) return p;
+      const th: MindmapNode = {
+        id: newId('thought'), parentId: central.id, type: 'thought', title: '',
+        description: '', icon: 'pencil', shape: 'rounded', colorKey: 'thought',
+        position: { x: 0, y: 0 }, order: 99, collapsed: false, createdBy: 'student',
+      };
+      setSelectedId(th.id);
+      setEditingId(th.id);
+      return { ...p, nodes: autoLayout([...p.nodes, th]) };
+    });
+  }, [commit]);
+
   const handleDelete = useCallback((id: string) => {
     const node = project?.nodes.find((n) => n.id === id);
     if (!node) return;
@@ -243,15 +259,12 @@ export default function StudentMindmapEditorPage() {
         return;
       }
       commit((p) => {
-        const nodes = aiResponseToNodes(res.data!, central);
-        // 학생 '나의 생각' 틀 1개 보존/추가.
-        const hasStudentThought = nodes.some((n) => n.type === 'thought' && n.createdBy === 'student');
-        const centralNode = nodes.find((n) => n.type === 'central')!;
-        const finalNodes = hasStudentThought ? nodes : [
-          ...nodes,
-          { id: newId('thought'), parentId: centralNode.id, type: 'thought' as const, title: '', description: '새롭게 알게 된 점을 적어 보세요.', icon: 'pencil', shape: 'rounded' as const, colorKey: 'thought', position: { x: 0, y: 0 }, order: 99, collapsed: false, createdBy: 'student' as const },
-        ];
-        return { ...p, nodes: autoLayout(finalNodes), centralTopic: res.data!.centralTopic || p.centralTopic };
+        // 기존 학생이 쓴 '나의 생각'(내용 있는 것)만 보존. 빈 thought 는 새로 만들지 않음.
+        const aiNodes = aiResponseToNodes(res.data!, central);
+        const studentThoughts = p.nodes.filter((n) => n.type === 'thought' && n.createdBy === 'student' && n.title.trim().length > 0);
+        const centralId = aiNodes.find((n) => n.type === 'central')?.id ?? '';
+        const finalNodes = autoLayout([...aiNodes, ...studentThoughts.map((t) => ({ ...t, parentId: centralId }))]);
+        return { ...p, nodes: finalNodes, centralTopic: res.data!.centralTopic || p.centralTopic };
       });
       setToast({ message: 'AI가 마인드맵을 만들었어요.', tone: 'success' });
       setTimeout(() => canvasRef.current?.fit(), 80);
@@ -283,8 +296,9 @@ export default function StudentMindmapEditorPage() {
         if (res.data!.suggestedDescription) {
           nodes = nodes.map((n) => n.id === node.id ? { ...n, description: clampDescription(res.data!.suggestedDescription!) } : n);
         }
+        const childType: MindmapNode['type'] = node.type === 'main' ? 'sub' : node.type === 'sub' ? 'detail' : 'sub';
         for (const c of res.data!.children || []) {
-          const r = addNode(nodes, { parentId: node.id, type: node.type === 'sub' ? 'sub' : 'sub', title: c.title, description: c.description, icon: c.icon, colorKey: node.colorKey, createdBy: 'ai' });
+          const r = addNode(nodes, { parentId: node.id, type: childType, title: c.title, description: c.description, icon: c.icon, colorKey: node.colorKey, createdBy: 'ai' });
           if (r.node) nodes = r.nodes;
         }
         return { ...p, nodes: autoLayout(nodes) };
@@ -340,6 +354,17 @@ export default function StudentMindmapEditorPage() {
   }, [project]);
 
   const selectedNode = useMemo(() => (project && selectedId ? getNode(project.nodes, selectedId) : undefined), [project, selectedId]);
+
+  // 캔버스에 그릴 노드: 빈/placeholder 노드는 숨김. 단, 현재 편집 중인 노드는 입력을 위해 유지.
+  const visibleNodes = useMemo(() => {
+    if (!project) return [];
+    const filtered = filterEmptyNodes(project.nodes);
+    if (editingId && !filtered.some((n) => n.id === editingId)) {
+      const en = project.nodes.find((n) => n.id === editingId);
+      if (en) return [...filtered, en];
+    }
+    return filtered;
+  }, [project, editingId]);
 
   if (loadError) {
     return (
@@ -450,22 +475,29 @@ export default function StudentMindmapEditorPage() {
             </div>
           )}
 
+          <button onClick={addThought} className="w-full mt-2 p-2 rounded-xl bg-pink-50 text-pink-700 text-xs font-bold hover:bg-pink-100 flex flex-col items-center gap-1">
+            ✏️ 나의 생각 추가
+          </button>
+
           <button onClick={() => setShowHelp(true)} className="w-full mt-2 p-2 rounded-xl text-slate-500 text-xs font-bold hover:bg-slate-50 flex flex-col items-center gap-1">
             <HelpCircle className="w-4 h-4" /> 도움말
           </button>
+
+          {/* 캐릭터 안내: 캔버스 밖(좌측 패널)에 배치해 작업영역 침범/클릭 방해 방지 */}
+          <MindmapPanelHints />
         </aside>
 
         {/* 중앙 캔버스 */}
         <main className="flex-1 min-w-0 relative">
           <MindmapCanvasHost
             canvasRef={canvasRef}
-            project={project}
+            project={{ ...project, nodes: visibleNodes }}
             themeId={project.themeId}
             selectedId={selectedId}
             editingId={editingId}
             onSelectNode={setSelectedId}
             onNodeDoubleClick={(id) => setEditingId(id)}
-            onAddChild={(pid) => { const parent = getNode(project.nodes, pid); addChild(pid, parent?.type === 'central' ? 'main' : 'sub'); }}
+            onAddChild={(pid) => { const parent = getNode(project.nodes, pid); const t = parent?.type === 'central' ? 'main' : parent?.type === 'main' ? 'sub' : 'detail'; addChild(pid, t); }}
             onTitleChange={setTitle}
             onFinishEditing={() => setEditingId(null)}
             onNodeDragStart={onNodeDragStartCb}
@@ -535,10 +567,10 @@ export default function StudentMindmapEditorPage() {
 
       <MindmapToast message={toast?.message ?? null} tone={toast?.tone} onDone={() => setToast(null)} />
 
-      {/* 캡처 전용 숨김 포스터(1.91:1). 화면에 보이지 않음. */}
+      {/* 캡처 전용 숨김 포스터(1.91:1). 빈 노드는 제외해 저장 이미지에 남지 않음. */}
       {project && (
         <div aria-hidden style={{ position: 'fixed', left: -99999, top: 0, width: POSTER_W, height: POSTER_H, pointerEvents: 'none', opacity: 1 }}>
-          <MindmapArtwork project={project} themeId={project.themeId} mode="fixed" width={POSTER_W} height={POSTER_H} artworkRef={posterRef} />
+          <MindmapArtwork project={{ ...project, nodes: filterEmptyNodes(project.nodes) }} themeId={project.themeId} mode="fixed" width={POSTER_W} height={POSTER_H} artworkRef={posterRef} />
         </div>
       )}
     </div>

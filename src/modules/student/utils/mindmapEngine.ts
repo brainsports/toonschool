@@ -150,6 +150,7 @@ function defaultShape(type: MindmapNode['type']): MindmapNode['shape'] {
     case 'central': return 'oval';
     case 'main': return 'rounded';
     case 'sub': return 'rounded';
+    case 'detail': return 'rounded';
     case 'thought': return 'rounded';
   }
 }
@@ -309,19 +310,20 @@ export function autoLayout(nodes: MindmapNode[]): MindmapNode[] {
   const mains = allKids.filter((n) => n.type === 'main');
   const thoughts = allKids.filter((n) => n.type === 'thought');
 
-  // 서브트리(2차+3차)의 세로 높이 계산.
-  const grandUnitH = LAYOUT.grandSize.h + LAYOUT.childGapY;
-  const subtreeHeight = (mainId: string): number => {
-    const subs = getChildren(next, mainId).filter((n) => n.type !== 'thought');
-    if (subs.length === 0) return LAYOUT.mainSize.h + LAYOUT.mainGapY;
-    let total = 0;
-    for (const s of subs) {
-      const grands = getChildren(next, s.id);
-      const gh = grands.length > 0 ? grands.length * grandUnitH : LAYOUT.subSize.h;
-      total += Math.max(LAYOUT.subSize.h, gh);
-      total += LAYOUT.childGapY;
-    }
-    return Math.max(LAYOUT.mainSize.h + LAYOUT.mainGapY, total);
+  const gap = LAYOUT.childGapY;
+  // 2차(sub) 하나의 세로 높이 = (3차 detail 들의 높이 합) 과 자기 높이 중 큰 쪽.
+  const subHeight = (subId: string): number => {
+    const details = getChildren(next, subId).filter((n) => n.type === 'detail');
+    if (details.length === 0) return LAYOUT.subSize.h;
+    const total = details.length * LAYOUT.detailSize.h + (details.length - 1) * gap;
+    return Math.max(LAYOUT.subSize.h, total);
+  };
+  // 1차(main) 서브트리 높이 = (2차 들의 높이 합) 과 자기 높이 중 큰 쪽.
+  const mainHeight = (mainId: string): number => {
+    const subs = getChildren(next, mainId).filter((n) => n.type === 'sub');
+    if (subs.length === 0) return LAYOUT.mainSize.h;
+    const total = subs.reduce((s, sb) => s + subHeight(sb.id), 0) + (subs.length - 1) * gap;
+    return Math.max(LAYOUT.mainSize.h, total);
   };
 
   // 좌·우 균형 분배(인덱스 짝수→오른쪽, 홀수→왼쪽). 홀수 개면 오른쪽이 1개 더 많음.
@@ -332,7 +334,7 @@ export function autoLayout(nodes: MindmapNode[]): MindmapNode[] {
   let maxHalfH = 0;
   const layoutSide = (list: MindmapNode[], sign: -1 | 1) => {
     if (list.length === 0) return;
-    const bands = list.map((m) => ({ m, h: subtreeHeight(m.id) }));
+    const bands = list.map((m) => ({ m, h: mainHeight(m.id) + LAYOUT.mainGapY }));
     const totalH = bands.reduce((s, b) => s + b.h, 0);
     let cursor = -totalH / 2;
     for (const b of bands) {
@@ -341,23 +343,26 @@ export function autoLayout(nodes: MindmapNode[]): MindmapNode[] {
       setPos(b.m.id, mx, my);
       cursor += b.h;
       if (b.m.collapsed) continue;
-      const subs = getChildren(next, b.m.id).filter((n) => n.type !== 'thought');
-      // 자식들을 메인 y 중심으로 균등 배치(바깥 방향).
-      const childTotal = subs.reduce((s, _s, j) => s + (j > 0 ? LAYOUT.childGapY : 0) + LAYOUT.subSize.h, 0);
-      let cy = my - childTotal / 2 + LAYOUT.subSize.h / 2;
-      subs.forEach((s) => {
-        const cx = mx + sign * LAYOUT.childDx;
-        setPos(s.id, cx, cy);
-        // 3차 가지는 더 바깥으로, 부모 sub 근처에 세로 정렬.
-        if (!s.collapsed) {
-          const grands = getChildren(next, s.id);
-          let gy = cy - ((grands.length - 1) * grandUnitH) / 2;
-          grands.forEach((g) => {
-            setPos(g.id, cx + sign * LAYOUT.grandDx, gy);
-            gy += grandUnitH;
-          });
-        }
-        cy += LAYOUT.subSize.h + LAYOUT.childGapY;
+      // 2차(sub) 들을 메인 y 중심으로 패킹.
+      const subs = getChildren(next, b.m.id).filter((n) => n.type === 'sub');
+      const subsTotal = subs.reduce((s, sb) => s + subHeight(sb.id), 0) + Math.max(0, subs.length - 1) * gap;
+      let cy = my - subsTotal / 2;
+      subs.forEach((sb) => {
+        const sh = subHeight(sb.id);
+        const sy = cy + sh / 2;
+        const sx = mx + sign * LAYOUT.subDx;
+        setPos(sb.id, sx, sy);
+        cy += sh + gap;
+        if (sb.collapsed) return;
+        // 3차(detail) 들을 2차 주변(바깥)으로 패킹.
+        const details = getChildren(next, sb.id).filter((n) => n.type === 'detail');
+        if (details.length === 0) return;
+        const detTotal = details.length * LAYOUT.detailSize.h + (details.length - 1) * gap;
+        let dy = sy - detTotal / 2;
+        details.forEach((d) => {
+          setPos(d.id, sx + sign * LAYOUT.detailDx, dy + LAYOUT.detailSize.h / 2);
+          dy += LAYOUT.detailSize.h + gap;
+        });
       });
     }
     maxHalfH = Math.max(maxHalfH, totalH / 2);
@@ -396,6 +401,7 @@ export function nodeSize(type: MindmapNode['type']): { w: number; h: number } {
     case 'central': return LAYOUT.centralSize;
     case 'main': return LAYOUT.mainSize;
     case 'sub': return LAYOUT.subSize;
+    case 'detail': return LAYOUT.detailSize;
     case 'thought': return LAYOUT.thoughtSize;
   }
 }
@@ -432,4 +438,102 @@ export function deriveEdges(nodes: MindmapNode[]): DerivedEdge[] {
     edges.push({ id: `${parent.id}->${n.id}`, from: parent, to: n });
   }
   return edges;
+}
+
+// ---------------------------------------------------------------------------
+// 빈/placeholder 노드 정제
+// ---------------------------------------------------------------------------
+const PLACEHOLDER_TEXT = new Set([
+  '내용 없음', '설명 없음', '제목 없음', '설명을 입력해 보세요',
+  '새로운 생각을 적어 보세요', '내용을 입력해 주세요', '새 가지', '새 가지입니다',
+]);
+
+/** placeholder/임시 문구 여부(빈 문자열·공백·'내용 없음' 등). */
+export function isPlaceholderText(s: string | null | undefined): boolean {
+  if (s == null) return true;
+  const t = String(s).trim();
+  if (t.length === 0) return true;
+  if (PLACEHOLDER_TEXT.has(t)) return true;
+  return false;
+}
+
+/**
+ * 구형 3단계 데이터(2차 sub 에 설명이 직접 들어 있고 3차 detail 이 없음)를
+ * 4단계 구조로 안전하게 변환한다: 설명을 가진 sub → sub(2차, 제목만) + detail(3차, 제목+설명).
+ *  - 이미 detail 노드가 있으면(신규 구조) 변환하지 않는다.
+ *  - 기존 내용(제목/설명/색)을 보존하고 삭제하지 않는다(additive 변환).
+ */
+export function upgradeOldStructure(input: MindmapNode[]): MindmapNode[] {
+  if (input.some((n) => n.type === 'detail')) return input; // 이미 4단계
+  const hasOldSubWithDesc = input.some((n) => n.type === 'sub' && !isPlaceholderText(n.description));
+  if (!hasOldSubWithDesc) return input;
+  const out: MindmapNode[] = [];
+  for (const n of input) {
+    if (n.type === 'sub' && !isPlaceholderText(n.description)) {
+      const desc = n.description ?? '';
+      out.push({ ...n, description: '' }); // 2차는 제목만
+      out.push({
+        id: newId('detail'), parentId: n.id, type: 'detail',
+        title: n.title, description: desc, icon: n.icon, shape: 'rounded',
+        colorKey: n.colorKey, position: { ...n.position }, order: 0, collapsed: false, createdBy: n.createdBy,
+      });
+    } else {
+      out.push(n);
+    }
+  }
+  return out;
+}
+
+/**
+ * 빈/placeholder 노드를 안전하게 제거한다.
+ *  - central 은 제목이 비어도 유지(중심은 필수).
+ *  - central 이 아닌 노드는 제목이 placeholder 면 제거 → 하위 고아도 함께 제거(cascade).
+ *  - 3차(sub) 설명만 비어있고 제목은 유효하면 노드는 유지(설명은 빈 문자열로 정리).
+ * 기존 정상 데이터는 건드리지 않고, 임시/빈 노드만 걸러낸다(원본 배열 변경 X).
+ */
+export function filterEmptyNodes(input: MindmapNode[]): MindmapNode[] {
+  if (input.length === 0) return input;
+  const remove = new Set<string>();
+  // 제목이 placeholder 인 비-중심 노드를 제거 대상으로.
+  // 단, 3차(detail) 설명 카드는 제목이 비어도 설명이 유효하면 유지.
+  for (const n of input) {
+    if (n.type === 'central') continue;
+    if (n.type === 'detail') {
+      if (isPlaceholderText(n.title) && isPlaceholderText(n.description)) remove.add(n.id);
+      continue;
+    }
+    if (isPlaceholderText(n.title)) remove.add(n.id);
+  }
+  // cascade: 제거되는 노드의 자손도 함께 제거.
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const n of input) {
+      if (remove.has(n.id)) continue;
+      if (n.parentId && remove.has(n.parentId)) { remove.add(n.id); changed = true; }
+    }
+  }
+  if (remove.size === 0) {
+    // 제목은 유효하지만 3차 설명에 placeholder 문구가 있으면 빈 문자열로 정리.
+    return input.map((n) => (n.type === 'sub' && isPlaceholderText(n.description) ? { ...n, description: '' } : n));
+  }
+  const kept = input.filter((n) => !remove.has(n.id));
+  return kept.map((n) => (n.type === 'sub' && isPlaceholderText(n.description) ? { ...n, description: '' } : n));
+}
+
+/**
+ * 기존 저장 데이터가 구형 위/아래 방사형 배치인지 판별.
+ * central 의 자식(main) 중 x≈0(위/아래) 이 하나라도 있으면 재배치 대상.
+ */
+export function hasOldVerticalLayout(nodes: MindmapNode[]): boolean {
+  const central = nodes.find((n) => n.type === 'central');
+  if (!central) return false;
+  const mains = nodes.filter((n) => n.parentId === central.id && n.type === 'main');
+  if (mains.length === 0) return false;
+  return mains.some((m) => Math.abs(m.position.x) < 60);
+}
+
+/** 안전하게 재배치가 필요하면 autoLayout 재실행, 아니면 원본 유지(사용자 드래그 존중). */
+export function relayoutIfNeeded(nodes: MindmapNode[]): MindmapNode[] {
+  return hasOldVerticalLayout(nodes) ? autoLayout(nodes) : nodes;
 }

@@ -26,7 +26,7 @@ import {
   type AiPartialRequest,
   type AiTopicsResponse,
 } from '../types/mindmapAi';
-import { newId, autoLayout } from '../utils/mindmapEngine';
+import { newId, autoLayout, filterEmptyNodes, relayoutIfNeeded, upgradeOldStructure } from '../utils/mindmapEngine';
 import { BRANCH_COLOR_KEYS } from '../data/mindmapConfig';
 import { buildSampleMindmap, buildSamplePartial, buildSampleTopics } from '../utils/mindmapSampleData';
 
@@ -315,17 +315,21 @@ export async function createMindmap(input: CreateMindmapInput): Promise<MindmapP
 }
 
 export async function getMindmap(id: string): Promise<MindmapProject | null> {
+  let raw: MindmapProject | null = null;
   const remote = await probeRemote();
   if (remote) {
     try {
       const { data, error } = await supabase.from(TABLE).select('*').eq('id', id).maybeSingle();
-      if (!error && data) return rowToProject(data as MindmapProjectRow);
+      if (!error && data) raw = rowToProject(data as MindmapProjectRow);
       if (error && isMissingTableError(error)) remoteAvailableCache = false;
     } catch {
       /* fall through */
     }
   }
-  return lsGet<MindmapProject>(LS_PROJECT(id));
+  if (!raw) raw = lsGet<MindmapProject>(LS_PROJECT(id));
+  if (!raw) return null;
+  // 하위호환: 구형 3단계→4단계 변환 → 빈/placeholder 제거 → 구형 위/아래 배치면 좌우로 재정렬. 색·수정내용 유지.
+  return { ...raw, nodes: relayoutIfNeeded(filterEmptyNodes(upgradeOldStructure(raw.nodes))) };
 }
 
 // 저장 직렬화: 동시에 여러 저장이 겹치지 않게.
@@ -591,12 +595,11 @@ export interface AiValidationReport {
   issues: string[];
 }
 /**
- * 전체 생성 응답 검증(저장 전).
- *  - 1차 가지 4~6개
- *  - 각 1차 가지에 2차 가지 2개 이상
- *  - 2차 가지 제목/설명이 비어 있지 않을 것(설명 길이 50~200자는 프롬프트·EF·정제로 유도;
- *    너무 짧은 것은 구조적으로만 걸러 "다시 시도" 안내)
- * 구조가 심하게 미달이면 ok=false → 호출측은 빈 마인드맵 대신 "다시 시도" 안내.
+ * 전체 생성 응답 검증(4단계 구조, 저장 전).
+ *  - 1차(branches) 4~6개
+ *  - 각 1차에 2차(children) 2개 이상
+ *  - 각 1차에 3차(details) 설명이 1개 이상(문장 길이 20자 이상)
+ * 구조가 심하게 미달이면 ok=false → 빈 마인드맵 대신 "다시 시도" 안내.
  */
 export function validateAiFull(resp: AiFullMindmapResponse | null | undefined): AiValidationReport {
   const issues: string[] = [];
@@ -606,11 +609,10 @@ export function validateAiFull(resp: AiFullMindmapResponse | null | undefined): 
   }
   for (const b of resp.branches) {
     const kids = (b.children || []).filter((c) => (c.title || '').trim().length > 0);
-    if (kids.length < 2) { issues.push(`'${b.title}' 가지에 작은 가지를 2개 이상 만들어 주세요.`); }
-    for (const c of kids) {
-      const d = cleanDescription(c.description);
-      if (d.trim().length < 8) { issues.push(`'${c.title}' 설명이 너무 짧아요.`); }
-    }
+    if (kids.length < 2) { issues.push(`'${b.title}' 가지에 2차 가지를 2개 이상 만들어 주세요.`); }
+    const details = kids.flatMap((c) => c.details || []);
+    const validDetails = details.filter((d) => (d.description || '').trim().length >= 20);
+    if (validDetails.length === 0) { issues.push(`'${b.title}' 가지에 3차 설명을 추가해 주세요.`); }
   }
   return { ok: issues.length === 0, issues };
 }
@@ -642,38 +644,28 @@ export function aiResponseToNodes(
   resp.branches.forEach((b, i) => {
     const colorKey = BRANCH_COLOR_KEYS[i % BRANCH_COLOR_KEYS.length];
     const mainId = newId('main');
+    // 1차 가지: 핵심 주제(제목 위주).
     nodes.push({
-      id: mainId,
-      parentId: central.id,
-      type: 'main',
-      title: b.title,
-      description: cleanDescription(b.description),
-      icon: b.icon,
-      shape: 'rounded',
-      colorKey,
-      position: { x: 0, y: 0 },
-      order: i,
-      collapsed: false,
-      createdBy: 'ai',
+      id: mainId, parentId: central.id, type: 'main', title: b.title, description: '',
+      icon: b.icon, shape: 'rounded', colorKey, position: { x: 0, y: 0 }, order: i, collapsed: false, createdBy: 'ai',
     });
+    // 2차 가지(짧은 세부 주제) → 3차 설명 카드(details).
     (b.children || []).forEach((c, j) => {
+      const subId = newId('sub');
       nodes.push({
-        id: newId('sub'),
-        parentId: mainId,
-        type: 'sub',
-        title: c.title,
-        description: cleanDescription(c.description),
-        icon: c.icon,
-        shape: 'rounded',
-        colorKey,
-        position: { x: 0, y: 0 },
-        order: j,
-        collapsed: false,
-        createdBy: 'ai',
+        id: subId, parentId: mainId, type: 'sub', title: c.title, description: '',
+        icon: c.icon, shape: 'rounded', colorKey, position: { x: 0, y: 0 }, order: j, collapsed: false, createdBy: 'ai',
+      });
+      (c.details || []).forEach((d, k) => {
+        nodes.push({
+          id: newId('detail'), parentId: subId, type: 'detail',
+          title: d.title, description: cleanDescription(d.description), icon: d.icon,
+          shape: 'rounded', colorKey, position: { x: 0, y: 0 }, order: k, collapsed: false, createdBy: 'ai',
+        });
       });
     });
   });
 
-  return autoLayout(nodes);
+  return autoLayout(filterEmptyNodes(nodes));
 }
 

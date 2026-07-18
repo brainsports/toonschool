@@ -11,7 +11,7 @@
  */
 
 /** 노드의 역할(깊이에 따른 종류). */
-export type MindmapNodeType = 'central' | 'main' | 'sub' | 'thought';
+export type MindmapNodeType = 'central' | 'main' | 'sub' | 'detail' | 'thought';
 
 /** 노드 외곽 모양. 테마/카드 종류에 따라 다양하게 표현. */
 export type MindmapNodeShape = 'circle' | 'rounded' | 'cloud' | 'star' | 'oval';

@@ -282,24 +282,25 @@ export const MINDMAP_LIMITS = {
   maxDescriptionLength: 200,
 } as const;
 
-/** 자동 배치 기준(좌·우 수평 트리). position 은 노드 중심점. */
+/** 자동 배치 기준(좌·우 수평 4단계 트리). position 은 노드 중심점.
+ *  단계별 크기: 중심(가장 큼) > 1차 main(중간) > 2차 sub(짧음) > 3차 detail(긴 가로형 설명 카드). */
 export const LAYOUT = {
-  centralSize: { w: 250, h: 120 },
-  mainSize: { w: 210, h: 84 },
-  subSize: { w: 224, h: 150 }, // 2차 가지는 설명(50~200자)을 담아 충분히 높게
-  thoughtSize: { w: 220, h: 90 },
-  grandSize: { w: 190, h: 80 },
-  // 중심→1차 가지 수평 거리
-  mainDx: 360,
-  // 1차 가지→2차 가지 수평 거리(바깥 방향)
-  childDx: 300,
-  // 2차→3차 가지 수평 거리
-  grandDx: 250,
+  centralSize: { w: 250, h: 124 },
+  mainSize: { w: 196, h: 70 }, // 1차: 중간 크기 핵심 주제 카드
+  subSize: { w: 184, h: 64 }, // 2차: 짧은 세부 주제 카드(제목 위주)
+  detailSize: { w: 300, h: 112 }, // 3차: 긴 가로형 설명 카드(제목 + 2~3줄 설명)
+  thoughtSize: { w: 244, h: 96 },
+  // 중심→1차 수평 거리
+  mainDx: 300,
+  // 1차→2차 수평 거리(바깥 방향)
+  subDx: 250,
+  // 2차→3차(설명카드) 수평 거리(바깥 방향). 넓은 카드 폭 고려.
+  detailDx: 300,
   // 같은 부모 안 자식들 사이 세로 간격
-  childGapY: 24,
+  childGapY: 18,
   // 한쪽에 쌓이는 1차 가지들 사이 최소 세로 여백
-  mainGapY: 36,
+  mainGapY: 26,
   // '나의 생각'을 중심 아래로 띄우는 거리
-  thoughtDy: 220,
-  thoughtGapX: 240,
+  thoughtDy: 250,
+  thoughtGapX: 260,
 };

@@ -19,7 +19,6 @@ import {
   createMindmap, generateMindmapFull, aiResponseToNodes, saveMindmap,
   generateTopicSuggestions,
 } from '../services/mindmapService';
-import { newId, autoLayout } from '../utils/mindmapEngine';
 import type { MindmapProject } from '../types/mindmap';
 
 type Grade = { id: string; value: number; label: string };
@@ -149,18 +148,8 @@ export default function StudentMindmapStartPage() {
         if (res.data) {
           const central = project.nodes.find((n) => n.type === 'central');
           const aiNodes = aiResponseToNodes(res.data, central);
-          // 학생 '나의 생각' 틀 보존.
-          const centralNode = aiNodes.find((n) => n.type === 'central')!;
-          const withThought = [
-            ...aiNodes,
-            {
-              id: newId('thought'), parentId: centralNode.id, type: 'thought' as const,
-              title: '', description: '새롭게 알게 된 점을 적어 보세요.', icon: 'pencil',
-              shape: 'rounded' as const, colorKey: 'thought', position: { x: 0, y: 0 },
-              order: 99, collapsed: false, createdBy: 'student' as const,
-            },
-          ];
-          const updated: MindmapProject = { ...project, nodes: autoLayout(withThought), centralTopic: res.data.centralTopic || project.centralTopic };
+          // 빈 thought 틀은 만들지 않음(에디터에서 '나의 생각 추가'로 직접 입력).
+          const updated: MindmapProject = { ...project, nodes: aiNodes, centralTopic: res.data.centralTopic || project.centralTopic };
           await saveMindmap(updated);
         }
       }

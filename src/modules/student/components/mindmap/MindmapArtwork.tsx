@@ -31,7 +31,6 @@ export interface MindmapArtworkProps {
   interactive?: boolean;
   selectedId?: string | null;
   editingId?: string | null;
-  showCharacters?: boolean;
   artworkRef?: Ref<HTMLDivElement>;
   onSelect?: (id: string | null) => void;
   onDoubleClick?: (id: string) => void;
@@ -44,7 +43,7 @@ export interface MindmapArtworkProps {
 export default function MindmapArtwork(props: MindmapArtworkProps) {
   const {
     project, themeId, mode = 'fixed', width = POSTER_W, height = POSTER_H,
-    interactive = false, selectedId, editingId, showCharacters = false, artworkRef,
+    interactive = false, selectedId, editingId, artworkRef,
     onSelect, onDoubleClick, onDragStart, onAddChild, onTitleChange, onFinishEditing,
   } = props;
 
@@ -88,7 +87,6 @@ export default function MindmapArtwork(props: MindmapArtworkProps) {
     <div className="mm-world" ref={artworkRef} style={frameStyle} data-mm-world="true">
       <div ref={containerRef} style={{ position: 'absolute', inset: 0 }}>
         <MindmapDecorations theme={theme} />
-        {showCharacters && <MindmapCharacterHints />}
         <div style={{ position: 'absolute', left: 0, top: 0, transform: `translate(${tx}px, ${ty}px) scale(${scale})`, transformOrigin: '0 0' }}>
           <MindmapNodesLayer
             nodes={project.nodes}
@@ -132,23 +130,26 @@ export function MindmapDecorations({ theme }: { theme: MindmapTheme }) {
   );
 }
 
-/** 캐릭터 안내 말풍선(편집 화면용). */
-export function MindmapCharacterHints() {
+/**
+ * 좌/우 패널용 컴팩트 캐릭터 안내(캔버스 작업영역 침범 금지).
+ * 좁은 패널에 세로로 나란히 들어가도록 작게. pointer-events:none.
+ */
+export function MindmapPanelHints() {
   const hints = [
-    { img: V2_CHARACTER_EXPRESSIONS.hana.explain, bubble: '주제를 중심에 두고, 양옆으로 가지를 뻗어 보세요!', pos: { left: 8, top: 8 } as CSSProperties, bg: '#fff3e6' },
-    { img: V2_CHARACTER_EXPRESSIONS.doyoon.thinking, bubble: '더 궁금한 점은 가지의 + 를 눌러 추가해요.', pos: { right: 8, top: 8 } as CSSProperties, bg: '#eaf3ff' },
-    { img: V2_CHARACTER_EXPRESSIONS.seoa.smile, bubble: '“나의 생각”도 꼭 직접 적어 보세요.', pos: { left: 8, bottom: 8 } as CSSProperties, bg: '#ffeaf2' },
+    { img: V2_CHARACTER_EXPRESSIONS.hana.explain, bubble: '주제를 중심에 두고 양옆으로 가지를 뻗어요!', bg: '#fff3e6' },
+    { img: V2_CHARACTER_EXPRESSIONS.doyoon.thinking, bubble: '더 궁금한 점은 가지의 + 를 눌러 추가해요.', bg: '#eaf3ff' },
+    { img: V2_CHARACTER_EXPRESSIONS.seoa.smile, bubble: '“나의 생각”도 꼭 직접 적어요.', bg: '#ffeaf2' },
   ];
   return (
-    <>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10, pointerEvents: 'none' }}>
       {hints.map((h, i) => (
-        <div key={i} style={{ position: 'absolute', zIndex: 14, display: 'flex', alignItems: 'flex-end', gap: 6, maxWidth: 220, ...h.pos, pointerEvents: 'none' }}>
-          <div style={{ background: h.bg, border: '2px solid rgba(0,0,0,0.05)', borderRadius: 14, padding: '8px 10px', fontSize: 12.5, fontWeight: 700, color: '#4a3a2a', lineHeight: 1.35, boxShadow: '0 6px 16px rgba(0,0,0,0.08)', wordBreak: 'keep-all' }}>
+        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <img src={h.img} alt="안내 캐릭터" style={{ width: 38, height: 38, objectFit: 'contain', flexShrink: 0 }} />
+          <div style={{ background: h.bg, border: '2px solid rgba(0,0,0,0.05)', borderRadius: 10, padding: '5px 7px', fontSize: 10.5, fontWeight: 700, color: '#4a3a2a', lineHeight: 1.3, wordBreak: 'keep-all' }}>
             {h.bubble}
           </div>
-          <img src={h.img} alt="안내 캐릭터" style={{ width: 64, height: 64, objectFit: 'contain' }} />
         </div>
       ))}
-    </>
+    </div>
   );
 }

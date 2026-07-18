@@ -102,20 +102,23 @@ export function buildSampleMindmap(params: {
 function branch(title: string, icon: string, children: AiLeaf[]): AiBranch {
   return { title, icon, children };
 }
+// 2차(짧은 세부 주제) + 그 아래 3차 설명 카드 1개(description 을 detail 로 내림).
 function leaf(title: string, icon: string, description: string): AiLeaf {
-  return { title, icon, description };
+  const d = description.trim();
+  return { title, icon, details: d ? [{ title, description: d }] : [] };
 }
 
-/** 부분 생성 로컬 폴백(설명은 50자 이상의 풍성한 문장). */
+/** 부분 생성 로컬 폴백(선택 노드 아래에 들어갈 자식/설명 제안). */
 export function buildSamplePartial(req: AiPartialRequest): AiPartialMindmapResponse {
   const t = req.nodeTitle?.trim() || '이 내용';
+  const pl = (title: string, icon: string, description: string): AiLeaf => ({ title, icon, description });
   const children: AiLeaf[] = [];
   switch (req.action) {
     case 'add_children':
       children.push(
-        leaf(`${t}의 특징`, 'star', `${t}이(가) 가진 중요한 특징을 쉬운 말로 살펴봅시다. 특징을 알면 다른 것과 구별하기 쉬워져요.`),
-        leaf(`${t}의 예시`, 'lightbulb', `${t}을(를) 우리가 자주 겪는 상황으로 예를 들어 설명해 볼게요. 예시를 통해 더 쉽게 이해할 수 있어요.`),
-        leaf(`${t}와 관련된 것`, 'search', `${t}과(와) 비슷하거나 다른 것을 비교해 보면, 각각의 특징이 더 뚜렷하게 보여요.`)
+        pl(`${t}의 특징`, 'star', `${t}이(가) 가진 중요한 특징을 쉬운 말로 살펴봅시다. 특징을 알면 다른 것과 구별하기 쉬워져요.`),
+        pl(`${t}의 예시`, 'lightbulb', `${t}을(를) 우리가 자주 겪는 상황으로 예를 들어 설명해 볼게요. 예시를 통해 더 쉽게 이해할 수 있어요.`),
+        pl(`${t}와 관련된 것`, 'search', `${t}과(와) 비슷하거나 다른 것을 비교해 보면, 각각의 특징이 더 뚜렷하게 보여요.`)
       );
       break;
     case 'simplify':
@@ -127,7 +130,7 @@ export function buildSamplePartial(req: AiPartialRequest): AiPartialMindmapRespo
     case 'daily':
       return { children: [], suggestedTitle: t, suggestedDescription: `우리 생활 속에서 ${t}은(는) 이런 모습으로 자주 나타나요. 주변을 둘러보며 직접 찾아보면 학습이 더 재미있어져요.` };
     case 'question':
-      children.push(leaf(`${t}에 대해 더 생각해 볼 질문`, 'question', `${t}과(와) 관련해서 “왜 그럴까?” “다르게 되면 어떻게 될까?” 같은 질문을 떠올려 봅시다.`));
+      children.push(pl(`${t}에 대해 더 생각해 볼 질문`, 'question', `${t}과(와) 관련해서 “왜 그럴까?” “다르게 되면 어떻게 될까?” 같은 질문을 떠올려 봅시다.`));
       break;
   }
   return { children };
