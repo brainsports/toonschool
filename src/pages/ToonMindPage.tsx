@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import FunReasonsSection from '../components/toonmind/FunReasonsSection';
 
 // ── 섹션 1: 메인 히어로 이미지 ──────────────────────────────
 function HeroMindmap() {
@@ -216,35 +217,8 @@ export default function ToonMindPage() {
         </div>
       </section>
 
-      {/* ── 섹션 5: 제작 과정 5단계 ── */}
-      <section className="py-20 bg-surface-dim">
-        <div className="max-w-[1280px] mx-auto px-6">
-          <h2 className="text-3xl md:text-4xl font-extrabold text-center text-on-surface mb-12">
-            툰마인드 제작 과정
-          </h2>
-          <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-center">
-            {[
-              { step: 1, label: '중심 주제\n정하기' },
-              { step: 2, label: '큰 가지\n만들기' },
-              { step: 3, label: '세부 가지\n연결하기' },
-              { step: 4, label: '디자인\n꾸미기' },
-              { step: 5, label: '저장하고\n제출하기' },
-            ].map((item, idx) => (
-              <div key={item.step} className="flex flex-row md:flex-col items-center gap-3 md:gap-2 flex-1">
-                <div className="flex flex-row md:flex-col items-center gap-2 md:gap-3 w-full">
-                  <div className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-primary text-white flex items-center justify-center text-xl md:text-2xl font-extrabold shadow-md flex-shrink-0">
-                    {item.step}.
-                  </div>
-                  <p className="text-sm font-bold text-on-surface text-left md:text-center whitespace-pre-line leading-snug">{item.label}</p>
-                </div>
-                {idx < 4 && (
-                  <div className="hidden md:flex text-gray-300 text-3xl self-center mx-1">→</div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      {/* ── 섹션 5: 툰마인드가 재미있는 3가지 이유 ── */}
+      <FunReasonsSection />
 
       {/* ── 섹션 6: 편집 기능 ── */}
       <section className="py-20 bg-white">
