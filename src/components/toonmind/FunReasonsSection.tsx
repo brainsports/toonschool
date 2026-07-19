@@ -31,20 +31,24 @@ export default function FunReasonsSection() {
           마인드맵으로 생각을 정리하고, 꾸미고, 나누는 즐거움까지!
         </p>
 
-        <div className="mt-8 grid grid-cols-1 gap-y-5 md:mt-10 md:grid-cols-2 md:gap-6 xl:grid-cols-3">
+        <div className="mt-8 grid grid-cols-1 gap-6 md:mt-10 md:grid-cols-2 md:gap-8 xl:grid-cols-3">
           {FUN_REASON_CARDS.map((card, index) => (
-            <img
+            <div
               key={card.src}
-              src={card.src}
-              alt={card.alt}
-              className={`block h-auto w-full ${
+              className={`aspect-[1122/1402] w-full ${
                 index === FUN_REASON_CARDS.length - 1
-                  ? 'md:col-span-2 md:mx-auto md:w-[calc(50%_-_12px)] xl:col-span-1 xl:mx-0 xl:w-full'
+                  ? 'md:col-span-2 md:mx-auto md:w-[calc(50%-16px)] xl:col-span-1 xl:mx-0 xl:w-full'
                   : ''
               }`}
-              loading="lazy"
-              decoding="async"
-            />
+            >
+              <img
+                src={card.src}
+                alt={card.alt}
+                className="block h-full w-full object-contain"
+                loading="lazy"
+                decoding="async"
+              />
+            </div>
           ))}
         </div>
       </div>
