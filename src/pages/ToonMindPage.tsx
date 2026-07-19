@@ -1,63 +1,16 @@
 import { Link } from 'react-router-dom';
 
-// ── 섹션 1: 메인 히어로 ──────────────────────────────
+// ── 섹션 1: 메인 히어로 이미지 ──────────────────────────────
 function HeroMindmap() {
   return (
-    <div className="relative w-full max-w-[480px] bg-white rounded-2xl shadow-lg border border-gray-200 p-4 flex flex-col gap-3">
-      {/* 상단 바 */}
-      <div className="flex items-center justify-between border-b border-gray-100 pb-2">
-        <span className="text-xs font-bold text-gray-400">마인드맵 편집기 예시</span>
-        <div className="flex gap-1">
-          <div className="w-2 h-2 rounded-full bg-red-400" />
-          <div className="w-2 h-2 rounded-full bg-yellow-400" />
-          <div className="w-2 h-2 rounded-full bg-green-400" />
-        </div>
-      </div>
-      {/* 마인드맵 SVG */}
-      <div className="relative w-full" style={{ minHeight: 260 }}>
-        <svg viewBox="0 0 460 260" className="w-full h-full" aria-label="인권 존중과 정의로운 사회 마인드맵 예시">
-          {/* 중심 노드 */}
-          <ellipse cx="230" cy="130" rx="70" ry="35" fill="#ff2778" />
-          <text x="230" y="124" textAnchor="middle" fill="white" fontSize="11" fontWeight="bold">인권 존중과</text>
-          <text x="230" y="140" textAnchor="middle" fill="white" fontSize="11" fontWeight="bold">정의로운 사회</text>
-
-          {/* 가지 1: 인권의 의미 */}
-          <line x1="165" y1="110" x2="95" y2="68" stroke="#a78bfa" strokeWidth="2.5" />
-          <ellipse cx="66" cy="58" rx="48" ry="22" fill="#ede9fe" stroke="#a78bfa" strokeWidth="1.5" />
-          <text x="66" y="62" textAnchor="middle" fill="#6d28d9" fontSize="10" fontWeight="bold">인권의 의미</text>
-
-          {/* 가지 2: 차별 금지 */}
-          <line x1="162" y1="125" x2="80" y2="125" stroke="#86efac" strokeWidth="2.5" />
-          <ellipse cx="52" cy="125" rx="40" ry="20" fill="#dcfce7" stroke="#86efac" strokeWidth="1.5" />
-          <text x="52" y="129" textAnchor="middle" fill="#15803d" fontSize="10" fontWeight="bold">차별 금지</text>
-
-          {/* 가지 3: 법과 제도 */}
-          <line x1="165" y1="148" x2="95" y2="188" stroke="#fbbf24" strokeWidth="2.5" />
-          <ellipse cx="66" cy="198" rx="48" ry="22" fill="#fef9c3" stroke="#fbbf24" strokeWidth="1.5" />
-          <text x="66" y="202" textAnchor="middle" fill="#b45309" fontSize="10" fontWeight="bold">법과 제도</text>
-
-          {/* 가지 4: 정의로운 사회 */}
-          <line x1="300" y1="110" x2="368" y2="68" stroke="#f9a8d4" strokeWidth="2.5" />
-          <ellipse cx="400" cy="58" rx="52" ry="22" fill="#fce7f3" stroke="#f9a8d4" strokeWidth="1.5" />
-          <text x="400" y="62" textAnchor="middle" fill="#be185d" fontSize="10" fontWeight="bold">정의로운 사회</text>
-
-          {/* 가지 5: 시민의 권리 */}
-          <line x1="300" y1="125" x2="378" y2="125" stroke="#7dd3fc" strokeWidth="2.5" />
-          <ellipse cx="412" cy="125" rx="45" ry="20" fill="#e0f2fe" stroke="#7dd3fc" strokeWidth="1.5" />
-          <text x="412" y="129" textAnchor="middle" fill="#0369a1" fontSize="10" fontWeight="bold">시민의 권리</text>
-
-          {/* 가지 6: 다양한 문화 */}
-          <line x1="298" y1="148" x2="368" y2="188" stroke="#6ee7b7" strokeWidth="2.5" />
-          <ellipse cx="400" cy="198" rx="52" ry="22" fill="#d1fae5" stroke="#6ee7b7" strokeWidth="1.5" />
-          <text x="400" y="202" textAnchor="middle" fill="#065f46" fontSize="10" fontWeight="bold">다양한 문화</text>
-        </svg>
-      </div>
-      {/* 편집 버튼 영역 */}
-      <div className="flex gap-2 flex-wrap">
-        <button className="px-3 py-1 text-xs bg-pink-50 text-primary border border-pink-200 rounded-full font-bold">+ 가지 추가</button>
-        <button className="px-3 py-1 text-xs bg-gray-50 text-gray-500 border border-gray-200 rounded-full font-bold">색상 변경</button>
-        <button className="px-3 py-1 text-xs bg-gray-50 text-gray-500 border border-gray-200 rounded-full font-bold">저장</button>
-      </div>
+    <div className="relative w-full max-w-[560px]">
+      <img
+        src="/images/toonmind/hero-mindmap.jpg"
+        alt="인권 존중과 정의로운 사회 마인드맵 예시 - 툰마인드 편집기 화면"
+        className="w-full h-auto object-contain rounded-2xl"
+        style={{ maxHeight: 520, minHeight: 280 }}
+        loading="eager"
+      />
     </div>
   );
 }
@@ -103,45 +56,17 @@ function SubjectSelector() {
   );
 }
 
-// ── 섹션 6: 편집기 예시 ──────────────────────────────
+// ── 섹션 6: 편집기 예시 이미지 ──────────────────────────────
 function EditMindmap() {
   return (
-    <div className="relative w-full max-w-[420px] bg-white rounded-2xl shadow border border-gray-200 p-4">
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-xs font-bold text-gray-500">기후 변화와 우리 생활</span>
-        <span className="text-xs text-gray-400">편집 중</span>
-      </div>
-      <svg viewBox="0 0 400 220" className="w-full" aria-label="기후 변화와 우리 생활 마인드맵 편집 예시">
-        {/* 중심 */}
-        <ellipse cx="200" cy="110" rx="65" ry="30" fill="#ff2778" />
-        <text x="200" y="104" textAnchor="middle" fill="white" fontSize="10" fontWeight="bold">기후 변화와</text>
-        <text x="200" y="119" textAnchor="middle" fill="white" fontSize="10" fontWeight="bold">우리 생활</text>
-
-        {/* 가지들 */}
-        <line x1="138" y1="95" x2="70" y2="58" stroke="#60a5fa" strokeWidth="2" />
-        <ellipse cx="45" cy="48" rx="42" ry="20" fill="#dbeafe" stroke="#60a5fa" strokeWidth="1.5" />
-        <text x="45" y="52" textAnchor="middle" fill="#1d4ed8" fontSize="9" fontWeight="bold">지구 온난화</text>
-
-        <line x1="137" y1="115" x2="65" y2="115" stroke="#86efac" strokeWidth="2" />
-        <ellipse cx="42" cy="115" rx="38" ry="19" fill="#dcfce7" stroke="#86efac" strokeWidth="1.5" />
-        <text x="42" y="119" textAnchor="middle" fill="#15803d" fontSize="9" fontWeight="bold">해수면 상승</text>
-
-        <line x1="138" y1="128" x2="70" y2="170" stroke="#fbbf24" strokeWidth="2" />
-        <ellipse cx="48" cy="180" rx="42" ry="20" fill="#fef9c3" stroke="#fbbf24" strokeWidth="1.5" />
-        <text x="48" y="184" textAnchor="middle" fill="#b45309" fontSize="9" fontWeight="bold">이상 기후</text>
-
-        <line x1="262" y1="95" x2="330" y2="58" stroke="#f9a8d4" strokeWidth="2" />
-        <ellipse cx="357" cy="48" rx="42" ry="20" fill="#fce7f3" stroke="#f9a8d4" strokeWidth="1.5" />
-        <text x="357" y="52" textAnchor="middle" fill="#be185d" fontSize="9" fontWeight="bold">탄소 배출</text>
-
-        <line x1="263" y1="115" x2="335" y2="115" stroke="#a78bfa" strokeWidth="2" />
-        <ellipse cx="358" cy="115" rx="38" ry="19" fill="#ede9fe" stroke="#a78bfa" strokeWidth="1.5" />
-        <text x="358" y="119" textAnchor="middle" fill="#6d28d9" fontSize="9" fontWeight="bold">환경 보호</text>
-
-        <line x1="262" y1="128" x2="330" y2="170" stroke="#6ee7b7" strokeWidth="2" />
-        <ellipse cx="355" cy="180" rx="42" ry="20" fill="#d1fae5" stroke="#6ee7b7" strokeWidth="1.5" />
-        <text x="355" y="184" textAnchor="middle" fill="#065f46" fontSize="9" fontWeight="bold">재생 에너지</text>
-      </svg>
+    <div className="relative w-full max-w-[520px]">
+      <img
+        src="/images/toonmind/edit-mindmap.jpg"
+        alt="기후 변화와 우리 생활 마인드맵 편집 화면 예시"
+        className="w-full h-auto object-contain rounded-2xl"
+        style={{ maxHeight: 480, minHeight: 260 }}
+        loading="lazy"
+      />
     </div>
   );
 }
