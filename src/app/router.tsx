@@ -51,7 +51,7 @@ import SharedMindmapViewerPage from '../modules/student/pages/SharedMindmapViewe
 
 import ResourceInbox from '../modules/resources/pages/ResourceInbox'
 
-import AIContentPage from '../pages/AIContentPage'
+import ToonMindPage from '../pages/ToonMindPage'
 import FlippedLearningPage from '../pages/FlippedLearningPage'
 import LMSPage from '../pages/LMSPage'
 import PWAPage from '../pages/PWAPage'
@@ -99,7 +99,7 @@ export default function AppRouter() {
     <Routes>
       <Route element={<PublicLayout />}>
         <Route path="/" element={<HomePage />} />
-        <Route path="/ai-content" element={<AIContentPage />} />
+        <Route path="/ai-content" element={<ToonMindPage />} />
         <Route path="/flipped-learning" element={<FlippedLearningPage />} />
         <Route path="/lms" element={<LMSPage />} />
         <Route path="/pwa" element={<PWAPage />} />
