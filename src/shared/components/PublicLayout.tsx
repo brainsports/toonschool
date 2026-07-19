@@ -34,7 +34,7 @@ export default function PublicLayout() {
                     </Link>
                     <nav className="hidden xl:flex justify-center items-center space-x-10 w-full">
                         <Link className={getLinkClass("/")} to="/">툰스쿨</Link>
-                        <Link className={getLinkClass("/ai-content")} to="/ai-content">AI 학습콘텐츠</Link>
+                        <Link className={getLinkClass("/ai-content")} to="/ai-content">툰마인드</Link>
                         <Link className={getLinkClass("/flipped-learning")} to="/flipped-learning">거꾸로 학습법</Link>
                         <Link className={getLinkClass("/pwa")} to="/pwa">PC·태블릿 버전</Link>
                         <Link className={getLinkClass("/faq")} to="/faq">궁금해요</Link>
@@ -84,7 +84,7 @@ export default function PublicLayout() {
                             className="xl:hidden absolute top-full left-0 w-full bg-white shadow-lg border-b border-gray-100 flex flex-col z-50"
                         >
                             <Link onClick={() => setIsMobileMenuOpen(false)} className="px-6 py-4 text-on-surface font-bold text-lg hover:bg-gray-50 border-b border-gray-50" to="/">툰스쿨</Link>
-                            <Link onClick={() => setIsMobileMenuOpen(false)} className="px-6 py-4 text-on-surface font-bold text-lg hover:bg-gray-50 border-b border-gray-50" to="/ai-content">AI 학습콘텐츠</Link>
+                            <Link onClick={() => setIsMobileMenuOpen(false)} className="px-6 py-4 text-on-surface font-bold text-lg hover:bg-gray-50 border-b border-gray-50" to="/ai-content">툰마인드</Link>
                             <Link onClick={() => setIsMobileMenuOpen(false)} className="px-6 py-4 text-on-surface font-bold text-lg hover:bg-gray-50 border-b border-gray-50" to="/flipped-learning">거꾸로 학습법</Link>
                             <Link onClick={() => setIsMobileMenuOpen(false)} className="px-6 py-4 text-on-surface font-bold text-lg hover:bg-gray-50 border-b border-gray-50" to="/pwa">PC·태블릿 버전</Link>
                             <Link onClick={() => setIsMobileMenuOpen(false)} className="px-6 py-4 text-on-surface font-bold text-lg hover:bg-gray-50" to="/faq">궁금해요</Link>
