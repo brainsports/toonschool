@@ -1,0 +1,384 @@
+/* ===========================================================
+   툰마인드 소개 페이지 — 섹션 5: "툰마인드가 재미있는 3가지 이유"
+   참고 이미지 기반 3카드형 섹션
+   =========================================================== */
+
+.fun-reasons {
+  background: var(--color-surface-dim);
+  padding: clamp(56px, 7vw, 96px) clamp(16px, 4vw, 40px);
+}
+
+.fun-reasons__inner {
+  max-width: 1440px;
+  margin: 0 auto;
+}
+
+.fun-reasons__title {
+  font-family: var(--font-title);
+  font-weight: 800;
+  font-size: clamp(1.6rem, 3.4vw, 2.6rem);
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  color: var(--color-on-surface);
+  text-align: center;
+  margin: 0;
+}
+
+.fun-reasons__title .em {
+  color: var(--color-primary);
+}
+
+.fun-reasons__subtitle {
+  margin: 14px auto 0;
+  max-width: 640px;
+  text-align: center;
+  color: var(--color-on-surface-variant);
+  font-size: clamp(0.9rem, 1.4vw, 1.05rem);
+  line-height: 1.6;
+}
+
+.fun-reasons__grid {
+  margin-top: clamp(36px, 5vw, 60px);
+  margin-bottom: clamp(40px, 5vw, 70px);
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(16px, 1.6vw, 26px);
+  align-items: stretch;
+}
+
+/* ---------------- 카드 외곽(공통) ---------------- */
+.fun-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-surface);
+  border-radius: 30px;
+  border: 1px solid #f1f1f6;
+  box-shadow: 0 14px 40px -22px rgba(60, 50, 80, 0.28),
+    0 4px 14px -10px rgba(60, 50, 80, 0.12);
+  padding: 54px 24px 24px;
+  overflow: visible;
+  isolation: isolate;
+}
+
+.fun-card__header {
+  text-align: center;
+  margin-bottom: 14px;
+}
+
+.fun-card__title {
+  font-family: var(--font-title);
+  font-weight: 800;
+  font-size: clamp(1.02rem, 1.5vw, 1.22rem);
+  line-height: 1.35;
+  color: var(--color-on-surface);
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.fun-card__title .em {
+  color: var(--color-primary);
+}
+
+.fun-card__desc {
+  margin: 8px auto 0;
+  color: var(--color-on-surface-variant);
+  font-size: clamp(0.82rem, 1.1vw, 0.94rem);
+  line-height: 1.6;
+  text-align: center;
+}
+
+/* 번호 배지 (핑크 꽃 모양) */
+.fun-card__badge {
+  position: absolute;
+  top: -22px;
+  left: 22px;
+  width: 60px;
+  height: 60px;
+  display: grid;
+  place-items: center;
+  z-index: 4;
+  filter: drop-shadow(0 6px 10px rgba(255, 39, 120, 0.32));
+}
+
+.fun-card__badge svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.fun-card__badge-num {
+  position: relative;
+  z-index: 1;
+  font-family: var(--font-title);
+  font-weight: 800;
+  font-size: 1.5rem;
+  color: #fff;
+  line-height: 1;
+}
+
+/* ---------------- 씬 영역 ---------------- */
+.fun-card__scene {
+  position: relative;
+  margin-top: auto;
+  padding-top: 18px;
+}
+
+/* ---------------- 마인드맵 (공통) ---------------- */
+.fun-mindmap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 320 / 230;
+}
+
+.fun-mindmap__svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.fun-mindmap__node {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 7px 12px;
+  border-radius: 999px;
+  font-family: var(--font-ui);
+  font-weight: 700;
+  font-size: clamp(0.66rem, 1.05vw, 0.86rem);
+  line-height: 1.2;
+  white-space: nowrap;
+  background: var(--node-bg, #ffd1dc);
+  color: var(--node-ink, #7a274a);
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 4px 10px -6px rgba(60, 50, 80, 0.3);
+  z-index: 2;
+}
+
+.fun-mindmap__node--center {
+  padding: 11px 18px;
+  font-size: clamp(0.82rem, 1.4vw, 1.05rem);
+  font-weight: 800;
+  box-shadow: 0 8px 18px -8px rgba(60, 50, 80, 0.38);
+  z-index: 3;
+}
+
+.mm-pos--c { left: 50%; top: 50%; }
+.mm-pos--tl { left: 21.875%; top: 18.26%; }
+.mm-pos--tr { left: 78.125%; top: 18.26%; }
+.mm-pos--bl { left: 21.875%; top: 81.74%; }
+.mm-pos--br { left: 78.125%; top: 81.74%; }
+
+/* ---------------- 캐릭터 ---------------- */
+.fun-char {
+  position: absolute;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.fun-char img {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+
+/* 카드1: 여자아이가 마인드맵 중심을 가리키는 연출 */
+.fun-card--girl .fun-char--seoa {
+  left: -4%;
+  bottom: -16%;
+  width: 42%;
+}
+
+/* ---------------- 카드2: 장식 스티커 ---------------- */
+.fun-stickers {
+  position: absolute;
+  inset: -6% -4% -6% -4%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.fun-sticker {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.08));
+}
+
+.fun-sticker svg {
+  width: 100%;
+  height: 100%;
+}
+
+.fun-sticker--star { top: 2%; left: 4%; width: 34px; height: 34px; }
+.fun-sticker--rainbow { top: 0%; right: 2%; width: 46px; height: 30px; }
+.fun-sticker--heart { bottom: 6%; left: 0%; width: 30px; height: 30px; }
+.fun-sticker--smile { bottom: 2%; right: 8%; width: 34px; height: 34px; }
+.fun-sticker--crayon { top: 44%; left: -6%; width: 60px; height: 18px; transform: rotate(-18deg); }
+.fun-sticker--sparkle1 { top: 30%; right: -2%; width: 18px; height: 18px; }
+.fun-sticker--sparkle2 { bottom: 30%; right: 22%; width: 14px; height: 14px; }
+
+/* ---------------- 카드3: 태블릿 ---------------- */
+.fun-tablet {
+  position: relative;
+  background: linear-gradient(160deg, #3b4252 0%, #4c5468 100%);
+  border-radius: 20px;
+  padding: 9px 9px 20px;
+  box-shadow: 0 14px 28px -16px rgba(40, 46, 64, 0.6),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.06);
+}
+
+.fun-tablet__screen {
+  position: relative;
+  background: #fdfdff;
+  border-radius: 12px;
+  padding: 16px 12px 12px;
+  overflow: hidden;
+}
+
+.fun-tablet__cam {
+  position: absolute;
+  top: 5px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #c7ccd8;
+}
+
+.fun-tablet__home {
+  position: absolute;
+  bottom: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+}
+
+/* 저장 완료 배지 */
+.fun-tablet__badge {
+  position: absolute;
+  top: -14px;
+  right: 10px;
+  z-index: 6;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: #2bb673;
+  color: #fff;
+  font-size: 0.74rem;
+  font-weight: 800;
+  box-shadow: 0 8px 16px -8px rgba(43, 182, 115, 0.6);
+  white-space: nowrap;
+}
+
+/* 카드3 하단 캐릭터 3종 */
+.fun-trio {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 2px;
+  margin-top: 8px;
+}
+
+.fun-trio .fun-char {
+  position: static;
+}
+
+.fun-trio .fun-char img {
+  width: 100%;
+}
+
+.fun-trio .fun-char--doyoon { width: 30%; }
+.fun-trio .fun-char--seoa { width: 30%; }
+.fun-trio .fun-char--hana { width: 32%; }
+
+/* ---------------- 반응형 ---------------- */
+
+/* 태블릿 */
+@media (max-width: 1024px) {
+  .fun-reasons__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* 모바일 */
+@media (max-width: 640px) {
+  .fun-reasons {
+    padding: 48px 16px;
+  }
+
+  .fun-reasons__grid {
+    grid-template-columns: 1fr;
+    gap: 36px;
+  }
+
+  .fun-card {
+    padding: 50px 18px 20px;
+    border-radius: 26px;
+  }
+
+  .fun-card__badge {
+    width: 52px;
+    height: 52px;
+    top: -20px;
+    left: 18px;
+  }
+
+  .fun-card__badge-num {
+    font-size: 1.3rem;
+  }
+
+  /* 모바일: 마인드맵 세로 여유를 늘려 긴 노드 줄바꿈 대비 */
+  .fun-mindmap {
+    aspect-ratio: 320 / 250;
+  }
+
+  /* 모바일에서는 노드 글자를 충분히 키워 가독성 확보 */
+  .fun-mindmap__node {
+    font-size: 0.74rem;
+    padding: 6px 9px;
+  }
+  .fun-mindmap__node--center {
+    font-size: 0.92rem;
+    padding: 9px 14px;
+  }
+
+  /* 캐릭터가 설명을 가리지 않도록 축소·재배치 */
+  .fun-card--girl .fun-char--seoa {
+    width: 40%;
+    bottom: -12%;
+    left: -2%;
+  }
+
+  .fun-trio .fun-char--doyoon,
+  .fun-trio .fun-char--seoa,
+  .fun-trio .fun-char--hana {
+    width: 31%;
+  }
+}
+
+/* 좁은 모바일 — 노드 글자 줄바꿈 허용해 잘림 방지 */
+@media (max-width: 380px) {
+  .fun-mindmap {
+    aspect-ratio: 320 / 275;
+  }
+  .fun-mindmap__node {
+    white-space: normal;
+    max-width: 44%;
+  }
+  .fun-mindmap__node--center {
+    max-width: 62%;
+  }
+}
