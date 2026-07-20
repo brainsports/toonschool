@@ -34,3 +34,8 @@ enabled = true
 verify_jwt = true
 entrypoint = "./functions/generate-mindmap/index.ts"
 
+[functions.lookup-korean-word]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/lookup-korean-word/index.ts"
+
