@@ -20,12 +20,18 @@ interface Props {
 const BASE_PRESETS = [
   { key: 'weekly1', label: '주 1회 수업', base: 4 },
   { key: 'weekly2', label: '주 2회 수업', base: 8 },
+  { key: 'weekly3', label: '주 3회 수업', base: 12 },
+  { key: 'weekly4', label: '주 4회 수업', base: 16 },
+  { key: 'weekly5', label: '주 5회 수업', base: 20 },
 ];
+
+// 기본 횟수 카드에 해당하는 정상값. 저장값이 여기 없으면 카드 선택 없이 보존(임의 덮어쓰지 않음).
+const VALID_BASES = [4, 8, 12, 16, 20];
 
 const EXTRA_PRESETS = [0, 1, 2, 3, 5];
 
 export default function ClassGenerationSettingModal({ open, classId, className, grade, onClose, onSaved }: Props) {
-  const [baseQuota, setBaseQuota] = useState<number>(4);
+  const [baseQuota, setBaseQuota] = useState<number>(8);
   const [extraQuota, setExtraQuota] = useState<number>(0);
   const [extraDuration, setExtraDuration] = useState<ExtraDuration>('this_month');
   const [customExtra, setCustomExtra] = useState<string>('');
@@ -36,12 +42,13 @@ export default function ClassGenerationSettingModal({ open, classId, className, 
 
   useEffect(() => {
     if (!open || !COMIC_QUOTA_ENABLED) return;
+    /* eslint-disable react-hooks/set-state-in-effect */
     setErr('');
     setSaving(false);
     getClassQuotaSummary(classId).then((s) => {
       if (s) {
         setSummary(s);
-        setBaseQuota(s.has_setting ? s.base_quota : 4);
+        setBaseQuota(s.has_setting ? s.base_quota : 8);
         setExtraQuota(s.has_setting ? s.extra_quota : 0);
         setExtraDuration(s.extra_duration);
         if (![0, 1, 2, 3, 5].includes(s.extra_quota) && s.extra_quota > 0) {
@@ -127,7 +134,12 @@ export default function ClassGenerationSettingModal({ open, classId, className, 
 
         {/* 기본 횟수 */}
         <div style={{ marginTop: 18, fontSize: 13, fontWeight: 700, color: '#374151' }}>기본 횟수</div>
-        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+        {!VALID_BASES.includes(baseQuota) && (
+          <div style={{ marginTop: 6, fontSize: 11, color: '#b45309' }}>
+            기존 설정 월 {baseQuota}회. 아래 카드에서 새 기본 횟수를 선택해 저장할 수 있어요.
+          </div>
+        )}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(116px, 1fr))', gap: 8, marginTop: 8 }}>
           {BASE_PRESETS.map((p) => (
             <div key={p.key} style={cardStyle(baseQuota === p.base)} onClick={() => setBaseQuota(p.base)}>
               <div>{p.label}</div>
