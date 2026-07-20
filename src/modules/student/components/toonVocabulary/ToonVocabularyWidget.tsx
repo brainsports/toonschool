@@ -2,7 +2,7 @@
 // - 접힌 상태: 플로팅 버튼(FAB). 클릭 시 우측 패널 확장.
 // - 상태 기계: idle → loading → success / empty / unauthorized / error.
 // - 최근 검색어는 localStorage 에 저장(DB 캐시 아님, 이번 범위에서 UI 전용).
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useState, useRef } from 'react'
 import { Heart } from 'lucide-react'
 import '../../styles/toon-vocabulary.css'
 import { lookupKoreanWord } from '../../services/vocabularyService'
@@ -25,18 +25,16 @@ export default function ToonVocabularyWidget({ grade, subject, unit }: ToonVocab
   const [open, setOpen] = useState(false)
   const [input, setInput] = useState('')
   const [state, setState] = useState<LookupState>(IDLE)
-  const [recents, setRecents] = useState<string[]>([])
   const lastQueryRef = useRef<string>('')
-
-  // 최근 검색어 로드
-  useEffect(() => {
+  const [recents, setRecents] = useState<string[]>(() => {
     try {
       const raw = localStorage.getItem(RECENTS_KEY)
-      if (raw) setRecents(JSON.parse(raw))
+      if (raw) return JSON.parse(raw)
     } catch {
       /* ignore */
     }
-  }, [])
+    return []
+  })
 
   const pushRecent = useCallback((word: string) => {
     setRecents((prev) => {
