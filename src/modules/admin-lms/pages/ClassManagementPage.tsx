@@ -10,6 +10,8 @@ import LicenseCard from '../components/LicenseCard'
 import UnitSettingModal from '../components/UnitSettingModal'
 import ConfirmModal from '../../../shared/components/ConfirmModal'
 import CreateClassModal from '../components/CreateClassModal'
+import ClassGenerationSettingModal from '../components/ClassGenerationSettingModal'
+import { getClassQuotaSummary, COMIC_QUOTA_ENABLED } from '../../../shared/lib/comicQuota'
 
 const GRADES = [1, 2, 3, 4, 5, 6]
 
@@ -25,6 +27,8 @@ export default function ClassManagementPage() {
   const [isDeleting, setIsDeleting] = useState(false)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [toast, setToast] = useState('')
+  const [quotaModalClass, setQuotaModalClass] = useState<ClassRoom | null>(null)
+  const [quotaLabels, setQuotaLabels] = useState<Record<string, string>>({})
 
   useEffect(() => {
     if (profile?.id) {
@@ -42,7 +46,18 @@ export default function ClassManagementPage() {
     // 선생님은 본인 소유 학급(teacher_id=본인)만 조회. 서버(DB) 단에서 격리.
     const teacherId = profile.role === 'teacher' ? profile.id : undefined
     fetchClassesByOrganizationAndGrade(profile.organization_id, selectedGrade, teacherId)
-      .then(classes => setGradeClasses(classes))
+      .then(classes => {
+        setGradeClasses(classes)
+        // 만화 생성 한도 요약 배지(flag 켜져 있을 때만 조회)
+        if (COMIC_QUOTA_ENABLED) {
+          classes.forEach(async c => {
+            const s = await getClassQuotaSummary(c.id)
+            if (s) {
+              setQuotaLabels(prev => ({ ...prev, [c.id]: `월 ${s.per_student_total}회` }))
+            }
+          })
+        }
+      })
       .catch(err => {
         console.error('Failed to load classes:', err)
         showToast('학급 목록을 불러오는 데 실패했습니다.')
@@ -192,7 +207,7 @@ export default function ClassManagementPage() {
           {/* 표 헤더 */}
           <div style={{
             display: 'grid',
-            gridTemplateColumns: '40px 60px 1fr 160px 80px 300px',
+            gridTemplateColumns: '40px 60px 1fr 160px 80px 380px',
             padding: '14px 20px',
             background: '#fafafa',
             borderBottom: '1.5px solid #f0f0f0',
@@ -217,7 +232,7 @@ export default function ClassManagementPage() {
           gradeClasses.map((cls, idx) => (
             <div key={cls.id} style={{
               display: 'grid',
-              gridTemplateColumns: '40px 60px 1fr 160px 80px 300px',
+              gridTemplateColumns: '40px 60px 1fr 160px 80px 380px',
               padding: '14px 20px',
               borderBottom: idx < gradeClasses.length - 1 ? '1px solid #f9f9f9' : 'none',
               alignItems: 'center',
@@ -230,12 +245,17 @@ export default function ClassManagementPage() {
               </div>
               <div style={{ fontSize: 14, fontWeight: 600, color: '#333' }}>{cls.grade}학년</div>
               <div>
-                <div style={{ fontSize: 15, fontWeight: 700, color: '#1a1a2e' }}>{cls.name}</div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: '#1a1a2e', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                  {cls.name}
+                  {cls.isDefault && (
+                    <span style={{ background: '#ede9fe', color: '#6d28d9', padding: '2px 8px', borderRadius: 99, fontSize: 11, fontWeight: 700 }}>기본학급</span>
+                  )}
+                </div>
                 {cls.teacherName && (
                   <div style={{ fontSize: 12, color: '#aaa', marginTop: 2 }}>담당: {cls.teacherName}</div>
                 )}
               </div>
-              <div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
                 {cls.unitSetting ? (
                   <span style={{
                     background: '#d1fae5', color: '#059669', padding: '3px 10px',
@@ -244,21 +264,39 @@ export default function ClassManagementPage() {
                 ) : (
                   <span style={{ color: '#ccc', fontSize: 13 }}>미설정</span>
                 )}
+                {COMIC_QUOTA_ENABLED && quotaLabels[cls.id] && (
+                  <span style={{
+                    background: '#dbeafe', color: '#1d4ed8', padding: '3px 10px',
+                    borderRadius: 99, fontSize: 12, fontWeight: 600,
+                  }}>{quotaLabels[cls.id]}</span>
+                )}
               </div>
               <div style={{ textAlign: 'center', fontSize: 15, fontWeight: 700, color: '#333' }}>
                 {cls.studentCount}명
               </div>
-              <div style={{ textAlign: 'center', display: 'flex', gap: 8, justifyContent: 'center' }}>
+              <div style={{ textAlign: 'center', display: 'flex', gap: 6, justifyContent: 'center', flexWrap: 'wrap' }}>
                 <button onClick={() => setUnitModalClass(cls)} style={{
                   padding: '6px 12px', borderRadius: 8, fontSize: 13, fontWeight: 600,
                   background: '#fff0f6', color: '#ff2778', border: '1px solid #ffc6de', cursor: 'pointer',
                   whiteSpace: 'nowrap',
                 }}>단원 설정</button>
-                <button onClick={() => setDeleteTargetClass(cls)} style={{
+                <button onClick={() => setQuotaModalClass(cls)} style={{
                   padding: '6px 12px', borderRadius: 8, fontSize: 13, fontWeight: 600,
-                  background: '#fee2e2', color: '#ef4444', border: '1px solid #fca5a5', cursor: 'pointer',
+                  background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe', cursor: 'pointer',
                   whiteSpace: 'nowrap',
-                }}>학급 삭제</button>
+                }}>만화 생성 설정</button>
+                {cls.isDefault ? (
+                  <span style={{
+                    padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600,
+                    background: '#f3f4f6', color: '#9ca3af', border: '1px dashed #d1d5db',
+                  }}>기본학급 · 삭제 불가</span>
+                ) : (
+                  <button onClick={() => setDeleteTargetClass(cls)} style={{
+                    padding: '6px 12px', borderRadius: 8, fontSize: 13, fontWeight: 600,
+                    background: '#fee2e2', color: '#ef4444', border: '1px solid #fca5a5', cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                  }}>학급 삭제</button>
+                )}
               </div>
             </div>
           ))
@@ -311,6 +349,21 @@ export default function ClassManagementPage() {
           onClose={() => setShowCreateModal(false)}
           onSuccess={loadClasses}
           createClassService={createClassService}
+        />
+      )}
+
+      {/* 만화 생성 설정 모달 */}
+      {quotaModalClass && (
+        <ClassGenerationSettingModal
+          open
+          classId={quotaModalClass.id}
+          className={quotaModalClass.name}
+          grade={quotaModalClass.grade}
+          onClose={() => setQuotaModalClass(null)}
+          onSaved={() => {
+            setQuotaModalClass(null)
+            loadClasses()
+          }}
         />
       )}
     </div>

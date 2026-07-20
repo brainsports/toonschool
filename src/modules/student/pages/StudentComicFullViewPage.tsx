@@ -12,6 +12,14 @@ import { projectStorage } from '../utils/projectStorage';
 import { Sparkles, Loader2, MousePointer2, Layout, Users, MessageSquare, Type, Layers, RefreshCw, Maximize, Undo, Redo } from 'lucide-react';
 import { runGeminiSmokeTest } from '../../../shared/lib/geminiDiagnostics';
 import { getErrorMessageByCode } from '../../../shared/lib/geminiLogger';
+import {
+  reserveComicGeneration,
+  releaseComicReservation,
+  isQuotaError,
+  getStudentQuotaStatus,
+  COMIC_QUOTA_ENABLED,
+  type ComicQuotaStatus,
+} from '../../../shared/lib/comicQuota';
 
 const IS_DEBUG_MODE = false; // 관리자/디버그 모드용 플래그 (true시 시간 및 상세 메시지 표시)
 
@@ -192,6 +200,14 @@ export default function StudentComicFullViewPage() {
   
   const [selectionData, setSelectionData] = useState<any>(null);
   const [projectId] = useState<string>(location.state?.projectId || '');
+  // 만화 생성 한도 사용량 표시(flag 켜져 있을 때만 조회).
+  const [quotaStatus, setQuotaStatus] = useState<ComicQuotaStatus | null>(null);
+  useEffect(() => {
+    if (!COMIC_QUOTA_ENABLED) return;
+    const sid = profile?.role === 'student' ? profile.id : user?.id;
+    if (!sid) return;
+    getStudentQuotaStatus(sid).then(setQuotaStatus);
+  }, [profile?.id, user?.id]);
   const [projectData, setProjectData] = useState<ComicProjectData | null>(null);
   const [scriptData, setScriptData] = useState<GeneratedComicScript | null>(null);
   
@@ -645,6 +661,17 @@ export default function StudentComicFullViewPage() {
   };
 
   const handleGenerateAll = async () => {
+    // 만화 생성 횟수 1회 예약(feature flag). 버튼 클릭 시 예약만 생성하고 차감하지 않는다.
+    // 완성 만화책(뒤표지 저장) 시점에 확정(confirm), 6컷 일부 실패 시 해제(release).
+    const comicId = projectData?.projectId;
+    if (COMIC_QUOTA_ENABLED && studentId && comicId) {
+      const r = await reserveComicGeneration({ studentId, comicId });
+      if (isQuotaError(r)) {
+        alert(r.message);
+        return;
+      }
+    }
+
     setGenAllState({ isRunning: true, completedCount: Object.values(cutsData).filter(c => c.backgroundImageUrl).length, startedAt: Date.now(), elapsedMs: 0 });
 
     // 생성이 필요한 컷 목록 수집 (기존 필터 조건 유지)
@@ -658,6 +685,7 @@ export default function StudentComicFullViewPage() {
     // 동시성 제한 풀: 한 번에 최대 COMIC_GENERATE_ALL_CONCURRENCY 컷까지 병렬 처리.
     // 완료된 컷부터 즉시 completedCount 갱신. 개별 컷 실패는 해당 컷에 에러 상태로 표시되고 나머지는 계속 진행.
     let nextIndex = 0;
+    const failedCuts: number[] = [];
     const runWorker = async () => {
       while (true) {
         const idx = nextIndex++;
@@ -667,6 +695,7 @@ export default function StudentComicFullViewPage() {
           await handleGenerateCut(cutNumber);
           setGenAllState(prev => ({ ...prev, completedCount: prev.completedCount + 1 }));
         } catch (e) {
+          failedCuts.push(cutNumber);
           console.error(`[StudentComicFullViewPage] handleGenerateCut error for cut ${cutNumber}`, e);
         }
       }
@@ -674,6 +703,15 @@ export default function StudentComicFullViewPage() {
 
     const workerCount = Math.min(COMIC_GENERATE_ALL_CONCURRENCY, pendingCuts.length);
     await Promise.all(Array.from({ length: workerCount }, () => runWorker()));
+
+    // 6컷 중 일부라도 실패하면 예약 해제(차감 없음). 완성 만화책 저장 시에만 확정.
+    if (failedCuts.length > 0 && COMIC_QUOTA_ENABLED && studentId && comicId) {
+      await releaseComicReservation({
+        studentId,
+        comicId,
+        reason: `cuts_failed:${failedCuts.join(',')}`,
+      });
+    }
 
     setGenAllState(prev => ({ ...prev, isRunning: false }));
   };
@@ -801,6 +839,11 @@ export default function StudentComicFullViewPage() {
   const actionButtons = (
     <div className="flex flex-col items-end gap-1.5 pr-8">
       <div className="flex flex-wrap items-center gap-3 justify-end">
+        {COMIC_QUOTA_ENABLED && quotaStatus && (
+          <div className="text-xs text-gray-500 mr-auto">
+            이번 달 {quotaStatus.completed}회 사용 · 생성중 {quotaStatus.reserved}회 · {quotaStatus.remaining}회 남음
+          </div>
+        )}
         <button
           onClick={handleGenerateAll}
           disabled={allBackgroundsGenerated || genAllState.isRunning}

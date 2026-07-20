@@ -46,6 +46,8 @@ export async function fetchClassesByOrganizationAndGrade(
     studentCount: cls.student_count || 0,
     teacherId: cls.teacher_id,
     teacherName: cls.teacher?.name || undefined,
+    isDefault: !!cls.is_default,
+    defaultGrade: cls.default_grade ?? null,
   }))
 }
 
@@ -74,6 +76,8 @@ export async function fetchClassesByTeacher(teacherId: string): Promise<ClassRoo
     studentCount: cls.student_count || 0,
     teacherId: cls.teacher_id,
     teacherName: cls.teacher?.name || undefined,
+    isDefault: !!cls.is_default,
+    defaultGrade: cls.default_grade ?? null,
   }))
 }
 

@@ -8,21 +8,29 @@ import { supabase } from '../../../shared/lib/supabase'
 import { useAuth } from '../../../shared/contexts/AuthContext'
 import type { Student, ClassRoom, LicenseInfo } from '../types'
 import { deleteStudents, deleteStudent, createStudent, moveStudentsToClass, fetchStudentsByTeacher } from '../services/studentService'
-import { fetchLicenseInfo } from '../services/classService'
+import { fetchLicenseInfo, fetchClassesByTeacher } from '../services/classService'
 import { createTeacherMessage, getMySentTeacherMessages } from '../../student/services/teacherMessageService'
 import { createNotification } from '../../student/services/notificationService'
 import LicenseCard from '../components/LicenseCard'
 import CreateStudentModal from '../components/CreateStudentModal'
 import ConfirmModal from '../../../shared/components/ConfirmModal'
+import { getOrCreateDefaultClass, isQuotaError, getStudentQuotaStatus, COMIC_QUOTA_ENABLED, type ComicQuotaStatus } from '../../../shared/lib/comicQuota'
 
 interface ExcelRow {
   이름?: string
+  '학생명'?: string
   학년?: string
+  아이디?: string
+  비밀번호?: string
+  학급명?: string
   반?: string
-  학생코드?: string
+  학생코드?: string // 레거시 하위 호환(=아이디)
   '보호자 연락처'?: string
-  _status?: 'ready' | 'error' | 'duplicate'
+  _status?: 'ready' | 'error' | 'duplicate' | 'default_class'
   _errorMsg?: string
+  _gradeNumber?: number
+  _resolvedClassId?: string
+  _resolvedClassName?: string
 }
 
 const GRADES = [1, 2, 3, 4, 5, 6]
@@ -32,6 +40,7 @@ export default function StudentManagementPage() {
   const { profile, user } = useAuth()
   const [license, setLicense] = useState<LicenseInfo | null>(null)
   const [allClasses, setAllClasses] = useState<ClassRoom[]>([])
+  const [quotaMap, setQuotaMap] = useState<Record<string, ComicQuotaStatus>>({})
   const [students, setStudents] = useState<Student[]>([])
   const [selectedGrade, setSelectedGrade] = useState(5)
   const [selectedClassId, setSelectedClassId] = useState('')
@@ -72,19 +81,44 @@ export default function StudentManagementPage() {
     fetchAndSetLicense()
   }, [profile?.id, actualCenterId, profile?.center_id])
 
-  useEffect(() => {
-    if (profile) {
-      const syntheticClasses = GRADES.map(g => ({
-        id: `class-${g}`,
-        name: `${g}학년 전체`,
-        grade: g,
-        studentCount: 0,
-        teacherName: profile.name || '선생님',
-      }))
-      setAllClasses(syntheticClasses)
+  // 실제 소유 학급을 로드. 없을 때만 학년 전체 가상 학급으로 폴백(레거시 호환).
+  const loadAllClasses = () => {
+    if (!profile?.id) return
+    fetchClassesByTeacher(profile.id).then(classes => {
+      if (classes.length > 0) {
+        setAllClasses(classes)
+      } else {
+        const syntheticClasses = GRADES.map(g => ({
+          id: `class-${g}`,
+          name: `${g}학년 전체`,
+          grade: g,
+          studentCount: 0,
+          teacherName: profile?.name || '선생님',
+        }))
+        setAllClasses(syntheticClasses)
+      }
       setSelectedClassId('')
-    }
-  }, [profile])
+    }).catch((err) => console.error('[StudentManagementPage] loadAllClasses failed', err))
+  }
+
+  useEffect(() => {
+    loadAllClasses()
+  }, [profile?.id])
+
+  // 만화 생성 한도 사용량 조회(flag 켜져 있을 때만). 학생 목록이 바뀔 때마다 갱신.
+  useEffect(() => {
+    if (!COMIC_QUOTA_ENABLED || students.length === 0) { setQuotaMap({}); return }
+    let cancelled = false
+    ;(async () => {
+      const m: Record<string, ComicQuotaStatus> = {}
+      await Promise.all(students.map(async s => {
+        const q = await getStudentQuotaStatus(s.id)
+        if (q) m[s.id] = q
+      }))
+      if (!cancelled) setQuotaMap(m)
+    })()
+    return () => { cancelled = true }
+  }, [students])
 
   useEffect(() => {
     // 학년 탭 변경 시 선택 학급 초기화 ('전체' 보기)
@@ -135,7 +169,23 @@ export default function StudentManagementPage() {
 
   const handleCreate = async (data: Parameters<typeof createStudent>[0]) => {
     try {
-      const newStudent = await createStudent(data)
+      // 학급 미선택(classId 빈 문자열)이면 해당 학년 기본학급에 자동 배정.
+      // 기본학급이 없으면 get_or_create_default_class RPC 가 안전하게 생성한다.
+      let resolvedClassId = data.classId
+      let resolvedClassName = data.className
+      if (!resolvedClassId && data.grade && profile?.id) {
+        try {
+          const r = await getOrCreateDefaultClass({ teacherId: profile.id, grade: data.grade })
+          if (!isQuotaError(r)) {
+            resolvedClassId = r.classId
+            resolvedClassName = `${data.grade}학년 기본학급`
+          }
+        } catch (e) {
+          console.error('[StudentManagementPage] default class assign failed', e)
+        }
+      }
+
+      const newStudent = await createStudent({ ...data, classId: resolvedClassId, className: resolvedClassName })
 
       // 목록 새로고침(선생님별 격리 조회)
       const refreshedData = await fetchStudentsByTeacher(selectedGrade)
@@ -298,10 +348,12 @@ export default function StudentManagementPage() {
   }
 
   const handleDownloadTemplate = () => {
+    // 필수 열: 학생명·학년·아이디·비밀번호 / 선택 열: 학급명(비우면 해당 학년 기본학급 자동 배정)
     const wsData = [
-      ['이름', '학년', '반', '학생코드', '보호자 연락처'],
-      ['홍길동', '3', '1반', 'happy001', '010-1234-5678'],
-      ['이순신', '4', '2반', '', '010-9876-5432']
+      ['학생명', '학년', '아이디', '비밀번호', '학급명'],
+      ['홍길동', '3', 'happy001', '1234', ''],
+      ['이순신', '4', 'happy002', '1234', '4학년 1반'],
+      ['김철수', '3', 'happy003', '1234', ''],
     ]
     const ws = XLSX.utils.aoa_to_sheet(wsData)
     const wb = XLSX.utils.book_new()
@@ -329,10 +381,9 @@ export default function StudentManagementPage() {
 
         let existingLoginIds = new Set<string>()
         if (actualCenterId || profile?.organization_id) {
-          const { data: dbStudents } = await supabase
-            .from('students')
-            .select('login_id')
-            .eq('center_id', actualCenterId)
+          let q = supabase.from('students').select('login_id')
+          q = actualCenterId ? q.eq('center_id', actualCenterId) : q.eq('organization_id', profile!.organization_id)
+          const { data: dbStudents } = await q
           if (dbStudents) {
             existingLoginIds = new Set(dbStudents.map(s => s.login_id))
           }
@@ -340,39 +391,47 @@ export default function StudentManagementPage() {
 
         const fileLoginIds = new Set<string>()
         const parsed: ExcelRow[] = data.map((row) => {
-          const name = (row['이름'] || '').toString().trim()
+          // 필수: 학생명/학년/아이디/비밀번호, 선택: 학급명. 레거시 학생코드=아이디 호환.
+          const name = (row['학생명'] || row['이름'] || '').toString().trim()
           const grade = (row['학년'] || '').toString().trim()
-          let studentCode = (row['학생코드'] || '').toString().trim()
+          const loginId = (row['아이디'] || row['학생코드'] || '').toString().trim()
+          const password = (row['비밀번호'] || '').toString().trim()
+          const className = (row['학급명'] || row['반'] || '').toString().trim()
+          const gradeNumber = Number.parseInt(grade, 10) || 0
+
           const r: ExcelRow = {
-            이름: name,
-            학년: grade,
-            반: (row['반'] || '').toString().trim(),
-            학생코드: studentCode,
-            '보호자 연락처': (row['보호자 연락처'] || '').toString().trim(),
-            _status: 'ready'
+            '학생명': name, 이름: name, 학년: grade, 아이디: loginId, 비밀번호: password, 학급명: className,
+            _status: 'ready', _gradeNumber: gradeNumber,
           }
 
-          if (!name) {
-            r._status = 'error'
-            r._errorMsg = '이름 누락'
-            return r
-          }
-          if (!grade) {
-            r._status = 'error'
-            r._errorMsg = '학년 누락'
-            return r
-          }
+          if (!name) { r._status = 'error'; r._errorMsg = '학생명 누락'; return r }
+          if (!grade || gradeNumber < 1 || gradeNumber > 6) { r._status = 'error'; r._errorMsg = '학년(1~6) 누락 또는 오류'; return r }
+          if (!loginId) { r._status = 'error'; r._errorMsg = '아이디 누락'; return r }
+          if (!password) { r._status = 'error'; r._errorMsg = '비밀번호 누락'; return r }
 
-          if (studentCode) {
-            if (fileLoginIds.has(studentCode)) {
-              r._status = 'duplicate'
-              r._errorMsg = '파일 내 중복'
-            } else if (existingLoginIds.has(studentCode)) {
-              r._status = 'duplicate'
-              r._errorMsg = '기존 아이디 존재'
-            } else {
-              fileLoginIds.add(studentCode)
+          if (fileLoginIds.has(loginId)) { r._status = 'duplicate'; r._errorMsg = '파일 내 아이디 중복'; return r }
+          if (existingLoginIds.has(loginId)) { r._status = 'duplicate'; r._errorMsg = '기존 아이디 존재'; return r }
+          fileLoginIds.add(loginId)
+
+          // 학급명 매칭: 본인 소유 학급(allClasses)만 대상. 다른 교사 학급/오타는 매칭 안 됨 → 오류.
+          if (className) {
+            const matched = allClasses.find(c => c.name === className)
+            if (!matched) {
+              r._status = 'error'
+              r._errorMsg = `존재하지 않는 학급명(오타 자동 생성 금지): ${className}`
+              return r
             }
+            if (matched.grade !== gradeNumber) {
+              r._status = 'error'
+              r._errorMsg = `학년-학급 불일치(${className}은 ${matched.grade}학년)`
+              return r
+            }
+            r._resolvedClassId = matched.id
+            r._resolvedClassName = matched.name
+          } else {
+            // 학급명 빈칸 → 해당 학년 기본학급 자동 배정(업로드 시 생성/배정)
+            r._status = 'default_class'
+            r._errorMsg = `${gradeNumber}학년 기본학급 자동 배정 예정`
           }
           return r
         })
@@ -392,9 +451,10 @@ export default function StudentManagementPage() {
       return
     }
 
-    const validRows = parsedRows.filter(r => r._status === 'ready')
+    // ready(\uC77C\uBC18 \uD559\uAE09 \uC9C0\uC815) + default_class(\uD559\uAE09\uBA85 \uBE44\uC6C0 \u2192 \uAE30\uBCF8\uD559\uAE09 \uC790\uB3D9 \uBC30\uC815) \uB458 \uB2E4 \uB4F1\uB85D \uB300\uC0C1
+    const validRows = parsedRows.filter(r => r._status === 'ready' || r._status === 'default_class')
     if (validRows.length === 0) {
-      alert('\uB4F1\uB85D \uAC00\uB2A5\uD55C \uB370\uC774\uD130\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.')
+      alert('\uB4F1\uB85D \uAC00\uB2A5\uD55C \uB370\uC774\uD130\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. \uD544\uC218\uAC12(\uD559\uC0DD\uBA85\u00B7\uD559\uB144\u00B7\uC544\uC774\uB514\u00B7\uBE44\uBC00\uBC88\uD638)\uACFC \uD559\uAE09\uBA85\uC744 \uD655\uC778\uD574 \uC8FC\uC138\uC694.')
       return
     }
 
@@ -417,23 +477,12 @@ export default function StudentManagementPage() {
       existingLoginIds = new Set(dbStudents.map(s => s.login_id))
     }
 
-    const readCell = (row: ExcelRow, keys: string[]) => {
-      const source = row as Record<string, unknown>
-      for (const key of keys) {
-        const value = source[key]
-        if (value !== undefined && value !== null && String(value).trim()) {
-          return String(value).trim()
-        }
-      }
-      return ''
-    }
-
     try {
       for (const [index, row] of validRows.entries()) {
-        const name = readCell(row, ['\uC774\uB984', 'name'])
-        const gradeValue = readCell(row, ['\uD559\uB144', 'grade'])
-        const gradeNumber = Number.parseInt(gradeValue, 10) || selectedGrade
-        let loginId = readCell(row, ['\uD559\uC0DD\uCF54\uB4DC', 'loginId'])
+        const name = (row['\uD559\uC0DD\uBA85'] || row.\uC774\uB984 || '').toString().trim()
+        const gradeNumber = row._gradeNumber || selectedGrade
+        const password = (row.\uBE44\uBC00\uBC88\uD638 || '1234').toString()
+        let loginId = (row.\uC544\uC774\uB514 || row.\uD559\uC0DD\uCF54\uB4DC || '').toString().trim()
 
         if (!loginId) {
           do {
@@ -445,16 +494,30 @@ export default function StudentManagementPage() {
           failures.push(`${loginId}: \uC774\uBBF8 \uC0AC\uC6A9 \uC911\uC778 \uC544\uC774\uB514`)
           continue
         }
-
         existingLoginIds.add(loginId)
+
+        // classId \uACB0\uC815: \uBBF8\uB9AC\uBCF4\uAE30\uC5D0\uC11C \uB9E4\uCE6D\uB41C \uD559\uAE09\uAC12, \uC5C6\uC73C\uBA74 \uD574\uB2F9 \uD559\uB144 \uAE30\uBCF8\uD559\uAE09 \uC790\uB3D9 \uC0DD\uC131/\uBC30\uC815
+        let classId = row._resolvedClassId || ''
+        let classNameFinal = row._resolvedClassName || ''
+        if (!classId && profile?.id) {
+          try {
+            const dr = await getOrCreateDefaultClass({ teacherId: profile.id, grade: gradeNumber })
+            if (!isQuotaError(dr)) {
+              classId = dr.classId
+              classNameFinal = `${gradeNumber}\uD559\uB144 \uAE30\uBCF8\uD559\uAE09`
+            }
+          } catch (e) {
+            console.error('[StudentManagementPage] default class creation failed', e)
+          }
+        }
 
         try {
           await createStudent({
             name,
             loginId,
-            password: '1234',
-            classId: `class-${gradeNumber}`,
-            className: `${gradeNumber}\uD559\uB144 \uC804\uCCB4`,
+            password,
+            classId,
+            className: classNameFinal || `${gradeNumber}\uD559\uB144 \uC804\uCCB4`,
             grade: gradeNumber,
             number: index + 1,
           })
@@ -472,6 +535,8 @@ export default function StudentManagementPage() {
       fetchStudentsByTeacher(selectedGrade).then(data => {
         setStudents(selectedClassId ? data.filter(s => s.classId === selectedClassId) : data)
       })
+      // \uD559\uAE09 \uBAA9\uB85D\uC5D0 \uAE30\uBCF8\uD559\uAE09\uC774 \uC0C8\uB85C \uC0DD\uC131\uB418\uC5C8\uC744 \uC218 \uC788\uC73C\uBBC0\uB85C \uAC31\uC2E0
+      loadAllClasses()
     } catch (err) {
       console.error(err)
       alert('\uC77C\uAD04 \uB4F1\uB85D \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.')
@@ -652,6 +717,11 @@ export default function StudentManagementPage() {
               <div style={{ fontSize: 14, color: '#888' }}>{stu.number}</div>
               <button onClick={() => navigate(`/admin/lms/students/${stu.id}`)} style={{ fontSize: 15, fontWeight: 700, color: '#1a1a2e', background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left', padding: 0 }} title="학생 상세 보기">{stu.name} <span style={{ fontSize: 11, color: '#ff2778' }}>상세</span></button>
               <div style={{ fontSize: 13, color: '#555', fontFamily: 'monospace' }}>{stu.loginId}</div>
+              {COMIC_QUOTA_ENABLED && quotaMap[stu.id] && (
+                <div style={{ fontSize: 11, color: '#6b7280', marginTop: 2 }}>
+                  이번 달 완료 {quotaMap[stu.id].completed} · 생성중 {quotaMap[stu.id].reserved} · 남음 {quotaMap[stu.id].remaining}/{quotaMap[stu.id].final_limit}
+                </div>
+              )}
               <div style={{ fontSize: 13, color: '#aaa', fontFamily: 'monospace' }}>******</div>
               <div>
                 <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
@@ -690,6 +760,7 @@ export default function StudentManagementPage() {
         <CreateStudentModal
           classes={allClasses}
           defaultClassId={selectedClassId}
+          defaultGrade={selectedGrade}
           onSave={handleCreate}
           onClose={() => setShowCreate(false)}
         />
