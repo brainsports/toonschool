@@ -3,6 +3,7 @@ import { supabase } from '../../../shared/lib/supabase'
 import { geminiClient } from '../../../shared/lib/gemini'
 import { Sparkles, Save, Clipboard, Plus, Trash2, ChevronRight, AlertCircle, CheckCircle, Globe, Copy, X } from 'lucide-react'
 import { characters } from '../../../data/characters'
+import ToonVocabularyWidget from '../../student/components/toonVocabulary/ToonVocabularyWidget'
 
 interface ToonCut {
   id: string
@@ -273,6 +274,7 @@ export default function ToonEditor() {
 
   return (
     <div className="space-y-6">
+      <ToonVocabularyWidget />
       {/* 1. Header Toolbar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-850 pb-5">
         <div className="space-y-1.5 w-full sm:max-w-md">
