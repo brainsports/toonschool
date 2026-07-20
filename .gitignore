@@ -25,3 +25,31 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# ---- OS / editor temp ----
+Thumbs.db
+ehthumbs.db
+*.tmp
+*.bak
+*.old
+
+# ---- Local tool state ----
+.vercel/
+
+# ---- Local validation & scratch ----
+# (machine-specific paths, localhost URLs, test-account credentials; do not commit)
+/scratch_*
+scratch/level-3-before-transparency-fix/
+
+# ---- Reports: keep tracked *.md reports, ignore captures/aux artifacts ----
+reports/**/*.png
+reports/**/*.jpg
+reports/**/*.jpeg
+reports/**/*.gif
+reports/**/*.cjs
+reports/**/*.html
+reports/**/*.json
+reports/**/*.txt
+
+# ---- Manual QA captures ----
+toonschool-*-manual-captures/
