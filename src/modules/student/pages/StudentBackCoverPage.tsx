@@ -10,6 +10,7 @@ import { showToast } from '../utils/toast'
 import { projectStorage } from '../utils/projectStorage'
 import { useAuth } from '../../../shared/contexts/AuthContext'
 import { supabase } from '../../../shared/lib/supabase'
+import { confirmComicCompletion, COMIC_QUOTA_ENABLED } from '../../../shared/lib/comicQuota'
 import {
   grantComicCompleteReward,
   grantLuckyRewardIfNeeded,
@@ -255,6 +256,15 @@ export default function StudentBackCoverPage() {
 
     if (shouldGrantReward) {
       await grantCompletionRewardAfterBackCoverSave(currentProjectId)
+      // 만화 생성 횟수 1회 확정: 6컷 + 작품 데이터 + 만화보기/공유 가능한 완성 만화책 저장 시점.
+      // 생성 버튼 클릭 시 예약만 해두었던 것을 완성 저장과 함께 reserved -> completed 로 확정.
+      if (COMIC_QUOTA_ENABLED && studentId) {
+        try {
+          await confirmComicCompletion({ studentId, comicId: currentProjectId })
+        } catch (e) {
+          console.error('[StudentBackCoverPage] confirm comic completion failed', e)
+        }
+      }
     }
 
     return true

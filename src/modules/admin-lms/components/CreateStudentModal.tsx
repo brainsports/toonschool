@@ -4,38 +4,55 @@
 import { useState } from 'react'
 import type { ClassRoom } from '../types'
 
+const GRADES = [1, 2, 3, 4, 5, 6]
+
 interface Props {
   classes: ClassRoom[]
   defaultClassId?: string
+  defaultGrade?: number
   onSave: (data: { name: string; loginId: string; password: string; classId: string; className: string; grade: number; number: number }) => Promise<void>
   onClose: () => void
 }
 
-export default function CreateStudentModal({ classes, defaultClassId, onSave, onClose }: Props) {
+export default function CreateStudentModal({ classes, defaultClassId, defaultGrade, onSave, onClose }: Props) {
   const [name, setName] = useState('')
   const [loginId, setLoginId] = useState('')
   const [password, setPassword] = useState('')
-  const [classId, setClassId] = useState(defaultClassId ?? (classes[0]?.id ?? ''))
+  const [grade, setGrade] = useState<number>(defaultGrade ?? classes[0]?.grade ?? 1)
+  const [classId, setClassId] = useState<string>(defaultClassId ?? '')
   const [number, setNumber] = useState(1)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  // 선택한 학년의 학급만 노출. 기본학급 자동 배정 옵션 포함.
+  const gradeClasses = classes.filter(c => c.grade === grade)
   const selectedClass = classes.find(c => c.id === classId)
 
+  const handleGradeChange = (g: number) => {
+    setGrade(g)
+    // 학년이 바뀌면 기존 학급 선택이 다른 학년이면 초기화(자동 배정으로)
+    if (selectedClass && selectedClass.grade !== g) setClassId('')
+  }
+
   const handleSubmit = async () => {
-    if (!name.trim() || !loginId.trim() || !password.trim() || !classId) {
-      alert('모든 항목을 입력해 주세요.')
+    if (!name.trim() || !loginId.trim() || !password.trim()) {
+      alert('이름·아이디·비밀번호·학년을 모두 입력해 주세요.')
       return
     }
-    
+    if (!grade) {
+      alert('학년을 선택해 주세요.')
+      return
+    }
+
     setIsSubmitting(true)
     try {
       await onSave({
         name: name.trim(),
         loginId: loginId.trim(),
         password,
+        // classId 가 빈 문자열이면 부모에서 해당 학년 기본학급으로 자동 배정한다.
         classId,
         className: selectedClass?.name ?? '',
-        grade: selectedClass?.grade ?? 1,
+        grade,
         number,
       })
       onClose()
@@ -68,14 +85,28 @@ export default function CreateStudentModal({ classes, defaultClassId, onSave, on
         <p style={{ fontSize: 13, color: '#aaa', marginBottom: 24 }}>선생님이 직접 아이디와 비밀번호를 설정합니다</p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {/* 학급 선택 */}
+          {/* 학년(필수) */}
           <div>
-            <label style={labelStyle}>학급</label>
-            <select value={classId} onChange={e => setClassId(e.target.value)} style={inputStyle}>
-              {classes.map(c => (
-                <option key={c.id} value={c.id}>{c.name}</option>
+            <label style={labelStyle}>학년 <span style={{ color: '#ff2778' }}>*</span></label>
+            <select value={grade} onChange={e => handleGradeChange(Number(e.target.value))} style={inputStyle}>
+              {GRADES.map(g => (
+                <option key={g} value={g}>{g}학년</option>
               ))}
             </select>
+          </div>
+
+          {/* 학급(선택) — 선택한 학년 학급만 표시. 미선택 시 기본학급 자동 배정 */}
+          <div>
+            <label style={labelStyle}>학급 <span style={{ color: '#bbb', fontWeight: 500 }}>(선택)</span></label>
+            <select value={classId} onChange={e => setClassId(e.target.value)} style={inputStyle}>
+              <option value="">기본학급 자동 배정</option>
+              {gradeClasses.map(c => (
+                <option key={c.id} value={c.id}>{c.name}{c.isDefault ? ' (기본학급)' : ''}</option>
+              ))}
+            </select>
+            <p style={{ fontSize: 11, color: '#9ca3af', marginTop: 4 }}>
+              학급을 선택하지 않으면 {grade}학년 기본학급에 자동 배정됩니다.
+            </p>
           </div>
 
           {/* 번호 */}

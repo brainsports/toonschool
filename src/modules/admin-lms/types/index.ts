@@ -21,6 +21,8 @@ export interface ClassRoom {
   unitSetting?: UnitSetting
   teacherId?: string
   teacherName?: string
+  isDefault?: boolean  // 학년별 기본학급 여부
+  defaultGrade?: number | null
 }
 
 export interface UnitSetting {
