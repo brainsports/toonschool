@@ -13,6 +13,7 @@ import { createTeacherMessage, getMySentTeacherMessages } from '../../student/se
 import { createNotification } from '../../student/services/notificationService'
 import LicenseCard from '../components/LicenseCard'
 import CreateStudentModal from '../components/CreateStudentModal'
+import StudentUsageRecordModal from '../components/StudentUsageRecordModal'
 import ConfirmModal from '../../../shared/components/ConfirmModal'
 import { getOrCreateDefaultClass, isQuotaError, getStudentQuotaStatus, COMIC_QUOTA_ENABLED, type ComicQuotaStatus } from '../../../shared/lib/comicQuota'
 
@@ -41,6 +42,7 @@ export default function StudentManagementPage() {
   const [license, setLicense] = useState<LicenseInfo | null>(null)
   const [allClasses, setAllClasses] = useState<ClassRoom[]>([])
   const [quotaMap, setQuotaMap] = useState<Record<string, ComicQuotaStatus>>({})
+  const [recordStudent, setRecordStudent] = useState<{ id: string; name: string } | null>(null)
   const [students, setStudents] = useState<Student[]>([])
   const [selectedGrade, setSelectedGrade] = useState(5)
   const [selectedClassId, setSelectedClassId] = useState('')
@@ -165,6 +167,14 @@ export default function StudentManagementPage() {
   }
   const toggleAll = () => {
     setCheckedIds(checkedIds.size === students.length ? new Set() : new Set(students.map(s => s.id)))
+  }
+
+  // 특정 학생의 한도 사용량 새로고침(모달에서 예약 해제/복원 후 즉시 갱신).
+  const refreshQuotaFor = (sid: string) => {
+    if (!COMIC_QUOTA_ENABLED) return
+    getStudentQuotaStatus(sid).then((q) => {
+      if (q) setQuotaMap((prev) => ({ ...prev, [sid]: q }))
+    })
   }
 
   const handleCreate = async (data: Parameters<typeof createStudent>[0]) => {
@@ -718,8 +728,9 @@ export default function StudentManagementPage() {
               <button onClick={() => navigate(`/admin/lms/students/${stu.id}`)} style={{ fontSize: 15, fontWeight: 700, color: '#1a1a2e', background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left', padding: 0 }} title="학생 상세 보기">{stu.name} <span style={{ fontSize: 11, color: '#ff2778' }}>상세</span></button>
               <div style={{ fontSize: 13, color: '#555', fontFamily: 'monospace' }}>{stu.loginId}</div>
               {COMIC_QUOTA_ENABLED && quotaMap[stu.id] && (
-                <div style={{ fontSize: 11, color: '#6b7280', marginTop: 2 }}>
-                  이번 달 완료 {quotaMap[stu.id].completed} · 생성중 {quotaMap[stu.id].reserved} · 남음 {quotaMap[stu.id].remaining}/{quotaMap[stu.id].final_limit}
+                <div style={{ fontSize: 11, color: '#6b7280', marginTop: 2, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span>이번 달 완료 {quotaMap[stu.id].completed} · 생성중 {quotaMap[stu.id].reserved} · 남음 {quotaMap[stu.id].remaining}/{quotaMap[stu.id].final_limit}</span>
+                  <button onClick={() => setRecordStudent({ id: stu.id, name: stu.name })} style={{ padding: '1px 6px', borderRadius: 6, fontSize: 11, fontWeight: 600, background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe', cursor: 'pointer', whiteSpace: 'nowrap' }}>기록·관리</button>
                 </div>
               )}
               <div style={{ fontSize: 13, color: '#aaa', fontFamily: 'monospace' }}>******</div>
@@ -763,6 +774,17 @@ export default function StudentManagementPage() {
           defaultGrade={selectedGrade}
           onSave={handleCreate}
           onClose={() => setShowCreate(false)}
+        />
+      )}
+
+      {/* 만화 생성 사용 기록 모달(예약 해제 / 1회 복원 포함) — feature flag 시에만 의미 있음 */}
+      {recordStudent && (
+        <StudentUsageRecordModal
+          open
+          studentId={recordStudent.id}
+          studentName={recordStudent.name}
+          onClose={() => setRecordStudent(null)}
+          onChanged={() => refreshQuotaFor(recordStudent.id)}
         />
       )}
 

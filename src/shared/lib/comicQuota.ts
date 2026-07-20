@@ -224,3 +224,46 @@ export async function assignStudentToDefaultClass(args: {
 export function isQuotaError(v: unknown): v is QuotaError {
   return typeof v === 'object' && v !== null && (v as QuotaError).error === true;
 }
+
+// ---------- 사용 기록 조회 (담당 교사만 — RLS 로 서버 검증) ----------
+export interface UsageRecord {
+  id: string;
+  comic_id: string;
+  generation_job_id: string | null;
+  status: string;
+  usage_year: number;
+  usage_month: number;
+  reserved_at: string | null;
+  completed_at: string | null;
+  released_at: string | null;
+  release_reason: string | null;
+  created_at: string;
+  title?: string | null;
+}
+
+export async function getStudentUsageRecords(studentId: string): Promise<UsageRecord[]> {
+  if (!COMIC_QUOTA_ENABLED) return [];
+  const { data, error } = await supabase
+    .from('comic_usage_records')
+    .select('id,comic_id,generation_job_id,status,usage_year,usage_month,reserved_at,completed_at,released_at,release_reason,created_at')
+    .eq('student_id', studentId)
+    .order('created_at', { ascending: false })
+    .limit(50);
+  if (error || !data) return [];
+  const records = data as UsageRecord[];
+
+  // 작품명 보강(shared_comic_books.project_id 기준, 공개 작품만)
+  const comicIds = Array.from(new Set(records.map((r) => r.comic_id))).filter(Boolean);
+  if (comicIds.length > 0) {
+    const { data: books } = await supabase
+      .from('shared_comic_books')
+      .select('project_id,title')
+      .in('project_id', comicIds);
+    const titleMap: Record<string, string> = {};
+    (books || []).forEach((b: { project_id: string; title: string }) => {
+      titleMap[b.project_id] = b.title;
+    });
+    return records.map((r) => ({ ...r, title: titleMap[r.comic_id] || null }));
+  }
+  return records;
+}
