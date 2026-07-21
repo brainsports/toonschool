@@ -7,8 +7,13 @@ import {
   Star,
   Trophy,
 } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import type { StudentNotification } from '../../services/notificationService'
 import type { TeacherMessage } from '../../services/teacherMessageService'
+
+// 툰어휘사전 캐릭터(기존 에셋 재사용 — 복사/신규 생성 금지).
+const VOCAB_MASCOT = '/images/toon-vocabulary/toon-vocabulary-mascot.png'
+const VOCABULARY_PATH = '/student/vocabulary'
 
 interface AttendanceCalendarDay {
   date: number
@@ -44,6 +49,7 @@ export default function StudentDashboardSidebar({
   onOpenTeacherMessages,
   onOpenNotifications,
 }: StudentDashboardSidebarProps) {
+  const navigate = useNavigate()
   return (
     <aside className="min-w-0 flex flex-col gap-4 xl:gap-5">
       <section className="min-w-0 bg-white rounded-[1.5rem] p-5 xl:p-6 border border-slate-100 shadow-sm flex flex-col gap-4">
@@ -125,6 +131,27 @@ export default function StudentDashboardSidebar({
           </div>
         </div>
       </section>
+
+      {/* 나의 단어장 배너 — 출석 기록과 선생님 말씀 사이. 카드 전체 클릭 시 /student/vocabulary 이동. */}
+      <button
+        type="button"
+        onClick={() => navigate(VOCABULARY_PATH)}
+        aria-label="나의 단어장 보기"
+        className="group min-w-0 w-full text-left bg-gradient-to-br from-sky-50 to-white rounded-[1.5rem] p-5 xl:p-6 border border-sky-100 shadow-sm hover:shadow-md hover:border-sky-200 transition-all flex items-center gap-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 active:scale-[0.99]"
+      >
+        <img
+          src={VOCAB_MASCOT}
+          alt=""
+          className="w-14 h-14 shrink-0 object-contain"
+        />
+        <div className="min-w-0 flex-1">
+          <h3 className="font-bold text-slate-800 whitespace-nowrap">나의 단어장</h3>
+          <p className="text-[13px] text-slate-500 font-medium mt-0.5 break-keep">저장한 낱말을 다시 살펴봐요!</p>
+          <span className="inline-flex items-center gap-1 mt-2 text-xs font-bold text-sky-600 group-hover:gap-1.5 transition-all">
+            단어장 보기 <ChevronRight className="w-3 h-3" />
+          </span>
+        </div>
+      </button>
 
       <section className="min-w-0 min-h-[180px] bg-white rounded-[1.5rem] p-5 xl:p-6 border border-slate-100 shadow-sm flex flex-col gap-4">
         <div className="flex items-center justify-between gap-2">
