@@ -112,6 +112,15 @@ function PolicyNav() {
                 <span className="xl:px-8"><PendingLink>이메일무단수집거부</PendingLink></span>
                 <span className="xl:px-8"><PendingLink>청소년보호정책</PendingLink></span>
                 <span className="xl:px-8">
+                    <Link
+                        to="/pricing"
+                        className="inline-flex items-center text-[15px] font-medium leading-none transition-colors hover:opacity-70"
+                        style={{ color: MUTED, padding: '2px 2px' }}
+                    >
+                        이용요금
+                    </Link>
+                </span>
+                <span className="xl:px-8">
                     <a
                         href={EXTERNAL_INQUIRY_URL}
                         target="_blank"
@@ -256,27 +265,27 @@ function ContactColumn() {
             <SectionTitle>고객센터</SectionTitle>
 
             <a
-                href="mailto:support@toonschool.kr"
+                href="mailto:contact@kmemory.org"
                 className="inline-flex items-center gap-2 text-[17px] font-semibold transition-opacity hover:opacity-75"
                 style={{ color: ACCENT }}
             >
                 <Mail className="h-[18px] w-[18px]" aria-hidden="true" />
-                support@toonschool.kr
+                contact@kmemory.org
             </a>
 
             <div className="flex items-center gap-2 text-[15px]" style={{ color: BODY }}>
                 <Phone className="h-[17px] w-[17px]" aria-hidden="true" style={{ color: ACCENT }} />
                 <span style={{ color: MUTED }}>문의 · 상담</span>
-                <a href="tel:05074582020" className="font-semibold transition-opacity hover:opacity-75" style={{ color: HEADING }}>
-                    050-7458-2020
+                <a href="tel:15992479" className="font-semibold transition-opacity hover:opacity-75" style={{ color: HEADING }}>
+                    1599-2479
                 </a>
             </div>
 
             <div className="flex items-center gap-2 text-[15px]" style={{ color: BODY }}>
                 <Headset className="h-[17px] w-[17px]" aria-hidden="true" style={{ color: ACCENT }} />
                 <span style={{ color: MUTED }}>기술 지원</span>
-                <a href="tel:01049838390" className="font-semibold transition-opacity hover:opacity-75" style={{ color: HEADING }}>
-                    010-4983-8390
+                <a href="tel:0269567975" className="font-semibold transition-opacity hover:opacity-75" style={{ color: HEADING }}>
+                    02-6956-7975
                 </a>
             </div>
 
@@ -291,19 +300,19 @@ function ContactColumn() {
                     운영사
                 </p>
                 <p className="text-[16px] font-medium" style={{ color: HEADING }}>
-                    브레인스포츠㈜
+                    브레인스포츠
                 </p>
                 <p className="flex items-start gap-2 text-[15px]" style={{ color: MUTED }}>
                     <MapPin className="mt-[2px] h-[16px] w-[16px] shrink-0" aria-hidden="true" style={{ color: ACCENT }} />
                     <span>서울특별시 금천구 가산디지털2로 169-16</span>
                 </p>
                 <a
-                    href="mailto:contact@toonschool.kr"
+                    href="mailto:contact@kmemory.org"
                     className="flex items-center gap-2 text-[15px] transition-opacity hover:opacity-75"
                     style={{ color: ACCENT }}
                 >
                     <Mail className="h-[16px] w-[16px]" aria-hidden="true" />
-                    contact@toonschool.kr
+                    contact@kmemory.org
                 </a>
             </div>
         </div>
