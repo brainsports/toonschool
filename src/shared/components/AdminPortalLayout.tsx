@@ -3,6 +3,8 @@ import { NavLink, Outlet, Link, useNavigate, useLocation, Navigate } from 'react
 import { useAuth } from '../contexts/AuthContext'
 import TeacherNotificationInbox from '../../modules/admin-lms/components/TeacherNotificationInbox'
 import OrgAdminNotificationInbox from '../../modules/admin-lms/components/OrgAdminNotificationInbox'
+import DemoBanner from './DemoBanner'
+import DemoOnboarding from './DemoOnboarding'
 
 const getMenuItems = (role: string) => {
   switch (role) {
@@ -293,10 +295,14 @@ export default function AdminPortalLayout() {
         </div>
       </header>
 
+      {profile.is_demo && <DemoBanner />}
+
       {/* 메인 콘텐츠 */}
       <main style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 24px 64px' }}>
         <Outlet />
       </main>
+
+      {profile.is_demo && <DemoOnboarding role="teacher" />}
     </div>
   )
 }

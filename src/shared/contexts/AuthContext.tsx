@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
+import { clearDemoSession } from '../lib/demoSession'
 
 export interface Profile {
   id: string
@@ -13,6 +14,7 @@ export interface Profile {
   monthly_used?: number
   center_id?: string | null
   organization_id?: string | null
+  is_demo?: boolean
   created_at?: string
   updated_at?: string
 }
@@ -34,7 +36,7 @@ const STATUS_CHECK_THROTTLE_MS = 30_000
 // 장시간 열린 세션을 위한 주기적 재확인 간격
 const STATUS_CHECK_INTERVAL_MS = 5 * 60_000
 
-const PROFILE_SELECT = 'id, email, name, role, status, plan_type, monthly_quota, monthly_used, center_id, organization_id, created_at, updated_at'
+const PROFILE_SELECT = 'id, email, name, role, status, plan_type, monthly_quota, monthly_used, center_id, organization_id, is_demo, created_at, updated_at'
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
@@ -227,6 +229,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     setLoading(true)
     await supabase.auth.signOut()
+    clearDemoSession()
     setUser(null)
     setProfile(null)
     setLoading(false)

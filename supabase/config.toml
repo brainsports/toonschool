@@ -21,6 +21,11 @@ entrypoint = "./functions/generate-topics-from-question/index.ts"
 # For example, if you want to serve static HTML pages in your function:
 # static_files = [ "./functions/generate-topics-from-question/*.html" ]
 
+[functions.demo-login]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/demo-login/index.ts"
+
 [functions.create-student]
 verify_jwt = true
 

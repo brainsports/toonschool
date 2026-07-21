@@ -18,6 +18,8 @@ import { useDreamProgress } from '../dream/useDreamProgress'
 import DreamScoreDetailModal from '../dream/DreamScoreDetailModal'
 import DreamRankingModal from '../dream/DreamRankingModal'
 import LevelUpModal from '../dream/LevelUpModal'
+import DemoBanner from '../../../../shared/components/DemoBanner'
+import DemoOnboarding from '../../../../shared/components/DemoOnboarding'
 
 interface StudentPageShellProps {
   children: React.ReactNode
@@ -155,7 +157,8 @@ export default function StudentPageShell({
   return (
     <div className={`${isFull ? 'h-[100dvh] overflow-hidden' : 'min-h-screen overflow-x-hidden'} flex flex-col ${isFull ? 'pb-0' : 'pb-12'} bg-gradient-to-tr ${bgOverlays[bgVariant as keyof typeof bgOverlays] || bgOverlays.default} relative`}>
       {bgVariant === 'space' && <StudentSpaceBackground />}
-      
+      {showHUD && authProfile?.is_demo && <DemoBanner />}
+
       {/* 상단 게임 HUD 영역 */}
       {showHUD && (
         <header className={`hud-panel relative z-50 px-4 py-3 ${isFull ? 'mb-0 shrink-0' : 'mb-6 sticky top-0'} !bg-[#f19cdb] border-none`}>
@@ -307,6 +310,8 @@ export default function StudentPageShell({
           onLater={dismissLevelUp}
         />
       )}
+
+      {authProfile?.is_demo && <DemoOnboarding role="student" />}
     </div>
   )
 }
