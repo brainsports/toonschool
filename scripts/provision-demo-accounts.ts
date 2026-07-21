@@ -85,7 +85,13 @@ async function getAuthUserIdByEmail(email: string): Promise<string | null> {
 
 async function ensureAuthUser(email: string, password: string, name: string, role: 'student' | 'teacher'): Promise<string> {
   const existing = await getAuthUserIdByEmail(email)
-  if (existing) return existing
+  if (existing) {
+    // 기존 사용자 재사용 시 비밀번호를 전달된 값으로 동기화.
+    // 프로비저닝 재실행해도 auth 비밀번호와 Supabase Secret(DEMO_*_PASSWORD)이 항상 일치하도록 보장.
+    const { error: updErr } = await admin.auth.admin.updateUserById(existing, { password })
+    if (updErr) throw new Error(`비밀번호 동기화 실패(${email}): ${updErr.message}`)
+    return existing
+  }
   const { data, error } = await admin.auth.admin.createUser({
     email,
     password,
@@ -198,9 +204,7 @@ async function main() {
       name: '체험학생',
       login_id: 'demo-student',
       class_id: classId,
-      class_name: DEMO_CLASS_NAME,
       grade: '5학년',
-      number: 1,
       organization_id: orgId,
       created_by: teacherId,
       status: 'active',
@@ -249,7 +253,6 @@ async function main() {
       status: 'completed',
       nodes,
       edges,
-      creation_method: 'ai',
       is_public: false,
     })
     if (error) throw new Error(error.message)
@@ -281,7 +284,6 @@ async function main() {
       status: 'published',
       is_public: true,
       summary: '운동장에서 피자를 나누며 분수의 원리를 배우는 이야기.',
-      creator_email: DEMO_STUDENT_EMAIL,
     }).select('id').single()
     if (projErr || !proj) throw new Error(projErr?.message ?? 'toon_projects insert 실패')
     comicId = proj.id
@@ -294,21 +296,32 @@ async function main() {
       student_name: '체험학생',
       grade: '5학년',
       pages,
-      summary: '운동장에서 피자를 나누며 분수의 원리를 배우는 이야기.',
       is_public: true,
     }, { onConflict: 'slug' })
     if (bookErr) throw new Error(bookErr.message)
   })
 
-  // 샘플 3: 보상 로그 + 통계 + 정원
+  // 샘플 3: 보상 로그 + 통계 + 정원 (reward_logs 부분 유니크 인덱스는 onConflict 추론이
+  //         어려워 사전 존재 확인 후 insert 하는 패턴 사용)
   await step('샘플 보상/정원', async () => {
-    const { error: rl1 } = await admin.from('reward_logs').upsert({
-      student_id: studentId, reward_type: 'attendance', reward_date: new Date().toISOString().slice(0, 10),
-    }, { onConflict: 'student_id,reward_type,reward_date' })
-    if (rl1) throw new Error(rl1.message)
-    await admin.from('reward_logs').upsert({
-      student_id: studentId, reward_type: 'comic_complete', source_id: comicId ?? 'demo-comic',
-    }, { onConflict: 'student_id,reward_type,source_id' })
+    const today = new Date().toISOString().slice(0, 10)
+    const { data: attExist } = await admin.from('reward_logs')
+      .select('id').eq('student_id', studentId).eq('reward_type', 'attendance').eq('reward_date', today).maybeSingle()
+    if (!attExist?.id) {
+      const { error: rl1 } = await admin.from('reward_logs').insert({
+        student_id: studentId, reward_type: 'attendance', reward_date: today,
+      })
+      if (rl1) throw new Error(rl1.message)
+    }
+    const comicSrc = comicId ?? 'demo-comic'
+    const { data: ccExist } = await admin.from('reward_logs')
+      .select('id').eq('student_id', studentId).eq('reward_type', 'comic_complete').eq('source_id', comicSrc).maybeSingle()
+    if (!ccExist?.id) {
+      const { error: rl2 } = await admin.from('reward_logs').insert({
+        student_id: studentId, reward_type: 'comic_complete', source_id: comicSrc,
+      })
+      if (rl2) throw new Error(rl2.message)
+    }
 
     const { error: statErr } = await admin.from('student_reward_stats').upsert({
       student_id: studentId,
