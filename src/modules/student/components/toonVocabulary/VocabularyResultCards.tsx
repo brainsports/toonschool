@@ -2,7 +2,6 @@
 // 선택한 뜻(sense) 하나에 대해 5개 카드(사전뜻/쉬운뜻/생활예문/교과예문/한마디)를 시안 색상으로 렌더.
 // 다의어/동음이의어(결과가 여러 개)일 땐 상단 탭으로 뜻을 전환해 한 뜻씩 본다(시안 단일 카드셋 인상 유지).
 // AI 실패(unavailable) 시 쉬운 설명 영역은 안내 카드로 대체, 사전 뜻은 유지.
-import { useState } from 'react'
 import { BookOpen, MessageCircle, Home, FlaskConical, Star, Info } from 'lucide-react'
 import type { ReactNode } from 'react'
 import type { VocabularyResult, VocabularyAiStatus } from '../../types/vocabulary'
@@ -73,19 +72,15 @@ function SenseBlock({ result, aiStatus }: { result: VocabularyResult; aiStatus: 
 export default function VocabularyResultCards({
   results,
   aiStatus,
+  sel,
+  onSelChange,
 }: {
   results: VocabularyResult[]
   aiStatus: VocabularyAiStatus
+  sel: number
+  onSelChange: (i: number) => void
 }) {
-  const [sel, setSel] = useState(0)
-  const [prevWord, setPrevWord] = useState(results[0]?.word ?? '')
   const word = results[0]?.word ?? ''
-  
-  if (word !== prevWord) {
-    setPrevWord(word)
-    setSel(0)
-  }
-
   const current = results[Math.min(sel, results.length - 1)]
   const multi = results.length > 1
 
@@ -101,7 +96,7 @@ export default function VocabularyResultCards({
             <button
               key={`${r.targetCode}-${r.senseOrder}`}
               className={`tv-tab${i === sel ? ' tv-tab--active' : ''}`}
-              onClick={() => setSel(i)}
+              onClick={() => onSelChange(i)}
               role="tab"
               aria-selected={i === sel}
             >

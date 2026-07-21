@@ -396,7 +396,13 @@ export default function StudentMindmapEditorPage() {
 
   return (
     <div className="h-[100dvh] w-full flex flex-col bg-slate-100 overflow-hidden">
-      <ToonVocabularyWidget grade={project.grade} subject={project.subject} unit={project.unitTitle} />
+      <ToonVocabularyWidget
+        sourceType="mindmap_editor"
+        sourceId={project.id}
+        grade={project.grade}
+        subject={project.subject}
+        unit={project.unitTitle}
+      />
       {/* 상단 도구 모음 */}
       <header className="shrink-0 bg-white border-b border-slate-200 px-3 py-2 flex items-center gap-2 flex-wrap z-30">
         <button onClick={() => navigate('/student/mypage')} className="p-2 rounded-lg hover:bg-slate-100 text-slate-600" title="뒤로"><ArrowLeft className="w-5 h-5" /></button>
