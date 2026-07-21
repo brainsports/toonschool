@@ -6,7 +6,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Undo2, Redo2, Wand2, LayoutGrid, Eye, CheckCircle2, Share2, Image, FileType, Printer, HelpCircle, Plus, Sparkles, Palette } from 'lucide-react';
+import { ArrowLeft, Undo2, Redo2, Wand2, LayoutGrid, Eye, CheckCircle2, Share2, Image, FileType, Printer, HelpCircle, Plus, Sparkles, Palette, BookMarked } from 'lucide-react';
 import type { MindmapNode, MindmapProject } from '../types/mindmap';
 import type { AiPartialAction } from '../types/mindmapAi';
 import { MINDMAP_THEMES, MINDMAP_ICONS, getTheme } from '../data/mindmapConfig';
@@ -106,6 +106,29 @@ export default function StudentMindmapEditorPage() {
     }, 1200);
     return () => { if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current); };
   }, [project]);
+
+  // 나의 단어장으로 이동 — 대기 중이거나 저장 중인 변경을 즉시 flush 해 작업 유실을 막는다.
+  const handleGoVocabulary = useCallback(async () => {
+    const cur = projectRef.current;
+    const hasPending = !!saveTimerRef.current || saveStatus === 'saving' || saveStatus === 'offline';
+    if (cur && hasPending) {
+      if (saveTimerRef.current) {
+        window.clearTimeout(saveTimerRef.current);
+        saveTimerRef.current = null;
+      }
+      if (navigator.onLine) {
+        setSaveStatus('saving');
+        try {
+          const saved = await saveMindmap(cur);
+          if (saved) lastSavedVersion.current = saved.version;
+          setSaveStatus('saved');
+        } catch {
+          setSaveStatus('error');
+        }
+      }
+    }
+    navigate('/student/vocabulary');
+  }, [navigate, saveStatus]);
 
   // ---- 커밋(히스토리Push) ----
   const commit = useCallback((updater: (prev: MindmapProject) => MindmapProject) => {
@@ -420,6 +443,14 @@ export default function StudentMindmapEditorPage() {
         <button onClick={() => canvasRef.current?.fit()} className="p-2 rounded-lg hover:bg-slate-100 text-slate-600" title="화면 맞춤"><Eye className="w-5 h-5" /></button>
 
         <div className="ml-auto flex items-center gap-2">
+          <button
+            onClick={() => void handleGoVocabulary()}
+            title="나의 단어장"
+            aria-label="나의 단어장"
+            className="px-3 py-1.5 rounded-lg border border-sky-200 bg-sky-50/70 text-sky-700 text-sm font-bold hover:bg-sky-100 hover:border-sky-300 flex items-center gap-1.5"
+          >
+            <BookMarked className="w-4 h-4" /> <span className="hidden sm:inline">나의 단어장</span>
+          </button>
           <button onClick={() => handleAiFull()} disabled={aiLoading} className="px-3 py-1.5 rounded-lg bg-purple-500 text-white text-sm font-bold hover:bg-purple-600 disabled:opacity-60 flex items-center gap-1">
             <Wand2 className="w-4 h-4" /> {aiLoading ? '만드는 중...' : 'AI 전체 만들기'}
           </button>
