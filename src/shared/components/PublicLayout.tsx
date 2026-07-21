@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
+import PublicFooter from './PublicFooter';
 
 export default function PublicLayout() {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -99,24 +100,7 @@ export default function PublicLayout() {
             </main>
 
             {/* Footer */}
-            <footer className="w-full px-6 py-12 flex flex-col items-center text-center space-y-6 bg-surface-dim border-t border-outline-variant mt-auto relative z-20">
-                <div className="flex items-center gap-2 mb-2 opacity-50 grayscale hover:grayscale-0 hover:opacity-100 transition-all">
-                    <div className="w-6 h-6 bg-gray-400 text-white flex items-center justify-center font-bold rounded text-xs">TS</div>
-                    <span className="font-title-md font-bold text-gray-500">ToonSchool</span>
-                </div>
-                <p className="text-gray-500 font-medium text-sm">공부하지 말고, 공부를 만들자.</p>
-                <div className="flex flex-wrap justify-center gap-4 text-sm text-gray-500">
-                    <Link className="hover:text-primary transition-colors" to="/">홈</Link>
-                    <Link className="hover:text-primary transition-colors" to="/about">툰스쿨이란</Link>
-                    <Link className="hover:text-primary transition-colors" to="/student/select-unit">툰스쿨 에디터</Link>
-                    <Link className="hover:text-primary transition-colors" to="/classroom">수업 활용</Link>
-                    <Link className="hover:text-primary transition-colors" to="/flipped-learning">거꾸로 학습법</Link>
-                    <Link className="hover:text-primary transition-colors" to="/share">공유 링크</Link>
-                    <Link className="hover:text-primary transition-colors" to="/pricing">요금제</Link>
-                    <Link className="hover:text-primary transition-colors" to="/contact">고객센터</Link>
-                </div>
-                <p className="text-sm text-gray-400 mt-4">© 2024 ToonSchool. All rights reserved.</p>
-            </footer>
+            <PublicFooter />
         </div>
     );
 }
