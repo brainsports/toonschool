@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Image, MessageSquare, PencilLine, Loader2, GraduationCap, Presentation } from 'lucide-react';
 import { useAuth } from '../shared/contexts/AuthContext';
 import { startDemo, DemoLoginError } from '../shared/lib/demoLogin';
@@ -60,31 +60,27 @@ export default function HomePage() {
 <p className="text-lg text-on-surface-variant max-w-xl mx-auto lg:mx-0">
                     툰스쿨은 초등 교과 단원을 학생이 직접 학습만화로 만드는 AI 수업 플랫폼입니다.<br />단원 선택부터 대본, 6컷 만화, 단원 정리, OX 문제까지 한 번에 완성합니다.
                 </p>
-<div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
-<Link className="w-full sm:w-auto bg-primary text-white px-8 py-4 rounded-lg font-bold text-lg hover:bg-primary-container transition-colors shadow-md text-center" to="/login">무료로 시작하기</Link>
-<Link className="w-full sm:w-auto bg-white text-primary border-2 border-primary px-8 py-4 rounded-lg font-bold text-lg hover:bg-gray-50 transition-colors text-center" to="/student/select-unit">툰스쿨 에디터 보기</Link>
-</div>
 {/* 가입 없이 바로 체험 (운영 도메인에서 VITE_DEMO_LOGIN_ENABLED=true 일 때만 노출) */}
 {isDemoLoginEnabled() && (
-<div className="space-y-2">
+<div className="space-y-3">
 <p className="text-sm text-on-surface-variant text-center lg:text-left font-medium">가입 없이 1분 만에 체험해 보세요!</p>
-<div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3">
+<div className="flex flex-col sm:flex-row items-stretch justify-center lg:justify-start gap-4">
 <button
 type="button"
 onClick={() => handleDemo('student')}
 disabled={demoLoading !== null}
-className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white text-pink-600 border-2 border-pink-300 px-6 py-3 rounded-xl font-bold text-base hover:bg-pink-50 hover:border-pink-400 transition-colors shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
+className="w-full sm:flex-1 sm:max-w-sm min-h-[88px] inline-flex items-center justify-center gap-3 bg-white text-pink-600 border-2 border-pink-300 px-8 py-6 rounded-xl font-extrabold text-lg hover:bg-pink-50 hover:border-pink-400 transition-colors shadow-md disabled:opacity-60 disabled:cursor-not-allowed"
 >
-{demoLoading === 'student' ? <Loader2 className="w-5 h-5 animate-spin" /> : <GraduationCap className="w-5 h-5" />}
+{demoLoading === 'student' ? <Loader2 className="w-7 h-7 animate-spin" /> : <GraduationCap className="w-7 h-7" />}
 학생으로 바로 체험하기
 </button>
 <button
 type="button"
 onClick={() => handleDemo('teacher')}
 disabled={demoLoading !== null}
-className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white text-sky-600 border-2 border-sky-300 px-6 py-3 rounded-xl font-bold text-base hover:bg-sky-50 hover:border-sky-400 transition-colors shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
+className="w-full sm:flex-1 sm:max-w-sm min-h-[88px] inline-flex items-center justify-center gap-3 bg-white text-sky-600 border-2 border-sky-300 px-8 py-6 rounded-xl font-extrabold text-lg hover:bg-sky-50 hover:border-sky-400 transition-colors shadow-md disabled:opacity-60 disabled:cursor-not-allowed"
 >
-{demoLoading === 'teacher' ? <Loader2 className="w-5 h-5 animate-spin" /> : <Presentation className="w-5 h-5" />}
+{demoLoading === 'teacher' ? <Loader2 className="w-7 h-7 animate-spin" /> : <Presentation className="w-7 h-7" />}
 선생님으로 바로 체험하기
 </button>
 </div>
