@@ -95,6 +95,12 @@ export interface FlipbookQuizPage {
   hint?: string
   answer: 'O' | 'X'
   explanation?: string
+  /**
+   * 원본 데이터의 정답 값이 'O'/'X' 로 신뢰 가능했는지 여부.
+   * false 이면 정답을 확정할 수 없어 학생에게 잘못된 정답을 보여주지 않는다.
+   * (매퍼가 isKnownOxAnswer(data.answer) 로 채운다. 값이 없으면 true 로 간주)
+   */
+  answerReliable?: boolean
 }
 
 /**

@@ -21,7 +21,7 @@ import {
   buildQuizPageInfo,
   getProjectKeywords,
 } from './landscapePageInfo'
-import { normalizeOxAnswer } from './flipbookOxQuiz'
+import { normalizeOxAnswer, isKnownOxAnswer } from './flipbookOxQuiz'
 import type {
   FlipbookPage,
   FlipbookCoverPage,
@@ -200,6 +200,8 @@ function mapQuiz(
     quizNumber: questionNum,
     question: data.question || '',
     answer: normalizeOxAnswer(data.answer),
+    // 정답 값이 실제 'O'/'X' 였는지(알 수 없으면 정답 판정/표시를 보류).
+    answerReliable: isKnownOxAnswer(data.answer),
     // hint 는 현재 데이터에 없음 → 1차 미제공(2차). explanation 은 풀이 팁 프리셋 사용.
     explanation: info?.mission || undefined,
   }

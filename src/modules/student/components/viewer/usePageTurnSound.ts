@@ -29,6 +29,8 @@ function readStoredEnabled(): boolean {
 export interface PageTurnSoundApi {
   /** 책장 넘김 효과음을 재생한다. 음소거 상태거나 오디오를 쓸 수 없으면 아무 일도 일어나지 않는다. */
   playPageTurn: () => void
+  /** OX 퀴즈 답안 선택 직후 결과 효과음(정답=밝은 2음, 오답=부드러운 하강 2음). 음소거 시 무시. */
+  playQuizResult: (isCorrect: boolean) => void
   /** "책 펼치기" 같은 최초 사용자 제스처에서 호출해 AudioContext 를 미리 생성·실행한다. 첫 넘김 소리 누락 방지. */
   primeAudio: () => void
   /** 효과음 사용 여부. */
@@ -139,6 +141,42 @@ export function usePageTurnSound(): PageTurnSoundApi {
     }
   }, [soundEnabled, ensureCtx])
 
+  /**
+   * OX 퀴즈 결과 효과음.
+   *  - 정답: 밝고 짧은 2음 상승(C5→E5) — "딩동" 느낌의 격려 사운드.
+   *  - 오답: 부드럽고 짧은 2음 하강(E4→C4) — 꾸짖지 않는 차분한 안내.
+   *  - 정현파(oscillator) + 짧은 ADSR 로 합성(오디오 파일 없음 → 404/저작권 이슈 없음).
+   *  - 음소거이거나 AudioContext 확보 불가면 아무 일도 일어나지 않는다(퀴즈 기능에 영향 없음).
+   */
+  const playQuizResult = useCallback((isCorrect: boolean) => {
+    if (!soundEnabled) return
+    const ctx = ensureCtx()
+    if (!ctx) return
+    try {
+      const notes = isCorrect ? [523.25, 659.25] : [329.63, 261.63] // C5/E5 or E4/C4
+      const base = ctx.currentTime + 0.02
+      const gap = 0.11
+      notes.forEach((freq, i) => {
+        const start = base + i * gap
+        const dur = 0.16
+        const osc = ctx.createOscillator()
+        osc.type = isCorrect ? 'triangle' : 'sine'
+        osc.frequency.value = freq
+        const gain = ctx.createGain()
+        const peak = isCorrect ? 0.3 : 0.24
+        gain.gain.setValueAtTime(0.0001, start)
+        gain.gain.exponentialRampToValueAtTime(peak, start + 0.012)
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + dur)
+        osc.connect(gain)
+        gain.connect(ctx.destination)
+        osc.start(start)
+        osc.stop(start + dur + 0.02)
+      })
+    } catch {
+      /* 결과 효과음 실패는 퀴즈 동작에 영향을 주지 않는다. */
+    }
+  }, [soundEnabled, ensureCtx])
+
   // 언마운트 시 AudioContext 정리(메모리 누수 방지).
   useEffect(() => {
     const ctx = ctxRef.current
@@ -151,5 +189,5 @@ export function usePageTurnSound(): PageTurnSoundApi {
     }
   }, [])
 
-  return { playPageTurn, primeAudio, soundEnabled, toggleSound }
+  return { playPageTurn, playQuizResult, primeAudio, soundEnabled, toggleSound }
 }

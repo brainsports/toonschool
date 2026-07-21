@@ -20,3 +20,24 @@ export function normalizeOxAnswer(raw: unknown): OxAnswer {
   if (FALSE_LIKE.has(v)) return 'X'
   return 'O'
 }
+
+/**
+ * 원본 정답 값이 'O'/'X' 로 판별 가능한 "신뢰할 수 있는" 값인지 검사.
+ * - normalizeOxAnswer 는 알 수 없는 값을 기본값 'O' 로 바꿔버리기 때문에,
+ *   정답 판정을 하기 전에 이 함수로 실제 데이터가 유효한 정답인지 먼저 확인해야
+ *   학생에게 잘못된 정답을 보여주는 일을 막을 수 있다.
+ * - null/undefined/빈 문자열/알 수 없는 토큰 → false.
+ */
+export function isKnownOxAnswer(raw: unknown): boolean {
+  if (raw == null) return false
+  const v = String(raw).trim().toUpperCase()
+  if (!v) return false
+  return TRUE_LIKE.has(v) || FALSE_LIKE.has(v)
+}
+
+/**
+ * 두 OX 값이 같은지(정답 여부) 판정. 타입이 이미 보장된 값에 사용.
+ */
+export function judgeOx(selected: OxAnswer, correct: OxAnswer): boolean {
+  return selected === correct
+}

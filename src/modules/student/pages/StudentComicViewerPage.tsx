@@ -3,6 +3,14 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { loadComicProjectData, loadComicCutData } from '../components/editor/utils/comicStorage'
 import type { ComicProjectData, ComicCutEditData } from '../components/editor/utils/comicStorage'
 import { projectStorage } from '../utils/projectStorage'
+import {
+  buildQuizAnswerKey,
+  loadQuizAnswers,
+  saveQuizAnswers,
+  toSelectionMap,
+  type StoredQuizAnswer,
+} from '../utils/flipbookQuizAnswers'
+import type { OxAnswer } from '../components/viewer/flipbookOxQuiz'
 import type { EditorState } from '../components/editor/types'
 import StudentWorkspaceLayout from '../components/layout/StudentWorkspaceLayout'
 import StudentZoomControl from '../components/layout/StudentZoomControl'
@@ -120,6 +128,34 @@ export default function StudentComicViewerPage() {
   const [projectData, setProjectData] = useState<ComicProjectData | null>(null)
   const [quizAnswers, setQuizAnswers] = useState<Record<number, 'O' | 'X'>>({})
 
+  // OX 답안 영구 저장 키: 사용자(또는 익명 세션) + 작품(project) 단위로 분리.
+  // 작품 식별자는 페이지 로드 키(currentProjectId)와 동일하게 맞춘다.
+  const currentProjectId =
+    location.state?.projectId || location.state?.topic?.id || localStorage.getItem('currentProjectId')
+  const quizAnswerKey = buildQuizAnswerKey(user?.id, currentProjectId)
+
+  // 작품/사용자가 바뀌거나 최초 로드 시 저장된 답안 복원(오프라인/재실행 후에도 유지).
+  useEffect(() => {
+    const stored = loadQuizAnswers(quizAnswerKey)
+    setQuizAnswers(toSelectionMap(stored))
+  }, [quizAnswerKey])
+
+  // 답안 선택 처리: 상태 갱신(중복 차단) + 영구 저장(스키마/손상 안전, 실패해도 동작 유지).
+  // 상태 로직을 분리해 두어 추후 '다시 풀기' 기능을 붙이기 쉽게 한다.
+  const handleQuizSelect = (quizNumber: number, selected: OxAnswer, correct: OxAnswer) => {
+    setQuizAnswers((c) => (c[quizNumber] ? c : { ...c, [quizNumber]: selected }))
+    if (!quizAnswerKey) return
+    const stored = loadQuizAnswers(quizAnswerKey)
+    if (stored[quizNumber]) return // 이미 저장된 답안이면 덮어쓰지 않는다(중복 방지)
+    const record: StoredQuizAnswer = {
+      answer: selected,
+      correct,
+      isCorrect: selected === correct,
+      answeredAt: new Date().toISOString(),
+    }
+    saveQuizAnswers(quizAnswerKey, { ...stored, [quizNumber]: record })
+  }
+
   const [showMenu, setShowMenu] = useState(false)
   const [isAutoFlip, setIsAutoFlip] = useState(false)
   const autoFlipTimerRef = useRef<NodeJS.Timeout | null>(null)
@@ -129,7 +165,7 @@ export default function StudentComicViewerPage() {
   const [targetSpreadIndex, setTargetSpreadIndex] = useState<number | null>(null)
 
   // 책장 넘김 효과음(합성, 음소거 상태는 localStorage 에 저장).
-  const { playPageTurn, primeAudio, soundEnabled, toggleSound } = usePageTurnSound()
+  const { playPageTurn, playQuizResult, primeAudio, soundEnabled, toggleSound } = usePageTurnSound()
 
   const useSinglePageMode = isSinglePageMode
   const spreads = getSpreads(pages.length, useSinglePageMode)
@@ -472,7 +508,8 @@ export default function StudentComicViewerPage() {
             model={model}
             totalQuestions={quizCount}
             selectedAnswer={quizAnswers[model.quizNumber]}
-            onSelect={(a) => setQuizAnswers((c) => ({ ...c, [model.quizNumber]: a }))}
+            onSelect={(a) => handleQuizSelect(model.quizNumber, a, model.answer)}
+            onPlayResult={playQuizResult}
           />
         )
       case 'back-cover':

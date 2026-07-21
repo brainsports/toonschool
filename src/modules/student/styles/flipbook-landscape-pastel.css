@@ -905,6 +905,31 @@
 .flp-quiz-choice.is-x .flp-quiz-choice-letter { color: #e0566b; }
 .flp-quiz-choice-lab { font-size: 20px; font-weight: 700; color: var(--flp-muted); }
 
+/* 답안 버튼 내 결과 마크(체크/X) — 색상 외에 아이콘으로도 정답/오답 전달 */
+.flp-quiz-choice { position: relative; }
+.flp-quiz-choice-mark {
+  position: absolute; top: 10px; right: 10px;
+  width: 40px; height: 40px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; box-shadow: var(--flp-shadow-sm);
+  animation: flp-quiz-pop 0.4s ease;
+}
+.flp-quiz-choice-mark svg { width: 22px; height: 22px; }
+.flp-quiz-choice-mark.is-correct { background: var(--flp-green); }
+.flp-quiz-choice-mark.is-wrong { background: #ef4444; }
+@keyframes flp-quiz-pop {
+  0%   { transform: scale(0.5); opacity: 0; }
+  60%  { transform: scale(1.14); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+/* 정답 정보를 불러오지 못한 안내 카드(판정 보류) */
+.flp-quiz-result.is-unreliable { background: rgba(181, 134, 43, 0.08); }
+.flp-quiz-result-fallback strong { color: #b5862b; }
+.flp-quiz-explain-fallback { color: var(--flp-muted); font-weight: 500; }
+@media (prefers-reduced-motion: reduce) {
+  .flp-quiz-choice-mark { animation: none !important; }
+}
+
 .flp-quiz-result {
   display: flex; align-items: center; gap: 16px;
   padding: 14px 22px;
