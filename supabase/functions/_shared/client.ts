@@ -67,3 +67,29 @@ export function authorize(profile: { role: string; status: string | null }, allo
 export function isValidUUID(uuid: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uuid)
 }
+
+// 데모 계정 AI 생성 일일 한도 적용.
+// 호출자가 데모(is_demo=true)인 경우에만 increment_demo_usage RPC 로 일일 사용량을 1 증가시킨다.
+// 한도 초과(RPC 가 DEMO_LIMIT_EXCEEDED 예외를 던지는 경우) → code 'DEMO_LIMIT' 예외를 던져
+// 호출 측이 즉시 사용자 안내 메시지를 반환하도록 한다. 일반 사용자는 아무 동작 없이 통과.
+export async function enforceDemoUsageLimit(
+  adminClient: SupabaseClient,
+  userId: string,
+  limitType: 'mindmap' | 'image',
+  limit: number
+): Promise<void> {
+  const { data: profile } = await adminClient
+    .from('profiles')
+    .select('is_demo')
+    .eq('id', userId)
+    .maybeSingle()
+  if (!profile || profile.is_demo !== true) return // 일반 사용자 → 제한 없음
+  const { error } = await adminClient.rpc('increment_demo_usage', {
+    p_account_id: userId,
+    p_limit_type: limitType,
+    p_limit: limit,
+  })
+  if (error) {
+    throw Object.assign(new Error('demo limit exceeded'), { code: 'DEMO_LIMIT' })
+  }
+}

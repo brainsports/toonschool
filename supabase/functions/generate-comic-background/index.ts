@@ -8,7 +8,7 @@
 // 로그: requestId/jobId/cut/단계별 소요만. API키·토큰·프롬프트 전문·개인정보는 절대 출력하지 않는다.
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { corsHeaders, jsonHeaders } from '../_shared/cors.ts'
-import { createAdminClient, resolveCaller } from '../_shared/client.ts'
+import { createAdminClient, resolveCaller, enforceDemoUsageLimit } from '../_shared/client.ts'
 import {
   createComicBackgroundCacheKey,
   createCacheStoragePath,
@@ -20,6 +20,8 @@ import {
 const TAG = 'generate-comic-background'
 const CACHE_BUCKET = 'toonschool-generated-backgrounds'
 const IMAGE_MODEL = Deno.env.get('GEMINI_IMAGE_MODEL') || 'gemini-3.1-flash-image'
+// 공개 데모 계정: 하루 이미지(컷 배경) 생성 한도. 만화 1편(6컷) 분량.
+const DEMO_IMAGE_DAILY_LIMIT = 6
 const STALE_PROCESSING_MS = 3 * 60 * 1000 // 이 시간 이상 processing이면 좀비로 간주하고 재선점
 const RECENT_JOB_WINDOW_MS = 60 * 60 * 1000 // 최근 완료 job 재사용 윈도우
 
@@ -96,6 +98,7 @@ const userMessage = (code: string): string => {
     case 'GEMINI_AUTH': return '이 컷의 배경을 만들지 못했어요. 해당 컷만 다시 만들어 주세요.'
     case 'STORAGE_ERROR':
     case 'DB_ERROR': return '이미지 저장 중 문제가 발생했어요.'
+    case 'DEMO_LIMIT': return '오늘 체험할 수 있는 그림 만들기 횟수를 다 썼어요. 내 계정을 만들면 더 많이 만들 수 있어요.'
     default: return '배경 생성 중 문제가 발생했어요. 잠시 후 다시 시도해 주세요.'
   }
 }
@@ -184,6 +187,16 @@ serve(async (req) => {
       return ok({ cutNumber, resultUrl: cached.public_url, cacheHit: true, elapsedMs: Date.now() - t0, cacheKey })
     }
     log('cacheMiss', { cut: cutNumber })
+
+    // 4.5) 데모 계정 일일 이미지 생성 한도(데모가 아닌 사용자는 통과).
+    //      캐시 HIT 는 실제 비용이 발생하지 않으므로 회수하지 않고, 캐시 miss(실제 AI 생성) 직전에만 회수.
+    try {
+      await enforceDemoUsageLimit(admin, userId, 'image', DEMO_IMAGE_DAILY_LIMIT)
+    } catch (e) {
+      const code = (e as { code?: string })?.code === 'DEMO_LIMIT' ? 'DEMO_LIMIT' : 'DB_ERROR'
+      log('demoLimit', { cut: cutNumber, code })
+      return fail(userMessage(code), code)
+    }
 
     // 5) 진행중 중복 가드: 같은 project+cut의 최근 processing 작업이 최근에 시작됐으면 중복 생성 방지.
     //    (콘텐츠 기반 재사용은 위 단계 4 캐시 키가 담당. project+cut 기반 '완료 job 재사용'은

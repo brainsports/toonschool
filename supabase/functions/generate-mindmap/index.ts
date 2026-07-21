@@ -11,10 +11,12 @@
 //       단일 경로로 파싱하도록 한다(의미는 code 로 전달).
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { corsHeaders, jsonHeaders } from '../_shared/cors.ts'
-import { createAdminClient, resolveCaller } from '../_shared/client.ts'
+import { createAdminClient, resolveCaller, enforceDemoUsageLimit } from '../_shared/client.ts'
 
 const TAG = 'generate-mindmap'
 const TEXT_MODEL = Deno.env.get('GEMINI_TEXT_MODEL') || 'gemini-2.5-flash'
+// 공개 데모 계정: 하루 툰마인드 AI 생성 한도.
+const DEMO_MINDMAP_DAILY_LIMIT = 2
 const MIN_BRANCHES = 4
 const MAX_BRANCHES = 6
 const MIN_LEAVES = 2
@@ -42,6 +44,7 @@ const userMessage = (code: string): string => {
     case 'UNAUTHORIZED': return '로그인이 만료되었어요. 다시 로그인해 주세요.'
     case 'INVALID_INPUT': return '툰마인드를 만들 정보가 부족해요. 학년·과목·단원을 다시 확인해 주세요.'
     case 'RATE_LIMITED': return '잠시 요청이 많아요. 잠시 후 다시 시도해 주세요.'
+    case 'DEMO_LIMIT': return '오늘 체험할 수 있는 툰마인드 만들기 횟수를 다 썼어요. 내 계정을 만들면 더 많이 만들 수 있어요.'
     case 'TIMEOUT': return 'AI 가 생각하는 시간이 조금 걸렸어요. 다시 시도해 주세요.'
     case 'BAD_MODEL_OUTPUT': return 'AI 가 올바른 형태로 답하지 못했어요. 다시 시도해 주세요.'
     case 'PROVIDER_5XX':
@@ -310,6 +313,15 @@ serve(async (req) => {
   try {
     const caller = await resolveCaller(admin, req.headers.get('Authorization'))
     log('authed', { uid: caller.id.slice(0, 8) })
+
+    // 데모 계정 일일 생성 한도(데모가 아닌 사용자는 통과).
+    try {
+      await enforceDemoUsageLimit(admin, caller.id, 'mindmap', DEMO_MINDMAP_DAILY_LIMIT)
+    } catch (e) {
+      const code = (e as { code?: string })?.code === 'DEMO_LIMIT' ? 'DEMO_LIMIT' : 'PROVIDER_ERROR'
+      log('demoLimit', { code })
+      return fail(userMessage(code), code)
+    }
 
     const body = await req.json().catch(() => ({}))
     const mode = body?.mode === 'partial' ? 'partial' : body?.mode === 'topics' ? 'topics' : 'full'

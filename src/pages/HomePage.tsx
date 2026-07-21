@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { Image, MessageSquare, PencilLine } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Image, MessageSquare, PencilLine, Loader2, GraduationCap, Presentation } from 'lucide-react';
+import { useAuth } from '../shared/contexts/AuthContext';
+import { startDemo, DemoLoginError } from '../shared/lib/demoLogin';
+import { isDemoLoginEnabled, type DemoRole } from '../shared/lib/demoSession';
 
 const worldStoryCards = [
     { id: 0, title: '역사 이야기', image: '/images/main/main-img-6.png' },
@@ -10,12 +13,40 @@ const worldStoryCards = [
 
 export default function HomePage() {
     const [currentSlide, setCurrentSlide] = useState(0);
+    const { user } = useAuth();
+    const navigate = useNavigate();
+    const [demoLoading, setDemoLoading] = useState<DemoRole | null>(null);
+    const [demoError, setDemoError] = useState<string | null>(null);
+
     useEffect(() => {
         const timer = setInterval(() => {
             setCurrentSlide((prev) => (prev + 1) % worldStoryCards.length);
         }, 3000);
         return () => clearInterval(timer);
     }, []);
+
+    const handleDemo = async (role: DemoRole) => {
+        if (demoLoading) return;
+        setDemoError(null);
+        if (!isDemoLoginEnabled()) {
+            setDemoError('지금은 체험 기능이 준비 중이에요. 잠시 후 다시 시도해 주세요.');
+            return;
+        }
+        // 이미 일반 회원으로 로그인 한 경우 전환 확인(바로 계정 교체하지 않음).
+        if (user) {
+            const ok = window.confirm('현재 로그인된 계정에서 로그아웃하고 체험 계정으로 전환할까요?');
+            if (!ok) return;
+        }
+        setDemoLoading(role);
+        try {
+            const { redirectTo } = await startDemo(role);
+            navigate(redirectTo, { replace: true });
+        } catch (e) {
+            setDemoError(e instanceof DemoLoginError ? e.message : '체험을 시작하지 못했어요. 잠시 후 다시 시도해 주세요.');
+        } finally {
+            setDemoLoading(null);
+        }
+    };
 
     return (
         <main className="pt-24 pb-16">
@@ -33,6 +64,35 @@ export default function HomePage() {
 <Link className="w-full sm:w-auto bg-primary text-white px-8 py-4 rounded-lg font-bold text-lg hover:bg-primary-container transition-colors shadow-md text-center" to="/login">무료로 시작하기</Link>
 <Link className="w-full sm:w-auto bg-white text-primary border-2 border-primary px-8 py-4 rounded-lg font-bold text-lg hover:bg-gray-50 transition-colors text-center" to="/student/select-unit">툰스쿨 에디터 보기</Link>
 </div>
+{/* 가입 없이 바로 체험 (운영 도메인에서 VITE_DEMO_LOGIN_ENABLED=true 일 때만 노출) */}
+{isDemoLoginEnabled() && (
+<div className="space-y-2">
+<p className="text-sm text-on-surface-variant text-center lg:text-left font-medium">가입 없이 1분 만에 체험해 보세요!</p>
+<div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3">
+<button
+type="button"
+onClick={() => handleDemo('student')}
+disabled={demoLoading !== null}
+className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white text-pink-600 border-2 border-pink-300 px-6 py-3 rounded-xl font-bold text-base hover:bg-pink-50 hover:border-pink-400 transition-colors shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
+>
+{demoLoading === 'student' ? <Loader2 className="w-5 h-5 animate-spin" /> : <GraduationCap className="w-5 h-5" />}
+학생으로 바로 체험하기
+</button>
+<button
+type="button"
+onClick={() => handleDemo('teacher')}
+disabled={demoLoading !== null}
+className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white text-sky-600 border-2 border-sky-300 px-6 py-3 rounded-xl font-bold text-base hover:bg-sky-50 hover:border-sky-400 transition-colors shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
+>
+{demoLoading === 'teacher' ? <Loader2 className="w-5 h-5 animate-spin" /> : <Presentation className="w-5 h-5" />}
+선생님으로 바로 체험하기
+</button>
+</div>
+{demoError && (
+<p className="text-sm text-red-500 text-center lg:text-left font-medium" role="alert">{demoError}</p>
+)}
+</div>
+)}
 </div>
 <div className="w-full lg:w-1/2 flex justify-center">
 {/* Tablet Frame Mockup */}
