@@ -107,10 +107,34 @@ function PolicyNav() {
                 className="mx-auto flex flex-wrap items-center justify-center gap-x-5 gap-y-2 px-6 xl:max-w-[1740px] xl:gap-x-0 xl:divide-x xl:px-[72px]"
                 style={{ borderColor: BORDER, minHeight: 88, paddingTop: 30, paddingBottom: 30 }}
             >
-                <span className="xl:px-8"><PendingLink>이용약관</PendingLink></span>
-                <span className="xl:px-8"><PendingLink>개인정보처리방침</PendingLink></span>
+                <span className="xl:px-8">
+                    <Link
+                        to="/terms-of-service"
+                        className="inline-flex items-center text-[15px] font-medium leading-none transition-colors hover:opacity-70"
+                        style={{ color: MUTED, padding: '2px 2px' }}
+                    >
+                        이용약관
+                    </Link>
+                </span>
+                <span className="xl:px-8">
+                    <Link
+                        to="/privacy-policy"
+                        className="inline-flex items-center text-[15px] font-medium leading-none transition-colors hover:opacity-70"
+                        style={{ color: MUTED, padding: '2px 2px' }}
+                    >
+                        개인정보처리방침
+                    </Link>
+                </span>
                 <span className="xl:px-8"><PendingLink>이메일무단수집거부</PendingLink></span>
-                <span className="xl:px-8"><PendingLink>청소년보호정책</PendingLink></span>
+                <span className="xl:px-8">
+                    <Link
+                        to="/youth-protection-policy"
+                        className="inline-flex items-center text-[15px] font-medium leading-none transition-colors hover:opacity-70"
+                        style={{ color: MUTED, padding: '2px 2px' }}
+                    >
+                        청소년보호정책
+                    </Link>
+                </span>
                 <span className="xl:px-8">
                     <Link
                         to="/pricing"

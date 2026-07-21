@@ -58,6 +58,9 @@ import LMSPage from '../pages/LMSPage'
 import PWAPage from '../pages/PWAPage'
 import PricingPage from '../pages/PricingPage'
 import FAQPage from '../pages/FAQPage'
+import TermsOfServicePage from '../pages/policies/TermsOfServicePage'
+import PrivacyPolicyPage from '../pages/policies/PrivacyPolicyPage'
+import YouthProtectionPolicyPage from '../pages/policies/YouthProtectionPolicyPage'
 
 // 공통 관리자 레이아웃
 import AdminPortalLayout from '../shared/components/AdminPortalLayout'
@@ -106,6 +109,9 @@ export default function AppRouter() {
         <Route path="/pwa" element={<PWAPage />} />
         <Route path="/pricing" element={<PricingPage />} />
         <Route path="/faq" element={<FAQPage />} />
+        <Route path="/terms-of-service" element={<TermsOfServicePage />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+        <Route path="/youth-protection-policy" element={<YouthProtectionPolicyPage />} />
       </Route>
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />

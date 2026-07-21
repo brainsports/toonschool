@@ -1,0 +1,311 @@
+/* 툰스쿨 정책 페이지 공통 스타일
+   - PolicyPageLayout 에서 import 하여 사용
+   - 깨끗한 문서형 레이아웃, 긴 본문 가독성, 반응형 표 */
+
+.policy-page {
+    min-height: 100vh;
+    background: #f7f8fc;
+    padding-top: 6rem;        /* 고정 헤더(h-24=96px) 여백 */
+    padding-bottom: 4rem;
+}
+
+.policy-container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 0 16px;
+}
+
+.policy-card {
+    background: #ffffff;
+    border: 1px solid #e8eaf0;
+    border-radius: 16px;
+    padding: 56px 48px 72px;
+    box-shadow: 0 1px 3px rgba(20, 24, 40, 0.04);
+}
+
+/* 상단 제목/메타 */
+.policy-header {
+    margin-bottom: 28px;
+}
+
+.policy-title {
+    font-size: 34px;
+    font-weight: 700;
+    line-height: 1.25;
+    color: #1a1a1a;
+    margin: 0 0 14px;
+    letter-spacing: -0.01em;
+}
+
+.policy-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 20px;
+    font-size: 14px;
+    color: #6b7280;
+}
+
+.policy-meta strong {
+    color: #4b5563;
+    font-weight: 600;
+}
+
+/* 검토용 안내 상자 */
+.policy-notice {
+    margin: 0 0 32px;
+    padding: 14px 18px;
+    background: #fff8e6;
+    border: 1px solid #f0d98a;
+    border-radius: 10px;
+    color: #7a5d12;
+    font-size: 14.5px;
+    line-height: 1.6;
+}
+
+/* 목차 */
+.policy-toc {
+    margin: 0 0 40px;
+    padding: 22px 26px;
+    background: #f9faff;
+    border: 1px solid #e6e9f5;
+    border-radius: 12px;
+}
+
+.policy-toc-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #252a37;
+    margin: 0 0 12px;
+}
+
+.policy-toc-list,
+.policy-toc-sub {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.policy-toc-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.policy-toc-sub {
+    margin-top: 6px;
+    padding-left: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.policy-toc-list a,
+.policy-toc-sub a {
+    color: #4a5160;
+    text-decoration: none;
+    font-size: 15px;
+    line-height: 1.5;
+    border-radius: 4px;
+    transition: color 0.15s ease;
+}
+
+.policy-toc-list > li > a {
+    font-weight: 600;
+    color: #353c4a;
+}
+
+.policy-toc-sub a {
+    font-size: 14px;
+}
+
+.policy-toc a:hover {
+    color: #5364e8;
+    text-decoration: underline;
+}
+
+.policy-toc a:focus-visible {
+    outline: 2px solid #5364e8;
+    outline-offset: 2px;
+}
+
+/* 본문 : 장/조 제목 */
+.policy-h2 {
+    font-size: 23px;
+    font-weight: 700;
+    color: #1f2533;
+    margin: 48px 0 16px;
+    padding-top: 4px;
+    scroll-margin-top: 110px;
+    letter-spacing: -0.01em;
+}
+
+.policy-h2:first-of-type {
+    margin-top: 8px;
+}
+
+.policy-h3 {
+    font-size: 19px;
+    font-weight: 700;
+    color: #252a37;
+    margin: 36px 0 12px;
+    scroll-margin-top: 110px;
+}
+
+/* 본문 단락 */
+.policy-p {
+    font-size: 16px;
+    line-height: 1.85;
+    color: #454b59;
+    margin: 0 0 12px;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+}
+
+/* 각 호 목록 */
+.policy-ol {
+    margin: 0 0 16px;
+    padding-left: 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.policy-ol > li {
+    font-size: 16px;
+    line-height: 1.8;
+    color: #454b59;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+}
+
+.policy-ol > li::marker {
+    color: #5364e8;
+    font-weight: 700;
+}
+
+/* 표 */
+.policy-table-scroll {
+    overflow-x: auto;
+    margin: 16px 0 24px;
+    border: 1px solid #e8eaf0;
+    border-radius: 10px;
+    -webkit-overflow-scrolling: touch;
+}
+
+.policy-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14.5px;
+    line-height: 1.6;
+    color: #3f4552;
+    min-width: 560px;
+}
+
+.policy-table thead th {
+    background: #f4f5ff;
+    color: #2a2f3d;
+    font-weight: 700;
+    text-align: left;
+    white-space: nowrap;
+    border-bottom: 1px solid #e8eaf0;
+}
+
+.policy-table th,
+.policy-table td {
+    padding: 12px 14px;
+    border-bottom: 1px solid #eef0f4;
+    vertical-align: top;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+}
+
+.policy-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.policy-table a {
+    color: #5364e8;
+    text-decoration: none;
+    word-break: break-all;
+}
+
+.policy-table a:hover {
+    text-decoration: underline;
+}
+
+/* 본문 내 인라인 연락처 링크 */
+.policy-body a.policy-mail,
+.policy-body a.policy-tel {
+    color: #5364e8;
+    text-decoration: none;
+    word-break: break-all;
+}
+
+.policy-body a.policy-mail:hover,
+.policy-body a.policy-tel:hover {
+    text-decoration: underline;
+}
+
+/* 맨 위로 버튼 */
+.policy-to-top {
+    position: fixed;
+    right: 24px;
+    bottom: 28px;
+    z-index: 30;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: 1px solid #e8eaf0;
+    background: #ffffff;
+    color: #353c4a;
+    box-shadow: 0 4px 14px rgba(20, 24, 40, 0.12);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.policy-to-top:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(20, 24, 40, 0.18);
+}
+
+.policy-to-top:focus-visible {
+    outline: 2px solid #5364e8;
+    outline-offset: 2px;
+}
+
+/* 모바일 */
+@media (max-width: 767px) {
+    .policy-card {
+        padding: 32px 20px 48px;
+        border-radius: 12px;
+    }
+
+    .policy-title {
+        font-size: 26px;
+    }
+
+    .policy-h2 {
+        font-size: 20px;
+    }
+
+    .policy-h3 {
+        font-size: 17px;
+    }
+
+    .policy-p,
+    .policy-ol > li {
+        font-size: 15px;
+    }
+
+    .policy-table {
+        font-size: 13.5px;
+    }
+
+    .policy-to-top {
+        right: 16px;
+        bottom: 20px;
+    }
+}
