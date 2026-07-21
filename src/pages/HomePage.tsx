@@ -69,7 +69,7 @@ export default function HomePage() {
 type="button"
 onClick={() => handleDemo('student')}
 disabled={demoLoading !== null}
-className="w-full sm:flex-1 sm:max-w-sm min-h-[88px] inline-flex items-center justify-center gap-3 bg-white text-pink-600 border-2 border-pink-300 px-8 py-6 rounded-xl font-extrabold text-lg hover:bg-pink-50 hover:border-pink-400 transition-colors shadow-md disabled:opacity-60 disabled:cursor-not-allowed"
+className="w-full sm:flex-1 sm:max-w-sm min-h-[68px] inline-flex items-center justify-center gap-3 bg-white text-pink-600 border-2 border-pink-300 px-8 py-4 rounded-xl font-extrabold text-lg hover:bg-pink-50 hover:border-pink-400 transition-colors shadow-md disabled:opacity-60 disabled:cursor-not-allowed"
 >
 {demoLoading === 'student' ? <Loader2 className="w-7 h-7 animate-spin" /> : <GraduationCap className="w-7 h-7" />}
 학생으로 바로 체험하기
@@ -78,7 +78,7 @@ className="w-full sm:flex-1 sm:max-w-sm min-h-[88px] inline-flex items-center ju
 type="button"
 onClick={() => handleDemo('teacher')}
 disabled={demoLoading !== null}
-className="w-full sm:flex-1 sm:max-w-sm min-h-[88px] inline-flex items-center justify-center gap-3 bg-white text-sky-600 border-2 border-sky-300 px-8 py-6 rounded-xl font-extrabold text-lg hover:bg-sky-50 hover:border-sky-400 transition-colors shadow-md disabled:opacity-60 disabled:cursor-not-allowed"
+className="w-full sm:flex-1 sm:max-w-sm min-h-[68px] inline-flex items-center justify-center gap-3 bg-white text-sky-600 border-2 border-sky-300 px-8 py-4 rounded-xl font-extrabold text-lg hover:bg-sky-50 hover:border-sky-400 transition-colors shadow-md disabled:opacity-60 disabled:cursor-not-allowed"
 >
 {demoLoading === 'teacher' ? <Loader2 className="w-7 h-7 animate-spin" /> : <Presentation className="w-7 h-7" />}
 선생님으로 바로 체험하기
