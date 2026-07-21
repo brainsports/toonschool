@@ -48,6 +48,7 @@ import StudentMindmapStartPage from '../modules/student/pages/StudentMindmapStar
 import StudentMindmapEditorPage from '../modules/student/pages/StudentMindmapEditorPage'
 import StudentMindmapListPage from '../modules/student/pages/StudentMindmapListPage'
 import SharedMindmapViewerPage from '../modules/student/pages/SharedMindmapViewerPage'
+import StudentVocabularyPage from '../modules/student/pages/StudentVocabularyPage'
 
 import ResourceInbox from '../modules/resources/pages/ResourceInbox'
 
@@ -146,6 +147,7 @@ export default function AppRouter() {
         <Route path="/student/mindmap" element={<StudentMindmapStartPage />} />
         <Route path="/student/mindmaps" element={<StudentMindmapListPage />} />
         <Route path="/student/mindmap/edit/:projectId" element={<StudentMindmapEditorPage />} />
+        <Route path="/student/vocabulary" element={<StudentVocabularyPage />} />
       </Route>
       <Route path="/book/:slug" element={<SharedComicViewerPage />} />
       <Route path="/mindmap/share/:slug" element={<SharedMindmapViewerPage />} />

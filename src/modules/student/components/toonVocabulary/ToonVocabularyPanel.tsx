@@ -1,10 +1,14 @@
 // 툰어휘사전 확장 패널 — 헤더 / 검색창 / 상태별 본문 / 최근 검색어 / 하단 버튼.
-// 상태 기계(idle/loading/empty/unauthorized/error/success)는 부모(Widget)가 전달.
+// 상태 기계(idle/loading/empty/unauthorized/error/success)와 저장 상태(saveState)는 부모(Widget)가 전달.
+// 뜻(sense) 선택도 부모가 제어(selSense/onSelSenseChange) — 저장 대상 식별을 위해.
 import { Search, X, Pin, Bookmark } from 'lucide-react'
 import type { LookupState } from '../../types/vocabulary'
 import VocabularyResultCards from './VocabularyResultCards'
 
 const MASCOT = '/images/toon-vocabulary/toon-vocabulary-mascot.png'
+
+// 저장 버튼 라벨/상태.
+type SaveState = 'idle' | 'saving' | 'saved' | 'exists' | 'error'
 
 export interface ToonVocabularyPanelProps {
   input: string
@@ -18,14 +22,22 @@ export interface ToonVocabularyPanelProps {
   onClose: () => void
   onSave: () => void
   onLearnMore: () => void
+  saveState: SaveState
+  saveMessage: string | null
+  selSense: number
+  onSelSenseChange: (i: number) => void
 }
 
 export default function ToonVocabularyPanel(props: ToonVocabularyPanelProps) {
   const {
     input, onInputChange, onSearch, onClearInput, state, recents,
     onPickRecent, onClearRecents, onClose, onSave, onLearnMore,
+    saveState, saveMessage, selSense, onSelSenseChange,
   } = props
   const hasResults = state.status === 'success' && state.data && state.data.results.length > 0
+  const saveLabel = SAVE_LABELS[saveState]
+  // 저장 가능한 상태: 결과가 있고, idle(처음) 또는 error(재시도)일 때.
+  const saveDisabled = !hasResults || saveState === 'saving' || saveState === 'saved' || saveState === 'exists'
 
   return (
     <div className="tv-panel" role="dialog" aria-label="툰어휘사전">
@@ -74,13 +86,24 @@ export default function ToonVocabularyPanel(props: ToonVocabularyPanelProps) {
           onClearRecents={onClearRecents}
           recents={recents}
           hasResults={!!hasResults}
+          selSense={selSense}
+          onSelSenseChange={onSelSenseChange}
         />
       </div>
 
+      {/* 저장 상태 안내 메시지 */}
+      {saveMessage ? (
+        <div className={`tv-save-msg tv-save-msg--${saveState}`}>{saveMessage}</div>
+      ) : null}
+
       {/* 하단 버튼 */}
       <div className="tv-footer">
-        <button className="tv-btn tv-btn--secondary" onClick={onSave} disabled={!hasResults}>
-          <Bookmark size={18} /> 저장하기
+        <button
+          className={`tv-btn ${saveState === 'saved' || saveState === 'exists' ? 'tv-btn--saved' : 'tv-btn--secondary'}`}
+          onClick={onSave}
+          disabled={saveDisabled}
+        >
+          <Bookmark size={18} /> {saveLabel}
         </button>
         <button className="tv-btn tv-btn--primary" onClick={onLearnMore} disabled={!hasResults}>
           <Search size={18} /> 더 알아보기
@@ -90,14 +113,24 @@ export default function ToonVocabularyPanel(props: ToonVocabularyPanelProps) {
   )
 }
 
+const SAVE_LABELS: Record<SaveState, string> = {
+  idle: '저장하기',
+  saving: '저장 중...',
+  saved: '저장했어요',
+  exists: '저장됨',
+  error: '저장하기',
+}
+
 function Body({
-  state, onPickRecent, onClearRecents, recents, hasResults,
+  state, onPickRecent, onClearRecents, recents, hasResults, selSense, onSelSenseChange,
 }: {
   state: LookupState
   onPickRecent: (w: string) => void
   onClearRecents: () => void
   recents: string[]
   hasResults: boolean
+  selSense: number
+  onSelSenseChange: (i: number) => void
 }) {
   if (state.status === 'loading') {
     return (
@@ -137,7 +170,12 @@ function Body({
   if (hasResults && state.data) {
     return (
       <>
-        <VocabularyResultCards results={state.data.results} aiStatus={state.data.aiStatus} />
+        <VocabularyResultCards
+          results={state.data.results}
+          aiStatus={state.data.aiStatus}
+          sel={selSense}
+          onSelChange={onSelSenseChange}
+        />
         <div className="tv-source">
           출처 · {state.data.source.name} ({state.data.source.license})
         </div>

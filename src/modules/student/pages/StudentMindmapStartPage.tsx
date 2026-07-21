@@ -20,6 +20,7 @@ import {
   generateTopicSuggestions,
 } from '../services/mindmapService';
 import type { MindmapProject } from '../types/mindmap';
+import ToonVocabularyWidget from '../components/toonVocabulary/ToonVocabularyWidget';
 
 type Grade = { id: string; value: number; label: string };
 type Subject = { id: string; name: string; code?: string };
@@ -163,6 +164,12 @@ export default function StudentMindmapStartPage() {
 
   return (
     <StudentPageShell bgVariant="pastel" maxWidth="2xl">
+      <ToonVocabularyWidget
+        sourceType="mindmap_start"
+        grade={grade?.value}
+        subject={subject?.name}
+        unit={major?.unitName}
+      />
       <div className="max-w-2xl mx-auto w-full px-4 py-6">
         <button onClick={() => navigate('/student/mypage')} className="text-sm text-slate-500 hover:text-slate-700 font-bold flex items-center gap-1 mb-4">
           <ArrowLeft className="w-4 h-4" /> 작품함으로

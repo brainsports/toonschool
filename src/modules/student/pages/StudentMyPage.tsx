@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { 
+import {
   BookOpen, Trophy, Calendar, ChevronRight,
-  CheckCircle2, Play, Heart
+  CheckCircle2, Play, Heart, BookMarked
 } from 'lucide-react'
 import StudentPageShell from '../components/layout/StudentPageShell'
 import WorkCard from '../components/mypage/WorkCard'
@@ -224,6 +224,14 @@ export default function StudentMyPage() {
                 >
                   <span className="text-lg leading-none">🧠</span>
                   <span>툰마인드 만들기</span>
+                </button>
+
+                <button
+                  onClick={() => navigate('/student/vocabulary')}
+                  className="mt-2 bg-sky-500 hover:bg-sky-600 text-white font-bold py-3 px-6 rounded-full shadow-md shadow-sky-500/20 hover:shadow-lg transition-all flex items-center gap-2 w-fit active:scale-95"
+                >
+                  <BookMarked className="w-5 h-5" />
+                  <span>나의 단어장</span>
                 </button>
               </div>
               <img
