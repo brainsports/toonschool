@@ -7,7 +7,6 @@ import {
     MapPin,
     Download,
     ArrowRight,
-    Handshake,
     School,
     UsersRound,
     Landmark,
@@ -240,43 +239,32 @@ function PartnershipColumn() {
     ];
 
     return (
-        <div className="flex flex-col gap-4">
-            <SectionTitle>광고 · 협업</SectionTitle>
+        <div className="flex flex-col md:pt-[45px]">
             <div
                 className="w-full max-w-[320px] overflow-hidden rounded-[10px] border bg-white p-2.5 shadow-[0_3px_12px_rgba(55,65,120,0.06)]"
                 style={{ borderColor: '#e8eaf5' }}
             >
-                <div className="grid grid-cols-[30%_70%] items-stretch">
-                    <div className="mr-2 overflow-hidden rounded-lg bg-[#f2f0ff]">
+                <div className="grid grid-cols-[38%_62%] items-stretch">
+                    <div className="mr-2.5 overflow-hidden rounded-lg bg-[#f2f0ff]">
                         <img
                             src="/images/footer/toonschool-partnership-guide.png"
                             alt="툰스쿨 도입과 제휴 문의 안내"
-                            className="h-full min-h-[126px] w-full object-cover object-[52%_18%]"
+                            className="h-full min-h-[144px] w-full object-cover object-[52%_18%]"
                         />
                     </div>
 
-                    <div className="min-w-0">
-                        <div className="mb-1.5 flex items-center gap-1.5 px-1">
-                            <Handshake className="h-4 w-4 shrink-0 text-[#5365ec]" aria-hidden="true" />
-                            <p className="text-[14px] font-bold leading-tight text-[#202637]">
-                                툰스쿨 도입·제휴 문의
-                            </p>
-                        </div>
-                        <nav className="flex flex-col" aria-label="툰스쿨 도입 및 제휴 문의">
+                    <div className="flex min-w-0 items-center">
+                        <ul className="flex w-full flex-col gap-1" aria-label="툰스쿨 도입 및 제휴 문의 분야">
                             {items.map(({ label, Icon }) => (
-                                <a
+                                <li
                                     key={label}
-                                    href={EXTERNAL_INQUIRY_URL}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="group flex min-h-8 items-center gap-1.5 rounded-md px-1 text-[11px] leading-tight text-[#4b5261] transition-colors hover:bg-[#f7f7ff] hover:text-[#5365ec] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5365ec] focus-visible:ring-offset-1"
+                                    className="flex min-h-10 items-center gap-2 px-1 text-[14px] font-medium leading-[1.45] text-[#343b4d]"
                                 >
-                                    <Icon className="h-3.5 w-3.5 shrink-0 text-[#6674e9]" aria-hidden="true" />
+                                    <Icon className="h-4 w-4 shrink-0 text-[#6674e9]" aria-hidden="true" />
                                     <span className="min-w-0 flex-1">{label}</span>
-                                    <ArrowRight className="h-3.5 w-3.5 shrink-0 text-[#98a0c5] transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
-                                </a>
+                                </li>
                             ))}
-                        </nav>
+                        </ul>
                     </div>
                 </div>
 
@@ -284,7 +272,7 @@ function PartnershipColumn() {
                     href={EXTERNAL_INQUIRY_URL}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-2 flex min-h-[38px] w-full items-center justify-between rounded-[7px] border border-transparent bg-[#f2f2ff] px-3 text-[12px] font-semibold text-[#5365ec] transition-colors hover:border-[#d9dcff] hover:bg-[#e9eaff] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5365ec] focus-visible:ring-offset-1"
+                    className="mt-2 flex min-h-[38px] w-full items-center justify-between rounded-[7px] border border-transparent bg-[#f2f2ff] px-3 text-[13px] font-semibold text-[#5365ec] transition-colors hover:border-[#d9dcff] hover:bg-[#e9eaff] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5365ec] focus-visible:ring-offset-1"
                 >
                     <span className="flex items-center gap-2">
                         <Mail className="h-4 w-4" aria-hidden="true" />
