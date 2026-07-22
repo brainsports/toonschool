@@ -1,0 +1,604 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=1320" />
+<title>툰스쿨 교육기관용 서비스 소개서 · ToonSchool (16:9)</title>
+<meta name="description" content="학교·지역아동센터·늘봄학교·방과후교실을 위한 툰스쿨 교육기관용 서비스 소개서. 아이들이 만들면서 배우는 창작 학습 플랫폼." />
+<link rel="icon" href="/favicon.svg" />
+<link rel="stylesheet" as="style" crossorigin
+  href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+<style>
+  /* ============ 16:9 슬라이드 토큰 (일반 소개서와 동일 브랜드 시스템) ============ */
+  :root{
+    --slide-width:13.333in;
+    --slide-height:7.5in;
+
+    --accent:#5364e8;
+    --accent-2:#5c54e8;
+    --accent-soft:#f1f2ff;
+    --accent-soft-2:#e7e9ff;
+    --grad:linear-gradient(145deg,#4f8cff 0%,#5c54e8 100%);
+    --ink:#252a37;
+    --body:#454b59;
+    --muted:#6b7280;
+    --line:#e7eaf1;
+    --paper:#ffffff;
+    --c-lav:#f3f0ff; --c-sky:#eef5ff; --c-mint:#ecfbf4; --c-peach:#fff2ea;
+    --c-lemon:#fdf7e3; --c-pink:#fdeef6; --c-grape:#efeaff;
+    --shadow:0 12px 34px rgba(40,53,120,.10);
+    --shadow-sm:0 4px 14px rgba(40,53,120,.07);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:"Pretendard",-apple-system,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+    color:var(--body); line-height:1.55; -webkit-font-smoothing:antialiased;
+  }
+  img{max-width:100%;display:block;}
+  a{color:var(--accent);text-decoration:none;}
+
+  .slide{
+    width:var(--slide-width); height:var(--slide-height); aspect-ratio:16/9;
+    position:relative; overflow:hidden; background:var(--paper);
+    padding:0.5in 0.62in; display:flex; flex-direction:column;
+    page-break-after:always; break-after:page;
+  }
+  .slide:last-child{page-break-after:auto;}
+  @page{ size:13.333in 7.5in; margin:0; }
+  @media print{
+    html,body{margin:0;padding:0;background:#ffffff;}
+    .no-print{display:none !important;}
+    .deck{transform:none !important;}
+    .slide{box-shadow:none;margin:0;border-radius:0;}
+  }
+  @media screen{
+    body{background:#e9ecf4;}
+    .deck{transform-origin:top center;}
+    .slide{margin:0 auto 22px; box-shadow:var(--shadow); border-radius:14px;}
+  }
+
+  /* 공통 */
+  .eyebrow{display:inline-block;font-weight:800;font-size:11px;letter-spacing:.16em;color:var(--accent);background:var(--accent-soft);padding:5px 12px;border-radius:999px;}
+  h1,h2,h3{color:var(--ink);margin:0;line-height:1.18;letter-spacing:-.01em;}
+  .t-slide{font-size:30px;font-weight:800;}
+  .t-sub{font-size:13px;color:var(--muted);font-weight:600;margin-top:4px;}
+  .lead{font-size:13.5px;color:var(--body);}
+  .strong-grad{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .pill{display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:11.5px;padding:6px 11px;border-radius:999px;background:#fff;border:1px solid var(--line);color:var(--ink);}
+  .num-badge{width:30px;height:30px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:800;color:#fff;font-size:13px;background:var(--grad);flex:0 0 auto;}
+  .screen-frame{border-radius:12px;overflow:hidden;border:1px solid var(--line);background:#fff;box-shadow:var(--shadow);}
+  .screen-frame img{width:100%;height:100%;object-fit:cover;}
+  .shead{display:flex;align-items:center;gap:12px;}
+  .shead .ic{width:42px;height:42px;border-radius:12px;background:var(--grad);color:#fff;display:flex;align-items:center;justify-content:center;font-size:21px;flex:0 0 auto;box-shadow:0 6px 14px rgba(83,100,232,.3);}
+  .grow{flex:1;min-height:0;}
+
+  .topbar{position:fixed;top:14px;right:14px;z-index:50;display:flex;gap:8px;}
+  .topbar a,.topbar button{font-family:inherit;font-weight:800;font-size:13px;border:0;cursor:pointer;padding:10px 15px;border-radius:10px;color:#fff;background:var(--grad);box-shadow:var(--shadow);}
+  .topbar a{background:#fff;color:var(--accent);border:1px solid var(--accent-soft-2);}
+
+  /* 표지 */
+  .cover{background:radial-gradient(1100px 620px at 92% -10%, #e7ecff 0%, rgba(231,236,255,0) 60%),radial-gradient(820px 560px at -8% 112%, #fdeef6 0%, rgba(253,238,246,0) 58%),linear-gradient(160deg,#fbfcff 0%,#f4f6ff 100%);}
+  .cover .topline{display:flex;align-items:center;justify-content:space-between;}
+  .brand{display:flex;align-items:center;gap:12px;}
+  .brand .mark{width:48px;height:48px;border-radius:13px;background:var(--grad);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:20px;box-shadow:0 8px 18px rgba(83,100,232,.35);}
+  .brand .name{line-height:1.05;}
+  .brand .name b{font-size:21px;color:var(--ink);font-weight:900;}
+  .brand .name span{display:block;font-size:12.5px;color:var(--muted);font-weight:700;margin-top:2px;}
+  .cover .body{display:grid;grid-template-columns:1.05fr .95fr;gap:26px;flex:1;align-items:center;margin-top:10px;}
+  .cover h1{font-size:46px;font-weight:900;line-height:1.1;margin-top:10px;}
+  .cover .tag{font-size:16px;color:var(--accent);font-weight:800;margin-top:13px;}
+  .cover .desc{font-size:13.5px;color:var(--body);margin-top:9px;max-width:540px;}
+  .cover .pills{display:flex;flex-wrap:wrap;gap:7px;margin-top:13px;}
+  .cover .hero img{width:100%;border-radius:16px;box-shadow:var(--shadow);}
+  .cover .foot{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin-top:8px;}
+  .cover .foot .quote{font-size:11px;color:var(--muted);font-weight:600;max-width:330px;}
+  .cover .foot .quote b{color:var(--ink);}
+  .lineup{height:1.45in;object-fit:contain;object-position:center bottom;}
+  .orgbadge{display:inline-flex;align-items:center;gap:7px;background:#fff;border:1.5px solid var(--accent-soft-2);color:var(--accent);font-weight:900;font-size:12.5px;padding:7px 13px;border-radius:11px;box-shadow:var(--shadow-sm);}
+
+  /* 값 카드 */
+  .value-row{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+  .value{padding:15px;border:1px dashed var(--accent-soft-2);border-radius:14px;background:#fff;}
+  .value .e{font-size:24px;}
+  .value .t{font-weight:800;color:var(--ink);font-size:14.5px;margin-top:5px;}
+  .value .d{font-size:12px;color:var(--muted);margin-top:5px;}
+
+  /* 활용 기관 그리드 */
+  .org-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+  .org{padding:13px;border-radius:13px;border:1px solid var(--line);background:#fff;display:flex;gap:11px;align-items:flex-start;}
+  .org .e{font-size:22px;flex:0 0 auto;}
+  .org b{font-size:13.5px;color:var(--ink);display:block;}
+  .org span{font-size:11px;color:var(--muted);}
+
+  /* 6단계 흐름 */
+  .flow{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;}
+  .flow .step{position:relative;text-align:center;padding:11px 6px;border-radius:14px;background:#fff;border:1px solid var(--line);}
+  .flow .step .nb{margin:0 auto 5px;}
+  .flow .step .t{font-size:11px;font-weight:800;color:var(--ink);line-height:1.25;}
+  .flow .arrow{position:absolute;right:-8px;top:24px;color:var(--accent);font-weight:900;font-size:14px;z-index:2;}
+  .flow .step:last-child .arrow{display:none;}
+  .scr-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+  .scr-row .f{border-radius:12px;overflow:hidden;border:1px solid var(--line);background:#fff;}
+  .scr-row .f img{aspect-ratio:16/10;object-fit:cover;width:100%;}
+  .scr-row .lbl{padding:7px 9px;}
+  .scr-row .lbl b{font-size:11.5px;color:var(--ink);}
+  .scr-row .lbl span{display:block;font-weight:600;color:var(--muted);font-size:10.5px;margin-top:1px;}
+
+  /* 교사 도구: 기능 + 미니 대시보드 도식 */
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:20px;flex:1;min-height:0;align-items:center;}
+  .tlist{margin:8px 0 0;padding:0;list-style:none;}
+  .tlist li{display:flex;gap:9px;align-items:flex-start;padding:6px 0;border-bottom:1px dashed var(--line);}
+  .tlist li:last-child{border-bottom:0;}
+  .tlist .e{font-size:16px;line-height:1.2;}
+  .tlist b{color:var(--ink);font-size:12.5px;}
+  .tlist span{display:block;font-size:10.5px;color:var(--muted);}
+  .dash{background:linear-gradient(160deg,#f6f8ff,#eef5ff);border:1px solid var(--line);border-radius:14px;padding:13px;box-shadow:var(--shadow-sm);}
+  .dash .dh{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px;}
+  .dash .dh b{font-size:12.5px;color:var(--ink);}
+  .dash .dh .tag{font-size:9.5px;color:var(--accent);font-weight:800;background:#fff;border:1px solid var(--accent-soft-2);padding:3px 7px;border-radius:999px;}
+  .dash .cards{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .dash .dc{background:#fff;border:1px solid var(--line);border-radius:10px;padding:9px;}
+  .dash .dc .k{font-size:9.5px;color:var(--muted);font-weight:700;}
+  .dash .dc .v{font-size:15px;color:var(--ink);font-weight:900;margin-top:2px;}
+  .dash .dc .bar{height:6px;border-radius:99px;background:#eef0f6;margin-top:6px;overflow:hidden;}
+  .dash .dc .bar i{display:block;height:100%;border-radius:99px;background:var(--grad);}
+  .dash .note{font-size:9.5px;color:var(--muted);margin-top:8px;text-align:right;}
+
+  /* 4대 서비스 */
+  .prod-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+  .prod{padding:14px;border-radius:15px;border:1px solid var(--line);display:flex;flex-direction:column;}
+  .prod .ic{width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:20px;background:#fff;}
+  .prod h3{font-size:15px;margin-top:9px;}
+  .prod .en{font-size:9.5px;color:var(--muted);font-weight:700;letter-spacing:.06em;margin-top:2px;}
+  .prod p{font-size:11.5px;color:var(--body);margin:7px 0 0;}
+  .prod.lav{background:var(--c-lav);} .prod.sky{background:var(--c-sky);} .prod.mint{background:var(--c-mint);} .prod.peach{background:var(--c-peach);}
+
+  /* 안전/신뢰 */
+  .trust-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;}
+  .trust{padding:13px 15px;border-radius:13px;border:1px solid var(--line);background:#fff;display:flex;gap:11px;align-items:flex-start;}
+  .trust .e{font-size:20px;flex:0 0 auto;}
+  .trust b{font-size:13.5px;color:var(--ink);}
+  .trust span{font-size:11px;color:var(--muted);}
+  .trust a.lk{font-size:11px;font-weight:800;color:var(--accent);}
+  .policy-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;}
+  .policy-row a{font-size:11px;font-weight:800;color:var(--accent);background:var(--accent-soft);padding:6px 11px;border-radius:9px;}
+
+  /* 학습 효과 */
+  .stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+  .stat{padding:13px;border-radius:13px;background:var(--grad);color:#fff;text-align:center;}
+  .stat .n{font-size:25px;font-weight:900;line-height:1;}
+  .stat .l{font-size:11px;font-weight:700;opacity:.95;margin-top:4px;}
+  .fx-row{display:grid;grid-template-columns:repeat(4,1fr);gap:11px;}
+  .fx{padding:13px;border-radius:13px;border:1px solid var(--line);}
+  .fx .e{font-size:20px;}
+  .fx b{font-size:12.5px;color:var(--ink);display:block;margin-top:4px;}
+  .fx p{margin:5px 0 0;font-size:10.5px;color:var(--body);}
+
+  /* 도입 절차 */
+  .steps-h{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+  .stp{position:relative;text-align:center;padding:12px 8px;border-radius:13px;background:#fff;border:1px solid var(--line);}
+  .stp .nb{margin:0 auto 6px;}
+  .stp .t{font-size:12px;font-weight:800;color:var(--ink);}
+  .stp .d{font-size:10.5px;color:var(--muted);margin-top:3px;line-height:1.35;}
+  .stp .arrow{position:absolute;right:-8px;top:24px;color:var(--accent);font-weight:900;font-size:14px;z-index:2;}
+  .stp:last-child .arrow{display:none;}
+  .price-box{background:linear-gradient(160deg,#f5f3ff,#eef5ff);border:1px solid var(--line);border-radius:14px;padding:14px 16px;}
+  .price-box h3{font-size:15px;}
+  .price-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:9px;}
+  .pc{background:#fff;border:1px solid var(--line);border-radius:11px;padding:10px;}
+  .pc .pk{font-size:10px;color:var(--accent);font-weight:800;}
+  .pc .pv{font-size:13px;color:var(--ink);font-weight:900;margin-top:2px;}
+  .pc .pd{font-size:10px;color:var(--muted);margin-top:3px;}
+
+  /* 문의 */
+  .contact-wrap{background:linear-gradient(160deg,#f4f6ff,#fbfcff);border-radius:16px;padding:16px 20px;border:1px solid var(--line);display:flex;flex-direction:column;}
+  .ci-line{display:flex;gap:10px;align-items:flex-start;padding:5px 0;}
+  .ci-line .e{font-size:15px;width:22px;flex:0 0 auto;text-align:center;}
+  .ci-line .k{font-size:10px;color:var(--muted);font-weight:700;}
+  .ci-line .v{font-size:13px;color:var(--ink);font-weight:800;}
+  .cta-box{background:var(--grad);color:#fff;border-radius:14px;padding:14px;}
+  .cta-box h3{color:#fff;font-size:16px;}
+  .cta-box p{font-size:11.5px;opacity:.95;margin:5px 0 9px;}
+  .cta-box .btn{display:inline-flex;align-items:center;gap:7px;background:#fff;color:var(--accent);font-weight:900;font-size:12px;padding:8px 13px;border-radius:10px;}
+  .char-row{display:flex;justify-content:center;gap:4px;margin-top:6px;}
+  .char-row img{height:1.35in;object-fit:contain;}
+</style>
+</head>
+<body>
+
+<div class="no-print topbar">
+  <button onclick="window.print()">📄 PDF로 저장</button>
+  <a href="/">툰스쿨 홈</a>
+</div>
+
+<div class="deck">
+
+<!-- ===================== 1. 표지 ===================== -->
+<section class="slide cover">
+  <div class="topline">
+    <div class="brand">
+      <div class="mark">TS</div>
+      <div class="name"><b>ToonSchool</b><span>툰스쿨</span></div>
+    </div>
+    <div class="orgbadge">🏫 교육기관용 서비스 소개서</div>
+  </div>
+
+  <div class="body">
+    <div>
+      <span class="eyebrow">학교 · 지역아동센터 · 늘봄학교 · 방과후교실</span>
+      <h1>아이들이 <span class="strong-grad">만들면서 배우는</span> 수업</h1>
+      <div class="tag">AI와 웹툰으로 배우는 초등 창작 학습 플랫폼</div>
+      <p class="desc">
+        툰스쿨은 학생이 교과 단원을 직접 <b>학습만화와 마인드맵으로 만들며 배우는</b> 수업 도구입니다.
+        학급만 등록하면 바로 수업에 쓸 수 있고, 선생님은 아이들의 작품과 성장을 한곳에서 살필 수 있어요.
+      </p>
+      <div class="pills">
+        <span class="pill">🖍️ 에디터</span>
+        <span class="pill">🧠 툰마인드</span>
+        <span class="pill">📖 툰어휘사전</span>
+        <span class="pill">🏰 꿈의 궁전</span>
+        <span class="pill">👩‍🏫 학급·평가 관리</span>
+      </div>
+    </div>
+    <div class="hero">
+      <img src="/images/main/main-img-1.png" alt="툰스쿨 수업 화면" />
+    </div>
+  </div>
+
+  <div class="foot">
+    <div class="quote">도입을 검토하는 기관장·선생님을 위해, 한눈에 알기 쉽게 정리했습니다. <b>운영사 브레인스포츠</b></div>
+    <img class="lineup" src="/images/toonschool/characters/v2/character-lineup/toonschool-v2-character-lineup.png" alt="툰스쿨 공식 캐릭터 라인업" />
+  </div>
+</section>
+
+<!-- ===================== 2. 왜 툰스쿨인가요? ===================== -->
+<section class="slide">
+  <div class="shead">
+    <div class="ic">💡</div>
+    <div>
+      <span class="eyebrow">왜 툰스쿨인가요?</span>
+      <h2 class="t-slide" style="margin-top:4px;">설치 없이 바로, 아이가 주인공인 수업</h2>
+      <div class="t-sub">기관에서 가장 신경 쓰이는 세 가지 — 도입 부담 · 수업 재미 · 성과 확인 — 을 한 번에</div>
+    </div>
+  </div>
+
+  <div class="grow" style="display:flex;flex-direction:column;justify-content:center;gap:16px;margin-top:6px;">
+    <div class="value-row">
+      <div class="value" style="background:var(--c-sky)">
+        <div class="e">🚀</div>
+        <div class="t">쉬운 도입</div>
+        <div class="d">학급만 등록하면 바로 수업에 씁니다. 무거운 설치나 복잡한 세팅 없이 태블릿·PC·PWA로 바로 시작해요.</div>
+      </div>
+      <div class="value" style="background:var(--c-lav)">
+        <div class="e">🎨</div>
+        <div class="t">즐거운 수업</div>
+        <div class="d">아이가 직접 만화·마인드맵을 만들며 능동으로 배웁니다. AI가 글·그림·구조를 도와주어 초등 누구나 완성해요.</div>
+      </div>
+      <div class="value" style="background:var(--c-mint)">
+        <div class="e">📊</div>
+        <div class="t">한눈에 성장</div>
+        <div class="d">학생별 작품·평가·성장을 선생님이 한곳에서 확인합니다. 칭찬과 보상으로 동기도 채워줘요.</div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;">
+      <span class="pill">✅ 회원가입 없이 체험 가능</span>
+      <span class="pill">📚 국어·수학·사회·과학·영어</span>
+      <span class="pill">📱 태블릿 · PC · 설치형 PWA</span>
+      <span class="pill">🛡️ 청소년보호·개인정보 보호 조치</span>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== 3. 어디서 쓰나요? ===================== -->
+<section class="slide">
+  <div class="shead">
+    <div class="ic">🏫</div>
+    <div>
+      <span class="eyebrow">어디서 쓰나요?</span>
+      <h2 class="t-slide" style="margin-top:4px;">다양한 배움터에서 그대로 씁니다</h2>
+      <div class="t-sub">정규 수업부터 방과후·돌봄까지, 초등 창작 학습이 들어가는 곳 어디나</div>
+    </div>
+  </div>
+
+  <div class="grow" style="display:flex;flex-direction:column;justify-content:center;margin-top:6px;">
+    <div class="org-grid">
+      <div class="org"><div class="e">🎒</div><div><b>초등학교 정규 수업</b><span>교과 단원을 만화·마인드맵으로 정리하는 창의·표현 수업</span></div></div>
+      <div class="org"><div class="e">🕒</div><div><b>방과후교실 / 동아리</b><span>재미있는 창작 활동으로 몰입도 높은 방과후 프로그램</span></div></div>
+      <div class="org"><div class="e">🏡</div><div><b>지역아동센터</b><span>놀이처럼 배우며 어휘·문해력·창의력을 기르는 활동</span></div></div>
+      <div class="org"><div class="e">🌞</div><div><b>늘봄학교 / 돌봄</b><span>스토리와 보상으로 꾸준히 참여하는 즐거운 돌봄 학습</span></div></div>
+      <div class="org"><div class="e">✏️</div><div><b>학원 · 사교육</b><span>글쓰기·독서·진로 수업에 바로 활용하는 창작 교구</span></div></div>
+      <div class="org"><div class="e">🏠</div><div><b>가정 학습</b><span>가족과 작품을 주고받으며 이어지는 집에서의 배움</span></div></div>
+    </div>
+    <div class="price-box" style="margin-top:14px;">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <b style="color:var(--ink);font-size:13px;">🎯 한 번 도입하면 여러 용도로</b>
+        <span class="pill">정규수업</span><span class="pill">방과후</span><span class="pill">돌봄</span><span class="pill">특별활동</span>
+        <span style="font-size:11px;color:var(--muted);margin-left:auto;">같은 계정으로 학급마다 자유롭게 운영할 수 있어요.</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== 4. 수업은 어떻게 진행되나요? ===================== -->
+<section class="slide">
+  <div class="shead">
+    <div class="ic">🎬</div>
+    <div>
+      <span class="eyebrow">한 수업의 흐름</span>
+      <h2 class="t-slide" style="margin-top:4px;">단원을 고르면, 아이들이 직접 만들어요</h2>
+      <div class="t-sub">선생님이 단원을 정하면 → 아이들이 만화를 만들고 → 공유·발표 → OX 퀴즈로 정리</div>
+    </div>
+  </div>
+
+  <div class="grow" style="display:flex;flex-direction:column;justify-content:center;gap:13px;margin-top:6px;">
+    <div class="flow">
+      <div class="step"><div class="num-badge nb">1</div><div class="t">단원 선택</div><div class="arrow">›</div></div>
+      <div class="step"><div class="num-badge nb">2</div><div class="t">대본·배경</div><div class="arrow">›</div></div>
+      <div class="step"><div class="num-badge nb">3</div><div class="t">6컷 만화</div><div class="arrow">›</div></div>
+      <div class="step"><div class="num-badge nb">4</div><div class="t">OX 퀴즈</div><div class="arrow">›</div></div>
+      <div class="step"><div class="num-badge nb">5</div><div class="t">공유·발표</div><div class="arrow">›</div></div>
+      <div class="step"><div class="num-badge nb">6</div><div class="t">성장 기록</div></div>
+    </div>
+
+    <div class="scr-row">
+      <div class="f">
+        <img src="/images/main/main-img-3.png" alt="배경 생성 화면" />
+        <div class="lbl"><b>배경 생성</b><span>AI가 학습 내용을 친근한 화면으로</span></div>
+      </div>
+      <div class="f">
+        <img src="/images/main/main-img-4.png" alt="대사 작성 화면" />
+        <div class="lbl"><b>대사 작성</b><span>대본을 아이 말투의 대사로</span></div>
+      </div>
+      <div class="f">
+        <img src="/images/main/main-img-5.png" alt="수업도구 화면" />
+        <div class="lbl"><b>수업도구</b><span>캐릭터·말풍선을 고쳐 꾸며요</span></div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;">
+      <span class="pill">✅ OX 정답·해설 즉시 확인</span>
+      <span class="pill">🔗 링크 공유 · PDF 저장</span>
+      <span class="pill">🗣️ 완성작 발표 · 자랑하기</span>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== 5. 선생님을 위한 관리 도구 ===================== -->
+<section class="slide">
+  <div class="shead">
+    <div class="ic">👩‍🏫</div>
+    <div>
+      <span class="eyebrow">선생님 화면 · LMS</span>
+      <h2 class="t-slide" style="margin-top:4px;">학급·평가·성장을 한곳에서</h2>
+      <div class="t-sub">여러 학급·학생·교사까지 관리하고, 칭찬과 알림으로 아이들을 응원해요</div>
+    </div>
+  </div>
+
+  <div class="two" style="margin-top:6px;">
+    <div>
+      <ul class="tlist">
+        <li><span class="e">🏫</span><div><b>학급 · 학생 · 교사 관리</b><span>여러 학급과 담임·강사를 기관 단위로 운영</span></div></li>
+        <li><span class="e">📂</span><div><b>작품 관리</b><span>학생이 만든 만화·마인드맵을 한곳에서 열람</span></div></li>
+        <li><span class="e">📝</span><div><b>평가 · 성장 현황</b><span>학생별 성장 단계와 성장 평가서 확인</span></div></li>
+        <li><span class="e">💬</span><div><b>칭찬 · 알림</b><span>격려 메시지와 알림으로 학습 동기 부여</span></div></li>
+        <li><span class="e">🤖</span><div><b>AI가 수업 준비를 덜어줘요</b><span>단원·주제·대본 생성으로 준비 시간 단축</span></div></li>
+      </ul>
+    </div>
+
+    <div class="dash">
+      <div class="dh"><b>우리 반 성장 보드</b><span class="tag">선생님 화면 예시</span></div>
+      <div class="cards">
+        <div class="dc"><div class="k">오늘 만든 작품</div><div class="v">12편</div><div class="bar"><i style="width:72%"></i></div></div>
+        <div class="dc"><div class="k">평균 참여율</div><div class="v">94%</div><div class="bar"><i style="width:94%"></i></div></div>
+        <div class="dc"><div class="k">이번 주 칭찬</div><div class="v">28회</div><div class="bar"><i style="width:60%"></i></div></div>
+        <div class="dc"><div class="k">제출 대기</div><div class="v">3명</div><div class="bar"><i style="width:18%"></i></div></div>
+      </div>
+      <div class="note">* 선생님 관리 화면 도식(실제 화면은 업데이트에 따라 다를 수 있어요)</div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== 6. 4대 서비스 한눈에 ===================== -->
+<section class="slide">
+  <div class="shead">
+    <div class="ic">🧩</div>
+    <div>
+      <span class="eyebrow">서비스 한눈에</span>
+      <h2 class="t-slide" style="margin-top:4px;">네 가지 서비스로 완성되는 한 수업</h2>
+      <div class="t-sub">창작 · 사고 · 어휘 · 보상 성장이 하나의 흐름으로 연결됩니다</div>
+    </div>
+  </div>
+
+  <div class="grow" style="display:flex;flex-direction:column;justify-content:center;margin-top:6px;">
+    <div class="prod-row">
+      <div class="prod lav">
+        <div class="ic">🖍️</div><h3>툰스쿨 에디터</h3><div class="en">EDITOR</div>
+        <p>단원을 고르면 대본·6컷 만화·OX 퀴즈까지 한 권의 학습만화책으로 완성.</p>
+      </div>
+      <div class="prod sky">
+        <div class="ic">🧠</div><h3>툰마인드</h3><div class="en">TOONMIND</div>
+        <p>교과 핵심을 중심 주제와 가지로 연결하는 마인드맵. AI가 가지를 채워줘요.</p>
+      </div>
+      <div class="prod mint">
+        <div class="ic">📖</div><h3>툰어휘사전</h3><div class="en">VOCABULARY</div>
+        <p>만들며 모르는 단어를 바로 찾고, 나만의 단어장으로 어휘력을 키워요.</p>
+      </div>
+      <div class="prod peach">
+        <div class="ic">🏰</div><h3>꿈의 궁전</h3><div class="en">DREAM PALACE</div>
+        <p>활동이 점수·레벨이 되어 10개 세계를 여행하는 게임형 보상 성장.</p>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;justify-content:center;">
+      <span class="pill">📚 전 과목 활용</span>
+      <span class="pill">🧠 메타인지 학습</span>
+      <span class="pill">🏆 게임화 보상</span>
+      <span class="pill">🔗 작품 공유 · PDF</span>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== 7. 안전과 신뢰 ===================== -->
+<section class="slide">
+  <div class="shead">
+    <div class="ic">🛡️</div>
+    <div>
+      <span class="eyebrow">안전과 신뢰</span>
+      <h2 class="t-slide" style="margin-top:4px;">아이들이 안전하게 쓰도록 설계했어요</h2>
+      <div class="t-sub">기관 도입 검토에 필요한 정책과 운영 기준을 갖추고 있습니다</div>
+    </div>
+  </div>
+
+  <div class="grow" style="display:flex;flex-direction:column;justify-content:center;gap:14px;margin-top:6px;">
+    <div class="trust-grid">
+      <div class="trust"><div class="e">🧒</div><div><b>초등 맞춤 설계</b><span>문장·화면·보상을 초등학생 눈높이에 맞춰 설계했어요.</span></div></div>
+      <div class="trust"><div class="e">🔒</div><div><b>청소년 보호</b><span>청소년보호정책에 따른 운영 기준을 마련해 운영합니다.</span></div></div>
+      <div class="trust"><div class="e">🔐</div><div><b>개인정보 보호</b><span>개인정보처리방침에 따라 아이 정보를 안전하게 다룹니다.</span></div></div>
+      <div class="trust"><div class="e">🏢</div><div><b>전문 운영사</b><span>운영사 <b>브레인스포츠</b>가 에듀테크 서비스를 책임집니다.</span></div></div>
+    </div>
+
+    <div class="price-box">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <b style="color:var(--ink);font-size:13px;">📄 정책 문서 바로 보기</b>
+        <div class="policy-row" style="margin-top:0;">
+          <a href="/terms-of-service">이용약관</a>
+          <a href="/privacy-policy">개인정보처리방침</a>
+          <a href="/youth-protection-policy">청소년보호정책</a>
+          <a href="/pricing">이용요금</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== 8. 교육 효과 ===================== -->
+<section class="slide">
+  <div class="shead">
+    <div class="ic">📈</div>
+    <div>
+      <span class="eyebrow">교육 효과</span>
+      <h2 class="t-slide" style="margin-top:4px;">만들며 배우면, 더 깊이 남아요</h2>
+      <div class="t-sub">창작 · 메타인지 · 게임화 보상이 하나로 연결된 학습 설계</div>
+    </div>
+  </div>
+
+  <div class="grow" style="display:flex;flex-direction:column;justify-content:center;gap:12px;margin-top:6px;">
+    <div class="stat-row">
+      <div class="stat"><div class="n">6단계</div><div class="l">단원 → 만화책 한 권 완성</div></div>
+      <div class="stat"><div class="n">5과목</div><div class="l">국어·수학·사회·과학·영어</div></div>
+      <div class="stat"><div class="n">10세계</div><div class="l">꿈의 궁전 보상 성장</div></div>
+    </div>
+    <div class="fx-row">
+      <div class="fx" style="background:var(--c-lav)"><div class="e">🎨</div><b>능동 표현 학습</b><p>받아적기가 아니라 스스로 만들어 표현하며 개념을 체화합니다.</p></div>
+      <div class="fx" style="background:var(--c-sky)"><div class="e">🧠</div><b>메타인지 · 구조화</b><p>마인드맵과 OX 퀴즈로 ‘아는 것’을 스스로 점검합니다.</p></div>
+      <div class="fx" style="background:var(--c-mint)"><div class="e">📖</div><b>어휘 · 문해력</b><p>만들며 단어를 찾고 모아 표현력과 문해력이 자라요.</p></div>
+      <div class="fx" style="background:var(--c-peach)"><div class="e">🏆</div><b>동기 · 지속성</b><p>완성·칭찬·레벨로 ‘한 번 더’ 하고 싶은 긍정 루프를 만듭니다.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== 9. 도입 절차 + 이용요금 ===================== -->
+<section class="slide">
+  <div class="shead">
+    <div class="ic">🚀</div>
+    <div>
+      <span class="eyebrow">도입 절차 · 이용요금</span>
+      <h2 class="t-slide" style="margin-top:4px;">문의부터 정기 수업까지, 네 단계</h2>
+      <div class="t-sub">기관 규모에 맞춰 요금을 안내해 드려요</div>
+    </div>
+  </div>
+
+  <div class="grow" style="display:flex;flex-direction:column;justify-content:center;gap:13px;margin-top:6px;">
+    <div class="steps-h">
+      <div class="stp"><div class="num-badge nb">1</div><div class="t">문의 · 상담</div><div class="d">기관 상황에 맞춰 사용처와 규모를 상담해요.</div><div class="arrow">›</div></div>
+      <div class="stp"><div class="num-badge nb">2</div><div class="t">무료 체험</div><div class="d">학생·선생님 화면을 가입 없이 바로 체험해요.</div><div class="arrow">›</div></div>
+      <div class="stp"><div class="num-badge nb">3</div><div class="t">도입 · 설정</div><div class="d">학급·계정을 세팅하고 수업에 바로 씁니다.</div><div class="arrow">›</div></div>
+      <div class="stp"><div class="num-badge nb">4</div><div class="t">정기 수업</div><div class="d">운영 지원과 함께 꾸준히 운영해요.</div></div>
+    </div>
+
+    <div class="price-box">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+        <h3 style="font-size:14px;">💳 학생 1명당 월 8회 기본 + 툰마인드 무제한</h3>
+        <a href="/pricing" style="font-size:11.5px;font-weight:900;color:var(--accent);">상세 요금제 보기 →</a>
+      </div>
+      <div class="price-grid">
+        <div class="pc"><div class="pk">소규모 기관</div><div class="pv">월 8회 만화 창작</div><div class="pd">툰마인드 무제한 · 기본 추천</div></div>
+        <div class="pc"><div class="pk">여러 학급 운영</div><div class="pv">학급·교사 관리</div><div class="pd">기본 제공량 초과 시 추가 가능</div></div>
+        <div class="pc"><div class="pk">정기 수업 기관</div><div class="pv">규모별 맞춤</div><div class="pd">도입 상담으로 안내해 드려요</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== 10. 문의 / 도입 신청 ===================== -->
+<section class="slide">
+  <div class="shead">
+    <div class="ic">📞</div>
+    <div>
+      <span class="eyebrow">문의 · 도입 신청</span>
+      <h2 class="t-slide" style="margin-top:4px;">함께 시작해 볼까요?</h2>
+      <div class="t-sub">기관 도입·견적·협업 문의는 언제든 편하게 연락 주세요</div>
+    </div>
+  </div>
+
+  <div class="grow" style="display:grid;grid-template-columns:1.05fr .95fr;gap:16px;margin-top:8px;align-items:center;">
+    <div class="contact-wrap">
+      <div class="brand" style="margin-bottom:6px;">
+        <div class="mark" style="width:38px;height:38px;font-size:16px;border-radius:11px;">TS</div>
+        <div class="name"><b style="font-size:16px;">ToonSchool</b><span style="font-size:11px;">툰스쿨 · 브레인스포츠</span></div>
+      </div>
+      <div>
+        <div class="ci-line"><div class="e">🏢</div><div><div class="k">운영사</div><div class="v">브레인스포츠</div></div></div>
+        <div class="ci-line"><div class="e">📍</div><div><div class="k">주소</div><div class="v">서울특별시 금천구 가산디지털2로 169-16</div></div></div>
+        <div class="ci-line"><div class="e">✉️</div><div><div class="k">이메일</div><div class="v">contact@kmemory.org</div></div></div>
+        <div class="ci-line"><div class="e">📞</div><div><div class="k">문의 · 상담</div><div class="v">1599-2479</div></div></div>
+        <div class="ci-line"><div class="e">🎧</div><div><div class="k">기술 지원</div><div class="v">02-6956-7975</div></div></div>
+        <div class="ci-line"><div class="e">🕑</div><div><div class="k">운영 시간</div><div class="v">평일 09:00 ~ 18:00</div></div></div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <div class="cta-box">
+        <h3>🏫 기관 도입 · 견적 문의</h3>
+        <p>학급 수와 운영 계획을 알려 주시면 맞춤 안내해 드려요.</p>
+        <a class="btn" href="http://page.kmemory.co.kr/toonschool/" target="_blank" rel="noopener">도입 문의하기 →</a>
+        <a class="btn" href="/" style="background:rgba(255,255,255,.16);color:#fff;margin-left:6px;">무료 체험하기</a>
+      </div>
+      <div class="price-box" style="padding:11px 14px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+          <b style="color:var(--ink);font-size:12.5px;">💳 이용요금 안내</b>
+          <a href="/pricing" style="font-size:11.5px;font-weight:900;color:var(--accent);">요금제 보기 →</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="char-row">
+    <img src="/images/toonschool/characters/v2/doyoon-master/doyoon-v2-fullbody.png" alt="도윤"/>
+    <img src="/images/toonschool/characters/v2/hana-master/hana-v2-fullbody.png" alt="하나 선생님"/>
+    <img src="/images/toonschool/characters/v2/seoa-master/seoa-v2-fullbody.png" alt="서아"/>
+  </div>
+</section>
+
+</div>
+
+<script>
+  (function () {
+    var NATIVE = 1280;
+    function fit() {
+      var deck = document.querySelector('.deck');
+      if (!deck) return;
+      var scale = Math.min(1, (window.innerWidth - 24) / NATIVE);
+      deck.style.transform = 'scale(' + scale + ')';
+    }
+    if (!window.matchMedia('print').matches) {
+      window.addEventListener('resize', fit);
+      window.addEventListener('load', fit);
+      fit();
+    }
+  })();
+</script>
+
+</body>
+</html>

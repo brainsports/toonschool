@@ -19,8 +19,8 @@ import {
  *   현재 프로젝트에 실제 라우트가 없으므로 가짜 경로를 만들지 않고
  *   ‘준비 중’ 안내 처리(클릭 시 안내 문구 + aria-disabled).
  * - SNS 아이콘은 실제 URL이 확인되지 않아 표시하지 않는다(가짜 링크 금지).
- * - 툰스쿨 소개서는 /intro/toonschool-intro.html(인쇄·PDF 저장 가능)을 새 탭으로 연다.
- *   교육기관용 서비스 소개서는 아직 준비 중이므로 ‘준비 중’ 처리를 유지한다.
+ * - 툰스쿨 소개서는 /intro/toonschool-intro.html,
+ *   교육기관용 서비스 소개서는 /intro/toonschool-edu-intro.html (모두 인쇄·PDF 저장 가능)을 새 탭으로 연다.
  */
 
 const EXTERNAL_INQUIRY_URL = 'http://page.kmemory.co.kr/toonschool/';
@@ -208,36 +208,18 @@ function BrandColumn() {
     );
 }
 
-/* ---------------- 소개서 다운로드 버튼 (준비 중) ---------------- */
-function PendingDownloadButton({ label }: { label: string }) {
-    return (
-        <button
-            type="button"
-            aria-disabled="true"
-            title="소개서를 준비하고 있습니다."
-            onClick={showPending}
-            className="flex h-[56px] w-full max-w-[370px] items-center justify-between rounded-[11px] px-5 text-[15px] font-semibold transition-colors hover:brightness-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
-            style={{ background: ACCENT_BG, color: ACCENT }}
-        >
-            <span>{label}</span>
-            <Download className="h-5 w-5" aria-hidden="true" />
-        </button>
-    );
-}
-
 /* ---------------- 소개서 보기(인쇄·PDF 저장 가능) ---------------- */
-const INTRO_URL = '/intro/toonschool-intro.html';
-function IntroDownloadLink() {
+function IntroDownloadLink({ href, label }: { href: string; label: string }) {
     return (
         <a
-            href={INTRO_URL}
+            href={href}
             target="_blank"
             rel="noopener noreferrer"
-            title="툰스쿨 소개서를 새 탭에서 열어요. 상단의 PDF로 저장하기를 누르면 PDF로 저장됩니다."
+            title={`${label} — 새 탭에서 열려요. 상단의 ‘PDF로 저장하기’를 누르면 PDF로 저장됩니다.`}
             className="flex h-[56px] w-full max-w-[370px] items-center justify-between rounded-[11px] px-5 text-[15px] font-semibold transition-all hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
             style={{ background: ACCENT, color: '#fff' }}
         >
-            <span>툰스쿨 소개서 다운로드</span>
+            <span>{label}</span>
             <Download className="h-5 w-5" aria-hidden="true" />
         </a>
     );
@@ -255,8 +237,8 @@ function ServiceColumn() {
                 <InternalLink to="/lms">수업 활용</InternalLink>
             </nav>
             <div className="mt-2 flex flex-col gap-3">
-                <IntroDownloadLink />
-                <PendingDownloadButton label="교육기관용 서비스 소개서 다운로드" />
+                <IntroDownloadLink href="/intro/toonschool-intro.html" label="툰스쿨 소개서 다운로드" />
+                <IntroDownloadLink href="/intro/toonschool-edu-intro.html" label="교육기관용 서비스 소개서 다운로드" />
             </div>
         </div>
     );
