@@ -1,5 +1,6 @@
 {
   "rewrites": [
+    { "source": "/book/:shareId", "destination": "/api/book-meta?shareId=:shareId" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
