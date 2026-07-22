@@ -7,6 +7,10 @@ import {
     MapPin,
     Download,
     ArrowRight,
+    Handshake,
+    School,
+    UsersRound,
+    Landmark,
 } from 'lucide-react';
 
 /**
@@ -27,8 +31,6 @@ const EXTERNAL_INQUIRY_URL = 'http://page.kmemory.co.kr/toonschool/';
 
 // 디자인 토큰 (기준 이미지에서 추출)
 const ACCENT = '#5364e8';
-const ACCENT_BG = '#f1f2ff';
-const ACCENT_BG_HOVER = '#e7e9ff';
 const BORDER = '#e7eaf1';
 const HEADING = '#252a37';
 const BODY = '#454b59';
@@ -69,21 +71,6 @@ function PendingLink({ children }: { children: React.ReactNode }) {
         >
             {children}
         </button>
-    );
-}
-
-/* ---------------- 외부 링크 (문의 페이지, 새 탭) ---------------- */
-function ExternalLink({ children }: { children: React.ReactNode }) {
-    return (
-        <a
-            href={EXTERNAL_INQUIRY_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center text-[17px] leading-[1.7] transition-colors hover:text-[#5364e8]"
-            style={{ color: LINK }}
-        >
-            {children}
-        </a>
     );
 }
 
@@ -247,38 +234,65 @@ function ServiceColumn() {
 /* ---------------- 3열: 광고·협업 ---------------- */
 function PartnershipColumn() {
     const items = [
-        '광고 및 협업 문의',
-        '교육기관 도입 문의',
-        '총판·지사·강사 파트너 문의',
-        '공공기관·지자체 사업 문의',
+        { label: '교육기관 도입 문의', Icon: School },
+        { label: '총판·지사·강사 파트너 문의', Icon: UsersRound },
+        { label: '공공기관·지자체 사업 문의', Icon: Landmark },
     ];
+
     return (
         <div className="flex flex-col gap-4">
             <SectionTitle>광고 · 협업</SectionTitle>
-            <nav className="flex flex-col gap-1" aria-label="광고 및 협업">
-                {items.map((item) => (
-                    <ExternalLink key={item}>{item}</ExternalLink>
-                ))}
-            </nav>
-            <a
-                href={EXTERNAL_INQUIRY_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-2 flex h-[56px] w-full max-w-[320px] items-center justify-between rounded-[11px] border px-5 text-[15px] font-bold transition-all hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
-                style={{ background: ACCENT_BG, borderColor: 'transparent', color: ACCENT }}
-                onMouseEnter={(e) => {
-                    (e.currentTarget as HTMLAnchorElement).style.background = ACCENT_BG_HOVER;
-                }}
-                onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLAnchorElement).style.background = ACCENT_BG;
-                }}
+            <div
+                className="w-full max-w-[320px] overflow-hidden rounded-[10px] border bg-white p-2.5 shadow-[0_3px_12px_rgba(55,65,120,0.06)]"
+                style={{ borderColor: '#e8eaf5' }}
             >
-                <span className="flex items-center gap-2">
-                    <Mail className="h-5 w-5" aria-hidden="true" />
-                    <span>광고 및 협업 문의하기</span>
-                </span>
-                <ArrowRight className="h-5 w-5" aria-hidden="true" />
-            </a>
+                <div className="grid grid-cols-[30%_70%] items-stretch">
+                    <div className="mr-2 overflow-hidden rounded-lg bg-[#f2f0ff]">
+                        <img
+                            src="/images/footer/toonschool-partnership-guide.png"
+                            alt="툰스쿨 도입과 제휴 문의 안내"
+                            className="h-full min-h-[126px] w-full object-cover object-[52%_18%]"
+                        />
+                    </div>
+
+                    <div className="min-w-0">
+                        <div className="mb-1.5 flex items-center gap-1.5 px-1">
+                            <Handshake className="h-4 w-4 shrink-0 text-[#5365ec]" aria-hidden="true" />
+                            <p className="text-[14px] font-bold leading-tight text-[#202637]">
+                                툰스쿨 도입·제휴 문의
+                            </p>
+                        </div>
+                        <nav className="flex flex-col" aria-label="툰스쿨 도입 및 제휴 문의">
+                            {items.map(({ label, Icon }) => (
+                                <a
+                                    key={label}
+                                    href={EXTERNAL_INQUIRY_URL}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="group flex min-h-8 items-center gap-1.5 rounded-md px-1 text-[11px] leading-tight text-[#4b5261] transition-colors hover:bg-[#f7f7ff] hover:text-[#5365ec] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5365ec] focus-visible:ring-offset-1"
+                                >
+                                    <Icon className="h-3.5 w-3.5 shrink-0 text-[#6674e9]" aria-hidden="true" />
+                                    <span className="min-w-0 flex-1">{label}</span>
+                                    <ArrowRight className="h-3.5 w-3.5 shrink-0 text-[#98a0c5] transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+                                </a>
+                            ))}
+                        </nav>
+                    </div>
+                </div>
+
+                <a
+                    href={EXTERNAL_INQUIRY_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-2 flex min-h-[38px] w-full items-center justify-between rounded-[7px] border border-transparent bg-[#f2f2ff] px-3 text-[12px] font-semibold text-[#5365ec] transition-colors hover:border-[#d9dcff] hover:bg-[#e9eaff] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5365ec] focus-visible:ring-offset-1"
+                >
+                    <span className="flex items-center gap-2">
+                        <Mail className="h-4 w-4" aria-hidden="true" />
+                        <span>광고 및 협업 문의하기</span>
+                    </span>
+                    <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                </a>
+            </div>
         </div>
     );
 }
