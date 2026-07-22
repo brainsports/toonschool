@@ -199,37 +199,39 @@ export default function StudentMyPage() {
       <div className="py-6 px-4 md:px-8 max-w-[1400px] mx-auto w-full grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_260px] lg:grid-cols-[minmax(0,1fr)_280px] xl:grid-cols-[minmax(0,1fr)_minmax(280px,320px)] gap-5 xl:gap-6 items-start overflow-y-auto">
         <main className="min-w-0 flex flex-col gap-6">
           {/* 학생 격려 배너 */}
-            <div className="bg-gradient-to-r from-pink-50 to-sky-50 rounded-[2rem] p-6 xl:p-8 flex items-center justify-between border border-pink-100 relative overflow-hidden min-h-[300px] shadow-sm">
-              <div className="z-10 flex flex-col gap-4 max-w-[72%] xl:max-w-xl">
-                <div className="flex items-center gap-2">
+            <div className="bg-gradient-to-r from-pink-50 to-sky-50 rounded-[2rem] p-6 xl:p-8 flex items-center justify-between border border-pink-100 relative overflow-hidden min-h-[280px] md:min-h-[300px] shadow-sm">
+              <div className="z-10 flex w-full max-w-full flex-col gap-3 md:w-auto md:max-w-[72%] md:gap-4 xl:max-w-xl">
+                <div className="flex max-w-[80%] items-center gap-2 md:max-w-none">
                   <h2 className="text-xl min-[1100px]:text-2xl xl:text-3xl font-black text-pink-600 break-keep">오늘도 툰스쿨과 함께 출발해요!</h2>
                   <span className="text-2xl">🚀</span>
                 </div>
 
-                <p className="text-slate-600 font-bold text-lg leading-relaxed">
+                <p className="max-w-[80%] break-keep text-base font-bold leading-relaxed text-slate-600 md:max-w-none md:text-lg">
                   내가 배운 내용을 멋진 만화로 만들어 볼까요?
                 </p>
 
-                <button
-                  onClick={() => navigate('/student/select-unit')}
-                  className="mt-2 bg-pink-500 hover:bg-pink-600 text-white font-bold py-3 px-6 rounded-full shadow-md shadow-pink-500/20 hover:shadow-lg transition-all flex items-center gap-2 w-fit active:scale-95"
-                >
-                  <Play className="w-5 h-5 fill-current" />
-                  <span>툰스쿨 에디터 입장</span>
-                </button>
+                <div className="mt-3 flex flex-col items-start gap-2.5 md:contents">
+                  <button
+                    onClick={() => navigate('/student/select-unit')}
+                    className="inline-flex min-h-12 w-fit max-w-full items-center justify-center gap-2 whitespace-nowrap break-keep rounded-full bg-pink-500 px-5 text-[15px] font-bold leading-none text-white shadow-md shadow-pink-500/20 transition-all hover:bg-pink-600 hover:shadow-lg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-pink-200 active:scale-95 md:mt-2 md:min-h-0 md:px-6 md:py-3 md:text-base"
+                  >
+                    <Play className="h-[18px] w-[18px] shrink-0 fill-current md:h-5 md:w-5" aria-hidden="true" />
+                    <span>툰스쿨 에디터 입장</span>
+                  </button>
 
-                <button
-                  onClick={() => navigate('/student/mindmap')}
-                  className="mt-2 ml-2 bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-6 rounded-full shadow-md shadow-purple-500/20 hover:shadow-lg transition-all flex items-center gap-2 w-fit active:scale-95"
-                >
-                  <span className="text-lg leading-none">🧠</span>
-                  <span>툰마인드 만들기</span>
-                </button>
+                  <button
+                    onClick={() => navigate('/student/mindmap')}
+                    className="inline-flex min-h-12 w-fit max-w-full items-center justify-center gap-2 whitespace-nowrap break-keep rounded-full bg-purple-500 px-5 text-[15px] font-bold leading-none text-white shadow-md shadow-purple-500/20 transition-all hover:bg-purple-600 hover:shadow-lg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-purple-200 active:scale-95 md:ml-2 md:mt-2 md:min-h-0 md:px-6 md:py-3 md:text-base"
+                  >
+                    <span className="shrink-0 text-[18px] leading-none" aria-hidden="true">🧠</span>
+                    <span>툰마인드 만들기</span>
+                  </button>
+                </div>
               </div>
               <img
                 src="/images/toonschool/login-hero.png"
                 alt="Study Hero"
-                className="absolute right-2 bottom-0 h-[58%] lg:h-[72%] xl:h-[88%] max-w-[42%] object-contain object-right-bottom opacity-90"
+                className="absolute right-2 top-6 h-[28%] max-w-[25%] object-contain object-right-top opacity-90 md:bottom-0 md:top-auto md:h-[58%] md:max-w-[42%] md:object-right-bottom lg:h-[72%] xl:h-[88%]"
               />
             </div>
 
