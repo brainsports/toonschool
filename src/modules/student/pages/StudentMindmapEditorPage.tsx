@@ -26,7 +26,7 @@ import MindmapShareDialog from '../components/mindmap/MindmapShareDialog';
 import MindmapCompleteDialog from '../components/mindmap/MindmapCompleteDialog';
 import MindmapDialog from '../components/mindmap/MindmapDialog';
 import MindmapToast from '../components/mindmap/MindmapToast';
-import ToonVocabularyWidget from '../components/toonVocabulary/ToonVocabularyWidget';
+import { useToonDictionaryPageContext } from '../components/toonVocabulary/useToonDictionaryPageContext';
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error' | 'offline';
 
@@ -49,6 +49,14 @@ export default function StudentMindmapEditorPage() {
   const [isEnabling, setIsEnabling] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<MindmapNode | null>(null);
   const [toast, setToast] = useState<{ message: string; tone: 'success' | 'error' | 'info' } | null>(null);
+
+  useToonDictionaryPageContext({
+    sourceType: 'mindmap_editor',
+    sourceId: projectId,
+    grade: project?.grade,
+    subject: project?.subject,
+    unit: project?.unitTitle,
+  });
 
   const [past, setPast] = useState<MindmapProject[]>([]);
   const [future, setFuture] = useState<MindmapProject[]>([]);
@@ -129,6 +137,15 @@ export default function StudentMindmapEditorPage() {
     }
     navigate('/student/vocabulary');
   }, [navigate, saveStatus]);
+
+  useEffect(() => {
+    const handleDictionaryWordbook = (event: Event) => {
+      event.preventDefault();
+      void handleGoVocabulary();
+    };
+    window.addEventListener('toonDictionaryOpenWordbook', handleDictionaryWordbook);
+    return () => window.removeEventListener('toonDictionaryOpenWordbook', handleDictionaryWordbook);
+  }, [handleGoVocabulary]);
 
   // ---- 커밋(히스토리Push) ----
   const commit = useCallback((updater: (prev: MindmapProject) => MindmapProject) => {
@@ -419,13 +436,6 @@ export default function StudentMindmapEditorPage() {
 
   return (
     <div className="h-[100dvh] w-full flex flex-col bg-slate-100 overflow-hidden">
-      <ToonVocabularyWidget
-        sourceType="mindmap_editor"
-        sourceId={project.id}
-        grade={project.grade}
-        subject={project.subject}
-        unit={project.unitTitle}
-      />
       {/* 상단 도구 모음 */}
       <header className="shrink-0 bg-white border-b border-slate-200 px-3 py-2 flex items-center gap-2 flex-wrap z-30">
         <button onClick={() => navigate('/student/mypage')} className="p-2 rounded-lg hover:bg-slate-100 text-slate-600" title="뒤로"><ArrowLeft className="w-5 h-5" /></button>

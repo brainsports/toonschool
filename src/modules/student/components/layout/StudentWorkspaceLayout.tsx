@@ -1,9 +1,8 @@
 import { type ReactNode } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { ChevronLeft, BookMarked } from 'lucide-react'
 import StudentPageShell from './StudentPageShell'
 import StudentFlowSidebar, { type FlowStepKey } from './StudentFlowSidebar'
-import ToonVocabularyWidget from '../toonVocabulary/ToonVocabularyWidget'
 
 interface StudentWorkspaceLayoutProps {
   currentStep: FlowStepKey
@@ -38,17 +37,8 @@ export default function StudentWorkspaceLayout({
   bgVariant = 'pastel'
 }: StudentWorkspaceLayoutProps) {
   const navigate = useNavigate()
-  const location = useLocation()
-  // 현재 만화 작품 ID — 단어 저장 출처(source_id). location.state 우선, localStorage 폴백.
-  const projectId =
-    (location.state as { projectId?: string } | null)?.projectId ||
-    (typeof window !== 'undefined' && (window.localStorage.getItem('currentProjectId') || window.localStorage.getItem('studentCurrentProjectId'))) ||
-    null
-
   return (
     <StudentPageShell bgVariant={bgVariant} maxWidth="full">
-      {/* 툰어휘사전 플로팅 위젯 — 만화 에디터 8단계 공통. position:fixed 로 레이아웃 영향 없음. */}
-      <ToonVocabularyWidget sourceType="comic_editor" sourceId={projectId} />
       <div className="student-editor-workspace">
         {/* 모바일/태블릿 세로 모드 상단 스텝퍼 (lg 미만에서 표시) */}
         <div className="lg:hidden w-full bg-[#134B4C] border-b border-[#0f3a3b] shadow-sm z-30 shrink-0">

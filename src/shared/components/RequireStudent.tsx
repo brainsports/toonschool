@@ -1,5 +1,7 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import ToonDictionaryWidgetProvider from '../../modules/student/components/toonVocabulary/ToonDictionaryWidgetProvider'
+import type { VocabularySourceType } from '../../modules/student/types/vocabulary'
 
 const ROLE_HOME: Record<string, string> = {
   super_admin: '/admin/super/dashboard',
@@ -43,5 +45,22 @@ export default function RequireStudent() {
     return <Navigate to={home} replace />
   }
 
-  return <Outlet />
+  const isMindmapEditor = location.pathname.startsWith('/student/mindmap/edit/')
+  const sourceType: VocabularySourceType = isMindmapEditor
+    ? 'mindmap_editor'
+    : location.pathname === '/student/mindmap'
+      ? 'mindmap_start'
+      : 'comic_editor'
+  const sourceId = isMindmapEditor
+    ? location.pathname.split('/').filter(Boolean).at(-1) ?? null
+    : localStorage.getItem('currentProjectId') || localStorage.getItem('studentCurrentProjectId')
+
+  return (
+    <ToonDictionaryWidgetProvider
+      defaultContext={{ sourceType, sourceId }}
+      placement={isMindmapEditor ? 'mindmap-editor' : 'default'}
+    >
+      <Outlet />
+    </ToonDictionaryWidgetProvider>
+  )
 }
