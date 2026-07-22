@@ -239,7 +239,8 @@ function PartnershipColumn() {
     ];
 
     return (
-        <div className="flex flex-col md:pt-[45px]">
+        <div className="flex flex-col gap-4">
+            <SectionTitle>광고 · 협업</SectionTitle>
             <div
                 className="w-full max-w-[320px] overflow-hidden rounded-[10px] border bg-white p-2.5 shadow-[0_3px_12px_rgba(55,65,120,0.06)]"
                 style={{ borderColor: '#e8eaf5' }}
