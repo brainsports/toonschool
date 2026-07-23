@@ -1,4 +1,4 @@
-# ToonSchool Agent Rules
+# ToonSchool Claude Development Rules
 
 
 
@@ -293,8 +293,6 @@
 ```bash
 
 git status --short
-
-````
 
 
 
