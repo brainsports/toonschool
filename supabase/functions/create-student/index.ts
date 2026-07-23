@@ -79,6 +79,39 @@ serve(async (req) => {
       throw new RequestError('이미 사용 중인 아이디입니다.', 409, 'DUPLICATE_LOGIN_ID')
     }
 
+    // 일반 교사(teacher)가 학급을 지정한 경우, Auth 계정을 만들기 "전"에 학급 소유권을
+    // 검증한다. Auth 생성 이후에 거부하면 고아 Auth/profiles 계정이 잔여로 남는다.
+    // org_admin/super_admin 경로는 현행 동작을 유지한다(관리자 인계는 별도 기능).
+    const validClassId = classId && isValidUUID(classId) ? classId : null
+    if (validClassId && callerProfile.role === 'teacher') {
+      const { data: targetClass, error: classLookupError } = await adminClient
+        .from('classes')
+        .select('id, teacher_id, organization_id')
+        .eq('id', validClassId)
+        .maybeSingle()
+      if (classLookupError) {
+        console.error(`[${TAG}] target class lookup error:`, classLookupError)
+        throw new RequestError('학생 계정 저장에 실패했습니다.', 500, 'ACCOUNT_CREATION_FAILED')
+      }
+      if (!targetClass) {
+        throw new RequestError('선택한 학급을 찾을 수 없습니다.', 400, 'CLASS_NOT_FOUND')
+      }
+      if (targetClass.teacher_id !== callerUser.id) {
+        throw new RequestError(
+          '선택한 학급은 현재 선생님이 담당하는 학급이 아닙니다.',
+          403,
+          'CLASS_NOT_OWNED_BY_TEACHER'
+        )
+      }
+      if (targetClass.organization_id !== organizationId) {
+        throw new RequestError(
+          '선택한 학급은 같은 기관 소속이 아닙니다.',
+          403,
+          'CLASS_NOT_OWNED_BY_TEACHER'
+        )
+      }
+    }
+
     // Auth 계정 생성
     const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
       email: cleanEmail,
@@ -124,42 +157,7 @@ serve(async (req) => {
     // students 행 추가(LMS 조회용). students.id 는 profiles 과 FK가 없으므로 별도 저장.
     // created_by 에 생성한 선생님(호출자) ID를 저장 — 이 값이 학생 소유권 신호가 되어
     // student-by-teacher 조회에서 선생님별 격리에 사용된다.
-    const validClassId = classId && isValidUUID(classId) ? classId : null
-
-    // 일반 교사(teacher)가 학급을 지정한 경우, 해당 학급이 반드시 본인 소유이고
-    // 같은 기관 소속인지 서버에서 검증한다. 타 교사 학급으로 학생을 생성하면
-    // 소유권(created_by)과 실제 학급 담당자(classes.teacher_id)가 어긋나
-    // student-by-teacher 격리가 무너지므로 생성 자체를 거부한다.
-    // org_admin/super_admin 경로는 현행 동작을 유지한다(관리자 인계는 별도 기능).
-    if (validClassId && callerProfile.role === 'teacher') {
-      const { data: targetClass, error: classLookupError } = await adminClient
-        .from('classes')
-        .select('id, teacher_id, organization_id')
-        .eq('id', validClassId)
-        .maybeSingle()
-      if (classLookupError) {
-        console.error(`[${TAG}] target class lookup error:`, classLookupError)
-        throw new RequestError('학생 계정 저장에 실패했습니다.', 500, 'ACCOUNT_CREATION_FAILED')
-      }
-      if (!targetClass) {
-        throw new RequestError('선택한 학급을 찾을 수 없습니다.', 400, 'CLASS_NOT_FOUND')
-      }
-      if (targetClass.teacher_id !== callerUser.id) {
-        throw new RequestError(
-          '선택한 학급은 현재 선생님이 담당하는 학급이 아닙니다.',
-          403,
-          'CLASS_NOT_OWNED_BY_TEACHER'
-        )
-      }
-      if (targetClass.organization_id !== organizationId) {
-        throw new RequestError(
-          '선택한 학급은 같은 기관 소속이 아닙니다.',
-          403,
-          'CLASS_NOT_OWNED_BY_TEACHER'
-        )
-      }
-    }
-
+    // class_id 소유권 검증은 위(Auth 생성 전)에서 이미 통과했다.
     const { error: studentError } = await adminClient.from('students').insert({
       id: userId,
       name,
