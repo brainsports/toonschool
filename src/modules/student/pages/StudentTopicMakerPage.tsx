@@ -37,12 +37,16 @@ export default function StudentTopicMakerPage() {
     const [genState, setGenState] = useState<TopicGenerationState>('idle')
   const [isGeneratingMore, setIsGeneratingMore] = useState(false)
   const [curriculumContext, setCurriculumContext] = useState<CurriculumContext | undefined>()
+  // 현재 selection 에 맞는 교과 컨텍스트 로드가 완료되었는지 추적(loadedCtxKey === 현재 selection 키).
+  const [loadedCtxKey, setLoadedCtxKey] = useState<string>('')
 
   // 키워드 추천 관련 상태
   const [recommendedKeywords, setRecommendedKeywords] = useState<KeywordItem[]>([])
   const [selectedKeywords, setSelectedKeywords] = useState<string[]>([])
   const [isKeywordLoading, setIsKeywordLoading] = useState(false)
   const [visibleKeywordCount, setVisibleKeywordCount] = useState(INITIAL_KEYWORD_VISIBLE_COUNT)
+  // 진행 중인 키워드 생성이 중복 실행되지 않도록 막는 동기 가드(자동 effect·더 보기·연속 클릭 공통).
+  const generatingRef = useRef(false)
 
 
 
@@ -106,12 +110,21 @@ export default function StudentTopicMakerPage() {
   }, [location.state, projectId])
 
   // 1-1. 단원 정보로 교과 컨텍스트 가져오기
+  // 비동기 로드가 끝나면 loadedCtxKey 를 현재 selection 키로 맞춘다. 그래야 자동 키워드 생성이
+  // 컨텍스트 준비 후 정확히 1회 실행된다. 동기 setState 회피를 위해 then/catch 에서만 setState.
+  const expectedCtxKey = selection ? `${selection.majorUnitId ?? ''}|${selection.middleUnitId ?? ''}` : ''
   useEffect(() => {
-    if (selection) {
-      fetchCurriculumContext(selection.majorUnitId, selection.middleUnitId)
-        .then(ctx => setCurriculumContext(ctx))
-        .catch(console.error)
-    }
+    if (!selection) return
+    const key = `${selection.majorUnitId ?? ''}|${selection.middleUnitId ?? ''}`
+    fetchCurriculumContext(selection.majorUnitId, selection.middleUnitId)
+      .then(ctx => {
+        setCurriculumContext(ctx)
+        setLoadedCtxKey(key)
+      })
+      .catch(() => {
+        // 로드 실패해도 키워드 생성은 진행(컨텍스트 없이도 동작). 로드 시도는 끝났다고 표시.
+        setLoadedCtxKey(key)
+      })
   }, [selection])
 
   // 이전 단계 데이터 복원
@@ -179,15 +192,26 @@ export default function StudentTopicMakerPage() {
   const canProceed = selectedTopicId !== null
 
   // 처음 AI 모드 진입 시 자동 키워드 생성
+  // 교과 컨텍스트 로드가 끝난 후(loadedCtxKey === expectedCtxKey) 1회만 실행.
   useEffect(() => {
-    if (creationMode === 'ai' && aiStep === 'keyword' && selection && recommendedKeywords.length === 0 && !isKeywordLoading) {
+    if (
+      creationMode === 'ai' &&
+      aiStep === 'keyword' &&
+      selection &&
+      expectedCtxKey &&
+      loadedCtxKey === expectedCtxKey &&
+      recommendedKeywords.length === 0 &&
+      !isKeywordLoading
+    ) {
       handleGenerateKeywords()
     }
-  }, [creationMode, aiStep, selection])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [creationMode, aiStep, selection, expectedCtxKey, loadedCtxKey])
 
   // 키워드 직접 생성 (수동)
   const handleGenerateKeywords = async () => {
-    if (!selection) return
+    if (!selection || generatingRef.current) return
+    generatingRef.current = true
     setIsKeywordLoading(true)
     const request = {
       gradeName: selection.gradeName || '',
@@ -214,6 +238,7 @@ export default function StudentTopicMakerPage() {
     } catch (error) {
       console.error('키워드 생성 실패:', error)
     } finally {
+      generatingRef.current = false
       setIsKeywordLoading(false)
     }
   }

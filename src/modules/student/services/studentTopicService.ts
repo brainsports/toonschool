@@ -1309,111 +1309,75 @@ const supplementKeywordsToCount = (
 
   return result.slice(0, targetCount)
 }
+
+// generate-student-keywords Edge Function 표준 응답.
+type KeywordEdgeResponse = {
+  ok: boolean
+  code?: string
+  message?: string
+  keywords?: Array<{ word: string; reason?: string }>
+  source?: 'ai' | 'fallback'
+  model?: string | null
+  durationMs?: number
+}
+
 export const generateKeywords = async (
   request: TopicGenerationRequest & { count?: number; existingKeywords?: string[] }
 ): Promise<KeywordItem[]> => {
   const { gradeName, subjectName, majorUnitName, middleUnitName, count = 2, existingKeywords = [], curriculumContext } = request
 
-  const existingKeywordsText = existingKeywords.length > 0 
-    ? `\n\n이미 생성된 다음 키워드들은 제외하고 완전히 새로운 단어로 만들어주세요:\n[${existingKeywords.join(', ')}]` 
-    : ''
-
-  const contextText = curriculumContext ? `
-[교과 정보]
-대단원 목표: ${curriculumContext.unitGoal || ''}
-중단원 학습목표: ${curriculumContext.learningGoal || ''}
-성취기준: ${curriculumContext.achievementStandards || ''}
-대단원 설명: ${curriculumContext.unitSummary || ''}
-중단원 설명: ${curriculumContext.subunitSummary || ''}
-내용 체계: ${curriculumContext.contentScope || ''}
-핵심 질문: ${curriculumContext.keyQuestions || ''}
-` : '';
-
   const unitKey = [gradeName, subjectName, majorUnitName, middleUnitName, curriculumContext?.unitGoal, curriculumContext?.learningGoal, curriculumContext?.subunitSummary].filter(Boolean).join('|')
 
-  const prompt = `
-너는 초등학생을 위한 학습만화 선생님입니다.
-아래 단원 정보와 교과 정보를 바탕으로 학습만화 이야기에 쓸 만한 핵심 키워드 ${count}개를 추천해 주세요.
+  console.debug('[키워드 생성 요청(Edge Function)]', { unitKey, gradeName, subjectName, majorUnitName, middleUnitName })
 
-학년: ${gradeName}
-과목: ${subjectName}
-대단원: ${majorUnitName}
-중단원(학습 주제): ${middleUnitName}${contextText}${existingKeywordsText}
-${KEYWORD_GENERATION_RULES}
-
-반환 형식:
-{
-  "keywords": [
-    {
-      "word": "산맥",
-      "reason": "우리나라 산지 지형의 특징을 보여주는 구체적인 장소입니다."
-    }
-  ]
-}
-`
-
-  console.debug('[키워드 생성 요청]', { unitKey, gradeName, subjectName, majorUnitName, middleUnitName })
-
-  const KEYWORD_GENERATION_TIMEOUT_MS = 12000
-  const KEYWORD_GENERATION_RETRY_COUNT = 1
-
-  const tryModel = async (model: string): Promise<KeywordItem[]> => {
-    if (!model) throw new Error('No model provided')
-
-    let lastError: unknown = null
-    for (let attempt = 0; attempt <= KEYWORD_GENERATION_RETRY_COUNT; attempt++) {
-      try {
-        const responseText = await Promise.race([
-          geminiClient.generateTextWithModel(prompt, model),
-          new Promise<string>((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), KEYWORD_GENERATION_TIMEOUT_MS))
-        ])
-
-        const cleanedText = responseText.replace(/\`\`\`json/gi, '').replace(/\`\`\`/g, '').trim()
-        const parsedData = JSON.parse(cleanedText)
-
-        if (parsedData && Array.isArray(parsedData.keywords) && parsedData.keywords.length > 0) {
-          const parsedKeywords = parsedData.keywords.map((k: any) => ({
-            word: k.word,
-            reason: k.reason || ''
-          }))
-
-          const result = supplementKeywordsToCount(parsedKeywords, request)
-          console.debug('[keyword generation complete]', {
-            unitKey,
-            aiCount: parsedKeywords.length,
-            finalCount: result.length,
-            keywords: result.map(k => k.word)
-          })
-          if (result.length >= count) return result
-        }
-
-        throw new Error('Invalid JSON format from AI or all keywords were filtered out')
-      } catch (error) {
-        lastError = error
-        if (attempt < KEYWORD_GENERATION_RETRY_COUNT) {
-          console.warn(`[키워드 생성] ${model} 실패, 1회 재시도:`, error instanceof Error ? error.message : error)
-          continue
-        }
-      }
-    }
-
-    throw lastError instanceof Error ? lastError : new Error('Failed to generate keywords')
-  }
-
+  // 키워드 생성은 Supabase Edge Function(generate-student-keywords)을 경유한다.
+  // - 브라우저가 Google Gemini API를 직접 호출하지 않는다(API 키 비노출).
+  // - thinkingBudget=0 + JSON 모드로 속도/안정성 확보(Edge Function 내부).
+  // - supabase.functions.invoke 가 현재 세션 access_token(JWT)을 자동으로 Authorization 헤더에 포함한다.
   try {
-    try {
-      return await tryModel(TEXT_GENERATION_MODEL)
-    } catch (err: any) {
-      console.warn(`[키워드 생성] ${TEXT_GENERATION_MODEL} 최종 실패 → fallback 사용:`, err.message)
-      throw err
+    const { data, error } = await supabase.functions.invoke<KeywordEdgeResponse>('generate-student-keywords', {
+      body: {
+        gradeName,
+        subjectName,
+        majorUnitName,
+        middleUnitName,
+        count,
+        existingKeywords,
+        curriculumContext
+      }
+    })
+
+    if (!error && data && data.ok && Array.isArray(data.keywords) && data.keywords.length > 0) {
+      const keywords: KeywordItem[] = data.keywords
+        .map((k) => ({
+          word: String(k.word ?? ''),
+          reason: typeof k.reason === 'string' ? k.reason : ''
+        }))
+        .filter((k: KeywordItem) => k.word)
+      console.debug('[keyword edge result]', {
+        unitKey,
+        source: data.source,
+        model: data.model,
+        count: keywords.length,
+        durationMs: data.durationMs
+      })
+      return keywords
     }
-  } catch (error) {
-    console.error('Failed to generate keywords from AI:', error)
-    const fallbacks = getFallbackKeywords(subjectName || '', existingKeywords, middleUnitName || '', majorUnitName || '', curriculumContext);
-    const result = supplementKeywordsToCount(fallbacks, request)
-    console.debug('[keyword fallback complete]', { unitKey, fallbackCount: fallbacks.length, finalCount: result.length, keywords: result.map(k => k.word) });
-    return result
+
+    console.warn('[키워드 생성] Edge Function 실패/빈 결과 → 프론트 fallback', {
+      unitKey,
+      code: data?.code,
+      hasError: Boolean(error)
+    })
+  } catch (e) {
+    console.warn('[키워드 생성] Edge Function 호출 예외 → 프론트 fallback', e)
   }
+
+  // 프론트 로컬 fallback(최종 안전장치). Edge Function 네트워크/런타임 장애 시에도 키워드를 제공한다.
+  const fallbacks = getFallbackKeywords(subjectName || '', existingKeywords, middleUnitName || '', majorUnitName || '', curriculumContext)
+  const result = supplementKeywordsToCount(fallbacks, request)
+  console.debug('[keyword fallback complete]', { unitKey, fallbackCount: fallbacks.length, finalCount: result.length, keywords: result.map(k => k.word) })
+  return result
 }
 
 export const fetchQuestionCategories = async (): Promise<any[]> => {

@@ -55,3 +55,8 @@ reports/**/*.txt
 
 # ---- Manual QA captures ----
 toonschool-*-manual-captures/
+
+# ---- Keyword generation speed QA (local only, never commit) ----
+tests/tmp-keyword-qa/
+keyword-speed-results.json
+screenshots/keyword-qa/

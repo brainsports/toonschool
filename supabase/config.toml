@@ -44,3 +44,9 @@ enabled = true
 verify_jwt = true
 entrypoint = "./functions/lookup-korean-word/index.ts"
 
+# 학생 키워드 생성(브라우저 Gemini 직접 호출을 서버로 이관). 학생 로그인 필요.
+[functions.generate-student-keywords]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/generate-student-keywords/index.ts"
+
