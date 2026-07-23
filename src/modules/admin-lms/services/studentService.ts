@@ -256,3 +256,57 @@ export async function moveStudentsToClass(studentIds: string[], targetClassId: s
     }
   })
 }
+
+// 학생 정보 수정(이름·비밀번호·소속학급·학생별 절대 월 만화 한도) — update-student-by-teacher EF.
+// 서버가 담당 교사(학급 우선, created_by 보조) 검증과 대상 학급 소유권 검증을 수행한다.
+// monthlyQuotaOverride: number(4/8/20 절대 설정) | null(학급 기본으로 되돌림) | undefined(변경 안 함).
+export interface UpdateStudentInput {
+  studentId: string
+  name?: string
+  newPassword?: string
+  classId?: string | null
+  monthlyQuotaOverride?: number | null
+}
+
+export async function updateStudentByTeacher(data: UpdateStudentInput): Promise<{
+  updated: Record<string, boolean>
+  passwordChanged: boolean
+  partial_success?: boolean
+  message?: string
+}> {
+  const body: Record<string, unknown> = { studentId: data.studentId }
+  if (Object.prototype.hasOwnProperty.call(data, 'name')) body.name = data.name
+  if (Object.prototype.hasOwnProperty.call(data, 'newPassword')) body.newPassword = data.newPassword
+  if (Object.prototype.hasOwnProperty.call(data, 'classId')) body.classId = data.classId
+  if (Object.prototype.hasOwnProperty.call(data, 'monthlyQuotaOverride')) body.monthlyQuotaOverride = data.monthlyQuotaOverride
+
+  const { data: resp, error } = await supabase.functions.invoke('update-student-by-teacher', { body })
+
+  if (error) {
+    let message = '학생 정보를 수정하지 못했습니다.'
+    let status = 0
+    try {
+      const ctx = (error as any)?.context
+      if (ctx?.status) status = ctx.status
+      if (ctx && typeof ctx.clone === 'function') {
+        const errBody = await ctx.clone().json()
+        message = errBody?.message || errBody?.error || message
+      }
+    } catch { /* ignore */ }
+    if (status === 401) message = '로그인이 만료되었습니다. 다시 로그인해 주세요.'
+    else if (status === 403) message = message || '수정 권한이 없습니다.'
+    console.error(`[updateStudentByTeacher] Error (${status}):`, message)
+    throw new Error(message)
+  }
+
+  if (!resp?.success) {
+    throw new Error(resp?.message || '학생 정보를 수정하지 못했습니다.')
+  }
+
+  return {
+    updated: resp.updated || {},
+    passwordChanged: !!resp.passwordChanged,
+    partial_success: resp.partial_success,
+    message: resp.message,
+  }
+}
