@@ -13,6 +13,7 @@ import { createTeacherMessage, getMySentTeacherMessages } from '../../student/se
 import { createNotification } from '../../student/services/notificationService'
 import LicenseCard from '../components/LicenseCard'
 import CreateStudentModal from '../components/CreateStudentModal'
+import EditStudentModal from '../components/EditStudentModal'
 import StudentUsageRecordModal from '../components/StudentUsageRecordModal'
 import ConfirmModal from '../../../shared/components/ConfirmModal'
 import { getOrCreateDefaultClass, isQuotaError, getStudentQuotaStatus, COMIC_QUOTA_ENABLED, type ComicQuotaStatus } from '../../../shared/lib/comicQuota'
@@ -65,8 +66,7 @@ export default function StudentManagementPage() {
   const [notiTargetType, setNotiTargetType] = useState<'all' | 'selected'>('all')
   const [isNotiSaving, setIsNotiSaving] = useState(false)
 
-  const [editPasswordStudentId, setEditPasswordStudentId] = useState<string | null>(null)
-  const [newPassword, setNewPassword] = useState('')
+  const [editStudent, setEditStudent] = useState<Student | null>(null)
 
   const [isExcelModalOpen, setIsExcelModalOpen] = useState(false)
   const [parsedRows, setParsedRows] = useState<ExcelRow[]>([])
@@ -248,37 +248,6 @@ export default function StudentManagementPage() {
     setCheckedIds(new Set())
     setShowMoveModal(false)
     showToast(`${targetClass.name}(으)로 이동되었습니다.`)
-  }
-
-  const handlePasswordUpdate = async () => {
-    if (!editPasswordStudentId || newPassword.length < 4) {
-      alert('비밀번호는 최소 4자리 이상이어야 합니다.')
-      return
-    }
-    try {
-      const { error } = await supabase
-        .from('students')
-        .update({ temp_password: newPassword })
-        .eq('id', editPasswordStudentId)
-
-      if (error) {
-        console.error('[StudentManagementPage] Failed to update password:', error.message, error.details, error.hint, error.code)
-        alert('비밀번호 수정에 실패했습니다.')
-        return
-      }
-
-      showToast('비밀번호가 수정되었습니다.')
-      setEditPasswordStudentId(null)
-      setNewPassword('')
-
-      // Refresh list(선생님별 격리 조회)
-      fetchStudentsByTeacher(selectedGrade).then(data => {
-        setStudents(selectedClassId ? data.filter(s => s.classId === selectedClassId) : data)
-      })
-    } catch (err) {
-      console.error('[StudentManagementPage] Unexpected error updating password:', err)
-      alert('비밀번호 수정에 실패했습니다.')
-    }
   }
 
   const handleSaveTeacherMessage = async () => {
@@ -736,10 +705,7 @@ export default function StudentManagementPage() {
               <div style={{ fontSize: 13, color: '#aaa', fontFamily: 'monospace' }}>******</div>
               <div>
                 <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                  <button onClick={() => {
-                    setEditPasswordStudentId(stu.id)
-                    setNewPassword('')
-                  }} style={{
+                  <button onClick={() => setEditStudent(stu)} style={{
                     minWidth: '56px', whiteSpace: 'nowrap', flexShrink: 0,
                     padding: '6px 12px', fontSize: 12, borderRadius: 6,
                     border: '1px solid #ddd', background: 'white', cursor: 'pointer',
@@ -934,41 +900,19 @@ export default function StudentManagementPage() {
         </div>
       )}
 
-      {/* 학생 비밀번호 수정 모달 */}
-      {editPasswordStudentId && (
-        <div style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 300,
-        }} onClick={() => setEditPasswordStudentId(null)}>
-          <div style={{
-            background: 'white', borderRadius: 20, padding: 32, width: '100%', maxWidth: 360,
-            boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
-          }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ fontSize: 18, fontWeight: 800, margin: '0 0 16px' }}>비밀번호 수정</h3>
-            <p style={{ fontSize: 13, color: '#888', marginBottom: 16 }}>새로운 비밀번호를 입력해 주세요. (최소 4자리)</p>
-            <input
-              type="text"
-              placeholder="새 비밀번호 입력"
-              value={newPassword}
-              onChange={e => setNewPassword(e.target.value)}
-              style={{
-                width: '100%', padding: '12px 14px', borderRadius: 10, border: '1.5px solid #e5e7eb',
-                fontSize: 14, boxSizing: 'border-box'
-              }}
-            />
-            <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
-              <button onClick={() => setEditPasswordStudentId(null)} style={{
-                flex: 1, padding: '12px', borderRadius: 12, border: '1.5px solid #e5e7eb',
-                background: 'white', color: '#555', fontWeight: 600, cursor: 'pointer',
-              }}>취소</button>
-              <button onClick={handlePasswordUpdate} style={{
-                flex: 1, padding: '12px', borderRadius: 12, border: 'none',
-                background: 'linear-gradient(90deg,#ff2778,#ff6baf)',
-                color: 'white', fontWeight: 700, cursor: 'pointer',
-              }}>저장</button>
-            </div>
-          </div>
-        </div>
+      {/* 학생 정보 수정 모달(이름·아이디·학급·만화 한도·비밀번호) */}
+      {editStudent && (
+        <EditStudentModal
+          student={editStudent}
+          classes={allClasses}
+          onClose={() => setEditStudent(null)}
+          onSaved={() => {
+            fetchStudentsByTeacher(selectedGrade).then(data => {
+              setStudents(selectedClassId ? data.filter(s => s.classId === selectedClassId) : data)
+            })
+            fetchAndSetLicense()
+          }}
+        />
       )}
     </div>
   )

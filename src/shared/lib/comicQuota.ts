@@ -14,6 +14,8 @@ export interface ComicQuotaStatus {
   class_base: number;
   class_extra: number;
   student_extra: number;
+  monthly_quota_override: number | null;
+  has_class_setting: boolean;
   completed: number;
   reserved: number;
   remaining: number;
