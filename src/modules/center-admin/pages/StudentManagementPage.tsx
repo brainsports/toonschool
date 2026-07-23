@@ -278,13 +278,19 @@ export default function StudentManagementPage() {
       // 2. Fetch or Create classes
       if (profile.organization_id) {
         for (const [key, cls] of uniqueClasses.entries()) {
-          const { data: existingClass } = await supabase
+          // 역할별 학급 매칭 범위:
+          //  - teacher: 본인 소유 학급만 (같은 학년/반 이름의 타 교사 학급 유입 차단)
+          //  - org_admin/middle_admin/super_admin: 기관 단위로 허용 (본인 기관 내 학급)
+          let classMatchQuery = supabase
             .from('classes')
             .select('id')
             .eq('organization_id', profile.organization_id)
             .eq('grade', cls.grade)
             .eq('name', cls.name)
-            .maybeSingle()
+          if (profile.role === 'teacher') {
+            classMatchQuery = classMatchQuery.eq('teacher_id', profile.id)
+          }
+          const { data: existingClass } = await classMatchQuery.maybeSingle()
 
           if (existingClass?.id) {
             classIdMap.set(key, existingClass.id)

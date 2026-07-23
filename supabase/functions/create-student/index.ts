@@ -125,6 +125,41 @@ serve(async (req) => {
     // created_by 에 생성한 선생님(호출자) ID를 저장 — 이 값이 학생 소유권 신호가 되어
     // student-by-teacher 조회에서 선생님별 격리에 사용된다.
     const validClassId = classId && isValidUUID(classId) ? classId : null
+
+    // 일반 교사(teacher)가 학급을 지정한 경우, 해당 학급이 반드시 본인 소유이고
+    // 같은 기관 소속인지 서버에서 검증한다. 타 교사 학급으로 학생을 생성하면
+    // 소유권(created_by)과 실제 학급 담당자(classes.teacher_id)가 어긋나
+    // student-by-teacher 격리가 무너지므로 생성 자체를 거부한다.
+    // org_admin/super_admin 경로는 현행 동작을 유지한다(관리자 인계는 별도 기능).
+    if (validClassId && callerProfile.role === 'teacher') {
+      const { data: targetClass, error: classLookupError } = await adminClient
+        .from('classes')
+        .select('id, teacher_id, organization_id')
+        .eq('id', validClassId)
+        .maybeSingle()
+      if (classLookupError) {
+        console.error(`[${TAG}] target class lookup error:`, classLookupError)
+        throw new RequestError('학생 계정 저장에 실패했습니다.', 500, 'ACCOUNT_CREATION_FAILED')
+      }
+      if (!targetClass) {
+        throw new RequestError('선택한 학급을 찾을 수 없습니다.', 400, 'CLASS_NOT_FOUND')
+      }
+      if (targetClass.teacher_id !== callerUser.id) {
+        throw new RequestError(
+          '선택한 학급은 현재 선생님이 담당하는 학급이 아닙니다.',
+          403,
+          'CLASS_NOT_OWNED_BY_TEACHER'
+        )
+      }
+      if (targetClass.organization_id !== organizationId) {
+        throw new RequestError(
+          '선택한 학급은 같은 기관 소속이 아닙니다.',
+          403,
+          'CLASS_NOT_OWNED_BY_TEACHER'
+        )
+      }
+    }
+
     const { error: studentError } = await adminClient.from('students').insert({
       id: userId,
       name,
