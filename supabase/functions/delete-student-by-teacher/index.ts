@@ -68,7 +68,7 @@ serve(async (req) => {
     // 대상 학생 행 조회(없을 수도 있음 — 고아/이미 삭제)
     const { data: studentData, error: studentErr } = await adminClient
       .from('students')
-      .select('id, login_id, center_id, organization_id')
+      .select('id, login_id, center_id, organization_id, created_by, class_id')
       .eq('id', studentId)
       .maybeSingle()
 
@@ -77,17 +77,45 @@ serve(async (req) => {
       throw new RequestError('학생 정보를 조회하는 중 오류가 발생했습니다.', 500, 'INTERNAL_ERROR')
     }
 
+    // 대상 학생이 존재하지 않으면 즉시 종료한다.
+    // 학생 행이 없는 상태에서 auth/잔여 데이터 정리를 수행하면 임의 id 공격에 악용될 수 있다.
+    if (!studentData) {
+      throw new RequestError('존재하지 않는 학생입니다.', 404, 'STUDENT_NOT_FOUND')
+    }
+
     if (studentData) {
       // 보호 계정 차단
       if (PROTECTED_LOGIN_IDS.includes(studentData.login_id)) {
         throw new RequestError('해당 학생 계정은 보호되어 삭제할 수 없습니다.', 403, 'FORBIDDEN')
       }
-      // 권한 교차 검증(super_admin 패스). 같은 기관 또는 같은 센터 소속만 가능.
+      // 권한 교차 검증(담당 교사 기준, 학급 우선).
+      //  - super_admin: 패스
+      //  - org_admin / middle_admin: 같은 기관/하위기관 단위(현행 유지)
+      //  - teacher: 학급이 있으면 현재 학급 교사가 본인일 때만, 학급이 없으면 created_by 가 본인일 때만 삭제.
+      //    최초 생성 교사가 학생 id만 알고 학급 이동 후 삭제하는 것을 막는다.
       if (!['super_admin', 'superadmin'].includes(callerProfile.role)) {
-        const sameOrg = callerProfile.organization_id && callerProfile.organization_id === studentData.organization_id
-        const sameCenter = callerProfile.center_id && callerProfile.center_id === studentData.center_id
-        if (!sameOrg && !sameCenter) {
-          throw new RequestError('담당 기관 또는 학급 소속 학생만 삭제할 수 있습니다.', 403, 'FORBIDDEN')
+        if (callerProfile.role === 'teacher') {
+          let allowed = false
+          if (studentData.class_id) {
+            const { data: ownedClass } = await adminClient
+              .from('classes')
+              .select('id')
+              .eq('id', studentData.class_id)
+              .eq('teacher_id', callerUser.id)
+              .maybeSingle()
+            allowed = !!ownedClass
+          } else {
+            allowed = studentData.created_by === callerUser.id
+          }
+          if (!allowed) {
+            throw new RequestError('본인이 담당하는 학생만 삭제할 수 있습니다.', 403, 'FORBIDDEN')
+          }
+        } else {
+          const sameOrg = callerProfile.organization_id && callerProfile.organization_id === studentData.organization_id
+          const sameCenter = callerProfile.center_id && callerProfile.center_id === studentData.center_id
+          if (!sameOrg && !sameCenter) {
+            throw new RequestError('담당 기관 또는 학급 소속 학생만 삭제할 수 있습니다.', 403, 'FORBIDDEN')
+          }
         }
       }
     }

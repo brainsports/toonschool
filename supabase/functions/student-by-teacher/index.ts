@@ -63,18 +63,24 @@ serve(async (req) => {
     }
 
     if (role === 'teacher') {
-      // 1) 본인 소유 학급 id
+      // 담당 교사 기준(학급 우선):
+      //  - 학급이 배정된 학생: 현재 학급의 담당 교사(classes.teacher_id)가 본인이면 표시.
+      //    created_by 는 무관 — 학생이 다른 교사 학급으로 정상 이동한 경우 새 담당 교사에게 보인다.
+      //  - 학급 미배정 학생: created_by 가 본인이면 표시(보조 기준).
       const { data: myClasses } = await adminClient
         .from('classes')
         .select('id')
         .eq('teacher_id', callerUser.id)
       const classIds = (myClasses || []).map((c: { id: string }) => c.id).filter(Boolean)
-      // 2) 본인이 생성한 학생 OR 소유 학급 배정 학생
-      const orParts = [`created_by.eq.${callerUser.id}`]
       if (classIds.length > 0) {
-        orParts.push(`class_id.in.(${classIds.join(',')})`)
+        // (본인 소유 학급에 배정됨) OR (학급 없음 AND 본인 생성)
+        query = query.or(
+          `class_id.in.(${classIds.join(',')}),and(class_id.is.null,created_by.eq.${callerUser.id})`
+        )
+      } else {
+        // 본인 소유 학급이 없으면 학급 미배정 + 본인 생성 학생만
+        query = query.and(`class_id.is.null,created_by.eq.${callerUser.id}`)
       }
-      query = query.or(orParts.join(','))
     } else if (role === 'org_admin') {
       if (!profile.organization_id) {
         return successResponse({ students: [], total: 0, message: '조회된 학생이 없습니다.' })
