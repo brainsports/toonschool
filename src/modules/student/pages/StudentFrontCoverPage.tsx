@@ -256,9 +256,11 @@ export default function StudentFrontCoverPage() {
     }
 
     const missing = [];
+    const isCreative = selection?.subjectName === '창작';
     if (!selection || !selection.gradeName) missing.push('학년·학기 정보');
     if (!topic || !topic.title) missing.push('학습 주제');
-    if (!keyConcepts || keyConcepts.length !== 3) missing.push('핵심 개념 3가지');
+    // '창작' 과목은 자유 주제 — 핵심 개념이 단원 기반으로 생성되지 않을 수 있어 검증을 완화한다.
+    if (!isCreative && (!keyConcepts || keyConcepts.length !== 3)) missing.push('핵심 개념 3가지');
 
     if (missing.length > 0) {
       alert(`다음 데이터가 누락되어 표지를 완성할 수 없습니다:\n- ${missing.join('\n- ')}\n\n대본 화면으로 돌아가서 내용을 확인해 주세요.`);

@@ -547,6 +547,11 @@ export const fetchCurriculumContext = async (
 ): Promise<CurriculumContext> => {
   const context: CurriculumContext = {}
 
+  // '창작' 과목(자유 주제) 가상 단원값 — 커리큘럼 컨텍스트 없이 빈 객체를 반환한다.
+  if (majorUnitId === 'creative-free' || middleUnitId === 'creative-free') {
+    return context
+  }
+
   if (majorUnitId) {
     try {
       const { data } = await supabase

@@ -423,12 +423,32 @@ const FALLBACK_RULE: SubjectBackgroundRule = {
   forbiddenElements: '',
 };
 
+// '창작' 과목(자유 주제)용 룰 — 학생이 고른 주제/장르를 폭넓게 수용.
+// 만화 6컷 배경 생성에 쓰이며, 표지/뒤표지 AI 생성(4~5단계)은 coverPromptBuilder 가 별도 조합.
+const CREATIVE_RULE: SubjectBackgroundRule = {
+  artStyle: 'Japanese anime-style educational illustration. Soft cell-shaded 2D art. Clean outlines. Bright pastel colors. Flexible for student-chosen free topics such as adventure, fantasy, school life, mystery, or comedy.',
+  colorPalette: 'Bright, cheerful pastel palette appropriate for elementary school students, tuned to the student-chosen theme.',
+  cutSceneGuide: {
+    1: 'Wide establishing shot of the main setting chosen by the student.',
+    2: 'Focused view of the key location or an important object.',
+    3: 'Mid-story environment showing the situation developing.',
+    4: 'Environment showing a turning point or an important moment.',
+    5: 'Environment showing the resolution or result.',
+    6: 'Wide summary shot reflecting the overall mood of the story.',
+  },
+  visualSymbols: 'Backgrounds, places, and props that match the student-chosen topic. Characters are not depicted here (added as a separate layer).',
+  forbiddenElements: 'no characters depicted in the background, no text, no speech bubbles',
+};
+
 const SUBJECT_ALL_RULES: Record<string, Record<string, SubjectBackgroundRule>> = {
   '과학': SCIENCE_RULES,
   '사회': SOCIAL_RULES,
   '국어': KOREAN_RULES,
   '수학': MATH_RULES,
   '영어': ENGLISH_RULES,
+  // '창작' 과목은 자유 주제 — 정해진 단원/테마가 없으므로 general 폴백 룰만 제공.
+  // 표지/뒤표지 AI 생성(4~5단계)에서는 coverPromptBuilder 가 별도로 스타일을 조합한다.
+  '창작': { general: CREATIVE_RULE },
 };
 
 export const getSubjectBackgroundRule = (

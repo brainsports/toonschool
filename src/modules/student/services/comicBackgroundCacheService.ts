@@ -90,7 +90,8 @@ const mapSubject = (subject?: string): string => {
     '수학': 'math',
     '사회': 'social',
     '과학': 'science',
-    '영어': 'english'
+    '영어': 'english',
+    '창작': 'creative'
   };
   return mapping[subject] || 'unknown';
 };

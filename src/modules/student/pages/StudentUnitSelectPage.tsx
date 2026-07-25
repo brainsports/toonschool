@@ -61,7 +61,7 @@ export default function StudentUnitSelectPage() {
   }
 
   const subjectEmojis: Record<string, string> = {
-    '국어': '✏️', '영어': '🌍', '수학': '📐', '사회': '🗺️', '과학': '🔬'
+    '국어': '✏️', '영어': '🌍', '수학': '📐', '사회': '🗺️', '과학': '🔬', '창작': '🎨'
   }
 
   const { user } = useAuth()
@@ -117,14 +117,22 @@ export default function StudentUnitSelectPage() {
   useEffect(() => {
     const fetchMajorUnits = async () => {
       if (!selectedGrade || !selectedSemester || !selectedSubject || step !== 2) return
+      // '창작' 과목은 자유 주제 — 단원/중단원 데이터가 없으므로 조회하지 않는다.
+      if (selectedSubject.name === '창작') {
+        setMajorUnits([])
+        setSelectedMajorUnit(null)
+        setSelectedMiddleUnit(null)
+        setLoadState('success')
+        return
+      }
       setLoadState('loading')
       const data = await getMajorUnitsByGradeSemesterAndSubject(
-        selectedGrade.value, 
-        selectedSemester.value, 
+        selectedGrade.value,
+        selectedSemester.value,
         selectedSubject.id,
         selectedSubject.code
       )
-      
+
       setMajorUnits(data)
       setLoadState('success')
     }
@@ -221,7 +229,11 @@ export default function StudentUnitSelectPage() {
   }
 
   const isStep1Complete = !!(selectedGrade && selectedSemester)
-  const isStep2Complete = !!(selectedSubject && selectedMajorUnit && selectedMiddleUnit)
+  // '창작' 과목은 자유 주제 — 대단원/중단원 선택 없이 바로 진입 가능.
+  const isCreativeSubject = selectedSubject?.name === '창작'
+  const isStep2Complete = isCreativeSubject
+    ? !!selectedSubject
+    : !!(selectedSubject && selectedMajorUnit && selectedMiddleUnit)
   const canProceed = isStep1Complete && isStep2Complete
 
   const handleNextStep = () => {
@@ -245,10 +257,11 @@ export default function StudentUnitSelectPage() {
       semesterName: selectedSemester?.label || null,
       subjectId: selectedSubject?.id || null,
       subjectName: selectedSubject?.name || null,
-      majorUnitId: selectedMajorUnit?.id || null,
-      majorUnitName: selectedMajorUnit?.unitName || null,
-      middleUnitId: selectedMiddleUnit?.id || null,
-      middleUnitName: selectedMiddleUnit?.subunitName || null
+      // '창작' 과목은 자유 주제 — 가상 단원값을 넣어 하위 파이프라인(주제/대본/만화)이 null-safe 동작.
+      majorUnitId: isCreativeSubject ? 'creative-free' : (selectedMajorUnit?.id || null),
+      majorUnitName: isCreativeSubject ? '자유 주제' : (selectedMajorUnit?.unitName || null),
+      middleUnitId: isCreativeSubject ? 'creative-free' : (selectedMiddleUnit?.id || null),
+      middleUnitName: isCreativeSubject ? '자유 주제' : (selectedMiddleUnit?.subunitName || null)
     }
 
     const currentProjectId = projectId || uuidv4()

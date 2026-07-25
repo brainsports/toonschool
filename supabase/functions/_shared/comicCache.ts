@@ -53,7 +53,7 @@ export const createComicBackgroundCacheKey = async (
 const mapSubject = (subject?: string): string => {
   if (!subject) return 'unknown'
   const mapping: Record<string, string> = {
-    국어: 'korean', 수학: 'math', 사회: 'social', 과학: 'science', 영어: 'english',
+    국어: 'korean', 수학: 'math', 사회: 'social', 과학: 'science', 영어: 'english', 창작: 'creative',
   }
   return mapping[subject] || 'unknown'
 }

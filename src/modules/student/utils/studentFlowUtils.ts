@@ -2,7 +2,7 @@ import type { StudentGrade, StudentSubject } from '../types/studentFlow'
 import { mockMajorUnits, mockSubUnits } from '../data/studentMockData'
 
 export const grades: StudentGrade[] = ['초3', '초4', '초5', '초6']
-export const subjects: StudentSubject[] = ['국어', '영어', '수학', '사회', '과학']
+export const subjects: StudentSubject[] = ['국어', '영어', '수학', '사회', '과학', '창작']
 
 export function getMajorUnits(grade: StudentGrade, subject: StudentSubject): string[] {
   const key = `${grade}-${subject}`
