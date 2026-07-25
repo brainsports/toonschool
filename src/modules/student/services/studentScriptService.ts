@@ -66,20 +66,25 @@ export const generateScript = async (
   let coreConcept = '주어진 이야기와 키워드를 활용해 상황을 해결하는 과정';
   let misconception = '단순히 정답만 외우지 않고 원리를 이해해야 함';
 
-  try {
-    const { data, error } = await supabase
-      .from('curriculum_subunits')
-      .select('learning_goal, content_scope, key_questions')
-      .eq('id', request.middleUnitId)
-      .single();
+  // '창작' 과목(자유 주제)은 단원 데이터가 없다 — 불필요한 DB 조회를 건너뛴다.
+  const isCreative = request.middleUnitId === 'creative-free';
 
-    if (!error && data) {
-      if (data.learning_goal) learningObjective = data.learning_goal;
-      if (data.content_scope) coreConcept = data.content_scope;
-      if (data.key_questions) misconception = data.key_questions;
+  if (!isCreative) {
+    try {
+      const { data, error } = await supabase
+        .from('curriculum_subunits')
+        .select('learning_goal, content_scope, key_questions')
+        .eq('id', request.middleUnitId)
+        .single();
+
+      if (!error && data) {
+        if (data.learning_goal) learningObjective = data.learning_goal;
+        if (data.content_scope) coreConcept = data.content_scope;
+        if (data.key_questions) misconception = data.key_questions;
+      }
+    } catch (err) {
+      console.error('Failed to fetch from curriculum_subunits', err);
     }
-  } catch (err) {
-    console.error('Failed to fetch from curriculum_subunits', err);
   }
 
   const prompt = `
@@ -89,7 +94,7 @@ export const generateScript = async (
 [학습 정보]
 학년: ${request.gradeName}
 과목: ${request.subjectName}
-단원: ${request.majorUnitName} > ${request.middleUnitName}
+단원: ${isCreative ? '자유 주제' : `${request.majorUnitName} > ${request.middleUnitName}`}
 학습목표: ${learningObjective}
 핵심 개념: ${coreConcept}
 주의사항(오개념): ${misconception}

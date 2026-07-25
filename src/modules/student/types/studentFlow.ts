@@ -2,7 +2,7 @@
 
 export type StudentGrade = '초3' | '초4' | '초5' | '초6'
 
-export type StudentSubject = '국어' | '영어' | '수학' | '사회' | '과학'
+export type StudentSubject = '국어' | '영어' | '수학' | '사회' | '과학' | '창작'
 
 export interface StudentProfile {
   id: string

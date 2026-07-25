@@ -47,6 +47,7 @@ export default function UnitStep2Selection({
   onMajorUnitSelect,
   onMiddleUnitSelect,
 }: UnitStep2SelectionProps) {
+  const isCreativeSubject = selectedSubject?.name === '창작'
   return (
     <div className="relative w-full max-w-[1200px] mx-auto space-y-6 animate-fade-in pb-8">
 
@@ -113,8 +114,18 @@ export default function UnitStep2Selection({
           )}
         </div>
 
+        {/* ④ 대단원 선택 — '창작' 과목은 자유 주제라 단원 선택을 생략하고 안내만 표시 */}
+        {selectedSubject && isCreativeSubject && (
+          <div className="space-y-4 animate-fade-in">
+            <StudentInnerPanel>
+              <span className="font-jua text-lg text-[#1f2937] block mb-1">🎨 자유 주제예요!</span>
+              단원 선택 없이 바로 시작할 수 있어요. <strong>주제 만들기</strong>를 누르면 내가 원하는 주제로 세상에 하나뿐인 만화를 만들 수 있어요.
+            </StudentInnerPanel>
+          </div>
+        )}
+
         {/* ④ 대단원 선택 */}
-        {selectedSubject && (
+        {selectedSubject && !isCreativeSubject && (
           <div className="space-y-4 animate-fade-in">
             <h3 className="font-jua text-xl text-[#1f2937] flex items-center gap-2">
               <span className="w-7 h-7 rounded-full bg-pink-100 border border-pink-300 flex items-center justify-center text-sm text-pink-600 font-bold">

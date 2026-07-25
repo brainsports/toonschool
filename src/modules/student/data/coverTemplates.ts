@@ -26,4 +26,7 @@ export const SUBJECT_COVER_MAPPING: Record<string, string> = {
   '수학': '/images/toonschool/covers/templates/math/math-cover-master.webp',
   '사회': '/images/toonschool/covers/templates/social/social-cover-base.webp',
   '과학': '/images/toonschool/covers/templates/science/science-cover-base.webp',
+  // '창작' 과목은 자유 주제 — 전용 템플릿 에셋 추가 전까지 공통 표지로 폴백.
+  // 4~5단계에서 AI 생성 표지가 도입되면 이 매핑 대신 AI 결과 이미지를 사용.
+  '창작': '/images/covers/cover-common-01.webp',
 };
