@@ -88,6 +88,8 @@ const userMessage = (code: string): string => {
     case 'RATE_LIMITED': return '잠시 요청이 많아요. 잠시 후 다시 시도해 주세요.'
     case 'UNAUTHORIZED': return '로그인이 만료되었어요. 다시 로그인해 주세요.'
     case 'INVALID_INPUT': return '표지 만들기 정보가 부족해요. 작품 정보를 다시 확인해 주세요.'
+    case 'FORBIDDEN':
+    case 'INVALID_PROJECT': return '이 작품에 접근할 수 없어요.'
     case 'COVER_LIMIT': return '이 작품에서 표지를 여러 번 만들었어요. 마음에 드는 표지를 골라보거나, 다른 작품에서 만들어 보세요.'
     case 'NO_IMAGE':
     case 'PROVIDER_5XX':
@@ -166,31 +168,50 @@ serve(async (req) => {
 
     const coverCutNo = COVER_CUT_NO[coverKind]
 
-    // 3) 작품당 coverKind별 생성 제한(비용 보호). completed 행 카운트.
+    // 3) 소유권 1차 검증: 같은 projectId의 기존 작업이 다른 사용자 소유면 거부.
+    //    프런트가 보낸 projectId를 그대로 신뢰하지 않고, 서버가 확인한 userId와 비교한다.
+    //    (완전 소유권 — 학생 본인/담당 교사-작품 소유자 매핑 — 은 project/소유자 테이블 조회가 필요해
+    //     운영 스키마 확인 후 추가 적용을 권장. Storage 경로의 사용자 식별자는 이 userId를 사용.)
+    const { data: ownerRow } = await admin.from('generation_jobs')
+      .select('user_id').eq('project_id', projectId).limit(1).maybeSingle()
+    if (ownerRow?.user_id && ownerRow.user_id !== userId) {
+      log('forbidden', { coverKind, reason: 'owner_mismatch' })
+      return fail(userMessage('FORBIDDEN'), 'FORBIDDEN')
+    }
+
+    // 4) 진행중 중복 가드: 같은 project+coverKind 의 최근 processing 작업이 있으면 중복 생성 방지.
+    //    (동시 요청 1차 방어 — 두 번째 요청을 IN_PROGRESS 로 막아 비용 중복 호출을 줄인다.)
+    const { data: recent } = await admin.from('generation_jobs')
+      .select('id,status,started_at,request_id').eq('project_id', projectId).eq('cut_number', coverCutNo)
+      .order('created_at', { ascending: false }).limit(1).maybeSingle()
+    const staleBefore = new Date(Date.now() - STALE_PROCESSING_MS).toISOString()
+    if (recent?.status === 'processing' && recent.started_at && recent.started_at > staleBefore) {
+      // 동일 requestId 면 같은 요청으로 보고 기존 job 반환(멱등). 아니면 진행중 안내.
+      if (requestId && recent.request_id && recent.request_id === requestId) {
+        log('idempotentReuse', { coverKind, jobId: String(recent.id).slice(0, 8) })
+        return ok({ coverKind, jobId: String(recent.id), cacheHit: false, processing: true, elapsedMs: Date.now() - t0 })
+      }
+      log('inProgress', { coverKind, jobId: String(recent.id).slice(0, 8) })
+      return fail('이 표지는 이미 만들고 있어요. 잠시만 기다려 주세요.', 'IN_PROGRESS', { jobId: recent.id })
+    }
+
+    // 5) 작품당 coverKind별 생성 제한(비용 보호).
+    //    processing + completed 를 모두 세어 동시 요청/진행중 작업까지 포함(원자성 보완).
     //    월별 만화 한도 RPC는 건드리지 않는다.
+    //    (완전 원자성 — 동시 insert 레이스 — 은 RPC/트랜잭션이 필요하므로 별도 보고.)
     const { data: profile } = await admin.from('profiles').select('is_demo').eq('id', userId).maybeSingle()
     const isDemo = profile?.is_demo === true
     const limit = isDemo ? COVER_LIMIT_DEMO : COVER_LIMIT_NORMAL
     const { count } = await admin.from('generation_jobs')
       .select('id', { count: 'exact', head: true })
-      .eq('project_id', projectId).eq('cut_number', coverCutNo).eq('status', 'completed')
+      .eq('project_id', projectId).eq('cut_number', coverCutNo).in('status', ['processing', 'completed'])
     const used = count || 0
     if (used >= limit) {
       log('coverLimit', { coverKind, used, limit, isDemo })
       return fail(userMessage('COVER_LIMIT'), 'COVER_LIMIT', { used, limit })
     }
 
-    // 4) 진행중 중복 가드: 같은 project+coverKind 의 최근 processing 작업이 있으면 중복 생성 방지.
-    const { data: recent } = await admin.from('generation_jobs')
-      .select('id,status,started_at').eq('project_id', projectId).eq('cut_number', coverCutNo)
-      .order('created_at', { ascending: false }).limit(1).maybeSingle()
-    const staleBefore = new Date(Date.now() - STALE_PROCESSING_MS).toISOString()
-    if (recent?.status === 'processing' && recent.started_at && recent.started_at > staleBefore) {
-      log('inProgress', { coverKind, jobId: String(recent.id).slice(0, 8) })
-      return fail('이 표지는 이미 만들고 있어요. 잠시만 기다려 주세요.', 'IN_PROGRESS', { jobId: recent.id })
-    }
-
-    // 5) job 선점(processing). cut_number 에 cover 매핑값(0/7)을 넣어 만화 컷(1~6)과 구분.
+    // 6) job 선점(processing). cut_number 에 cover 매핑값(0/7)을 넣어 만화 컷(1~6)과 구분.
     const { data: inserted, error: ie } = await admin.from('generation_jobs').insert({
       project_id: projectId, cut_number: coverCutNo,
       prompt_data: { coverKind, presetCode, promptLength: prompt.length },
