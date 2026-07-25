@@ -50,3 +50,9 @@ enabled = true
 verify_jwt = true
 entrypoint = "./functions/generate-student-keywords/index.ts"
 
+# 창작 과목 표지/뒤표지 이미지 생성. 학생 로그인 필요(verify_jwt=true, 기존 만화 EF와 동일).
+[functions.generate-cover-image]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/generate-cover-image/index.ts"
+
