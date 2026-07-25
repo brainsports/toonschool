@@ -64,6 +64,9 @@ export const getComicKey = (projectId: string) => `toonschool:comic:${projectId}
 export const getSummaryKey = (projectId: string) => `toonschool:summary:${projectId}`;
 export const getQuizKey = (projectId: string) => `toonschool:quiz:${projectId}`;
 export const getBackCoverKey = (projectId: string) => `toonschool:back-cover:${projectId}`;
+// 창작 과목 AI 표지/뒤표지 상세 상태(유형·추가요청·생성이력 등). 이어서 만들기 복원용.
+export const getCreationFrontCoverKey = (projectId: string) => `toonschool:creation-front-cover:${projectId}`;
+export const getCreationBackCoverKey = (projectId: string) => `toonschool:creation-back-cover:${projectId}`;
 
 export const projectStorage = {
   // 1. 단원 선택
@@ -97,4 +100,10 @@ export const projectStorage = {
   // 8. 뒷표지 꾸미기
   saveBackCover: <T>(projectId: string, data: T) => saveToStorage(getBackCoverKey(projectId), data),
   loadBackCover: <T>(projectId: string): T | null => loadFromStorage<T>(getBackCoverKey(projectId)),
+
+  // 창작 과목 AI 표지/뒤표지 상세 상태 (유형·추가요청·생성이력 등 — 이어서 만들기 복원용)
+  saveCreationFrontCover: <T>(projectId: string, data: T) => saveToStorage(getCreationFrontCoverKey(projectId), data),
+  loadCreationFrontCover: <T>(projectId: string): T | null => loadFromStorage<T>(getCreationFrontCoverKey(projectId)),
+  saveCreationBackCover: <T>(projectId: string, data: T) => saveToStorage(getCreationBackCoverKey(projectId), data),
+  loadCreationBackCover: <T>(projectId: string): T | null => loadFromStorage<T>(getCreationBackCoverKey(projectId)),
 };

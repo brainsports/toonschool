@@ -30,6 +30,16 @@ export interface EditorState {
     topicId?: string;
     lessonTitle?: string;
     unitTitle?: string;
+    /** 창작 과목 뒷표지 작가명(뷰어 표시용). */
+    authorName?: string;
+    /** 창작 과목 AI 표지/뒤표지 결과 메타 — 뷰어/플립북에서 히어로 이미지 식별에만 사용. */
+    aiCover?: {
+      isAiCover?: boolean;
+      coverKind?: 'front' | 'back';
+      resultUrl?: string;
+      presetCode?: string;
+      generatedAt?: string;
+    };
   };
 }
 

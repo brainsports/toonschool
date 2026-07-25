@@ -124,7 +124,7 @@ function mapCover(data: EditorState | null, ctx: FlipbookMapContext): FlipbookCo
     topic: project?.topicTitle || meta?.topicTitle || back?.topicTitle || back?.topicName || '',
     // learningGoal 은 현재 데이터에 없음 → 1차 미제공(2차: 커리큘럼 조회/프로젝트 저장)
     keywords: getProjectKeywords(project, 4),
-    heroImageUrl: data?.background || project?.cover?.imageUrl || ctx.firstComicImageUrl || undefined,
+    heroImageUrl: meta?.aiCover?.resultUrl || data?.background || project?.cover?.imageUrl || ctx.firstComicImageUrl || undefined,
     studentName: back?.authorName || '',
     className: back?.gradeClassInfo,
     createdAt: back?.createdDate,
@@ -209,20 +209,38 @@ function mapQuiz(
 
 function mapBackCover(data: BackCoverData | null, ctx: FlipbookMapContext): FlipbookBackCoverPage {
   const project = ctx.project
-  const back = data
+  // 창작 과목은 saveBackCover 에 EditorState(AI 이미지 + 선택 내용 elements)가 저장되어 있다.
+  type BackCoverWithAi = BackCoverData & {
+    metadata?: {
+      aiCover?: { resultUrl?: string };
+      authorName?: string;
+      topicTitle?: string;
+      subjectName?: string;
+    };
+    elements?: { id?: string; props?: { text?: string }; zIndex?: number }[];
+  };
+  const back = data as BackCoverWithAi | null;
+  const aiMeta = back?.metadata?.aiCover;
+  const contentLines: string[] = Array.isArray(back?.elements)
+    ? back!.elements!
+        .filter((e) => typeof e?.id === 'string' && e.id.startsWith('back-content-') && Boolean(e?.props?.text))
+        .sort((a, b) => (a.zIndex ?? 0) - (b.zIndex ?? 0))
+        .map((e) => (e.props?.text as string) ?? '')
+    : []
   return {
     type: 'back-cover',
     // 1차 자동 채움: 오늘의 핵심3 / 기억할 낱말3 은 coreConcepts 에서
     keyPoints: getProjectKeywords(project, 3),
     keywords: getProjectKeywords(project, 3),
     // pledge / teacherMessage / nextLearning 은 현재 데이터에 없음 → 1차 미제공(2~3차)
-    studentName: back?.authorName || '',
+    studentName: back?.authorName || back?.metadata?.authorName || '',
     className: back?.gradeClassInfo,
-    workTitle: project?.topicTitle || back?.topicTitle || back?.topicName || '',
-    subject: back?.subjectName || project?.subject || '',
+    workTitle: project?.topicTitle || back?.topicTitle || back?.topicName || back?.metadata?.topicTitle || '',
+    subject: back?.subjectName || back?.metadata?.subjectName || project?.subject || '',
     unit: back?.unitName || project?.subUnit || project?.mainUnit || '',
     createdAt: back?.createdDate,
-    heroImage: ctx.firstComicImageUrl || undefined,
+    heroImage: aiMeta?.resultUrl || ctx.firstComicImageUrl || undefined,
+    contentLines: contentLines.length ? contentLines : undefined,
   }
 }
 
