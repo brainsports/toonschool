@@ -51,6 +51,22 @@ export default function FlipBackCoverPagePastel({ model }: FlipBackCoverPagePast
       <section className="flp-back-main">
         {workTitle && <div className="flp-back-worktitle flp-title-font">{workTitle}</div>}
 
+        {model.heroImage && (
+          <div style={{ marginBottom: 12, borderRadius: 12, overflow: 'hidden', maxHeight: 260, border: '1px solid rgba(0,0,0,0.06)' }}>
+            <img src={model.heroImage} alt="뒷표지 이미지" style={{ width: '100%', objectFit: 'cover', display: 'block' }} />
+          </div>
+        )}
+
+        {model.contentLines && model.contentLines.length > 0 && (
+          <FlipbookContentCard tone="purple" className="flp-back-card">
+            <div className="flp-back-card-head"><span className="flp-back-card-icon" aria-hidden="true">📝</span> 작품 이야기</div>
+            <div className="flp-back-content-lines" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {model.contentLines.map((line, i) => (
+                <p key={i} style={{ margin: 0, fontSize: 14, lineHeight: 1.5, color: '#374151' }}>{line}</p>
+              ))}
+            </div>
+          </FlipbookContentCard>
+        )}
         <FlipbookContentCard tone="blue" className="flp-back-card">
           <div className="flp-back-card-head"><span className="flp-back-card-icon" aria-hidden="true">⭐</span> 오늘의 학습</div>
           {keyPoints.length ? (

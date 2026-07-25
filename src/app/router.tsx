@@ -36,7 +36,7 @@ import AnalyticsDashboard from '../modules/analytics/pages/AnalyticsDashboard'
 
 import StudentUnitSummaryPage from '../modules/student/pages/StudentUnitSummaryPage'
 import StudentQuizMakerPage from '../modules/student/pages/StudentQuizMakerPage'
-import StudentBackCoverPage from '../modules/student/pages/StudentBackCoverPage'
+import BackCoverRoute from '../modules/student/routes/BackCoverRoute'
 import StudentComicViewerPage from '../modules/student/pages/StudentComicViewerPage'
 import SharedComicViewerPage from '../modules/student/pages/SharedComicViewerPage'
 import StudentMyPage from '../modules/student/pages/StudentMyPage'
@@ -143,7 +143,7 @@ export default function AppRouter() {
         <Route path="/student/comic/cut/:cutNumber" element={<StudentComicCutPage />} />
         <Route path="/student/unit-summary" element={<StudentUnitSummaryPage />} />
         <Route path="/student/quiz/intro" element={<StudentQuizMakerPage />} />
-        <Route path="/student/back-cover" element={<StudentBackCoverPage />} />
+        <Route path="/student/back-cover" element={<BackCoverRoute />} />
         <Route path="/student/comic/read" element={<StudentComicViewerPage />} />
         <Route path="/student/mypage" element={<StudentMyPage />} />
         <Route path="/student/my" element={<Navigate to="/student/mypage" replace />} />

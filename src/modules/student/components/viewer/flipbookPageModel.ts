@@ -126,6 +126,8 @@ export interface FlipbookBackCoverPage {
   unit?: string
   createdAt?: string
   heroImage?: string
+  /** 창작 과목: 학생이 고른 뒷표지 내용 라인들(AI 이미지 위에 별도 합성). */
+  contentLines?: string[]
 }
 
 /** 16:9 플립북의 단일 페이지 모델. */

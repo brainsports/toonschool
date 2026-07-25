@@ -8,6 +8,8 @@ import type { EditorState, CanvasElement } from '../components/editor/types'
 import { SUBJECT_COVER_MAPPING } from '../data/coverTemplates'
 import { projectStorage } from '../utils/projectStorage'
 import { showToast } from '../utils/toast'
+import StudentWorkspaceLayout from '../components/layout/StudentWorkspaceLayout'
+import CreationFrontCoverWorkspace from '../components/cover/CreationFrontCoverWorkspace'
 
 export default function StudentFrontCoverPage() {
   const navigate = useNavigate()
@@ -119,7 +121,29 @@ export default function StudentFrontCoverPage() {
   if (!selectionData) return null
 
   const { selection } = selectionData
-  
+
+  // '창작' 과목은 기존 캔버스 에디터 대신 AI 표지 생성 워크스페이스를 사용한다.
+  // 기존 5개 교과목은 아래 기존 StudentCanvasEditor 흐름을 그대로 유지한다.
+  if (selection.subjectName === '창작') {
+    return (
+      <StudentWorkspaceLayout
+        currentStep="frontCover"
+        title="표지 만들기"
+        subtitle="작품 정보를 확인하고 표지 모습을 골라보세요"
+        onBack={() => navigate('/student/topic', { state: { ...selectionData, projectId } })}
+        bgVariant="pastel"
+      >
+        <CreationFrontCoverWorkspace
+          selection={selection}
+          topic={selectionData.topic}
+          projectId={projectId}
+          onComplete={() => navigate('/student/comic/full', { state: { ...selectionData, projectId } })}
+          onPrev={() => navigate('/student/topic', { state: { ...selectionData, projectId } })}
+        />
+      </StudentWorkspaceLayout>
+    )
+  }
+
   const handleNext = (state: EditorState) => {
     if (!isCoverCompleted) {
       alert('먼저 표지 완성하기 버튼을 눌러주세요.');
