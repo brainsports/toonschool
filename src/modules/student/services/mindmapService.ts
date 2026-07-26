@@ -27,7 +27,7 @@ import {
   type AiTopicsResponse,
 } from '../types/mindmapAi';
 import { newId, autoLayout, filterEmptyNodes, relayoutIfNeeded, upgradeOldStructure } from '../utils/mindmapEngine';
-import { BRANCH_COLOR_KEYS } from '../data/mindmapConfig';
+import { BRANCH_COLOR_KEYS, MINDMAP_LIMITS } from '../data/mindmapConfig';
 import { buildSampleMindmap, buildSamplePartial, buildSampleTopics } from '../utils/mindmapSampleData';
 
 const TABLE = 'mindmap_projects';
@@ -608,17 +608,46 @@ export async function generateTopicSuggestions(params: {
 // ---------------------------------------------------------------------------
 // AI 응답 검증(저장 전) + 노드 변환
 // ---------------------------------------------------------------------------
-const MAX_DESC = 200;
+// 4차(detail) 가지 설명 전용 한도. 1~3차 설명(200자)과 분리.
+const DETAIL_DESC_MAX = MINDMAP_LIMITS.maxDetailDescriptionLength; // 49
+const DETAIL_DESC_MIN = MINDMAP_LIMITS.minDetailDescriptionLength; // 10
 
-/** 설명에서 JSON/영어 필드명/태그가 새어나오지 않도록 정제. */
-function cleanDescription(raw?: string): string {
+/**
+ * 4차(detail) 가지 설명 전용 정제 + 안전 축약.
+ * AI가 규칙을 무시하고 길게 보내도 49자 이하를 보장한다.
+ * - 49자 이하: 그대로 사용
+ * - 50자 이상: 문장 부호(. ! ? ·) 경계 → 공백 경주 순으로 자연스럽게 축약
+ * - 중간 단어 절단 / 말줄임표 남용 금지(자르고 나서 '…' 를 붙이지 않음)
+ * - 축약 결과가 최소 길이(10자) 미만이면 49자까지 허용(검증 단계에서 재생성 유도)
+ */
+export function cleanDetailDescription(raw?: string): string {
   if (!raw) return '';
   let s = String(raw).replace(/<[^>]*>/g, '').replace(/```/g, '').trim();
-  // JSON 잔재/필드명 패턴이 보이면 해당 토큰 제거.
   s = s.replace(/"[a-zA-Z_]+"\s*:/g, '').replace(/[{}[\]]/g, '').trim();
   s = s.replace(/\s+/g, ' ');
-  if (s.length > MAX_DESC) s = s.slice(0, MAX_DESC);
-  return s;
+  if (s.length <= DETAIL_DESC_MAX) return s;
+  const cut = s.slice(0, DETAIL_DESC_MAX);
+  // 1) 49자 이내의 가장 긴 "문장 부호로 끝나는" 접두사.
+  const m = cut.match(/^(.*[.!?·])/);
+  if (m && m[1].trim().length >= DETAIL_DESC_MIN) return m[1].trim();
+  // 2) 가장 마지막 공백 경계.
+  const lastSpace = cut.lastIndexOf(' ');
+  if (lastSpace >= DETAIL_DESC_MIN) return cut.slice(0, lastSpace).trim();
+  // 3) 최소 길이 확보가 안 되면 49자까지 사용(단어가 매우 긴 경우).
+  return cut.trim();
+}
+
+/** AI 응답의 detail 설명 중 49자를 초과하는 것이 있는지(재시도 판단용). */
+export function hasOverlongDetails(resp: AiFullMindmapResponse | null | undefined): boolean {
+  if (!resp || !Array.isArray(resp.branches)) return false;
+  for (const b of resp.branches) {
+    for (const c of b.children || []) {
+      for (const d of c.details || []) {
+        if ((d.description || '').replace(/\s+/g, ' ').trim().length > DETAIL_DESC_MAX) return true;
+      }
+    }
+  }
+  return false;
 }
 
 export interface AiValidationReport {
@@ -642,7 +671,7 @@ export function validateAiFull(resp: AiFullMindmapResponse | null | undefined): 
     const kids = (b.children || []).filter((c) => (c.title || '').trim().length > 0);
     if (kids.length < 2) { issues.push(`'${b.title}' 가지에 2차 가지를 2개 이상 만들어 주세요.`); }
     const details = kids.flatMap((c) => c.details || []);
-    const validDetails = details.filter((d) => (d.description || '').trim().length >= 20);
+    const validDetails = details.filter((d) => (d.description || '').trim().length >= DETAIL_DESC_MIN);
     if (validDetails.length === 0) { issues.push(`'${b.title}' 가지에 3차 설명을 추가해 주세요.`); }
   }
   return { ok: issues.length === 0, issues };
@@ -690,7 +719,7 @@ export function aiResponseToNodes(
       (c.details || []).forEach((d, k) => {
         nodes.push({
           id: newId('detail'), parentId: subId, type: 'detail',
-          title: d.title, description: cleanDescription(d.description), icon: d.icon,
+          title: d.title, description: cleanDetailDescription(d.description), icon: d.icon,
           shape: 'rounded', colorKey, position: { x: 0, y: 0 }, order: k, collapsed: false, createdBy: 'ai',
         });
       });
