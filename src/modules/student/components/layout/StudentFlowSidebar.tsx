@@ -1,5 +1,8 @@
 import { Check, Lock } from 'lucide-react'
 import { useNavigate, useLocation } from 'react-router-dom'
+import { useMemo } from 'react'
+import { projectStorage } from '../../utils/projectStorage'
+import type { StudentUnitSelection } from '../../types/studentCurriculum'
 
 export type FlowStepKey = 'unit' | 'topic' | 'script' | 'frontCover' | 'comic' | 'summary' | 'quiz' | 'backCover' | 'viewer' | 'complete'
 
@@ -21,6 +24,12 @@ const steps: FlowStep[] = [
   { key: 'viewer',     label: '만화보기',     icon: '🖼️', path: '/student/comic/read' },
 ]
 
+// '창작' 과목일 때만 바뀌는 라벨 오버라이드. 교과 라벨은 그대로 유지.
+const CREATIVE_LABEL_OVERRIDE: Partial<Record<FlowStepKey, string>> = {
+  unit: '창작 설정',
+  summary: '이야기 정리',
+}
+
 interface StudentFlowSidebarProps {
   currentStep: FlowStepKey
   completedSteps?: FlowStepKey[]
@@ -31,7 +40,36 @@ interface StudentFlowSidebarProps {
 export default function StudentFlowSidebar({ currentStep, completedSteps = [], orientation = 'vertical' }: StudentFlowSidebarProps) {
   const navigate = useNavigate()
   const location = useLocation()
-  const currentIndex = steps.findIndex(s => s.key === currentStep)
+
+  // 현재 작품이 '창작' 과목인지 판별. location.state 의 selection 또는
+  // projectId 로 불러온 저장 단원 정보를 통해 알아낸다(각 페이지에서 별도 전달 불필요).
+  const isCreative = useMemo(() => {
+    const state = location.state as any
+    if (state?.selection?.subjectName === '창작') return true
+    const pid = state?.projectId
+    if (pid) {
+      try {
+        const unit = projectStorage.loadUnit<StudentUnitSelection>(pid)
+        if (unit?.subjectName === '창작') return true
+      } catch {
+        // 저장 읽기 실패 시 교과 라벨 유지
+      }
+    }
+    return false
+  }, [location.state])
+
+  // 창작일 때만 라벨을 오버라이드한 단계 목록.
+  const displaySteps = useMemo(
+    () =>
+      isCreative
+        ? steps.map((s) =>
+            CREATIVE_LABEL_OVERRIDE[s.key] ? { ...s, label: CREATIVE_LABEL_OVERRIDE[s.key]! } : s
+          )
+        : steps,
+    [isCreative]
+  )
+
+  const currentIndex = displaySteps.findIndex(s => s.key === currentStep)
 
   return (
     <div className={`flex w-full h-full bg-transparent ${orientation === 'horizontal' ? 'flex-row items-center overflow-x-auto py-2 px-4 gap-2 no-scrollbar' : 'flex-col pt-3 pb-2 px-2 gap-0'}`}>
@@ -46,7 +84,7 @@ export default function StudentFlowSidebar({ currentStep, completedSteps = [], o
       )}
 
       <div className={`flex ${orientation === 'horizontal' ? 'flex-row items-center min-w-max' : 'flex-col'}`}>
-        {steps.map((step, index) => {
+        {displaySteps.map((step, index) => {
           const isCurrent   = step.key === currentStep
           const isCompleted = completedSteps.includes(step.key) || index < currentIndex
           const isUpcoming  = !isCurrent && !isCompleted

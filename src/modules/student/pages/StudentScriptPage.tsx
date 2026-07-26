@@ -5,6 +5,7 @@ import type { StudentUnitSelection } from '../types/studentCurriculum'
 import type { TopicRecommendation } from '../types/studentTopic'
 import type { CoverKeyConcept, CoverDialogue } from '../services/studentScriptService'
 import { projectStorage } from '../utils/projectStorage'
+import type { CreativeStorySettings } from '../data/creativeCategories'
 
 export default function StudentScriptPage() {
   const navigate = useNavigate()
@@ -15,6 +16,8 @@ export default function StudentScriptPage() {
     topic: TopicRecommendation
     extraRequest?: string
     selectedKeywords?: string[]
+    // '창작' 과목일 때 전달되는 창작 설정.
+    creativeSettings?: CreativeStorySettings
     projectId?: string
   } | null>(null)
 

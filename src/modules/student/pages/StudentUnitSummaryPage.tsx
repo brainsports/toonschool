@@ -133,7 +133,7 @@ export default function StudentUnitSummaryPage() {
     setIsGeneratingStory(true)
     
     try {
-      const { selection, topic, selectedKeywords } = projectData.topicData
+      const { selection, topic, selectedKeywords, creativeSettings } = projectData.topicData
       const panels = projectData.comicData?.panels || []
       const comicText = panels.map((p: any) => p.dialogues?.map((d: any) => d.text).join(' ')).join(' | ')
 
@@ -146,7 +146,8 @@ export default function StudentUnitSummaryPage() {
         selectedKeywords: selectedKeywords,
         topicTitle: topic?.title,
         topicSummary: topic?.summary,
-        comicText: comicText
+        comicText: comicText,
+        creativeSettings
       })
 
       setStories(generatedStories)
@@ -163,7 +164,7 @@ export default function StudentUnitSummaryPage() {
     setIsGeneratingQuiz(true)
 
     try {
-      const { selection, topic } = projectData.topicData
+      const { selection, topic, creativeSettings } = projectData.topicData
       const panels = projectData.comicData?.panels || []
       const comicText = panels.map((p: any) => p.dialogues?.map((d: any) => d.text).join(' ')).join(' | ')
 
@@ -175,7 +176,8 @@ export default function StudentUnitSummaryPage() {
         learningGoal: selection?.learningGoal,
         topicTitle: topic?.title,
         topicSummary: topic?.summary,
-        comicText: comicText
+        comicText: comicText,
+        creativeSettings
       })
 
       setQuestions(generatedQuizzes)
@@ -206,6 +208,7 @@ export default function StudentUnitSummaryPage() {
 
   // 기존 저장 데이터 연동
   const subject = projectData?.topicData?.selection?.subjectName || '과목 정보 없음'
+  const isCreativeSummary = subject === '창작'
   const unitTitle = projectData?.topicData?.topic?.title || projectData?.topicData?.selection?.middleUnitName || projectData?.topicData?.selection?.majorUnitName || '단원 정보 없음'
 
   const isDataMissing = !projectData?.topicData;
@@ -270,7 +273,7 @@ export default function StudentUnitSummaryPage() {
   return (
     <StudentWorkspaceLayout
       currentStep="summary"
-      title="단원 정리"
+      title={isCreativeSummary ? '이야기 정리' : '단원 정리'}
       subtitle="세상과 연결하고, 내가 문제를 만들어 봐요!"
       onBack={() => navigate('/student/comic/full', { state: { projectId } })}
       actionButtons={actionButtons}

@@ -13,6 +13,7 @@ import { showToast } from '../../utils/toast';
 import StudentWorkspaceLayout from '../layout/StudentWorkspaceLayout';
 import StudentToolPanel from '../layout/StudentToolPanel';
 import StudentZoomControl from '../layout/StudentZoomControl';
+import type { CreativeStorySettings } from '../../data/creativeCategories';
 
 export type ScriptToolType = 'ai' | 'cut' | 'concept' | 'coverDialogue';
 
@@ -22,6 +23,8 @@ interface StudentScriptEditorProps {
     topic: TopicRecommendation;
     extraRequest?: string;
     selectedKeywords?: string[];
+    // '창작' 과목일 때 전달되는 창작 설정. 대본 생성 프롬프트에 반영.
+    creativeSettings?: CreativeStorySettings;
   };
   projectId: string;
   onPrev: () => void;
@@ -72,7 +75,8 @@ export default function StudentScriptEditor({ selectionData, projectId, onPrev, 
     incident: selectionData.topic.incident || '',
     problem: selectionData.topic.problem || '',
     resolutionDirection: selectionData.topic.resolutionDirection || '',
-    learningConnection: selectionData.topic.learningConnection || ''
+    learningConnection: selectionData.topic.learningConnection || '',
+    creativeSettings: selectionData.creativeSettings
   };
 
   const handleGenerateScript = async () => {
