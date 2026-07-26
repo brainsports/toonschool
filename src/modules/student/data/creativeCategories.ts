@@ -248,6 +248,8 @@ export const getCreativeCategory = (id: string): CreativeCategory | undefined =>
 
 // 창작 설정(분야/세부설정/주인공/배경/분위기/결말). 주제·키워드·대본·표지 생성에 전달.
 // 문자열 하나로 합치지 않고 구조화된 형태로 저장/전달한다.
+export type CreativeCharacterMode = 'standard' | 'free';
+
 export interface CreativeStorySettings {
   categoryId: string;
   categoryName: string;
@@ -261,6 +263,12 @@ export interface CreativeStorySettings {
   moodName?: string;
   endingId?: string;
   endingName?: string;
+  // 캐릭터 사용 방식. 'standard'=툰스쿨 표준 3인(도윤/서아/하나 선생님),
+  // 'free'=창작 주인공 중심 자유 캐릭터(대본/표지 텍스트에 반영).
+  // 기본값 'standard' — 만화 컷 캐릭터 이미지는 현재 표준 에셋만 지원하여 일관성 유지.
+  characterMode?: CreativeCharacterMode;
+  // 자유 모드에서 추가 캐릭터 묘사(선택). 대본/표지 프롬프트에 반영.
+  customCharacterDescription?: string;
   createdAt?: string;
 }
 

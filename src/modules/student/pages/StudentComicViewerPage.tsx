@@ -21,6 +21,7 @@ import html2canvas from 'html2canvas'
 import { jsPDF } from 'jspdf'
 import { useAuth } from '../../../shared/contexts/AuthContext'
 import { createGrowthEvaluationForSharedComic } from '../services/studentGrowthService'
+import { ensureStudentWorkDraft } from '../services/studentWorkService'
 import FlipbookPageFrame, { FLIPBOOK_LANDSCAPE_HEIGHT, FLIPBOOK_LANDSCAPE_WIDTH } from '../components/viewer/FlipbookPageFrame'
 import FlipCoverPagePastel from '../components/viewer/pages/FlipCoverPagePastel'
 import FlipComicPagePastel from '../components/viewer/pages/FlipComicPagePastel'
@@ -102,7 +103,7 @@ const createShareUrl = (slug: string) => {
 export default function StudentComicViewerPage() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   
   const [pages, setPages] = useState<ViewerPage[]>([])
   const [currentSpreadIndex, setCurrentSpreadIndex] = useState(0)
@@ -139,6 +140,47 @@ export default function StudentComicViewerPage() {
     const stored = loadQuizAnswers(quizAnswerKey)
     setQuizAnswers(toSelectionMap(stored))
   }, [quizAnswerKey])
+
+  // 완성 작품을 '내 작품'에 즉시 노출: 비공개 드래프트 row 보장(뷰어 진입 시 1회).
+  // student_name 을 profile.name 으로 맞춰 getStudentWorks 조회 조건과 일치시킨다.
+  useEffect(() => {
+    if (!currentProjectId || !profile?.name || !projectData) return;
+    const pd = projectData as any;
+    const possibleTitles = [
+      pd?.title,
+      pd?.content?.topicTitle,
+      pd?.content?.selectedTopic?.title,
+      pd?.content?.title,
+      pd?.topicTitle,
+    ];
+    const title =
+      possibleTitles.find((t) => typeof t === 'string' && t.trim() !== '') || '툰스쿨 만화';
+    const possibleSubjects = [
+      pd?.subject,
+      pd?.content?.subject,
+      pd?.content?.curriculum?.subjectName,
+      pd?.content?.curriculum?.subject,
+    ];
+    let subject = possibleSubjects.find((s) => typeof s === 'string' && s.trim() !== '') || '';
+    if (!subject) {
+      const text = `${title} ${pd?.summary || ''} ${pd?.content?.summary || ''}`;
+      if (text.includes('과학')) subject = '과학';
+      else if (text.includes('수학')) subject = '수학';
+      else if (text.includes('영어')) subject = '영어';
+      else if (text.includes('사회')) subject = '사회';
+      else if (text.includes('국어')) subject = '국어';
+      else subject = pd?.content?.creativeSettings ? '창작' : '기타';
+    }
+    const thumbnailUrl =
+      pd?.frontCoverImageUrl || pd?.content?.frontCoverImageUrl || pd?.content?.coverImage || '';
+    ensureStudentWorkDraft({
+      projectId: currentProjectId,
+      studentName: profile.name,
+      title,
+      subject,
+      thumbnailUrl,
+    });
+  }, [currentProjectId, profile, projectData]);
 
   // 답안 선택 처리: 상태 갱신(중복 차단) + 영구 저장(스키마/손상 안전, 실패해도 동작 유지).
   // 상태 로직을 분리해 두어 추후 '다시 풀기' 기능을 붙이기 쉽게 한다.
@@ -649,11 +691,20 @@ export default function StudentComicViewerPage() {
         .eq('project_id', currentProjectId)
         .eq('is_public', true)
         .maybeSingle();
-        
+
       if (existingData?.slug) {
         setShareModalData({ url: createShareUrl(existingData.slug) });
         return;
       }
+
+      // 1b. 드래프트(비공개) row 가 있으면 INSERT 대신 UPDATE 로 승격(중복 row 방지).
+      const { data: existingDraft } = await supabase
+        .from('shared_comic_books')
+        .select('project_id')
+        .eq('project_id', currentProjectId)
+        .eq('is_public', false)
+        .maybeSingle();
+      const hasDraft = !!existingDraft?.project_id;
 
       // 2. Extract pages as images
       const pageNodes = pdfCaptureRef.current?.querySelectorAll('[data-pdf-page="true"]');
@@ -749,21 +800,42 @@ export default function StudentComicViewerPage() {
         else finalSubject = '기타';
       }
 
-      const { error: insertError } = await supabase
-        .from('shared_comic_books')
-        .insert({
-          slug,
-          project_id: currentProjectId,
-          title: finalTitle,
-          subject: finalSubject,
-          student_name: authorName,
-          grade: gradeClassInfo,
-          thumbnail_url: thumbnailUrl,
-          pages: uploadedPages,
-          is_public: true
-        });
+      // 드래프트가 있으면 UPDATE(비공개→공개 승격), 없으면 INSERT.
+      // student_name 은 profile.name 우선(getStudentWorks 조회 조건과 일치).
+      const shareStudentName = profile?.name || authorName;
+      if (hasDraft) {
+        const { error: updateError } = await supabase
+          .from('shared_comic_books')
+          .update({
+            slug,
+            title: finalTitle,
+            subject: finalSubject,
+            student_name: shareStudentName,
+            grade: gradeClassInfo,
+            thumbnail_url: thumbnailUrl,
+            pages: uploadedPages,
+            is_public: true
+          })
+          .eq('project_id', currentProjectId);
 
-      if (insertError) throw insertError;
+        if (updateError) throw updateError;
+      } else {
+        const { error: insertError } = await supabase
+          .from('shared_comic_books')
+          .insert({
+            slug,
+            project_id: currentProjectId,
+            title: finalTitle,
+            subject: finalSubject,
+            student_name: shareStudentName,
+            grade: gradeClassInfo,
+            thumbnail_url: thumbnailUrl,
+            pages: uploadedPages,
+            is_public: true
+          });
+
+        if (insertError) throw insertError;
+      }
 
       if (user?.id) {
         try {

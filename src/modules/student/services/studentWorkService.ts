@@ -200,3 +200,59 @@ export async function getStudentWorksByStudentId(
 ): Promise<MyWork[]> {
   return getStudentWorks({ profileId, authUserId });
 }
+
+/**
+ * 완성된 작품을 '내 작품' 목록에 즉시 노출하기 위해 shared_comic_books 에
+ * 비공개(is_public=false) 드래프트 row를 만든다(또는 이미 있으면 아무 것도 하지 않는다).
+ *
+ * 배경: 학생 신규 플로우는 완성 시점에 DB 에 작품을 기록하지 않고, 오직
+ * '친구에게 자랑하기'(handleShare)에서만 shared_comic_books 에 insert 했다.
+ * 그래서 자랑하기를 누르지 않으면 '내 작품'에 영영 노출되지 않는 문제가 있었다.
+ * 드래프트 row를 먼저 만들어 두면 getStudentWorks(공개 여부 미필터)에 잡혀 즉시 노출된다.
+ *
+ * student_name 은 조회 키(profile.name)와 일치하도록 profile.name 을 사용한다.
+ * (기존 handleShare 의 authorName 불일치 누락 방지)
+ *
+ * 주의: shared_comic_books 스키마가 로컬 마이그레이션에 없어 컬럼 제약을 코드만으로
+ * 단정할 수 없다. insert 실패 시 콘솔에 로깅만 하고 흐름은 깨지 않는다.
+ * 스키마 제약(NOT NULL 등)으로 계속 실패하면 컬럼/기본값 추가 범위를 별도 보고한다.
+ */
+export async function ensureStudentWorkDraft(params: {
+  projectId: string;
+  studentName: string;
+  title: string;
+  subject: string;
+  thumbnailUrl?: string;
+  grade?: string;
+}): Promise<void> {
+  const { projectId, studentName, title, subject, thumbnailUrl, grade } = params;
+  if (!projectId || !studentName) return;
+  try {
+    // 이미 row(드래프트/공개)가 있으면 중복 생성 금지.
+    const { data: existing } = await supabase
+      .from('shared_comic_books')
+      .select('project_id')
+      .eq('project_id', projectId)
+      .maybeSingle();
+    if (existing) return;
+
+    const slug = Math.random().toString(36).substring(2, 8);
+    const { error } = await supabase.from('shared_comic_books').insert({
+      slug,
+      project_id: projectId,
+      title: title || '툰스쿨 만화',
+      subject: subject || '기타',
+      student_name: studentName,
+      grade: grade || '',
+      thumbnail_url: thumbnailUrl || '',
+      pages: [],
+      is_public: false,
+    });
+    if (error) {
+      // 스키마 제약 등 실패 — 흐름은 유지하고 로깅.
+      console.error('[ensureStudentWorkDraft] insert 실패:', error);
+    }
+  } catch (e) {
+    console.error('[ensureStudentWorkDraft] 예외:', e);
+  }
+}

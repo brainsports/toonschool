@@ -123,11 +123,47 @@ ${formatCreativeSettingsLines(request.creativeSettings!)}
 주의사항(오개념): ${misconception}`;
 
   const studentActionWord = hasCreative ? '질문, 발견, 행동, 적용' : '질문, 발견, 계산, 적용';
-  const hanaRole = hasCreative
-    ? '- 하나 선생님: 이야기의 핵심을 짚어주거나 도움을 주는 역할 (최소 2개 컷 등장)'
-    : '- 하나 선생님: 핵심 개념을 알려주거나 정리하는 역할 (최소 2개 컷 등장)';
 
-  const cutSection = hasCreative
+  // 창작 자유 캐릭터 모드: 표준 3인(도윤/서아/하나 선생님)을 강제하지 않고
+  // 학생이 고른 창작 주인공 중심으로 등장인물을 구성.
+  const isFreeCharacter = hasCreative && request.creativeSettings?.characterMode === 'free';
+  const protagonistHint = request.creativeSettings
+    ? request.creativeSettings.protagonistCustomText || request.creativeSettings.protagonistName || ''
+    : '';
+
+  // 등장인물 규칙 블록 — 교과(원문 유지) / 창작-표준 / 창작-자유 3분기.
+  const characterRuleBlock = isFreeCharacter
+    ? `[등장인물 규칙]
+- 학생이 고른 창작 주인공을 중심으로 자유롭게 등장인물을 구성해. 표준 캐릭터(도윤/서아/하나 선생님)를 억지로 등장시키지 마.
+- 주인공 방향: ${protagonistHint || '학생이 고른 설정에 어울리는 주인공'}${request.creativeSettings?.customCharacterDescription ? `\n- 추가 캐릭터 모습: ${request.creativeSettings.customCharacterDescription}` : ''}
+- 등장인물 이름은 이야기 분위기에 맞게 자유롭되 초등학생이 이해하기 쉬운 이름으로.
+- 컷당 등장인물: 한 컷에 1~2명만 등장하여 화면이 복잡해지지 않도록 함.`
+    : hasCreative
+    ? `[등장인물 규칙]
+- 기본 등장인물: "하나 선생님", "도윤", "서아" (이름을 절대 임의로 바꾸지 마세요. hana, doyoon 같은 영문 ID도 사용 금지)
+- 하나 선생님: 이야기의 핵심을 짚어주거나 도움을 주는 역할 (최소 2개 컷 등장)
+- 도윤: ${studentActionWord}에 참여하는 활발한 학생
+- 서아: ${studentActionWord}에 참여하는 차분한 학생
+- 보조 인물: 이야기 배경에 필요한 인물이 있다면 '보조 인물'로만 추가하며, 기본 등장인물 3명을 대체할 수 없음.
+- 컷당 등장인물: 한 컷에 1~2명만 등장하여 화면이 복잡해지지 않도록 함.`
+    : `[등장인물 규칙]
+- 기본 등장인물: "하나 선생님", "도윤", "서아" (이름을 절대 임의로 바꾸지 마세요. hana, doyoon 같은 영문 ID도 사용 금지)
+- 하나 선생님: 핵심 개념을 알려주거나 정리하는 역할 (최소 2개 컷 등장)
+- 도윤: ${studentActionWord}에 참여하는 활발한 학생
+- 서아: ${studentActionWord}에 참여하는 차분한 학생
+- 보조 인물: 이야기 배경에 필요한 인물이 있다면 '보조 인물'로만 추가하며, 기본 등장인물 3명을 대체할 수 없음.
+- 컷당 등장인물: 한 컷에 1~2명만 등장하여 화면이 복잡해지지 않도록 함.`;
+
+  const cutSection = isFreeCharacter
+    ? `[고정된 6컷 전개 방식 (반드시 이 역할과 순서를 지켜라)]
+1컷 (이야기 시작): 선택한 배경과 주인공, 해결할 문제가 등장
+2컷 (궁금증 발견): 이야기를 이끌어갈 구체적인 상황이나 사건 발생
+3컷 (핵심 이해): 도움을 주는 인물(또는 주인공의 깨달음)이 이야기의 핵심을 짚어줌
+4컷 (직접 해결): 주인공이 이야기 속 문제를 해결하는 과정 (행동과 감정이 자연스럽게 드러나야 함)
+5컷 (확인과 바로잡기): 오해나 갈등을 확인하고 바르게 풀어감
+6컷 (이야기 완성): 사건을 해결하고 이야기의 핵심이나 교훈을 짧게 정리
+(6컷 전체가 자연스럽게 하나의 이야기로 연결되어야 합니다.)`
+    : hasCreative
     ? `[고정된 6컷 전개 방식 (반드시 이 역할과 순서를 지켜라)]
 1컷 (이야기 시작): 선택한 배경과 인물, 해결할 문제가 등장
 2컷 (궁금증 발견): 이야기를 이끌어갈 구체적인 상황이나 사건 발생
@@ -169,13 +205,7 @@ ${infoBlock}
 해결 방향: ${request.resolutionDirection}
 ${hasCreative ? '주제 연결' : '학습 연결'}: ${request.learningConnection}
 
-[등장인물 규칙]
-- 기본 등장인물: "하나 선생님", "도윤", "서아" (이름을 절대 임의로 바꾸지 마세요. hana, doyoon 같은 영문 ID도 사용 금지)
-${hanaRole}
-- 도윤: ${studentActionWord}에 참여하는 활발한 학생
-- 서아: ${studentActionWord}에 참여하는 차분한 학생
-- 보조 인물: 이야기 배경에 필요한 인물이 있다면 '보조 인물'로만 추가하며, 기본 등장인물 3명을 대체할 수 없음.
-- 컷당 등장인물: 한 컷에 1~2명만 등장하여 화면이 복잡해지지 않도록 함.
+${characterRuleBlock}
 
 ${cutSection}
 
@@ -230,34 +260,39 @@ ${pointRule}
           throw new Error('6컷이 아닙니다.');
         }
 
-        let hanaCount = 0;
-
         parsedData.cuts.forEach((cut, index) => {
           if (cut.cutNumber !== index + 1) throw new Error('컷 번호가 올바르지 않습니다.');
           if (!cut.scene) throw new Error('장면 설명이 없습니다.');
           if (!cut.characters || cut.characters.length === 0) throw new Error('등장인물이 없습니다.');
           if (!cut.dialogues || cut.dialogues.length === 0) throw new Error('대사가 없습니다.');
-          
-          cut.characters = cut.characters.map(char => {
-            if (char.toLowerCase() === 'hana' || char.includes('하나')) return '하나 선생님';
-            if (char.toLowerCase() === 'doyoon' || char.includes('도윤')) return '도윤';
-            if (char.toLowerCase() === 'seoa' || char.includes('서아')) return '서아';
-            return char;
-          });
-
-          cut.dialogues.forEach(dialogue => {
-            if (dialogue.speaker.toLowerCase() === 'hana' || dialogue.speaker.includes('하나')) dialogue.speaker = '하나 선생님';
-            if (dialogue.speaker.toLowerCase() === 'doyoon' || dialogue.speaker.includes('도윤')) dialogue.speaker = '도윤';
-            if (dialogue.speaker.toLowerCase() === 'seoa' || dialogue.speaker.includes('서아')) dialogue.speaker = '서아';
-          });
-
-          if (cut.characters.includes('하나 선생님')) {
-            hanaCount++;
-          }
         });
 
-        if (hanaCount < 2) {
-          throw new Error('하나 선생님이 최소 2개 컷에 등장해야 합니다.');
+        // 자유 캐릭터 모드가 아닐 때만 표준 3인 이름 정규화 + 하나 선생님 필수 등장 검증.
+        if (!isFreeCharacter) {
+          let hanaCount = 0;
+
+          parsedData.cuts.forEach((cut) => {
+            cut.characters = cut.characters.map(char => {
+              if (char.toLowerCase() === 'hana' || char.includes('하나')) return '하나 선생님';
+              if (char.toLowerCase() === 'doyoon' || char.includes('도윤')) return '도윤';
+              if (char.toLowerCase() === 'seoa' || char.includes('서아')) return '서아';
+              return char;
+            });
+
+            cut.dialogues.forEach(dialogue => {
+              if (dialogue.speaker.toLowerCase() === 'hana' || dialogue.speaker.includes('하나')) dialogue.speaker = '하나 선생님';
+              if (dialogue.speaker.toLowerCase() === 'doyoon' || dialogue.speaker.includes('도윤')) dialogue.speaker = '도윤';
+              if (dialogue.speaker.toLowerCase() === 'seoa' || dialogue.speaker.includes('서아')) dialogue.speaker = '서아';
+            });
+
+            if (cut.characters.includes('하나 선생님')) {
+              hanaCount++;
+            }
+          });
+
+          if (hanaCount < 2) {
+            throw new Error('하나 선생님이 최소 2개 컷에 등장해야 합니다.');
+          }
         }
 
         return parsedData;

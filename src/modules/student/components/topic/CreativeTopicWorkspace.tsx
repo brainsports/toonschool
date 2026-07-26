@@ -14,6 +14,7 @@ import {
   type CreativeTopic,
 } from '../../services/creativeTopicService';
 import { projectStorage } from '../../utils/projectStorage';
+import { showToast } from '../../utils/toast';
 
 // 대본 만들기로 넘길 데이터. 기존 projectStorage.saveTopic 구조를 그대로 따르되
 // creativeSettings 와 creativeSettingsKey(설정 변경 감지용)를 추가로 포함.
@@ -21,8 +22,13 @@ export interface CreativeTopicSelectionData {
   selection: StudentUnitSelection;
   topic: { id: string; title: string; summary: string };
   extraRequest: string;
+  // 대본/표지/만화 생성에 실제로 전달되는 키워드(효과값).
+  // 학생이 고른 키워드가 있으면 그 부분집합, 없으면 전체 추천 키워드.
   selectedKeywords: string[];
   creativeSettings: CreativeStorySettings;
+  // 워크스페이스 복원용(선택 UI 상태). selectedKeywords(효과값)와는 분리해서 보관.
+  creativeKeywordOptions?: string[]; // 생성된 전체 키워드 목록
+  creativeSelectedKeywords?: string[]; // 학생이 명시적으로 고른 부분집합(없으면 전체 사용)
 }
 
 interface Props {
@@ -58,9 +64,13 @@ export default function CreativeTopicWorkspace({
   const [topics, setTopics] = useState<CreativeTopic[]>([]);
   const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null);
   const [keywords, setKeywords] = useState<string[]>([]);
+  // 학생이 명시적으로 고른 키워드 부분집합. 빈 배열이면 '전체 키워드 사용' 폴백.
+  const [selectedKeywords, setSelectedKeywords] = useState<string[]>([]);
   const [isGenTopics, setIsGenTopics] = useState(false);
   const [isGenKeywords, setIsGenKeywords] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const MAX_KEYWORD_SELECT = 5;
 
   // 중복 주제 생성 방지용 동기 가드(StrictMode 중복 호출 + 자동 effect 보호).
   const lastHandledKeyRef = useRef<string>('');
@@ -123,7 +133,14 @@ export default function CreativeTopicWorkspace({
         { id: saved.topic.id, title: saved.topic.title, summary: saved.topic.summary || '' },
       ]);
       setSelectedTopicId(saved.topic.id);
-      setKeywords(Array.isArray(saved.selectedKeywords) ? saved.selectedKeywords : []);
+      // 전체 키워드 목록(옵션) 복원. 구형 데이터엔 options가 없으니 selectedKeywords로 폴백.
+      const opts = Array.isArray(saved.creativeKeywordOptions)
+        ? saved.creativeKeywordOptions
+        : Array.isArray(saved.selectedKeywords)
+        ? saved.selectedKeywords
+        : [];
+      setKeywords(opts);
+      setSelectedKeywords(Array.isArray(saved.creativeSelectedKeywords) ? saved.creativeSelectedKeywords : []);
       return;
     }
     // 설정이 바뀌었거나 저장이 없으면 주제를 새로 만든다.
@@ -138,8 +155,22 @@ export default function CreativeTopicWorkspace({
     if (selectedTopicId === id) return;
     setSelectedTopicId(id);
     setKeywords([]);
+    // 주제가 바뀌면 이전 선택 키워드는 무효 → 초기화(새 키워드로 다시 고름).
+    setSelectedKeywords([]);
     const t = topics.find((x) => x.id === id);
     if (t) genKeywords(t.title);
+  };
+
+  // 키워드 토글: 클릭→선택 / 재클릭→해제. 최대 5개.
+  const toggleKeyword = (word: string) => {
+    setSelectedKeywords((prev) => {
+      if (prev.includes(word)) return prev.filter((k) => k !== word);
+      if (prev.length >= MAX_KEYWORD_SELECT) {
+        showToast('키워드는 최대 5개까지 고를 수 있어요.');
+        return prev;
+      }
+      return [...prev, word];
+    });
   };
 
   const handleRegenerate = async () => {
@@ -157,6 +188,8 @@ export default function CreativeTopicWorkspace({
 
   const handleProceed = () => {
     if (!selectedTopic) return;
+    // 효과 키워드: 학생이 고른 키워드가 있으면 그 것으로, 없으면 전체 추천 키워드 사용.
+    const effectiveKeywords = selectedKeywords.length > 0 ? selectedKeywords : keywords;
     const data: CreativeTopicSelectionData = {
       selection,
       topic: {
@@ -165,8 +198,10 @@ export default function CreativeTopicWorkspace({
         summary: selectedTopic.summary || '',
       },
       extraRequest: '',
-      selectedKeywords: keywords,
+      selectedKeywords: effectiveKeywords,
       creativeSettings,
+      creativeKeywordOptions: keywords,
+      creativeSelectedKeywords: selectedKeywords,
     };
     onProceed(data);
   };
@@ -292,18 +327,34 @@ export default function CreativeTopicWorkspace({
             </div>
           ) : keywords.length > 0 ? (
             <>
+              <p className="text-xs text-gray-500 mb-3">
+                이 키워드로 대본을 만들어요. 마음에 드는 키워드를 골라 보세요. (최대 {MAX_KEYWORD_SELECT}개)
+              </p>
               <div className="flex flex-wrap gap-2">
-                {keywords.map((k) => (
-                  <span
-                    key={k}
-                    className="px-3 py-1.5 rounded-full text-sm bg-sky-100 text-sky-700 border-2 border-sky-200 font-semibold"
-                  >
-                    {k}
-                  </span>
-                ))}
+                {keywords.map((k) => {
+                  const isSelected = selectedKeywords.includes(k);
+                  return (
+                    <button
+                      key={k}
+                      type="button"
+                      onClick={() => toggleKeyword(k)}
+                      aria-pressed={isSelected}
+                      className={`px-3 py-1.5 rounded-full text-sm border-2 font-semibold transition-all flex items-center gap-1 ${
+                        isSelected
+                          ? 'bg-pink-500 text-white border-pink-500 shadow-sm'
+                          : 'bg-white text-sky-700 border-sky-200 hover:border-sky-400'
+                      }`}
+                    >
+                      {isSelected && <Check className="w-3.5 h-3.5 stroke-[3.5]" />}
+                      {k}
+                    </button>
+                  );
+                })}
               </div>
               <p className="text-xs text-gray-500 mt-3">
-                고른 주제에서 뽑은 키워드예요. 이 키워드로 대본을 만들어 드려요.
+                {selectedKeywords.length > 0
+                  ? `선택한 키워드 ${selectedKeywords.length}개로 대본을 만들어요.`
+                  : '선택하지 않으면 추천 키워드를 바탕으로 대본을 만들어요.'}
               </p>
             </>
           ) : (
