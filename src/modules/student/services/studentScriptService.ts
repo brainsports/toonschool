@@ -1,6 +1,18 @@
 import { supabase } from '../../../shared/lib/supabase'
 import { geminiClient } from '../../../shared/lib/gemini'
 import { TEXT_GENERATION_MODEL, TEXT_FALLBACK_MODEL } from '../../../config/models'
+import type { CreativeStorySettings } from '../data/creativeCategories'
+
+// 창작 설정을 대본 프롬프트에 넣을 문장으로 정리. summarizeCreativeSettings 와 유사하지만
+// 프롬프트용 라벨(분야/종류/소재/주인공/배경/분위기/결말)을 쓴다.
+const formatCreativeSettingsLines = (s: CreativeStorySettings): string => {
+  const lines = [`- 분야: ${s.categoryName}`, `- 종류: ${s.genreName}`, `- 소재: ${s.materialName}`]
+  if (s.protagonistName) lines.push(`- 주인공: ${s.protagonistCustomText || s.protagonistName}`)
+  if (s.backgroundName) lines.push(`- 배경: ${s.backgroundCustomText || s.backgroundName}`)
+  if (s.moodName) lines.push(`- 분위기: ${s.moodName}`)
+  if (s.endingName) lines.push(`- 결말 방향: ${s.endingName}`)
+  return lines.join('\n')
+}
 
 export interface ScriptDialogue {
   speaker: string;
@@ -56,6 +68,8 @@ export interface ScriptGenerationRequest {
   problem: string;
   resolutionDirection: string;
   learningConnection: string;
+  // '창작' 과목일 때 전달. 교과 학습목표 대신 이 설정으로 대본을 구성한다.
+  creativeSettings?: CreativeStorySettings;
   onStatusUpdate?: (msg: string) => void;
 }
 
@@ -87,17 +101,63 @@ export const generateScript = async (
     }
   }
 
-  const prompt = `
-너는 초등학생을 위한 6컷 학습만화 대본 작가야.
-아래의 정보를 바탕으로 정해진 6컷 전개 방식에 맞춰 대본을 작성해 줘.
+  // '창작' 과목 여부. creativeSettings 가 있어야 창작 프롬프트로 분기한다.
+  const hasCreative = isCreative && !!request.creativeSettings;
 
-[학습 정보]
+  const introRole = hasCreative
+    ? '너는 초등학생을 위한 6컷 창작 만화 대본 작가야. 학생이 고른 창작 설정과 주제·키워드로 재미있는 이야기 대본을 만들어 줘.'
+    : '너는 초등학생을 위한 6컷 학습만화 대본 작가야.';
+
+  // 창작은 교과 학습목표/단원 개념을 넣지 않고 [창작 설정] 블록으로 대체.
+  const infoBlock = hasCreative
+    ? `[창작 설정]
+${formatCreativeSettingsLines(request.creativeSettings!)}
+대상 학년: ${request.gradeName}
+(이 작품은 교과 학습 단원이 아닌 자유 창작 작품입니다. 교과 학습목표나 단원 개념을 강제로 넣지 마세요.)`
+    : `[학습 정보]
 학년: ${request.gradeName}
 과목: ${request.subjectName}
-단원: ${isCreative ? '자유 주제' : `${request.majorUnitName} > ${request.middleUnitName}`}
+단원: ${request.majorUnitName} > ${request.middleUnitName}
 학습목표: ${learningObjective}
 핵심 개념: ${coreConcept}
-주의사항(오개념): ${misconception}
+주의사항(오개념): ${misconception}`;
+
+  const studentActionWord = hasCreative ? '질문, 발견, 행동, 적용' : '질문, 발견, 계산, 적용';
+  const hanaRole = hasCreative
+    ? '- 하나 선생님: 이야기의 핵심을 짚어주거나 도움을 주는 역할 (최소 2개 컷 등장)'
+    : '- 하나 선생님: 핵심 개념을 알려주거나 정리하는 역할 (최소 2개 컷 등장)';
+
+  const cutSection = hasCreative
+    ? `[고정된 6컷 전개 방식 (반드시 이 역할과 순서를 지켜라)]
+1컷 (이야기 시작): 선택한 배경과 인물, 해결할 문제가 등장
+2컷 (궁금증 발견): 이야기를 이끌어갈 구체적인 상황이나 사건 발생
+3컷 (핵심 이해): 하나 선생님이 이야기의 핵심을 쉽고 친절하게 짚어줌
+4컷 (직접 해결): 도윤 또는 서아가 이야기 속 문제를 해결하는 과정 (행동과 감정이 자연스럽게 드러나야 함)
+5컷 (확인과 바로잡기): 오해나 갈등을 확인하고 바르게 풀어감
+6컷 (이야기 완성): 사건을 해결하고 이야기의 핵심이나 교훈을 짧게 정리
+(6컷 전체가 자연스럽게 하나의 이야기로 연결되어야 합니다.)`
+    : `[고정된 6컷 전개 방식 (반드시 이 역할과 순서를 지켜라)]
+1컷 (이야기 시작): 선택한 배경과 인물, 해결할 문제가 등장
+2컷 (궁금증 발견): 학습 개념이 필요한 구체적인 상황 발생
+3컷 (개념 이해): 하나 선생님이 핵심 원리를 쉽고 정확하게 설명
+4컷 (직접 해결): 도윤 또는 서아가 이야기 속 문제를 계산하거나 해결 (교과 개념과 계산 결과는 반드시 정확해야 함)
+5컷 (확인과 바로잡기): 실수나 오해를 확인하고 올바르게 수정
+6컷 (이야기 완성): 사건을 해결하고 핵심 개념을 짧게 정리
+(6컷 전체가 자연스럽게 하나의 이야기로 연결되어야 합니다.)`;
+
+  const pointRule = hasCreative
+    ? '- 이야기 요점(learningPoint)은 이 컷에서 중요한 장면이나 감정을 최대 40자 이내로 작성하세요.'
+    : '- 학습 요점(learningPoint)은 교과 내용 검토를 위한 정보로 최대 40자 이내로 작성하세요.';
+
+  const learningGoalHint = hasCreative
+    ? '"learningGoal": "이번 대본의 이야기 주제와 교훈 (창작 설정·주제 기반)"'
+    : '"learningGoal": "이번 대본의 학습 목표 (학습 정보 기반으로 작성)"';
+
+  const prompt = `
+${introRole}
+아래의 정보를 바탕으로 정해진 6컷 전개 방식에 맞춰 대본을 작성해 줘.
+
+${infoBlock}
 
 [이야기 정보]
 이야기 제목: ${request.storyTitle}
@@ -107,35 +167,28 @@ export const generateScript = async (
 주요 사건: ${request.incident}
 해결할 문제: ${request.problem}
 해결 방향: ${request.resolutionDirection}
-학습 연결: ${request.learningConnection}
+${hasCreative ? '주제 연결' : '학습 연결'}: ${request.learningConnection}
 
 [등장인물 규칙]
 - 기본 등장인물: "하나 선생님", "도윤", "서아" (이름을 절대 임의로 바꾸지 마세요. hana, doyoon 같은 영문 ID도 사용 금지)
-- 하나 선생님: 핵심 개념을 알려주거나 정리하는 역할 (최소 2개 컷 등장)
-- 도윤: 질문, 발견, 계산, 적용에 참여하는 활발한 학생
-- 서아: 질문, 발견, 계산, 적용에 참여하는 차분한 학생
-- 보조 인물: 이야기 배경(예: 길동, 보부상 등)에 필요한 인물이 있다면 '보조 인물'로만 추가하며, 기본 등장인물 3명을 대체할 수 없음.
+${hanaRole}
+- 도윤: ${studentActionWord}에 참여하는 활발한 학생
+- 서아: ${studentActionWord}에 참여하는 차분한 학생
+- 보조 인물: 이야기 배경에 필요한 인물이 있다면 '보조 인물'로만 추가하며, 기본 등장인물 3명을 대체할 수 없음.
 - 컷당 등장인물: 한 컷에 1~2명만 등장하여 화면이 복잡해지지 않도록 함.
 
-[고정된 6컷 전개 방식 (반드시 이 역할과 순서를 지켜라)]
-1컷 (이야기 시작): 선택한 배경과 인물, 해결할 문제가 등장
-2컷 (궁금증 발견): 학습 개념이 필요한 구체적인 상황 발생
-3컷 (개념 이해): 하나 선생님이 핵심 원리를 쉽고 정확하게 설명
-4컷 (직접 해결): 도윤 또는 서아가 이야기 속 문제를 계산하거나 해결 (교과 개념과 계산 결과는 반드시 정확해야 함)
-5컷 (확인과 바로잡기): 실수나 오해를 확인하고 올바르게 수정
-6컷 (이야기 완성): 사건을 해결하고 핵심 개념을 짧게 정리
-(6컷 전체가 자연스럽게 하나의 이야기로 연결되어야 합니다.)
+${cutSection}
 
 [대사 및 장면 작성 규칙]
 - 한 컷당 대사는 2~3개로 제한합니다.
 - 대사는 초등학생이 실제로 말하는 것처럼 쉬운 표현을 사용해야 합니다. 너무 길어지면 대사를 여러 개로 나누거나 다음 컷으로 넘기세요.
 - 장면 설명(scene)은 그림 생성을 위한 구체적인 문장(인물, 장소, 행동, 표정 등)으로 최대 60자 이내로 작성하세요.
-- 학습 요점(learningPoint)은 교과 내용 검토를 위한 정보로 최대 40자 이내로 작성하세요.
+${pointRule}
 
 반환 형식 예시 (정확히 아래 JSON 구조를 지켜야 함. 마크다운 코드블록 등은 제외하고 순수 JSON 객체만 반환할 것):
 {
   "title": "${request.storyTitle}",
-  "learningGoal": "이번 대본의 학습 목표 (학습 정보 기반으로 작성)",
+  ${learningGoalHint},
   "cuts": [
     {
       "cutNumber": 1,
@@ -145,7 +198,7 @@ export const generateScript = async (
       "dialogues": [
         { "speaker": "등장인물 이름", "text": "실제 대사" }
       ],
-      "learningPoint": "이 컷의 학습 요점"
+      "learningPoint": "이 컷의 요점"
     }
     // ... 6컷까지 정확히 작성
   ]
@@ -251,34 +304,64 @@ export const generateCoverContent = async (
   script: GeneratedComicScript,
   request: ScriptGenerationRequest
 ): Promise<{ keyConcepts: CoverKeyConcept[], coverDialogue: CoverDialogue }> => {
-  const prompt = `중단원 학습 목표와 완성된 6컷 대본을 바탕으로 앞표지에 사용할 핵심 개념 3가지와 표지 대화 3개를 작성한다.
+  const hasCreative = request.middleUnitId === 'creative-free' && !!request.creativeSettings;
 
-[학습 정보]
+  const conceptIntro = hasCreative
+    ? `완성된 6컷 창작 만화 대본을 바탕으로 앞표지에 사용할 '이야기 핵심' 3가지와 표지 대화 3개를 작성한다.`
+    : `중단원 학습 목표와 완성된 6컷 대본을 바탕으로 앞표지에 사용할 핵심 개념 3가지와 표지 대화 3개를 작성한다.`;
+
+  const infoBlock = hasCreative
+    ? `[창작 설정]
+${formatCreativeSettingsLines(request.creativeSettings!)}
+- 이야기 주제/교훈: ${script.learningGoal}`
+    : `[학습 정보]
 - 학년/과목: ${request.gradeName} ${request.subjectName}
 - 단원: ${request.majorUnitName} > ${request.middleUnitName}
-- 중단원 학습 목표: ${script.learningGoal}
+- 중단원 학습 목표: ${script.learningGoal}`;
 
-[대본 정보]
-- 주제: ${request.storyTitle}
-- 컷별 학습 요점:
-${script.cuts.map(c => `  ${c.cutNumber}컷: ${c.learningPoint}`).join('\n')}
-
-[핵심 개념 추출 규칙]
+  const conceptRule = hasCreative
+    ? `[이야기 핵심 추출 규칙]
+이야기 핵심은 이야기에서 꼭 짚고 가면 좋은 점이어야 한다. (교과 지식이 아님)
+이야기 핵심은 정확히 3개다.
+1. 주요 인물이나 사건
+2. 핵심 갈등이나 전개
+3. 결말이나 얻은 교훈`
+    : `[핵심 개념 추출 규칙]
 핵심 개념은 이야기 줄거리가 아니라 교과에서 꼭 알아야 할 지식이어야 한다.
 핵심 개념은 정확히 3개다.
 1. 핵심 개념 또는 용어
 2. 원리 또는 방법
-3. 적용 또는 문제 해결
+3. 적용 또는 문제 해결`;
 
-각 핵심 개념 제목은 10자 이내다.
-각 설명은 30자 이내의 한 문장이다.
+  const dialogueRule = hasCreative
+    ? `[표지 대화 작성 규칙]
+표지 대화는 하나 선생님, 도윤, 서아에게 한 문장씩 작성한다.
 
-[표지 대화 작성 규칙]
+하나 선생님은 이야기 주제에 관한 호기심 질문을 한다.
+도윤은 이야기의 핵심이나 상황을 짚어 설명한다.
+서아는 자신의 생각이나 느낌을 말한다.`
+    : `[표지 대화 작성 규칙]
 표지 대화는 하나 선생님, 도윤, 서아에게 한 문장씩 작성한다.
 
 하나 선생님은 학습 주제에 관한 호기심 질문을 한다.
 도윤은 핵심 개념이나 원리를 설명한다.
-서아는 적용 방법이나 자신의 생각을 말한다.
+서아는 적용 방법이나 자신의 생각을 말한다.`;
+
+  const prompt = `${conceptIntro}
+
+${infoBlock}
+
+[대본 정보]
+- 주제: ${request.storyTitle}
+- 컷별 요점:
+${script.cuts.map(c => `  ${c.cutNumber}컷: ${c.learningPoint}`).join('\n')}
+
+${conceptRule}
+
+각 핵심 제목은 10자 이내다.
+각 설명은 30자 이내의 한 문장이다.
+
+${dialogueRule}
 
 세 문장은 질문과 답으로 자연스럽게 이어져야 한다.
 각 문장은 28자 이내다.
@@ -288,14 +371,14 @@ ${script.cuts.map(c => `  ${c.cutNumber}컷: ${c.learningPoint}`).join('\n')}
 JSON 이외의 설명은 출력하지 않는다. 반드시 아래 JSON 구조만 반환한다:
 {
   "keyConcepts": [
-    { "title": "개념 제목", "description": "설명" },
-    { "title": "원리 제목", "description": "설명" },
-    { "title": "적용 제목", "description": "설명" }
+    { "title": "제목", "description": "설명" },
+    { "title": "제목", "description": "설명" },
+    { "title": "제목", "description": "설명" }
   ],
   "coverDialogue": {
     "hana": "질문",
-    "doyoon": "개념이나 원리 답",
-    "seoa": "적용이나 생각 답"
+    "doyoon": "핵심이나 상황 답",
+    "seoa": "생각이나 느낌 답"
   }
 }
 `;

@@ -7,6 +7,9 @@ import StoryInputCard from '../components/topic/StoryInputCard'
 import AiRecommendationCard from '../components/topic/AiRecommendationCard'
 
 import KeywordSelectionCard from '../components/topic/KeywordSelectionCard'
+import CreativeTopicWorkspace from '../components/topic/CreativeTopicWorkspace'
+import type { CreativeTopicSelectionData } from '../components/topic/CreativeTopicWorkspace'
+import type { CreativeStorySettings } from '../data/creativeCategories'
 
 import type { StudentUnitSelection } from '../types/studentCurriculum'
 import type { TopicRecommendation, TopicGenerationState, KeywordItem, CurriculumContext } from '../types/studentTopic'
@@ -25,6 +28,8 @@ export default function StudentTopicMakerPage() {
   const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null)
   const [extraRequest, setExtraRequest] = useState('')
   const [selection, setSelection] = useState<StudentUnitSelection | null>(null)
+  // '창작' 과목 설정(분야/세부설정/주인공/배경/분위기/결말). location.state 또는 projectStorage 에서 복원.
+  const [creativeSettings, setCreativeSettings] = useState<CreativeStorySettings | null>(null)
 
   const INITIAL_TOPIC_VISIBLE_COUNT = 2
   const MAX_RECOMMENDED_TOPICS = 10
@@ -83,7 +88,7 @@ export default function StudentTopicMakerPage() {
   // 1. 단원 선택 정보 가져오기 (projectStorage 우선, 그다음 location.state, 마지막 localStorage)
   useEffect(() => {
     let currentSelection: StudentUnitSelection | null = null;
-    
+
     if (projectId) {
       const storedUnit = projectStorage.loadUnit<StudentUnitSelection>(projectId);
       if (storedUnit) {
@@ -94,7 +99,7 @@ export default function StudentTopicMakerPage() {
     if (!currentSelection && location.state?.selection) {
       currentSelection = location.state.selection as StudentUnitSelection;
     }
-    
+
     if (!currentSelection) {
       const stored = localStorage.getItem('studentUnitSelection')
       if (stored) {
@@ -105,8 +110,19 @@ export default function StudentTopicMakerPage() {
         }
       }
     }
-    
+
     setSelection(currentSelection || null)
+
+    // '창작' 설정 복원: location.state 우선, projectStorage(loadCreativeSettings) 차선.
+    const stateSettings = (location.state as any)?.creativeSettings as CreativeStorySettings | undefined
+    if (stateSettings && stateSettings.categoryId) {
+      setCreativeSettings(stateSettings)
+    } else if (projectId && currentSelection?.subjectName === '창작') {
+      const stored = projectStorage.loadCreativeSettings<CreativeStorySettings>(projectId)
+      setCreativeSettings(stored || null)
+    } else {
+      setCreativeSettings(null)
+    }
   }, [location.state, projectId])
 
   // 1-1. 단원 정보로 교과 컨텍스트 가져오기
@@ -115,6 +131,12 @@ export default function StudentTopicMakerPage() {
   const expectedCtxKey = selection ? `${selection.majorUnitId ?? ''}|${selection.middleUnitId ?? ''}` : ''
   useEffect(() => {
     if (!selection) return
+    // '창작'은 교과 단원 기반이 아니라 creativeSettings 기반 흐름이므로 컨텍스트 조회를 건너뛴다.
+    if (selection.subjectName === '창작') {
+      setCurriculumContext(undefined)
+      setLoadedCtxKey('')
+      return
+    }
     const key = `${selection.majorUnitId ?? ''}|${selection.middleUnitId ?? ''}`
     fetchCurriculumContext(selection.majorUnitId, selection.middleUnitId)
       .then(ctx => {
@@ -190,6 +212,23 @@ export default function StudentTopicMakerPage() {
   }, [currentUnitKey])
 
   const canProceed = selectedTopicId !== null
+
+  // '창작' 과목 여부. creativeSettings 가 있을 때만 창작 흐름으로 분기한다.
+  const isCreative = selection?.subjectName === '창작' && !!creativeSettings
+
+  // '창작' 주제 만들기 → 대본 만들기 진행.
+  // CreativeTopicWorkspace 에서 주제 선택·키워드 생성이 끝난 데이터를 넘겨받아
+  // 기존 projectStorage.saveTopic 구조로 저장하고 /student/script 로 이동한다.
+  const handleProceedCreativeTopic = (data: CreativeTopicSelectionData) => {
+    const success = projectStorage.saveTopic(projectId, data)
+    if (!success) {
+      alert('저장에 실패했습니다. 저장 공간을 확인해 주세요.')
+      return
+    }
+    showToast('저장되었습니다')
+    localStorage.setItem('studentSelectedTopic', JSON.stringify(data))
+    navigate('/student/script', { state: { ...data, projectId } })
+  }
 
   // 처음 AI 모드 진입 시 자동 키워드 생성
   // 교과 컨텍스트 로드가 끝난 후(loadedCtxKey === expectedCtxKey) 1회만 실행.
@@ -470,7 +509,9 @@ export default function StudentTopicMakerPage() {
     navigate('/student/script', { state: { ...fullSelectionData, projectId } })
   }
 
-  const actionButtons = (
+  // '창작'은 CreativeTopicWorkspace 가 자체 진행 버튼(대본 만들기)을 가지므로
+  // 상단 actionButtons 는 비운다.
+  const actionButtons = isCreative ? undefined : (
     <button
       disabled={!canProceed || !selection}
       onClick={handleProceedToComic}
@@ -481,17 +522,26 @@ export default function StudentTopicMakerPage() {
   )
 
   return (
-    <StudentWorkspaceLayout 
-      currentStep="topic" 
+    <StudentWorkspaceLayout
+      currentStep="topic"
       bgVariant="pastel"
-      title="주제 만들기"
-      subtitle="어떤 이야기를 만들까요?"
+      title={isCreative ? '창작 주제 만들기' : '주제 만들기'}
+      subtitle={isCreative ? '고른 설정으로 주제를 만들어 보세요.' : '어떤 이야기를 만들까요?'}
       onBack={() => navigate('/student/select-unit', { state: { projectId } })}
       actionButtons={actionButtons}
     >
       <div className="flex-1 w-full h-full overflow-y-auto student-scrollbar">
+        {isCreative && selection && creativeSettings ? (
+          <CreativeTopicWorkspace
+            projectId={projectId}
+            selection={selection}
+            creativeSettings={creativeSettings}
+            onPrev={() => navigate('/student/select-unit', { state: { projectId } })}
+            onProceed={handleProceedCreativeTopic}
+          />
+        ) : (
         <div className="flex flex-col gap-8 animate-fade-in w-full pt-8 px-4 max-w-[1200px] mx-auto pb-12 relative">
-          
+
           {/* 단원 정보 배지 */}
         <TopicStepTitle selection={selection} />
 
@@ -698,6 +748,7 @@ export default function StudentTopicMakerPage() {
             )}
           </div>
       </div>
+        )}
       </div>
     </StudentWorkspaceLayout>
   )
