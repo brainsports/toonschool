@@ -1007,7 +1007,11 @@ export default function StudentComicFullViewPage() {
                 />
               )}
               {activeTool === 'bubble' && (
-                <ComicSpeechBubblePanel onAddElement={handleAddElement} />
+                <ComicSpeechBubblePanel
+                  onAddElement={handleAddElement}
+                  selectedElement={currentCutData?.elements.find((e) => e.id === selectedElementId) || null}
+                  onUpdateElement={handleUpdateElement}
+                />
               )}
               {activeTool === 'layer' && currentCutData && (
                 <ComicLayerPanel 

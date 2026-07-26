@@ -94,6 +94,15 @@ export const loadComicMasterData = (topicId: string): ComicMasterData | null => 
 // New V2 Comic Cut Editor Storage
 // ----------------------------------------------------------------------
 
+// 말풍선 말꼬리 속성. 모든 필드 선택 — 없으면 기본값(아래쪽 중앙)으로 렌더링(기존 데이터 호환).
+export interface BubbleTail {
+  direction: 'down' | 'up' | 'left' | 'right'; // 말꼬리가 가리키는 방향
+  length?: number;   // 본체에서 끝점까지 길이(px). 기본 40
+  width?: number;    // 말꼬리 폭(px). 기본 36
+  offset?: number;   // -1~1, 본체 테두리상 시작 위치 오프셋(0=중앙)
+  visible?: boolean; // 말꼬리 표시 여부. 기본 true
+}
+
 export interface ComicCutElement {
   id: string;
   type: "character" | "speechBubble" | "image" | "text" | "shape";
@@ -124,6 +133,8 @@ export interface ComicCutElement {
     textColor?: string;
     fontSize?: number;
   };
+  // 말풍선 말꼬리(speechBubble 전용). 없으면 기본값(아래쪽 중앙).
+  tail?: BubbleTail;
   [key: string]: any;
 }
 

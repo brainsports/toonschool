@@ -46,6 +46,7 @@ export default function CreativeSetupWorkspace({ projectId, initial, onComplete,
         materialName: '',
         endingId: 'ai',
         endingName: CREATIVE_ENDINGS.find((e) => e.id === 'ai')?.label,
+        characterMode: 'standard',
       }
   );
   // 직접 입력 모드 필드
@@ -281,6 +282,52 @@ export default function CreativeSetupWorkspace({ projectId, initial, onComplete,
                 );
               })}
             </div>
+          </div>
+
+          {/* 캐릭터 방식 (표준 / 자유) */}
+          <div>
+            <div className="text-sm font-semibold text-[#374151] mb-1">캐릭터 방식</div>
+            <p className="text-xs text-gray-500 mb-2">만화에 어떤 캐릭터를 쓸지 정해 보세요.</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setSettings((s) => ({ ...s, characterMode: 'standard' }))}
+                aria-pressed={settings.characterMode !== 'free'}
+                className={`text-left rounded-xl p-3 border-2 transition-all ${
+                  settings.characterMode !== 'free'
+                    ? 'border-purple-400 bg-purple-50 ring-2 ring-purple-200'
+                    : 'border-purple-100 bg-white hover:border-purple-300'
+                }`}
+              >
+                <div className="font-jua text-sm text-[#303442]">표준 캐릭터로 만들기</div>
+                <div className="text-xs text-gray-500 mt-0.5">도윤, 서아, 하나 선생님이 등장해요. 빠르고 일관돼요.</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setSettings((s) => ({ ...s, characterMode: 'free' }))}
+                aria-pressed={settings.characterMode === 'free'}
+                className={`text-left rounded-xl p-3 border-2 transition-all ${
+                  settings.characterMode === 'free'
+                    ? 'border-purple-400 bg-purple-50 ring-2 ring-purple-200'
+                    : 'border-purple-100 bg-white hover:border-purple-300'
+                }`}
+              >
+                <div className="font-jua text-sm text-[#303442]">이야기에 맞는 자유 캐릭터로 만들기</div>
+                <div className="text-xs text-gray-500 mt-0.5">주인공·분위기에 맞춘 자유 캐릭터가 대본에 반영돼요.</div>
+              </button>
+            </div>
+            {settings.characterMode === 'free' && (
+              <div className="mt-2 animate-fade-in">
+                <input
+                  className="input-game-soft"
+                  placeholder="추가로 넣고 싶은 캐릭터 모습을 적어 보세요 (선택). 예: 파란 로브를 입은 마법사"
+                  maxLength={60}
+                  value={settings.customCharacterDescription || ''}
+                  onChange={(e) => setSettings((s) => ({ ...s, customCharacterDescription: e.target.value }))}
+                />
+                <p className="text-[11px] text-amber-600 mt-1">※ 지금은 대본·표지에 반영됩니다. 만화 칸의 캐릭터 그림은 아직 표준 캐릭터로 배치돼요.</p>
+              </div>
+            )}
           </div>
         </section>
       )}
