@@ -106,8 +106,12 @@ export default function StudentUnitSelectPage() {
       }
       setSubjectLoadState('loading')
       const data = await getSubjectsByGradeAndSemester(selectedGrade.value, selectedSemester.value)
-      
-      setSubjects(data)
+      // '창작' 과목은 자유 주제(단원 데이터 없음) — DB subjects 행이 없어도 항상 노출.
+      const withCreative = data.some((s) => s.name === '창작')
+        ? data
+        : [...data, { id: 'creative', name: '창작', code: 'CREATIVE' }]
+
+      setSubjects(withCreative)
       setSubjectLoadState('success')
     }
     fetchSubjects()
