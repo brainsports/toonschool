@@ -67,6 +67,8 @@ export const getBackCoverKey = (projectId: string) => `toonschool:back-cover:${p
 // 창작 과목 AI 표지/뒤표지 상세 상태(유형·추가요청·생성이력 등). 이어서 만들기 복원용.
 export const getCreationFrontCoverKey = (projectId: string) => `toonschool:creation-front-cover:${projectId}`;
 export const getCreationBackCoverKey = (projectId: string) => `toonschool:creation-back-cover:${projectId}`;
+// 창작 과목 설정(분야/세부설정/주인공/배경/분위기/결말). 이어서 만들기 복원용.
+export const getCreativeSettingsKey = (projectId: string) => `toonschool:creative-settings:${projectId}`;
 
 export const projectStorage = {
   // 1. 단원 선택
@@ -106,4 +108,7 @@ export const projectStorage = {
   loadCreationFrontCover: <T>(projectId: string): T | null => loadFromStorage<T>(getCreationFrontCoverKey(projectId)),
   saveCreationBackCover: <T>(projectId: string, data: T) => saveToStorage(getCreationBackCoverKey(projectId), data),
   loadCreationBackCover: <T>(projectId: string): T | null => loadFromStorage<T>(getCreationBackCoverKey(projectId)),
+  // 창작 과목 설정(분야/세부설정/주인공/배경/분위기/결말)
+  saveCreativeSettings: <T>(projectId: string, data: T) => saveToStorage(getCreativeSettingsKey(projectId), data),
+  loadCreativeSettings: <T>(projectId: string): T | null => loadFromStorage<T>(getCreativeSettingsKey(projectId)),
 };

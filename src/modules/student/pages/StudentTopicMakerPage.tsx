@@ -193,11 +193,14 @@ export default function StudentTopicMakerPage() {
 
   // 처음 AI 모드 진입 시 자동 키워드 생성
   // 교과 컨텍스트 로드가 끝난 후(loadedCtxKey === expectedCtxKey) 1회만 실행.
+  // '창작'은 creativeSettings 기반 흐름(분야→세부설정→주제→키워드)을 따르므로
+  // 이 교과용 자동 키워드 게이트에서 제외한다.
   useEffect(() => {
     if (
       creationMode === 'ai' &&
       aiStep === 'keyword' &&
       selection &&
+      selection.subjectName !== '창작' &&
       expectedCtxKey &&
       loadedCtxKey === expectedCtxKey &&
       recommendedKeywords.length === 0 &&

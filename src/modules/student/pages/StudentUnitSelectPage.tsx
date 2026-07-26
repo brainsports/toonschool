@@ -25,6 +25,8 @@ import type { UnitSetting } from '../../admin-lms/types'
 
 import UnitStep1Selection from '../components/unit/UnitStep1Selection'
 import UnitStep2Selection from '../components/unit/UnitStep2Selection'
+import CreativeSetupWorkspace from '../components/unit/CreativeSetupWorkspace'
+import type { CreativeStorySettings } from '../data/creativeCategories'
 
 export default function StudentUnitSelectPage() {
   const navigate = useNavigate()
@@ -288,7 +290,38 @@ export default function StudentUnitSelectPage() {
     navigate('/student/topic', { state: { selection, projectId: currentProjectId } })
   }
 
-  const actionButtons = step === 1 ? (
+  // '창작'은 단원 선택 대신 CreativeSetupWorkspace 에서 분야·세부설정을 받아 주제 만들기로 이동.
+  // 이전 단원/학습목표 기반이 아니라 creativeSettings 기반 흐름으로 전환.
+  const handleProceedCreative = (creativeSettings: CreativeStorySettings) => {
+    const currentProjectId = projectId || uuidv4()
+    if (!projectId) setProjectId(currentProjectId)
+    const selection: StudentUnitSelection = {
+      gradeValue: selectedGrade?.value || null,
+      gradeName: selectedGrade?.label || null,
+      semesterValue: selectedSemester?.value || null,
+      semesterName: selectedSemester?.label || null,
+      subjectId: selectedSubject?.id || null,
+      subjectName: selectedSubject?.name || null,
+      majorUnitId: 'creative-free',
+      majorUnitName: '자유 주제',
+      middleUnitId: 'creative-free',
+      middleUnitName: '자유 주제',
+    }
+    const success = projectStorage.saveUnit(currentProjectId, selection)
+    if (!success) {
+      alert('저장에 실패했습니다. 저장 공간을 확인해 주세요.')
+      return
+    }
+    projectStorage.saveCreativeSettings(currentProjectId, creativeSettings)
+    showToast('저장되었습니다')
+    localStorage.setItem('studentUnitSelection', JSON.stringify(selection))
+    navigate('/student/topic', { state: { selection, projectId: currentProjectId, creativeSettings } })
+  }
+
+  // '창작'은 CreativeSetupWorkspace 내부 진행 버튼이 주제 만들기를 처리하므로 상단 액션 버튼 숨김.
+  const actionButtons = (isCreativeSubject && step === 2)
+    ? null
+    : step === 1 ? (
     <button
       disabled={!isStep1Complete}
       onClick={handleNextStep}
@@ -307,17 +340,17 @@ export default function StudentUnitSelectPage() {
   )
 
   return (
-    <StudentWorkspaceLayout 
-      currentStep="unit" 
+    <StudentWorkspaceLayout
+      currentStep="unit"
       bgVariant="pastel"
-      title="어떤 모험을 떠날까요?"
-      subtitle={step === 1 ? '1단계: 학년·학기 고르기' : '2단계: 과목과 단원 고르기'}
+      title={isCreativeSubject && step === 2 ? '어떤 이야기를 만들어 볼까요?' : '어떤 모험을 떠날까요?'}
+      subtitle={step === 1 ? '1단계: 학년·학기 고르기' : isCreativeSubject ? '2단계: 창작 분야와 이야기 설정 고르기' : '2단계: 과목과 단원 고르기'}
       onBack={step === 2 ? handlePrevStep : () => navigate('/student/dashboard')}
-      actionButtons={actionButtons}
+      actionButtons={actionButtons ?? undefined}
     >
       <div className="flex-1 w-full h-full overflow-y-auto student-scrollbar">
-        <div className="w-full pt-8 pb-12 px-4 max-w-[1200px] mx-auto">
-          {step === 1 ? (
+        {step === 1 ? (
+          <div className="w-full pt-8 pb-12 px-4 max-w-[1200px] mx-auto">
             <UnitStep1Selection
               grades={grades}
               semesters={semesters}
@@ -329,7 +362,17 @@ export default function StudentUnitSelectPage() {
               onGradeSelect={handleGradeSelect}
               onSemesterSelect={handleSemesterSelect}
             />
-          ) : (
+          </div>
+        ) : isCreativeSubject ? (
+          <CreativeSetupWorkspace
+            projectId={projectId}
+            gradeName={selectedGrade?.label}
+            initial={projectId ? projectStorage.loadCreativeSettings<CreativeStorySettings>(projectId) : null}
+            onComplete={handleProceedCreative}
+            onBack={handlePrevStep}
+          />
+        ) : (
+          <div className="w-full pt-8 pb-12 px-4 max-w-[1200px] mx-auto">
             <UnitStep2Selection
               selectedGrade={selectedGrade}
               selectedSemester={selectedSemester}
@@ -348,8 +391,8 @@ export default function StudentUnitSelectPage() {
               onMajorUnitSelect={handleMajorUnitSelect}
               onMiddleUnitSelect={handleMiddleUnitSelect}
             />
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </StudentWorkspaceLayout>
   )
