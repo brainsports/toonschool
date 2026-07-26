@@ -282,6 +282,10 @@ export const MINDMAP_LIMITS = {
   maxDepth: 4,
   maxTitleLength: 30,
   maxDescriptionLength: 200,
+  // 4차 가지(detail 노드, 가장 깊은 설명 카드) 전용 길이 규칙.
+  // 학생이 읽기 부담 없도록 한 문장으로 짧게. 50자 미만(49자 이하) 강제.
+  minDetailDescriptionLength: 10,
+  maxDetailDescriptionLength: 49,
 } as const;
 
 /** 자동 배치 기준(좌·우 수평 4단계 트리). position 은 노드 중심점.

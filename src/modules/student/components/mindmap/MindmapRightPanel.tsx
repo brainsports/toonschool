@@ -3,7 +3,7 @@
  * 선택이 없으면 작품 정보와 사용 안내를 표시.
  */
 import type { MindmapNode, MindmapProject } from '../../types/mindmap';
-import { resolveColor, getTheme, BRANCH_COLOR_KEYS } from '../../data/mindmapConfig';
+import { resolveColor, getTheme, BRANCH_COLOR_KEYS, MINDMAP_LIMITS } from '../../data/mindmapConfig';
 import { clampDescription, clampTitle, collectSubtree, getChildren, getNode } from '../../utils/mindmapEngine';
 import type { AiPartialAction } from '../../types/mindmapAi';
 import { Trash2, Copy, Plus, Sparkles, ChevronDown } from 'lucide-react';
@@ -100,16 +100,42 @@ export default function MindmapRightPanel(props: MindmapRightPanelProps) {
         className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-pink-300"
       />
 
-      <label className="block text-xs font-bold text-slate-500 mb-1">짧은 설명</label>
-      <textarea
-        value={selectedNode.description ?? ''}
-        maxLength={200}
-        rows={3}
-        onChange={(e) => onUpdateNode(selectedNode.id, { description: clampDescription(e.target.value) })}
-        placeholder="쉽게 한 문장으로 적어 보세요."
-        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm mb-1 focus:outline-none focus:ring-2 focus:ring-pink-300 resize-none"
-      />
-      <div className="text-[10px] text-slate-400 text-right mb-3">{(selectedNode.description ?? '').length}/200</div>
+      {/* 설명 입력 — 4차(detail) 노드만 49자 이하(10자 이상) 규칙 적용. 1~3차는 기존 200자 유지. */}
+      {(() => {
+        const isDetail = selectedNode.type === 'detail';
+        const descMax = isDetail ? MINDMAP_LIMITS.maxDetailDescriptionLength : MINDMAP_LIMITS.maxDescriptionLength;
+        const descMin = isDetail ? MINDMAP_LIMITS.minDetailDescriptionLength : 0;
+        const descValue = selectedNode.description ?? '';
+        const invalid = isDetail && (descValue.length < descMin || descValue.length > descMax);
+        return (
+          <>
+            <label className="block text-xs font-bold text-slate-500 mb-1">
+              {isDetail ? '설명(한 문장, 49자 이하)' : '짧은 설명'}
+            </label>
+            <textarea
+              value={descValue}
+              maxLength={descMax}
+              rows={3}
+              onChange={(e) => onUpdateNode(selectedNode.id, {
+                // 4차(detail)는 49자 입력 제한(maxLength)에 맡기고 자동 절삭하지 않아
+                // 기존 긴 데이터가 깎이지 않도록 한다. 1~3차는 기존 clamp(200) 유지.
+                description: isDetail ? e.target.value : clampDescription(e.target.value),
+              })}
+              placeholder={isDetail ? '핵심만 한 문장으로 적어 보세요.' : '쉽게 한 문장으로 적어 보세요.'}
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm mb-1 focus:outline-none focus:ring-2 focus:ring-pink-300 resize-none"
+            />
+            <div className="flex items-center justify-between mb-1">
+              {isDetail && descValue.length < descMin ? (
+                <span className="text-[10px] text-rose-500">설명을 {descMin}자 이상 작성해 주세요.</span>
+              ) : isDetail && descValue.length > descMax ? (
+                <span className="text-[10px] text-rose-500">설명은 {descMax}자까지 작성할 수 있어요.</span>
+              ) : <span />}
+              <span className={`text-[10px] ${invalid ? 'text-rose-500 font-bold' : 'text-slate-400'}`}>{descValue.length}/{descMax}</span>
+            </div>
+            <div className="mb-3" />
+          </>
+        );
+      })()}
 
       {/* 색상 */}
       {!isCentral && (

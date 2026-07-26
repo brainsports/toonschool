@@ -21,7 +21,7 @@ const MIN_BRANCHES = 4
 const MAX_BRANCHES = 6
 const MIN_LEAVES = 2
 const MAX_LEAVES = 4
-const DESC_MAX = 120
+const DESC_MAX = 49
 const TOPICS_MIN = 3
 const TOPICS_MAX = 5
 
@@ -178,7 +178,7 @@ function validateBranches(raw: unknown): { branches: ValidatedBranch[]; centralT
         const dd = d as Record<string, unknown>
         const dtitle = cleanStr(dd.title, 30) || ctitle
         const ddesc = cleanStr(dd.description, DESC_MAX)
-        if (!ddesc || ddesc.length < 8 || isBadText(ddesc)) continue
+        if (!ddesc || ddesc.length < 10 || isBadText(ddesc)) continue
         details.push({ title: dtitle, description: ddesc, icon: cleanStr(dd.icon, 20) || undefined })
       }
       children.push({ title: ctitle, icon: cleanStr(co.icon, 20) || undefined, details })
@@ -251,13 +251,13 @@ function fullPrompt(ctx: {
 [구조 규칙 — 반드시 지킨다. 4단계: 중심 → 1차 → 2차 → 3차]
 - 1차 가지(branch): 정확히 ${MIN_BRANCHES}~${MAX_BRANCHES}개. 중심 주제의 서로 다른 핵심 영역. title 4~15자.
 - 각 1차 아래 2차 가지(children): ${MIN_LEAVES}~${MAX_LEAVES}개. 짧은 세부 주제. title 4~16자. (2차에는 description 없음)
-- 각 2차 아래 3차 설명 카드(details): 1~${MAX_DETAILS}개. title 4~16자 + description(한글 50~120자, 2~3줄, 자세하고 쉬운 온전한 문장). 정의·원리·특징·과정·생활 예시 중 어울리는 것 구체적 설명. 어려운 용어는 바로 쉬운 말로 풀어쓴다. 절대 빈 값/“내용 없음”/임시 문구/같은 문장 반복 금지. "${ctx.centralTopic}" 단원에 맞는 사실만.
+- 각 2차 아래 3차 설명 카드(details): 1~${MAX_DETAILS}개. title 4~16자 + description(초등학생이 쉽게 이해할 수 있는 한 문장, 20~40자 권장, 반드시 49자 이하). 핵심 내용만 간단히 설명. 같은 말 반복 금지, 어려운 전문용어 피함, 제목을 그대로 반복하지 않음, 문장을 중간에 자르지 않음. 정의·원리·특징·과정·생활 예시 중 어울리는 것을 한 문장으로. 어려운 용어는 바로 쉬운 말로 풀어쓴다. 절대 빈 값/"내용 없음"/임시 문구/같은 문장 반복 금지. "${ctx.centralTopic}" 단원에 맞는 사실만.
 
 [말투] 초등학생이 혼자 읽어도 이해되는 친절한 말투. 틀리거나 불확실한 사실은 만들지 않는다.
 [icon] 다음 키 중 하나만: idea,sun,water,air,soil,seed,sprout,leaf,flower,fruit,tree,root,star,heart,book,pencil,question,search,lightbulb,home,friends,clock,weather,music,art,number,letter,map,globe,animal,bird,fish,rocket,cloud,rain,fire,snow,magnet,gear,thermometer. 알맞지 않으면 생략.
 
 반드시 다음 JSON 형태로만 응답한다(JSON 외 설명·코드블록 금지):
-{"centralTopic":"${ctx.centralTopic}","branches":[{"title":"1차가지","icon":"leaf","children":[{"title":"2차가지","icon":"search","details":[{"title":"설명제목","icon":"lightbulb","description":"50~120자의 자세하고 쉬운 설명"}]}]}]}`
+{"centralTopic":"${ctx.centralTopic}","branches":[{"title":"1차가지","icon":"leaf","children":[{"title":"2차가지","icon":"search","details":[{"title":"설명제목","icon":"lightbulb","description":"20~40자의 핵심 설명(49자 이하)"}]}]}]}`
 }
 
 function topicsPrompt(ctx: {
@@ -297,7 +297,7 @@ function partialPrompt(req: PartialReq, ctx: PartialCtx): string {
 선택한 노드 설명: "${req.nodeDescription ?? ''}"
 요청: ${act}
 
-조건: 쉬운 온전한 문장, 틀린 사실 금지, 친절한 말투. icon 키는 idea,lightbulb,star,search,heart,home,book,question,leaf,sprout,fruit,sun,water 중에서만.
+조건: 쉬운 온전한 문장, 틀린 사실 금지, 친절한 말투. suggestedDescription와 children의 description은 초등학생이 쉽게 이해하는 한 문장으로 간결하게 작성하고 반드시 49자 이하로 한다. icon 키는 idea,lightbulb,star,search,heart,home,book,question,leaf,sprout,fruit,sun,water 중에서만.
 반드시 다음 JSON 형태로만 응답한다(JSON 이외 금지):
 {"children":[{"title":"","description":"","icon":""}],"suggestedTitle":"","suggestedDescription":""}`
 }

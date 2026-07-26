@@ -9,7 +9,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Undo2, Redo2, Wand2, LayoutGrid, Eye, CheckCircle2, Share2, Image, FileType, Printer, HelpCircle, Plus, Sparkles, Palette, BookMarked } from 'lucide-react';
 import type { MindmapNode, MindmapProject } from '../types/mindmap';
 import type { AiPartialAction } from '../types/mindmapAi';
-import { MINDMAP_THEMES, MINDMAP_ICONS, getTheme } from '../data/mindmapConfig';
+import { MINDMAP_THEMES, MINDMAP_ICONS, getTheme, MINDMAP_LIMITS } from '../data/mindmapConfig';
 import {
   addNode, autoLayout, checkCompletion, clampDescription, clampTitle, deleteNode as engineDelete,
   filterEmptyNodes, getNode, newId, reparent,
@@ -17,6 +17,7 @@ import {
 import {
   enableShare, getMindmap, revokeShare, saveMindmap,
   generateMindmapFull, generateMindmapPartial, aiResponseToNodes, validateAiFull,
+  cleanDetailDescription, hasOverlongDetails,
 } from '../services/mindmapService';
 import { exportPng, exportPdf, printMindmap, makeThumbnailDataUrl } from '../utils/mindmapExport';
 import MindmapCanvasHost, { type MindmapCanvasHandle } from '../components/mindmap/MindmapCanvasHost';
@@ -293,12 +294,19 @@ export default function StudentMindmapEditorPage() {
     setAiLoading(true); setAiMsg(null);
     try {
       const central = project.nodes.find((n) => n.type === 'central');
-      const res = await generateMindmapFull({
+      const params = {
         grade: project.grade, subject: project.subject, semester: project.semester,
         unitTitle: project.unitTitle, centralTopic: project.centralTopic || project.unitTitle,
-      });
+      };
+      let res = await generateMindmapFull(params);
       if (!res.data) { setAiMsg(res.message || 'AI 가 만들지 못했어요. 다시 시도해 주세요.'); return; }
-      // 품질 검증: 1차 4~6, 각 2차 ≥2, 설명 50~200자. 미달이면 덮어쓰지 않고 재시도 안내.
+      // 안전망: 4차(detail) 설명이 49자를 넘으면 1회 재요청. 그래도 길면 aiResponseToNodes 의
+      // cleanDetailDescription 이 문장 단위로 자연 축약(중간 절단/말줄임표 남용 금지).
+      if (hasOverlongDetails(res.data)) {
+        const retry = await generateMindmapFull(params);
+        if (retry.data) res = retry;
+      }
+      // 품질 검증: 1차 4~6, 각 2차 ≥2, 4차 설명 10자 이상. 미달이면 덮어쓰지 않고 재시도 안내.
       const report = validateAiFull(res.data);
       if (!report.ok) {
         setAiMsg(`AI 결과가 조금 부족해요(${report.issues[0]}). 다시 시도해 주세요.`);
@@ -340,11 +348,18 @@ export default function StudentMindmapEditorPage() {
       commit((p) => {
         let nodes = p.nodes;
         if (res.data!.suggestedDescription) {
-          nodes = nodes.map((n) => n.id === node.id ? { ...n, description: clampDescription(res.data!.suggestedDescription!) } : n);
+          // 선택 노드가 4차(detail)면 49자 이하 정제, 그 외는 기존 200자 clamp.
+          const sd = node.type === 'detail'
+            ? cleanDetailDescription(res.data!.suggestedDescription)
+            : clampDescription(res.data!.suggestedDescription);
+          nodes = nodes.map((n) => n.id === node.id ? { ...n, description: sd } : n);
         }
         const childType: MindmapNode['type'] = node.type === 'main' ? 'sub' : node.type === 'sub' ? 'detail' : 'sub';
+        const isDetailChild = childType === 'detail';
         for (const c of res.data!.children || []) {
-          const r = addNode(nodes, { parentId: node.id, type: childType, title: c.title, description: c.description, icon: c.icon, colorKey: node.colorKey, createdBy: 'ai' });
+          // 4차(detail) 자식 설명은 49자 이하로 정제.
+          const desc = isDetailChild ? cleanDetailDescription(c.description) : clampDescription(c.description || '');
+          const r = addNode(nodes, { parentId: node.id, type: childType, title: c.title, description: desc, icon: c.icon, colorKey: node.colorKey, createdBy: 'ai' });
           if (r.node) nodes = r.nodes;
         }
         return { ...p, nodes: autoLayout(nodes), creationMethod: 'ai' as const };
@@ -357,10 +372,21 @@ export default function StudentMindmapEditorPage() {
 
   // ---- 완성 ----
   const handleComplete = useCallback(() => {
+    // 4차(detail) 설명 최소 길이 검증: 내용이 있는데 10자 미만이면 완성을 막아 안내.
+    // (빈 detail 노드는 표시에서 필터링되므로 여기서는 무시. 기존 49자 초과 데이터는 자동 절삭하지 않으므로 완성을 막지 않음.)
+    const tooShort = project?.nodes.find((n) => {
+      if (n.type !== 'detail') return false;
+      const len = (n.description ?? '').trim().length;
+      return len > 0 && len < MINDMAP_LIMITS.minDetailDescriptionLength;
+    });
+    if (tooShort) {
+      setAiMsg(`4차 가지 설명을 ${MINDMAP_LIMITS.minDetailDescriptionLength}자 이상 작성해 주세요.`);
+      return;
+    }
     commit((p) => ({ ...p, status: 'completed' as const }));
     setShowComplete(false);
     setAiMsg('🎉 완성했어요! 이제 친구에게 공유할 수 있어요.');
-  }, [commit]);
+  }, [project, commit]);
 
   // ---- 공유 ----
   const shareUrl = project?.shareSlug ? `${window.location.origin}/mindmap/share/${project.shareSlug}` : null;
