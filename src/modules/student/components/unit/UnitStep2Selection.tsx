@@ -83,6 +83,7 @@ export default function UnitStep2Selection({
                 const isSelected = selectedSubject?.id === s.id
                 const isAllowed  =
                   !classUnitSetting ||
+                  s.name === '창작' || // '창작'은 자유 주제 — 학급 단원 설정과 무관하게 항상 허용
                   classUnitSetting.subjects.includes('전체') ||
                   classUnitSetting.subjects.includes(s.name)
                 return (
