@@ -31,7 +31,6 @@ import { BRANCH_COLOR_KEYS, MINDMAP_LIMITS } from '../data/mindmapConfig';
 import { buildSampleMindmap, buildSamplePartial, buildSampleTopics } from '../utils/mindmapSampleData';
 
 const TABLE = 'mindmap_projects';
-const VIEW = 'mindmap_public_shares';
 const LS_PROJECT = (id: string) => `ts_mindmap_project_${id}`;
 const LS_INDEX = (studentId: string) => `ts_mindmap_index_${studentId}`;
 const LS_SHARE = (slug: string) => `ts_mindmap_share_${slug}`;
@@ -520,9 +519,7 @@ export async function getPublicMindmapBySlug(slug: string): Promise<MindmapPubli
   if (remote) {
     try {
       const { data, error } = await supabase
-        .from(VIEW)
-        .select('*')
-        .eq('share_slug', slug)
+        .rpc('get_public_mindmap_share', { p_slug: slug })
         .maybeSingle();
       if (!error && data) return data as MindmapPublicShareRow;
       if (error && isMissingTableError(error)) remoteAvailableCache = false;
