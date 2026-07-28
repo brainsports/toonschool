@@ -26,20 +26,20 @@ function loadEnv(filename: string) {
 loadEnv('.env');
 loadEnv('.env.local');
 
-const SUPABASE_URL = process.env.VITE_SUPABASE_URL || '';
-const SUPABASE_KEY = process.env.VITE_SUPABASE_ANON_KEY || '';
+const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
+const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY || '';
 
 import { FALLBACK_IMAGE_GENERATION_MODEL } from '../config/models';
-if (!SUPABASE_URL || !SUPABASE_KEY || !GEMINI_API_KEY) {
-  console.error('❌ 필수 환경변수가 없습니다. .env.local 파일을 확인해 주세요.');
-  console.error(`  VITE_SUPABASE_URL: ${SUPABASE_URL ? '있음' : '없음'}`);
-  console.error(`  VITE_SUPABASE_ANON_KEY: ${SUPABASE_KEY ? '있음' : '없음'}`);
+if (!SUPABASE_URL || !SERVICE_ROLE_KEY || !GEMINI_API_KEY) {
+  console.error('❌ 필수 서버 환경변수가 없습니다. .env.local 또는 서버 환경변수를 확인해 주세요.');
+  console.error(`  SUPABASE_URL / VITE_SUPABASE_URL: ${SUPABASE_URL ? '있음' : '없음'}`);
+  console.error(`  SUPABASE_SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY ? '있음(보안 처리됨)' : '없음(필수)'}`);
   console.error(`  GEMINI_API_KEY: ${GEMINI_API_KEY ? '있음' : '없음'}`);
   process.exit(1);
 }
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
 // 동시에 처리할 이미지 job 수.
 // 6컷 "모든 배경 생성"이 프론트에서 동시성 제한(3)으로 enqueue되므로, 워커도 3개까지 병렬 처리.
