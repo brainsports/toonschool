@@ -1,12 +1,18 @@
 import * as fs from 'fs'
 import * as path from 'path'
 
-const envPath = path.join(process.cwd(), '.env')
-const envContent = fs.readFileSync(envPath, 'utf-8')
-const geminiKeyLine = envContent.split('\n').find(l => l.startsWith('VITE_GEMINI_API_KEY='))
-const apiKey = geminiKeyLine ? geminiKeyLine.split('=')[1].trim() : ''
+let apiKey = process.env.GEMINI_API_KEY || ''
+if (!apiKey && fs.existsSync(path.join(process.cwd(), '.env.local'))) {
+  const envContent = fs.readFileSync(path.join(process.cwd(), '.env.local'), 'utf-8')
+  const line = envContent.split('\n').find(l => l.startsWith('GEMINI_API_KEY='))
+  if (line) apiKey = line.split('=')[1].trim()
+}
 
 async function callAi(prompt: string) {
+  if (!apiKey) {
+    console.error('GEMINI_API_KEY not found in env')
+    return
+  }
   const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -51,6 +57,7 @@ const prompt = `당신은 초등학생용 교과 학습만화 기획자입니다
 }`
 
 callAi(prompt).then(text => {
+  if (!text) return
   const jsonStr = text.replace(/\`\`\`json/gi, '').replace(/\`\`\`/g, '').trim()
   const data = JSON.parse(jsonStr)
   data.recommendations.forEach((r: any, i: number) => {

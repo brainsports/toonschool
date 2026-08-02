@@ -1,6 +1,6 @@
 import { loadEnv } from 'vite';
 const env = loadEnv('development', process.cwd(), '');
-const key = env.VITE_GEMINI_API_KEY;
+const key = env.GEMINI_API_KEY || process.env.GEMINI_API_KEY;
 if (key) {
   fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`)
     .then(res => res.json())
@@ -15,5 +15,5 @@ if (key) {
     })
     .catch(console.error);
 } else {
-  console.error('VITE_GEMINI_API_KEY not found in env');
+  console.error('GEMINI_API_KEY not found in env');
 }

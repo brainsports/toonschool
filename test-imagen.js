@@ -1,9 +1,13 @@
 import fs from 'fs';
 
-const envFile = fs.readFileSync('.env', 'utf-8');
-const match = envFile.match(/VITE_GEMINI_API_KEY=(.*)/);
-if (match) {
-  const apiKey = match[1].trim();
+let apiKey = process.env.GEMINI_API_KEY;
+if (!apiKey && fs.existsSync('.env.local')) {
+  const envFile = fs.readFileSync('.env.local', 'utf-8');
+  const match = envFile.match(/GEMINI_API_KEY=(.*)/);
+  if (match) apiKey = match[1].trim();
+}
+
+if (apiKey) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-fast-generate-001:predict?key=${apiKey}`;
   
   const payload = {
