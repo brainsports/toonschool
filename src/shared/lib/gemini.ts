@@ -1,7 +1,6 @@
+import { supabase } from './supabase'
 import { TEXT_GENERATION_MODEL, TEXT_FALLBACK_MODEL } from '../../config/models'
 import { httpStatusToErrorCode } from './geminiLogger'
-
-const GEMINI_API_KEY = (import.meta.env.VITE_GEMINI_API_KEY as string) || ''
 
 /**
  * HTTP 상태코드별 에러 클래스
@@ -21,120 +20,101 @@ export class GeminiError extends Error {
 }
 
 /**
- * 단일 모델로 Gemini 텍스트 생성
- * - API 키는 절대 로그에 출력하지 않음
+ * Supabase Edge Function (generate-learning-text)을 경유한 Gemini 텍스트 생성
+ * - 브라우저에 API Key가 노출되지 않으며, 서버(Deno) Secret의 GEMINI_API_KEY를 안전하게 사용함
  */
 async function generateTextWithModel(prompt: string, model: string): Promise<string> {
   const startTime = Date.now();
 
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
-    }
-  );
+  try {
+    const { data, error } = await supabase.functions.invoke('generate-learning-text', {
+      body: { prompt, model },
+    });
 
-  const elapsedMs = Date.now() - startTime;
+    const elapsedMs = Date.now() - startTime;
 
-  if (!response.ok) {
-    const errorCode = httpStatusToErrorCode(response.status);
-    let userMessage: string;
-
-    switch (response.status) {
-      case 503:
-        userMessage = 'Gemini 모델이 현재 응답하지 않습니다. (503)';
-        break;
-      case 429:
-        userMessage = 'API 요청 한도를 초과했습니다. (429)';
-        break;
-      case 401:
-      case 403:
-        userMessage = 'API 키 또는 권한 문제입니다. (401/403)';
-        break;
-      case 404:
-        userMessage = '모델을 찾을 수 없습니다. (404)';
-        break;
-      default:
-        userMessage = `Gemini API 오류 (${response.status})`;
-    }
-
-    console.error(`[Gemini] model=${model} http=${response.status} elapsed=${elapsedMs}ms`);
-    throw new GeminiError(userMessage, errorCode, response.status);
-  }
-
-  const data = await response.json();
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-
-  if (!text) {
-    console.error(`[Gemini] model=${model} unexpected response format elapsed=${elapsedMs}ms`);
-    throw new GeminiError('응답을 생성하지 못했습니다. (데이터 형식 오류)', 'GEMINI_EMPTY', undefined);
-  }
-
-  console.log(`[Gemini] model=${model} http=200 elapsed=${elapsedMs}ms`);
-  return text;
-}
-
-export const geminiClient = {
-  getApiKey: (): string => GEMINI_API_KEY,
-
-  /**
-   * Gemini 텍스트 생성
-   *
-   * 정책 (2026-06-27 smoke test 기준):
-   * - Primary: TEXT_GENERATION_MODEL (gemini-3.5-flash)
-   * - Fallback: TEXT_FALLBACK_MODEL가 설정된 경우에만 시도 (현재 빈 문자열 → fallback 없음)
-   * - 503 → 로컬 fallback 프롬프트로 이미지 생성 진행 (호출자에서 처리)
-   * - 429/401/403 → 즉시 에러 (재시도해도 소용없음)
-   * - 불안정한 모델(503 확인된 모델)로 fallback하지 않음
-   */
-  generateText: async (prompt: string): Promise<string> => {
-    if (!GEMINI_API_KEY || GEMINI_API_KEY === 'your_gemini_api_key_here') {
-      console.warn('[Gemini] API key is not configured.')
+    if (error) {
+      const httpStatus = (error as any).status || 500;
+      const errorCode = httpStatusToErrorCode(httpStatus);
+      console.error(`[GeminiEF] model=${model} error=${error.message} elapsed=${elapsedMs}ms`);
       throw new GeminiError(
-        'AI 연결에 문제가 생겼어요. 잠시 후 다시 시도해 주세요.',
-        'GEMINI_NO_KEY'
+        error.message || `Edge Function 호출 오류 (${httpStatus})`,
+        errorCode,
+        httpStatus
       );
     }
 
+    if (!data || !data.success) {
+      const httpStatus = data?.httpStatus || 400;
+      const errorCode = data?.code || httpStatusToErrorCode(httpStatus);
+      const userMsg = data?.message || 'AI 응답 생성에 실패했습니다.';
+      console.error(`[GeminiEF] model=${model} code=${errorCode} elapsed=${elapsedMs}ms`);
+      throw new GeminiError(userMsg, errorCode, httpStatus);
+    }
+
+    const text = data.text;
+    if (!text || typeof text !== 'string') {
+      console.error(`[GeminiEF] model=${model} unexpected response format elapsed=${elapsedMs}ms`);
+      throw new GeminiError('응답을 생성하지 못했습니다. (데이터 형식 오류)', 'GEMINI_EMPTY', undefined);
+    }
+
+    console.log(`[GeminiEF] model=${model} http=200 elapsed=${elapsedMs}ms`);
+    return text;
+  } catch (err: any) {
+    if (err instanceof GeminiError) {
+      throw err;
+    }
+    const elapsedMs = Date.now() - startTime;
+    console.error(`[GeminiEF] model=${model} network/unexpected error=${err?.message || err} elapsed=${elapsedMs}ms`);
+    throw new GeminiError('AI 서비스 연결에 실패했습니다.', 'NETWORK_ERROR', undefined);
+  }
+}
+
+export const geminiClient = {
+  /**
+   * 보안 향상: 클라이언트에는 API 키가 저장되지 않으며 Edge Function에서 안전하게 관리됨.
+   */
+  getApiKey: (): string => 'managed-via-edge-function',
+
+  /**
+   * Gemini 텍스트 생성 (Supabase Edge Function 경유)
+   */
+  generateText: async (prompt: string): Promise<string> => {
     // 1차 시도: primary 모델
     try {
       return await generateTextWithModel(prompt, TEXT_GENERATION_MODEL);
     } catch (primaryErr: any) {
       const primaryStatus = primaryErr instanceof GeminiError ? primaryErr.httpStatus : undefined;
 
-      // fallback 모델이 설정되어 있고 503/5xx/네트워크 오류인 경우에만 fallback 시도
+      // fallback 모델이 설정되어 있고 재시도 가능한 에러인 경우에만 fallback 시도
       const isRetryable =
         primaryStatus === 503 ||
         primaryStatus === 500 ||
         primaryStatus === 502 ||
         primaryStatus === 504 ||
-        primaryErr?.name === 'TypeError' ||
-        primaryErr?.message?.includes('fetch');
+        primaryErr?.errorCode === 'NETWORK_ERROR' ||
+        primaryErr?.errorCode === 'TIMEOUT';
 
-      const hasFallback = (TEXT_FALLBACK_MODEL as string).length > 0;
+      const hasFallback = typeof TEXT_FALLBACK_MODEL === 'string' && TEXT_FALLBACK_MODEL.length > 0;
 
       if (isRetryable && hasFallback) {
         console.warn(
-          `[Gemini] primary model failed (http=${primaryStatus ?? 'network'}). Trying fallback: ${TEXT_FALLBACK_MODEL}`
+          `[GeminiEF] primary model failed (http=${primaryStatus ?? 'network'}). Trying fallback: ${TEXT_FALLBACK_MODEL}`
         );
         try {
           return await generateTextWithModel(prompt, TEXT_FALLBACK_MODEL);
         } catch (fallbackErr: any) {
-          console.error(`[Gemini] fallback model also failed. Giving up.`);
+          console.error(`[GeminiEF] fallback model also failed. Giving up.`);
           throw fallbackErr;
         }
       }
 
-      // fallback 없거나 재시도 불필요한 에러 → 원래 에러 throw
-      // 호출자(studentComicService)에서 GeminiError를 catch해 로컬 fallback 처리
       throw primaryErr;
     }
   },
 
   /**
-   * 지정 모델로 직접 호출 (smoke test 등 용도)
+   * 지정 모델로 직접 Edge Function 호출
    */
   generateTextWithModel: async (prompt: string, model: string): Promise<string> => {
     return generateTextWithModel(prompt, model);

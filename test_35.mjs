@@ -2,7 +2,7 @@ import { loadEnv } from 'vite';
 
 async function test() {
   const env = loadEnv('development', process.cwd(), '');
-  const key = env.VITE_GEMINI_API_KEY;
+  const key = env.GEMINI_API_KEY || process.env.GEMINI_API_KEY;
   if (!key) return console.log('No key');
   
   const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${key}`, {

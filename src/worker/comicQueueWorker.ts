@@ -28,7 +28,7 @@ loadEnv('.env.local');
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY || '';
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
 
 import { FALLBACK_IMAGE_GENERATION_MODEL } from '../config/models';
 if (!SUPABASE_URL || !SERVICE_ROLE_KEY || !GEMINI_API_KEY) {
